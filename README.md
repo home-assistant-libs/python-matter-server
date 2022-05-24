@@ -1,13 +1,14 @@
-# Python CHIP WebSocket Server
+# Python Matter Server
 
 This project implements a Matter (formerly Home Assistant Connected Home over IP
-or CHIP) WebSocket Server.
+or CHIP) Controller Server using WebSockets.
 
 :warning: This is under development and in very early stage!
 
 ## Usage
 
-To use the Matter Server using the Supervisor add-on is the recommended path.
+To use the Matter Server using the Supervisor add-on is the recommended path
+(tbd).
 
 ## Development
 
