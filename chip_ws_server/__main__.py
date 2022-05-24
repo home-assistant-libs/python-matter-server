@@ -23,12 +23,9 @@ async def websocket_handler(request, server):
     async for msg in ws:
         _LOGGER.debug(msg)
         if msg.type == aiohttp.WSMsgType.TEXT:
-            print(msg.data)
             if msg.data == 'close':
                 await ws.close()
-            else:
-                await ws.send_str(msg.data + '/answer')
-
+            server.new_message(msg.data)
     _LOGGER.info("Websocket connection closed")
     return ws
 
