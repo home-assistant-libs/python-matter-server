@@ -1,6 +1,7 @@
 {
   "name": "Matter Lighting App Example",
   "version": "<unknown>",
+  "new_install_improv_wait_time": 0,
   "builds": [
     {
       "chipFamily": "ESP32-C3",
