@@ -1,10 +1,10 @@
 import json
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from functools import partial
 
 import aiohttp
-from chip_ws_common.wsmsg import WSCommandMessage, WSEncoder
+from chip_ws_common.wsmsg import WSEncoder, WSMethodMessage
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,16 +28,21 @@ class CHIPControllerClient:
         await self._ws.send_str(msg)
 
     async def send_toggle(self):
-        await self.send_command(Clusters.OnOff.Commands.Toggle())
+        await self.send_command(nodeid=4335, endpoint=1, payload=Clusters.OnOff.Commands.Toggle())
 
     async def send_move(self):
-        await self.send_command(Clusters.ColorControl.Commands.MoveToHueAndSaturation(200,100,0,0,0))
+        await self.send_command(nodeid=4335, endpoint=1, payload=Clusters.ColorControl.Commands.MoveToHueAndSaturation(200,100,0,0,0))
 
-    async def send_command(self, cmd: Clusters.ClusterCommand):
-        cmd_dict = asdict(cmd)
-        cls = type(cmd)
-        cmd_dict["_type"] = f"{cls.__module__}.{cls.__qualname__}"
-        wscmd = WSCommandMessage(command="test", args={ "val": cmd_dict })
+    async def send_command(self, **args):
+        for arg, value in args.items():
+            # Add type information to dataclasses
+            if is_dataclass(value):
+                cmd_dict = asdict(value)
+                cls = type(value)
+                cmd_dict["_type"] = f"{cls.__module__}.{cls.__qualname__}"
+                args[arg] = cmd_dict
+
+        wscmd = WSMethodMessage(method="send_command", args=args)
         await self._ws.send_json(wscmd, dumps=partial(json.dumps, cls=WSEncoder))
 
     def shutdown(self):

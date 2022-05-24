@@ -8,8 +8,9 @@ import aiohttp.web
 
 from chip_ws_server.server import CHIPControllerServer
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.WARN)
 _LOGGER = logging.getLogger(__name__)
+_LOGGER.setLevel(logging.DEBUG)
 
 HOST = os.getenv('CHIP_WS_SERVER_HOST', '0.0.0.0')
 PORT = int(os.getenv('CHIP_WS_SERVER_PORT', 8080))
@@ -25,7 +26,7 @@ async def websocket_handler(request, server):
         if msg.type == aiohttp.WSMsgType.TEXT:
             if msg.data == 'close':
                 await ws.close()
-            server.new_message(msg.data)
+            await server.new_message(msg.data)
     _LOGGER.info("Websocket connection closed")
     return ws
 

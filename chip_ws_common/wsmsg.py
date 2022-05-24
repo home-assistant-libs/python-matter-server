@@ -39,6 +39,6 @@ class WSDecoder(json.JSONDecoder):
         return cluster_cls(**obj)
 
 @dataclass
-class WSCommandMessage:
-    command: str
+class WSMethodMessage:
+    method: str
     args: dict
