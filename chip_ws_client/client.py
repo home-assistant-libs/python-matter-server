@@ -1,36 +1,33 @@
 """Client."""
 from __future__ import annotations
+
 import asyncio
-from dataclasses import is_dataclass, asdict
+import json
 import logging
 import pprint
 import uuid
 from collections import defaultdict
 from copy import deepcopy
+from dataclasses import asdict, is_dataclass
 from datetime import datetime
+from functools import partial
 from operator import itemgetter
 from types import TracebackType
 from typing import Any, DefaultDict, Dict, List, cast
 
-from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
+from aiohttp import (ClientSession, ClientWebSocketResponse, WSMsgType,
+                     client_exceptions)
+from chip_ws_common.wsmsg import WSEncoder
 
 from chip_ws_client.model.version import VersionInfoDataType
 
 from .const import MAX_SERVER_SCHEMA_VERSION, MIN_SERVER_SCHEMA_VERSION
 from .event import Event
+from .exceptions import (CannotConnect, ConnectionClosed, ConnectionFailed,
+                         FailedCommand, InvalidMessage, InvalidServerVersion,
+                         InvalidState, NotConnected)
 from .model.driver import Driver
 from .model.version import VersionInfo
-from .exceptions import (
-    CannotConnect,
-    ConnectionClosed,
-    ConnectionFailed,
-    FailedCommand,
-    InvalidMessage,
-    InvalidServerVersion,
-    InvalidState,
-    NotConnected,
-)
-
 
 SIZE_PARSE_JSON_EXECUTOR = 8192
 
@@ -400,7 +397,10 @@ class Client:
                 }
             )
 
-        await self._client.send_json(message)
+        try:
+            await self._client.send_json(message, dumps=partial(json.dumps, cls=WSEncoder))
+        except:
+            self._logger.exception("Error sending JSON")
 
     async def __aenter__(self) -> "Client":
         """Connect to the websocket."""

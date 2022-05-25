@@ -1,14 +1,15 @@
 import asyncio
-from dataclasses import is_dataclass, asdict
 import json
 import logging
 import os
 import sys
+from dataclasses import asdict, is_dataclass
 from functools import partial
 
 import aiohttp
 import aiohttp.web
 from chip_ws_common.wsmsg import WSDecoder, WSEncoder
+
 from chip_ws_server.server import CHIPControllerServer
 
 logging.basicConfig(level=logging.WARN)
@@ -64,14 +65,13 @@ async def websocket_handler(request, server):
 
 
 async def handle_message(ws, server, msg):
-    _LOGGER.debug(msg)
-
     if msg.type != aiohttp.WSMsgType.TEXT:
         _LOGGER.debug("Ignoring %s", msg)
         return
 
     _LOGGER.info("Received: %s", msg.data)
     msg = json.loads(msg.data, cls=WSDecoder)
+    _LOGGER.info("Deserialized message: %s", msg)
     if msg["command"] == "start_listening":
         await ws.send_json(
             create_success_response(

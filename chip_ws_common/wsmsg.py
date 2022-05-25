@@ -1,7 +1,8 @@
+import base64
 import json
 import sys
 from dataclasses import asdict, dataclass, is_dataclass
-import base64
+from enum import Enum
 
 import chip.clusters.Objects
 from chip.clusters.Types import Nullable
@@ -13,7 +14,15 @@ class WSEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Nullable):
             return None
-        if isinstance(obj, bytes):
+        elif isinstance(obj, type):
+            # Maybe we should restrict this to CHIP cluster types (see deserialization?)
+            return { "_class": f"{obj.__module__}.{obj.__qualname__}"}
+        elif isinstance(obj, Enum):
+            # Works for chip.clusters.Attributes.EventPriority,
+            # might need more sophisticated solution for other Enums
+            # Also, deserialization?
+            return obj.value
+        elif isinstance(obj, bytes):
             return base64.b64encode(obj).decode("utf-8")
         # if is_dataclass(obj):
         #     return asdict(obj)
@@ -25,24 +34,28 @@ class WSDecoder(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
         json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
 
-    def object_hook(self, obj: dict):
-        _type = obj.get("_type")
-        if _type is None:
-            return obj
-
-        if not _type.startswith(CLUSTER_TYPE_NAMESPACE):
+    def _get_class(self, type: str):
+        if not type.startswith(CLUSTER_TYPE_NAMESPACE):
             raise TypeError("Only CHIP cluster objects supported")
 
-        cluster_type = _type.removeprefix(f"{CLUSTER_TYPE_NAMESPACE}.")
-        # Delete the `_type` key as it isn't used in the dataclasses
-        del obj["_type"]
+        cluster_type = type.removeprefix(f"{CLUSTER_TYPE_NAMESPACE}.")
 
         cluster_cls = sys.modules[CLUSTER_TYPE_NAMESPACE]
         for cluster_subtype in cluster_type.split("."):
-            print(cluster_subtype)
             cluster_cls = getattr(cluster_cls, cluster_subtype)
 
-        return cluster_cls(**obj)
+        return cluster_cls
+
+    def object_hook(self, obj: dict):
+        if type := obj.get('_type'):
+            cls = self._get_class(type)
+            # Delete the `_type` key as it isn't used in the dataclasses
+            del obj['_type']
+            return cls(**obj)
+        elif cls := obj.get('_class'):
+            return self._get_class(cls)
+
+        return obj
 
 
 @dataclass
