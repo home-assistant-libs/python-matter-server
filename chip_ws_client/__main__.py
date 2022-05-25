@@ -38,26 +38,34 @@ async def connect(session):
 
 
 async def toggle_happiness(client: Client, is_initialized: asyncio.Event):
-    await is_initialized.wait()
+    try:
+        await is_initialized.wait()
 
-    node = await client.driver.device_controller.Read(
-        4335, attributes=[Clusters.OnOff], events="*", returnClusterObject=True
-    )
-    await asyncio.sleep(1)
+        nodeid = 4336
 
-    node = await client.driver.device_controller.Read(
-        4335, attributes="*", events="*", returnClusterObject=True
-    )
+        # This (now) throws exceptions if it fails
+        await client.driver.device_controller.ResolveNode(nodeid)
 
-    from pprint import pprint
-
-    pprint(node)
-
-    while True:
-        await asyncio.sleep(5)
-        await client.driver.device_controller.SendCommand(
-            nodeid=4335, endpoint=1, payload=Clusters.OnOff.Commands.Toggle()
+        node = await client.driver.device_controller.Read(
+            nodeid, attributes=[Clusters.OnOff], events="*", returnClusterObject=True
         )
+        await asyncio.sleep(1)
+
+        node = await client.driver.device_controller.Read(
+            nodeid, attributes="*", events="*", returnClusterObject=True
+        )
+
+        from pprint import pprint
+
+        pprint(node)
+
+        while True:
+            await asyncio.sleep(5)
+            await client.driver.device_controller.SendCommand(
+                nodeid=nodeid, endpoint=1, payload=Clusters.OnOff.Commands.Toggle()
+            )
+    except Exception:
+        _LOGGER.exception("No more Happiness")
 
 
 def ipython():

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -64,8 +65,13 @@ class DeviceController:
     def SetThreadOperationalDataset(self, threadOperationalDataset):
         raise NotImplementedError
 
-    def ResolveNode(self, nodeid):
-        raise NotImplementedError
+    async def ResolveNode(self, nodeid: int):
+        return await self._async_send_command(
+            "ResolveNode",
+            {
+                "nodeid": nodeid,
+            },
+        )
 
     def GetAddressAndPort(self, nodeid):
         raise NotImplementedError

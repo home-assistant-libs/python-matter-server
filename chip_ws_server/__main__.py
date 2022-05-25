@@ -8,6 +8,7 @@ from functools import partial
 
 import aiohttp
 import aiohttp.web
+from chip.exceptions import ChipStackError
 from chip_ws_common.wsmsg import WSDecoder, WSEncoder
 
 from chip_ws_server.server import CHIPControllerServer
@@ -148,6 +149,8 @@ async def handle_message(ws, server, msg):
                 create_success_response(msg, result),
                 dumps=partial(json.dumps, cls=WSEncoder),
             )
+        except ChipStackError as ex:
+            await ws.send_json(create_error_response(msg, str(ex)))
         except Exception:
             _LOGGER.exception("Error calling method: %s", msg["command"])
             await ws.send_json(create_error_response(msg, "UNKNOWN"))
