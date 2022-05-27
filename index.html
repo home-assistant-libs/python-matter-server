@@ -75,16 +75,51 @@
         }
       }
     </style>
-    <script type="module" src="https://unpkg.com/esp-web-tools@8.0.2/dist/web/install-button.js?module"></script>
+    <script
+      type="module"
+      src="https://unpkg.com/esp-web-tools@8.0.2/dist/web/install-button.js?module"
+    ></script>
   </head>
   <body>
     <div class="content">
-      <h1>Matter Lighting App Example</h1>
-      <p>Select your product</p>
+      <h1>Matter Example installer</h1>
+      <p>
+        Install these example applications on an
+        <a href="https://www.mouser.com/ProductDetail/356-ESP32-C3DEVKITM1"
+          >ESP32-C3 DevKit M-1</a
+        >
+        to be able to test Matter locally.
+      </p>
+      <p>
+        Select an app to install the example and access the Matter REPL to
+        configure Wi-Fi on the device.
+      </p>
       <ul class="radios">
         <li>
-          <label><input type="radio" name="type" value="lighting-app-example/esp32-c3" />Lighting App for ESP32-C3</label>
-          <label><input type="radio" name="type" value="light-switch-app-example/esp32-c3" />Light Switch for ESP32-C3</label>
+          <label>
+            <input
+              type="radio"
+              name="type"
+              value="lighting-app-example/esp32-c3"
+            />
+            Lighting App (<a
+              href="https://github.com/project-chip/connectedhomeip/tree/master/examples/lighting-app/esp32"
+              >source</a
+            >)
+          </label>
+        </li>
+        <li>
+          <label>
+            <input
+              type="radio"
+              name="type"
+              value="light-switch-app-example/esp32-c3"
+            />
+            Light Switch (<a
+              href="https://github.com/project-chip/connectedhomeip/tree/master/examples/light-switch-app/esp32"
+              >source</a
+            >)
+          </label>
         </li>
       </ul>
       <p class="button-row" align="center">
@@ -94,17 +129,19 @@
       <div class="footer">
         <a href="https://github.com/project-chip/connectedhomeip"
           >Project Connected Home Over IP</a
-        > &mdash;
-        Installer powered by <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>.
+        >
+        &mdash; Installer powered by
+        <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>.
+      </div>
     </div>
     <script>
-      document.querySelectorAll('input[name="type"]').forEach(radio =>
+      document.querySelectorAll('input[name="type"]').forEach((radio) =>
         radio.addEventListener("change", () => {
-          const button = document.querySelector('esp-web-install-button');
+          const button = document.querySelector("esp-web-install-button");
           button.manifest = `./${radio.value}/manifest.json`;
-          button.classList.remove('invisible');
-        }
-      ));
+          button.classList.remove("invisible");
+        })
+      );
     </script>
   </body>
 </html>
