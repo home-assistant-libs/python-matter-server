@@ -1,4 +1,3 @@
-import json
 import logging
 
 import chip.clusters.Objects as Clusters
@@ -12,17 +11,16 @@ from chip_ws_common.json_utils import CHIPJSONDecoder
 
 _LOGGER = logging.getLogger(__name__)
 
-
 class CHIPControllerServer:
     def __init__(self):
         pass
 
-    def setup(self):
+    def setup(self, storage_path):
         _LOGGER.info("Setup CHIP Controller Server")
         chip.native.GetLibraryHandle()
         chip.logging.RedirectToPythonLogging()
         coloredlogs.install(level=logging.INFO)
-        self._stack = ChipStack(persistentStoragePath="/tmp/repl-storage.json")
+        self._stack = ChipStack(persistentStoragePath=storage_path)
 
         self._fabricAdmin = chip.FabricAdmin.FabricAdmin()
 

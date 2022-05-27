@@ -5,6 +5,7 @@ import os
 import sys
 from dataclasses import asdict, is_dataclass
 from functools import partial
+from pathlib import Path
 
 import aiohttp
 import aiohttp.web
@@ -19,6 +20,7 @@ _LOGGER.setLevel(logging.DEBUG)
 
 HOST = os.getenv("CHIP_WS_SERVER_HOST", "0.0.0.0")
 PORT = int(os.getenv("CHIP_WS_SERVER_PORT", 8080))
+STORAGE_PATH = os.getenv("CHIP_WS_STORAGE", Path.joinpath(Path.home(), ".chip-storage/python-kv.json"))
 
 
 def create_success_response(message, result):
@@ -162,7 +164,7 @@ async def handle_message(ws, server, msg):
 
 def main() -> int:
     server = CHIPControllerServer()
-    server.setup()
+    server.setup(STORAGE_PATH)
     app = aiohttp.web.Application()
     app.router.add_route("GET", "/chip_ws", partial(websocket_handler, server=server))
     aiohttp.web.run_app(app, host=HOST, port=PORT)
