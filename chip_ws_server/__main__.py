@@ -9,7 +9,7 @@ from functools import partial
 import aiohttp
 import aiohttp.web
 from chip.exceptions import ChipStackError
-from chip_ws_common.wsmsg import WSDecoder, WSEncoder
+from chip_ws_common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 
 from chip_ws_server.server import CHIPControllerServer
 
@@ -71,7 +71,7 @@ async def handle_message(ws, server, msg):
         return
 
     _LOGGER.info("Received: %s", msg.data)
-    msg = json.loads(msg.data, cls=WSDecoder)
+    msg = json.loads(msg.data, cls=CHIPJSONDecoder)
     _LOGGER.info("Deserialized message: %s", msg)
     if msg["command"] == "start_listening":
         await ws.send_json(
@@ -147,7 +147,7 @@ async def handle_message(ws, server, msg):
 
             await ws.send_json(
                 create_success_response(msg, result),
-                dumps=partial(json.dumps, cls=WSEncoder),
+                dumps=partial(json.dumps, cls=CHIPJSONEncoder),
             )
         except ChipStackError as ex:
             await ws.send_json(create_error_response(msg, str(ex)))

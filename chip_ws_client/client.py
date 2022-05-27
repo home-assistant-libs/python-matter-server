@@ -17,7 +17,7 @@ from typing import Any, DefaultDict, Dict, List, cast
 
 from aiohttp import (ClientSession, ClientWebSocketResponse, WSMsgType,
                      client_exceptions)
-from chip_ws_common.wsmsg import WSEncoder
+from chip_ws_common.json_utils import CHIPJSONEncoder
 
 from chip_ws_client.model.version import VersionInfoDataType
 
@@ -398,7 +398,7 @@ class Client:
             )
 
         try:
-            await self._client.send_json(message, dumps=partial(json.dumps, cls=WSEncoder))
+            await self._client.send_json(message, dumps=partial(json.dumps, cls=CHIPJSONEncoder))
         except:
             self._logger.exception("Error sending JSON")
 

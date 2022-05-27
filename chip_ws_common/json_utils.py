@@ -1,7 +1,6 @@
 import base64
 import json
 import sys
-from dataclasses import asdict, dataclass, is_dataclass
 from enum import Enum
 
 import chip.clusters.Objects
@@ -10,7 +9,7 @@ from chip.clusters.Types import Nullable
 CLUSTER_TYPE_NAMESPACE = "chip.clusters.Objects"
 
 
-class WSEncoder(json.JSONEncoder):
+class CHIPJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Nullable):
             return None
@@ -30,7 +29,7 @@ class WSEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-class WSDecoder(json.JSONDecoder):
+class CHIPJSONDecoder(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
         json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
 
@@ -56,9 +55,3 @@ class WSDecoder(json.JSONDecoder):
             return self._get_class(cls)
 
         return obj
-
-
-@dataclass
-class WSMethodMessage:
-    method: str
-    args: dict

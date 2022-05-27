@@ -8,7 +8,7 @@ import chip.native
 import coloredlogs
 from chip.ChipStack import *
 from chip.tlv import float32, uint
-from chip_ws_common.wsmsg import WSDecoder
+from chip_ws_common.json_utils import CHIPJSONDecoder
 
 _LOGGER = logging.getLogger(__name__)
 
