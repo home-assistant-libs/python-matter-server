@@ -41,7 +41,7 @@ async def toggle_happiness(client: Client, is_initialized: asyncio.Event):
     try:
         await is_initialized.wait()
 
-        nodeid = 4336
+        nodeid = 4335
 
         # This (now) throws exceptions if it fails
         await client.driver.device_controller.ResolveNode(nodeid)

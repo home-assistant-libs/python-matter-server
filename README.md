@@ -34,7 +34,7 @@ mkdir $HOME/.chip-storage/
 With the following command the server can be run directly from the source tree.
 
 ```
-python3 -m chip_ws_server.__main__
+python3 -m chip_ws_server
 ```
 
 To test device communication or to commission devices the provided Python CHIP
@@ -54,7 +54,7 @@ The client does not need to be run in the Python CHIP Controller environment. It
 can be run from the source tree using:
 
 ```
-python3 -m chip_ws_server.__main__
+python3 -m chip_ws_server
 ```
 
 ### Build and install
@@ -66,6 +66,42 @@ to this repository and install this project as follows:
 
 ```shell
 pip install .
+```
+
+### Creating a test device
+
+Instruction on how to create a test device can be found [here](https://nabucasa.github.io/matter-example-apps/).
+
+### Commissioning a test device
+
+Currently the easiest way to set up a test device is using the Python CHIP REPL. Start it by pointing it at the same storage location as the servier will run off:
+
+```
+sudo chip-repl --storagepath=$HOME/.chip-storage/python-kv.json
+```
+
+Inside the Python REPL, configure your Wi-Fi credentials:
+
+```python
+devCtrl.SetWiFiCredentials("SSID", "PW")
+```
+
+Once done, paste the following code to commission the device:
+
+```python
+from chip.setup_payload import SetupPayload
+setupPayload = SetupPayload().ParseQrCode("MT:Y.K9042C00KA0648G00")
+import ctypes
+longDiscriminator = ctypes.c_uint16(int(setupPayload.attributes['Discriminator']))
+pincode = ctypes.c_uint32(int(setupPayload.attributes['SetUpPINCode']))
+
+devCtrl.ConnectBLE(longDiscriminator, pincode, 4335)
+```
+
+If you have installed the lighting app, send the following command to test if it works:
+
+```python
+await devCtrl.SendCommand(4335, 1, Clusters.OnOff.Commands.Toggle())
 ```
 
 [project-chip]: https://github.com/project-chip/connectedhomeip
