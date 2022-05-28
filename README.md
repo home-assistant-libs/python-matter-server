@@ -37,19 +37,6 @@ With the following command the server can be run directly from the source tree.
 python3 -m chip_ws_server
 ```
 
-To test device communication or to commission devices the provided Python CHIP
-REPL can be useful. Make sure to start the REPL with the same storage location
-to share the network information.
-
-```
-chip-repl --storagepath=$HOME/.chip-storage/python-kv.json
-```
-
-Note: At least under Linux some values are still stored in `/tmp/chip_*.ini` files.
-Currently there is no build option to adjust that. To use the same path manual
-adjustments in `src/platform/Linux/CHIPLinuxStorage.h` are required.
-
-
 The client does not need to be run in the Python CHIP Controller environment. It
 can be run from the source tree using:
 
