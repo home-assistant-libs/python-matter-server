@@ -42,9 +42,11 @@ class MatterLight(LightEntity):
         await self.client.driver.device_controller.SendCommand(
             nodeid=self.node_id, endpoint=1, payload=Clusters.OnOff.Commands.On()
         )
+        self._attr_is_on = True
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn light off."""
         await self.client.driver.device_controller.SendCommand(
             nodeid=self.node_id, endpoint=1, payload=Clusters.OnOff.Commands.Off()
         )
+        self._attr_is_on = False
