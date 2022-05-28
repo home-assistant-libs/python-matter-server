@@ -100,7 +100,7 @@ await devCtrl.SendCommand(4335, 1, Clusters.OnOff.Commands.Toggle())
 Inside your Home Assistant development environment.
 
 ```
-pip3 install -e ../../../python-matter-server
+pip3 install -e ../python-matter-server
 cd config
 mkdir custom_components
 cd custom_components
