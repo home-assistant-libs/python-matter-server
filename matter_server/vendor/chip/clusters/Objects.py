@@ -25,9 +25,9 @@
 from dataclasses import dataclass, field
 import typing
 from enum import IntEnum
-from chip import ChipUtility
 
-from chip.tlv import uint, float32
+from .. import ChipUtility
+from ..tlv import uint, float32
 
 from .ClusterObjects import ClusterObject, ClusterObjectDescriptor, ClusterObjectFieldDescriptor, ClusterCommand, ClusterAttributeDescriptor, Cluster, ClusterEvent
 from .Types import Nullable, NullValue

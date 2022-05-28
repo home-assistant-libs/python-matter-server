@@ -15,17 +15,23 @@ from operator import itemgetter
 from types import TracebackType
 from typing import Any, DefaultDict, Dict, List, cast
 
-from aiohttp import (ClientSession, ClientWebSocketResponse, WSMsgType,
-                     client_exceptions)
-from chip_ws_common.json_utils import CHIPJSONEncoder
+from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
 
-from chip_ws_client.model.version import VersionInfoDataType
 
+from ..common.json_utils import CHIPJSONEncoder
+from .model.version import VersionInfoDataType
 from .const import MAX_SERVER_SCHEMA_VERSION, MIN_SERVER_SCHEMA_VERSION
 from .event import Event
-from .exceptions import (CannotConnect, ConnectionClosed, ConnectionFailed,
-                         FailedCommand, InvalidMessage, InvalidServerVersion,
-                         InvalidState, NotConnected)
+from .exceptions import (
+    CannotConnect,
+    ConnectionClosed,
+    ConnectionFailed,
+    FailedCommand,
+    InvalidMessage,
+    InvalidServerVersion,
+    InvalidState,
+    NotConnected,
+)
 from .model.driver import Driver
 from .model.version import VersionInfo
 
@@ -383,6 +389,12 @@ class Client:
                     cmd_dict = asdict(value)
                     cls = type(value)
                     cmd_dict["_type"] = f"{cls.__module__}.{cls.__qualname__}"
+
+                    # Currently in client we have vendorized chip. Strip vendor prefix.
+                    strip_prefix = "matter_server.vendor."
+                    if cmd_dict["_type"].startswith(strip_prefix):
+                        cmd_dict["_type"] = cmd_dict["_type"][len(strip_prefix) :]
+
                     message["args"][arg] = cmd_dict
 
         if self._record_messages and message["messageId"] not in LISTEN_MESSAGE_IDS:
@@ -398,7 +410,9 @@ class Client:
             )
 
         try:
-            await self._client.send_json(message, dumps=partial(json.dumps, cls=CHIPJSONEncoder))
+            await self._client.send_json(
+                message, dumps=partial(json.dumps, cls=CHIPJSONEncoder)
+            )
         except:
             self._logger.exception("Error sending JSON")
 

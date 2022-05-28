@@ -1,15 +1,13 @@
 import logging
 
-import chip.clusters.Objects as Clusters
-import chip.FabricAdmin
+from chip.FabricAdmin import FabricAdmin
 import chip.logging
 import chip.native
 import coloredlogs
-from chip.ChipStack import *
-from chip.tlv import float32, uint
-from chip_ws_common.json_utils import CHIPJSONDecoder
+from chip.ChipStack import ChipStack
 
 _LOGGER = logging.getLogger(__name__)
+
 
 class CHIPControllerServer:
     def __init__(self):
@@ -22,7 +20,7 @@ class CHIPControllerServer:
         coloredlogs.install(level=logging.INFO)
         self._stack = ChipStack(persistentStoragePath=storage_path)
 
-        self._fabricAdmin = chip.FabricAdmin.FabricAdmin()
+        self._fabricAdmin = FabricAdmin()
 
         self.device_controller = self._fabricAdmin.NewController()
         _LOGGER.info("CHIP Controller Stack initialized")
@@ -31,16 +29,3 @@ class CHIPControllerServer:
         _LOGGER.info("Shutdown CHIP Controller Server")
         self.device_controller.Shutdown()
         self._stack.Shutdown()
-
-    # async def send_command(
-    #     self,
-    #     nodeid: int,
-    #     endpoint: int,
-    #     payload: Clusters.ClusterCommand,
-    #     responseType=None,
-    #     timedRequestTimeoutMs: int = None,
-    # ):
-    #     _LOGGER.info(
-    #         "Sending command to node id %d, endpoint %d: %s", nodeid, endpoint, payload
-    #     )
-    #     await self.device_controller.SendCommand(nodeid, endpoint, payload)

@@ -34,14 +34,16 @@ mkdir $HOME/.chip-storage/
 With the following command the server can be run directly from the source tree.
 
 ```
-python3 -m chip_ws_server
+python3 -m matter_server.server
 ```
+
+_On MacOs you will have to run above command with 'sudo' as it requires to interact with BLE._
 
 The client does not need to be run in the Python CHIP Controller environment. It
 can be run from the source tree using:
 
 ```
-python3 -m chip_ws_server
+python3 -m matter_server.client
 ```
 
 ### Build and install
@@ -64,8 +66,10 @@ Instruction on how to create a test device can be found [here](https://nabucasa.
 Currently the easiest way to set up a test device is using the Python CHIP REPL. Start it by pointing it at the same storage location as the servier will run off:
 
 ```
-sudo chip-repl --storagepath=$HOME/.chip-storage/python-kv.json
+chip-repl --storagepath=$HOME/.chip-storage/python-kv.json
 ```
+
+_On MacOs you will have to run above command with 'sudo' as it requires to interact with BLE._
 
 Inside the Python REPL, configure your Wi-Fi credentials:
 

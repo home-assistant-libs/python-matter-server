@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .. import client
 
-from chip.clusters import Objects as Clusters
+from matter_server.vendor.chip.clusters import Objects as Clusters
 
 from .device_controller import DeviceController
 

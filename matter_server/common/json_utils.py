@@ -3,8 +3,14 @@ import json
 import sys
 from enum import Enum
 
-import chip.clusters.Objects
-from chip.clusters.Types import Nullable
+# Compatible both with vendorized and not-vendorized
+try:
+    from chip.clusters import Objects as Clusters
+    from chip.clusters.Types import Nullable
+except ImportError:
+    from ..vendor.chip.clusters import Objects as Clusters
+    from ..vendor.chip.clusters.Types import Nullable
+
 
 CLUSTER_TYPE_NAMESPACE = "chip.clusters.Objects"
 
@@ -15,7 +21,7 @@ class CHIPJSONEncoder(json.JSONEncoder):
             return None
         elif isinstance(obj, type):
             # Maybe we should restrict this to CHIP cluster types (see deserialization?)
-            return { "_class": f"{obj.__module__}.{obj.__qualname__}"}
+            return {"_class": f"{obj.__module__}.{obj.__qualname__}"}
         elif isinstance(obj, Enum):
             # Works for chip.clusters.Attributes.EventPriority,
             # might need more sophisticated solution for other Enums
@@ -39,19 +45,19 @@ class CHIPJSONDecoder(json.JSONDecoder):
 
         cluster_type = type.removeprefix(f"{CLUSTER_TYPE_NAMESPACE}.")
 
-        cluster_cls = sys.modules[CLUSTER_TYPE_NAMESPACE]
+        cluster_cls = Clusters
         for cluster_subtype in cluster_type.split("."):
             cluster_cls = getattr(cluster_cls, cluster_subtype)
 
         return cluster_cls
 
     def object_hook(self, obj: dict):
-        if type := obj.get('_type'):
+        if type := obj.get("_type"):
             cls = self._get_class(type)
             # Delete the `_type` key as it isn't used in the dataclasses
-            del obj['_type']
+            del obj["_type"]
             return cls(**obj)
-        elif cls := obj.get('_class'):
+        elif cls := obj.get("_class"):
             return self._get_class(cls)
 
         return obj

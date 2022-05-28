@@ -4,9 +4,9 @@ import os
 import sys
 
 import aiohttp
-from chip.clusters import Objects as Clusters
+from matter_server.vendor.chip.clusters import Objects as Clusters
 
-from chip_ws_client.client import Client
+from matter_server.client.client import Client
 
 logging.basicConfig(level=logging.DEBUG)
 _LOGGER = logging.getLogger(__name__)
@@ -44,20 +44,20 @@ async def toggle_happiness(client: Client, is_initialized: asyncio.Event):
         nodeid = 4335
 
         # This (now) throws exceptions if it fails
-        await client.driver.device_controller.ResolveNode(nodeid)
+        # await client.driver.device_controller.ResolveNode(nodeid)
 
-        node = await client.driver.device_controller.Read(
-            nodeid, attributes=[Clusters.OnOff], events="*", returnClusterObject=True
-        )
-        await asyncio.sleep(1)
+        # node = await client.driver.device_controller.Read(
+        #     nodeid, attributes=[Clusters.OnOff], events="*", returnClusterObject=True
+        # )
+        # await asyncio.sleep(1)
 
-        node = await client.driver.device_controller.Read(
-            nodeid, attributes="*", events="*", returnClusterObject=True
-        )
+        # node = await client.driver.device_controller.Read(
+        #     nodeid, attributes="*", events="*", returnClusterObject=True
+        # )
 
-        from pprint import pprint
+        # from pprint import pprint
 
-        pprint(node)
+        # pprint(node)
 
         while True:
             await asyncio.sleep(5)

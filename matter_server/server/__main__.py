@@ -10,9 +10,9 @@ from pathlib import Path
 import aiohttp
 import aiohttp.web
 from chip.exceptions import ChipStackError
-from chip_ws_common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 
-from chip_ws_server.server import CHIPControllerServer
+from .server import CHIPControllerServer
+from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 
 logging.basicConfig(level=logging.WARN)
 _LOGGER = logging.getLogger(__name__)
@@ -20,7 +20,9 @@ _LOGGER.setLevel(logging.DEBUG)
 
 HOST = os.getenv("CHIP_WS_SERVER_HOST", "0.0.0.0")
 PORT = int(os.getenv("CHIP_WS_SERVER_PORT", 8080))
-STORAGE_PATH = os.getenv("CHIP_WS_STORAGE", Path.joinpath(Path.home(), ".chip-storage/python-kv.json"))
+STORAGE_PATH = os.getenv(
+    "CHIP_WS_STORAGE", Path.joinpath(Path.home(), ".chip-storage/python-kv.json")
+)
 
 
 def create_success_response(message, result):
