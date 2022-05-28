@@ -20,7 +20,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Hue Light from Config Entry."""
-    client: Client = hass.data[DOMAIN][config_entry.entry_id]
+    client: Client = hass.data[DOMAIN][config_entry.entry_id]["client"]
 
     async_add_entities([MatterLight(client, 4335)])
 

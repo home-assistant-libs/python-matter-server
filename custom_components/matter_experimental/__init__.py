@@ -30,16 +30,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     driver_ready = asyncio.Event()
 
-    asyncio.create_task(_client_listen(hass, entry, client, driver_ready))
+    listen_task = asyncio.create_task(_client_listen(hass, entry, client, driver_ready))
 
     await driver_ready.wait()
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = client
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+        "client": client,
+        "listen_task": listen_task,
+    }
+
     hass.config_entries.async_setup_platforms(entry, PLATFORMS)
 
     async def on_hass_stop(event: Event) -> None:
         """Handle incoming stop event from Home Assistant."""
-        await client.disconnect()
+        listen_task.cancel()
+        await listen_task
 
     entry.async_on_unload(
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, on_hass_stop)
@@ -57,8 +62,14 @@ async def async_remove_config_entry_device(
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    await hass.data[DOMAIN].pop(entry.entry_id).disconnect()
-    return True
+    unload_success = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    if unload_success:
+        listen_task = hass.data[DOMAIN].pop(entry.entry_id)["listen_task"]
+        listen_task.cancel()
+        await listen_task
+
+    return unload_success
 
 
 async def _client_listen(
