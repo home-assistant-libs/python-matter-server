@@ -95,6 +95,22 @@ If you have installed the lighting app, send the following command to test if it
 await devCtrl.SendCommand(4335, 1, Clusters.OnOff.Commands.Toggle())
 ```
 
+### Installing custom component in Home Assistant
+
+Inside your Home Assistant development environment.
+
+```
+pip3 install -e ../../../python-matter-server
+cd config
+mkdir custom_components
+cd custom_components
+ln -sf ../../../python-matter-server/custom_components/matter_experimental .
+```
+
+You can now add the custom component via the UI. It's called Matter (experimental):
+
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=matter_experimental)
+
 [project-chip]: https://github.com/project-chip/connectedhomeip
 [chip-controller-repl-add-on]: https://github.com/home-assistant/addons-development/tree/master/chip_controller_repl
 [python-chip-building]: https://github.com/project-chip/connectedhomeip/blob/master/docs/guides/python_chip_controller_building.md
