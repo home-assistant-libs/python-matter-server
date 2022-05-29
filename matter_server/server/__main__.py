@@ -118,7 +118,7 @@ async def handle_message(send_msg, server: CHIPControllerServer, msg: dict):
         if command == "CommissionWithCode" and not server.wifi_cred_set:
             _LOGGER.warning("Received commissioning without Wi-Fi set")
 
-        elif command[0] != "_":
+        if command[0] != "_":
             method = getattr(server.device_controller, command, None)
         if not method:
             await send_msg(create_error_response(msg, "INVALID_COMMAND"))
