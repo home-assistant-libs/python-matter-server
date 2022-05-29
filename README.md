@@ -83,9 +83,9 @@ You can use Home Assistant services to commission a test device.
 
 [![Open your Home Assistant instance and show your service developer tools.](https://my.home-assistant.io/badges/developer_services.svg)](https://my.home-assistant.io/redirect/developer_services/)
 
-Each time the server restarts you will need to provide it your Wi-Fi credentials via the `set_wifi` service to be able to onboard Wi-Fi devices.
+Each time the server restarts you will need to provide it your Wi-Fi credentials via the `matter_experimental.set_wifi` service to be able to onboard Wi-Fi devices.
 
-Once done, you can onboard devices by sending the content of a QR code to the `commission` service.
+Once done, you can onboard devices by sending the content of a QR code to the `matter_experimental.commission` service.
 
 ### Using the Python CHIP REPL
 
