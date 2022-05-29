@@ -20,7 +20,7 @@ commission:
 set_wifi:
   name: Set Wi-Fi credentials
   description: >
-    This is needed to set-up new devices.
+    This is needed to set-up new Wi-Fi devices.
   fields:
     network_name:
       name: Network name
@@ -33,3 +33,13 @@ set_wifi:
       selector:
         text:
           type: password
+set_thread:
+  name: Set Thread network operational dataset
+  description: >
+    Required to set-up new Thread devices. Use "ot-ctl dataset active -x" on the OTBR.
+  fields:
+    thread_operation_dataset:
+      name: Thread Operational Dataset
+      required: true
+      selector:
+        text:

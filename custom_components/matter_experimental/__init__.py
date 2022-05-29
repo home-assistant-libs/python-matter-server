@@ -159,3 +159,26 @@ def _async_init_services(hass: HomeAssistant) -> None:
             }
         ),
     )
+
+    async def set_thread(call: ServiceCall) -> None:
+        """Handle set Thread creds."""
+        # Code written assuming single config entry.
+        assert len(hass.data[DOMAIN]) == 1
+
+        client: Client = list(hass.data[DOMAIN].values())[0]["client"]
+        thread_dataset = bytes.fromhex(call.data["thread_operation_dataset"])
+        await client.driver.device_controller.SetThreadOperationalDataset(
+            thread_dataset
+        )
+
+    async_register_admin_service(
+        hass,
+        DOMAIN,
+        "set_thread",
+        set_thread,
+        vol.Schema(
+            {
+                "thread_operation_dataset": str,
+            }
+        ),
+    )

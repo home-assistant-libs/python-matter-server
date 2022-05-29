@@ -23,6 +23,7 @@ async def async_setup_entry(
     client: Client = hass.data[DOMAIN][config_entry.entry_id]["client"]
 
     async_add_entities([MatterLight(client, 4335)])
+    async_add_entities([MatterLight(client, 4445)])
 
 
 class MatterLight(LightEntity):

@@ -28,8 +28,13 @@ class DeviceController:
             },
         )
 
-    def SetThreadOperationalDataset(self, threadOperationalDataset):
-        raise NotImplementedError
+    async def SetThreadOperationalDataset(self, dataset):
+        return await self._async_send_command(
+            "SetThreadOperationalDataset",
+            {
+                "threadOperationalDataset": dataset,
+            },
+        )
 
     async def ResolveNode(self, nodeid: int):
         return await self._async_send_command(

@@ -28,7 +28,7 @@ class CHIPJSONEncoder(json.JSONEncoder):
             # Also, deserialization?
             return obj.value
         elif isinstance(obj, bytes):
-            return base64.b64encode(obj).decode("utf-8")
+            return {"_type": "bytes", "value": base64.b64encode(obj).decode("utf-8") }
         # if is_dataclass(obj):
         #     return asdict(obj)
         # Let the base class default method raise the TypeError
@@ -53,10 +53,13 @@ class CHIPJSONDecoder(json.JSONDecoder):
 
     def object_hook(self, obj: dict):
         if type := obj.get("_type"):
-            cls = self._get_class(type)
-            # Delete the `_type` key as it isn't used in the dataclasses
-            del obj["_type"]
-            return cls(**obj)
+            if type == "bytes":
+                return base64.b64decode(obj["value"])
+            else:
+                cls = self._get_class(type)
+                # Delete the `_type` key as it isn't used in the dataclasses
+                del obj["_type"]
+                return cls(**obj)
         elif cls := obj.get("_class"):
             return self._get_class(cls)
 
