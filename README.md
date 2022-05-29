@@ -61,40 +61,6 @@ pip install .
 
 Instruction on how to create a test device can be found [here](https://nabucasa.github.io/matter-example-apps/).
 
-### Commissioning a test device
-
-Currently the easiest way to set up a test device is using the Python CHIP REPL. Start it by pointing it at the same storage location as the servier will run off:
-
-```
-chip-repl --storagepath=$HOME/.chip-storage/python-kv.json
-```
-
-_On MacOs you will have to run above command with 'sudo' as it requires to interact with BLE._
-
-Inside the Python REPL, configure your Wi-Fi credentials:
-
-```python
-devCtrl.SetWiFiCredentials("SSID", "PW")
-```
-
-Once done, paste the following code to commission the device:
-
-```python
-from chip.setup_payload import SetupPayload
-setupPayload = SetupPayload().ParseQrCode("MT:Y.K9042C00KA0648G00")
-import ctypes
-longDiscriminator = ctypes.c_uint16(int(setupPayload.attributes['Discriminator']))
-pincode = ctypes.c_uint32(int(setupPayload.attributes['SetUpPINCode']))
-
-devCtrl.ConnectBLE(longDiscriminator, pincode, 4335)
-```
-
-If you have installed the lighting app, send the following command to test if it works:
-
-```python
-await devCtrl.SendCommand(4335, 1, Clusters.OnOff.Commands.Toggle())
-```
-
 ### Installing custom component in Home Assistant
 
 Inside your Home Assistant development environment.
@@ -110,6 +76,26 @@ ln -sf ../../../python-matter-server/custom_components/matter_experimental .
 You can now add the custom component via the UI. It's called Matter (experimental):
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=matter_experimental)
+
+### Commissioning a test device
+
+You can use Home Assistant services to commission a test device.
+
+[![Open your Home Assistant instance and show your service developer tools.](https://my.home-assistant.io/badges/developer_services.svg)](https://my.home-assistant.io/redirect/developer_services/)
+
+Each time the server restarts you will need to provide it your Wi-Fi credentials via the `set_wifi` service to be able to onboard Wi-Fi devices.
+
+Once done, you can onboard devices by sending the content of a QR code to the `commission` service.
+
+### Using the Python CHIP REPL
+
+Matter provides their own REPL that allows you to directly interact with the device controller. It's possible to start this and have it use the same storage as the server:
+
+```
+chip-repl --storagepath=$HOME/.chip-storage/python-kv.json
+```
+
+_On MacOs you will have to run above command with 'sudo' as it requires to interact with BLE._
 
 [project-chip]: https://github.com/project-chip/connectedhomeip
 [chip-controller-repl-add-on]: https://github.com/home-assistant/addons-development/tree/master/chip_controller_repl

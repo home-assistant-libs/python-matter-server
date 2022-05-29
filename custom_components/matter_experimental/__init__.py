@@ -2,16 +2,18 @@
 from __future__ import annotations
 import asyncio
 
+import voluptuous as vol
 import logging
 
 from homeassistant.const import CONF_URL, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import Event, HomeAssistant
+from homeassistant.core import Event, HomeAssistant, callback, ServiceCall
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 from homeassistant.helpers import device_registry as dr, aiohttp_client
+from homeassistant.helpers.service import async_register_admin_service
 
 from matter_server.client.client import Client
-from matter_server.client.exceptions import BaseMatterServerError
+from matter_server.client.exceptions import BaseMatterServerError, FailedCommand
 
 from .const import DOMAIN
 
@@ -34,7 +36,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await driver_ready.wait()
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+    if DOMAIN not in hass.data:
+        hass.data[DOMAIN] = {}
+        _async_init_services(hass)
+
+    hass.data[DOMAIN][entry.entry_id] = {
         "client": client,
         "listen_task": listen_task,
     }
@@ -96,3 +102,60 @@ async def _client_listen(
     if should_reload:
         _LOGGER.info("Disconnected from server. Reloading integration")
         hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+
+
+@callback
+def _async_init_services(hass: HomeAssistant) -> None:
+    """Init services."""
+
+    async def commission(call: ServiceCall) -> None:
+        """Handle commissioning."""
+        # Code written assuming single config entry.
+        assert len(hass.data[DOMAIN]) == 1
+
+        client: Client = list(hass.data[DOMAIN].values())[0]["client"]
+
+        try:
+            await client.driver.device_controller.CommissionWithCode(
+                call.data["code"], call.data["node_id"]
+            )
+        except FailedCommand as err:
+            raise HomeAssistantError(str(err)) from err
+
+        # TODO notify that we now know a new device?
+
+    async_register_admin_service(
+        hass,
+        DOMAIN,
+        "commission",
+        commission,
+        vol.Schema(
+            {
+                "code": str,
+                "node_id": int,
+            }
+        ),
+    )
+
+    async def set_wifi(call: ServiceCall) -> None:
+        """Handle set wifi creds."""
+        # Code written assuming single config entry.
+        assert len(hass.data[DOMAIN]) == 1
+
+        client: Client = list(hass.data[DOMAIN].values())[0]["client"]
+        await client.driver.device_controller.SetWiFiCredentials(
+            call.data["network_name"], call.data["password"]
+        )
+
+    async_register_admin_service(
+        hass,
+        DOMAIN,
+        "set_wifi",
+        set_wifi,
+        vol.Schema(
+            {
+                "network_name": str,
+                "password": str,
+            }
+        ),
+    )

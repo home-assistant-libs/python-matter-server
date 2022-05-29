@@ -1,0 +1,35 @@
+commission:
+  name: Commission device
+  description: >
+    Commission a new device
+  fields:
+    code:
+      name: Pairing code
+      required: true
+      selector:
+        text:
+    node_id:
+      name: Node ID
+      description: The identifier for the new node
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 6000
+          mode: box
+set_wifi:
+  name: Set Wi-Fi credentials
+  description: >
+    This is needed to set-up new devices.
+  fields:
+    network_name:
+      name: Network name
+      required: true
+      selector:
+        text:
+    password:
+      name: Password
+      required: true
+      selector:
+        text:
+          type: password

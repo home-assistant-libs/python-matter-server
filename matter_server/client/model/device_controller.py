@@ -10,57 +10,23 @@ class DeviceController:
     def __init__(self, client: client.Client):
         self.client = client
 
-    def ConnectBle(self, bleConnection):
-        raise NotImplementedError
+    async def CommissionWithCode(self, setupPayload: str, nodeid: int):
+        return await self._async_send_command(
+            "CommissionWithCode",
+            {
+                "setupPayload": setupPayload,
+                "nodeid": nodeid,
+            },
+        )
 
-    def ConnectBLE(self, discriminator, setupPinCode, nodeid):
-        raise NotImplementedError
-
-    def CloseBLEConnection(self):
-        raise NotImplementedError
-
-    def CloseSession(self, nodeid):
-        raise NotImplementedError
-
-    def EstablishPASESessionIP(self, ipaddr, setupPinCode, nodeid):
-        raise NotImplementedError
-
-    def Commission(self, nodeid):
-        raise NotImplementedError
-
-    def GetTestCommissionerUsed(self):
-        raise NotImplementedError
-
-    def ResetTestCommissioner(self):
-        raise NotImplementedError
-
-    def SetTestCommissionerSimulateFailureOnStage(self, stage: int):
-        raise NotImplementedError
-
-    def SetTestCommissionerSimulateFailureOnReport(self, stage: int):
-        raise NotImplementedError
-
-    def CheckTestCommissionerCallbacks(self):
-        raise NotImplementedError
-
-    def CheckTestCommissionerPaseConnection(self, nodeid):
-        raise NotImplementedError
-
-    def CommissionIP(self, ipaddr, setupPinCode, nodeid):
-        raise NotImplementedError
-
-    def CommissionThread(
-        self, discriminator, setupPinCode, nodeId, threadOperationalDataset: bytes
-    ):
-        """Commissions a Thread device over BLE"""
-        raise NotImplementedError
-
-    def CommissionWiFi(self, discriminator, setupPinCode, nodeId, ssid, credentials):
-        """Commissions a WiFi device over BLE"""
-        raise NotImplementedError
-
-    def SetWiFiCredentials(self, ssid, credentials):
-        raise NotImplementedError
+    async def SetWiFiCredentials(self, ssid, credentials):
+        return await self._async_send_command(
+            "SetWiFiCredentials",
+            {
+                "ssid": ssid,
+                "credentials": credentials,
+            },
+        )
 
     def SetThreadOperationalDataset(self, threadOperationalDataset):
         raise NotImplementedError

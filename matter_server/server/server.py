@@ -10,6 +10,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class CHIPControllerServer:
+
+    # To track if wifi credentials set this session.
+    wifi_cred_set = False
+
     def __init__(self):
         pass
 

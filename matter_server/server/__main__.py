@@ -6,6 +6,7 @@ import sys
 from dataclasses import asdict, is_dataclass
 from functools import partial
 from pathlib import Path
+from pprint import pformat
 
 import aiohttp
 import aiohttp.web
@@ -43,7 +44,7 @@ def create_error_response(message, code):
     }
 
 
-async def websocket_handler(request, server):
+async def websocket_handler(request, server: CHIPControllerServer):
     _LOGGER.info("New connection...")
     ws = aiohttp.web.WebSocketResponse()
     await ws.prepare(request)
@@ -59,9 +60,13 @@ async def websocket_handler(request, server):
 
     _LOGGER.info("Websocket connection ready")
 
+    async def send_msg(msg):
+        _LOGGER.info("Sending message: %s", pformat(msg))
+        await ws.send_json(msg, dumps=partial(json.dumps, cls=CHIPJSONEncoder))
+
     async for msg in ws:
         try:
-            await handle_message(ws, server, msg)
+            await handle_message(send_msg, server, msg)
         except Exception:
             _LOGGER.exception("Error handling message: %s", msg)
 
@@ -69,7 +74,7 @@ async def websocket_handler(request, server):
     return ws
 
 
-async def handle_message(ws, server, msg):
+async def handle_message(send_msg, server: CHIPControllerServer, msg: dict):
     if msg.type != aiohttp.WSMsgType.TEXT:
         _LOGGER.debug("Ignoring %s", msg)
         return
@@ -78,7 +83,7 @@ async def handle_message(ws, server, msg):
     msg = json.loads(msg.data, cls=CHIPJSONDecoder)
     _LOGGER.info("Deserialized message: %s", msg)
     if msg["command"] == "start_listening":
-        await ws.send_json(
+        await send_msg(
             create_success_response(
                 msg,
                 {
@@ -102,21 +107,28 @@ async def handle_message(ws, server, msg):
     # See if it's an instance method
     instance, _, command = msg["command"].partition(".")
     if not instance or not command:
-        await ws.send_json(create_error_response(msg, "INVALID_COMMAND"))
+        await send_msg(create_error_response(msg, "INVALID_COMMAND"))
         _LOGGER.warning("Unknown command: %s", msg["command"])
         return
 
     if instance == "device_controller":
         method = None
-        if command[0] != "_":
+        args = msg["args"]
+
+        if command == "CommissionWithCode" and not server.wifi_cred_set:
+            await send_msg(create_error_response(msg, "NO_WIFI_CREDENTIALS"))
+            _LOGGER.error("Received commissioning without Wi-Fi set")
+            return
+
+        elif command[0] != "_":
             method = getattr(server.device_controller, command, None)
         if not method:
-            await ws.send_json(create_error_response(msg, "INVALID_COMMAND"))
+            await send_msg(create_error_response(msg, "INVALID_COMMAND"))
             _LOGGER.error("Unknown command: %s", msg["command"])
             return
 
         try:
-            raw_result = method(**msg["args"])
+            raw_result = method(**args)
 
             if asyncio.iscoroutine(raw_result):
                 raw_result = await raw_result
@@ -145,23 +157,19 @@ async def handle_message(ws, server, msg):
             else:
                 result = raw_result
 
-            from pprint import pprint
+            if command == "SetWiFiCredentials" and result == 0:
+                server.wifi_cred_set = True
 
-            pprint(result)
-
-            await ws.send_json(
-                create_success_response(msg, result),
-                dumps=partial(json.dumps, cls=CHIPJSONEncoder),
-            )
+            await send_msg(create_success_response(msg, result))
         except ChipStackError as ex:
-            await ws.send_json(create_error_response(msg, str(ex)))
+            await send_msg(create_error_response(msg, str(ex)))
         except Exception:
             _LOGGER.exception("Error calling method: %s", msg["command"])
-            await ws.send_json(create_error_response(msg, "UNKNOWN"))
+            await send_msg(create_error_response(msg, "UNKNOWN"))
 
     else:
         _LOGGER.warning("Unknown command: %s", msg["command"])
-        await ws.send_json(create_error_response(msg, "INVALID_COMMAND"))
+        await send_msg(create_error_response(msg, "INVALID_COMMAND"))
 
 
 def main() -> int:
