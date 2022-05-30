@@ -8,15 +8,6 @@ commission:
       required: true
       selector:
         text:
-    node_id:
-      name: Node ID
-      description: The identifier for the new node
-      required: true
-      selector:
-        number:
-          min: 0
-          max: 6000
-          mode: box
 set_wifi:
   name: Set Wi-Fi credentials
   description: >
