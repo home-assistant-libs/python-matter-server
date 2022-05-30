@@ -59,7 +59,7 @@ pip install .
 
 ### Creating a test device
 
-Instruction on how to create a test device can be found [here](https://nabucasa.github.io/matter-example-apps/).
+Instruction on how to create a test device can be found [here][example-firmware-site].
 
 ### Installing custom component in Home Assistant
 
@@ -85,7 +85,7 @@ You can use Home Assistant services to commission a test device.
 
 Each time the server restarts you will need to provide it your Wi-Fi credentials via the `matter_experimental.set_wifi` service to be able to onboard Wi-Fi devices.
 
-Once done, you can onboard devices by sending the content of a QR code to the `matter_experimental.commission` service.
+Once done, you can onboard devices by sending the content of a QR code to the `matter_experimental.commission` service. Get the QR code from your test device via [the Matter REPL][example-firmware-site].
 
 ### Using the Python CHIP REPL
 
@@ -100,3 +100,4 @@ _On MacOs you will have to run above command with 'sudo' as it requires to inter
 [project-chip]: https://github.com/project-chip/connectedhomeip
 [chip-controller-repl-add-on]: https://github.com/home-assistant/addons-development/tree/master/chip_controller_repl
 [python-chip-building]: https://github.com/project-chip/connectedhomeip/blob/master/docs/guides/python_chip_controller_building.md
+[example-firmware-site]: https://nabucasa.github.io/matter-example-apps/
