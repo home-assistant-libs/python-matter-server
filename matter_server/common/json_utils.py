@@ -13,6 +13,7 @@ except ImportError:
 
 
 CLUSTER_TYPE_NAMESPACE = "chip.clusters.Objects"
+CLUSTER_TYPE_VENDORIZED_NAMESPACE = "matter_server.vendor"
 
 
 class CHIPJSONEncoder(json.JSONEncoder):
@@ -20,8 +21,11 @@ class CHIPJSONEncoder(json.JSONEncoder):
         if isinstance(obj, Nullable):
             return None
         elif isinstance(obj, type):
+            namespace = obj.__module__
+            if namespace.startswith(CLUSTER_TYPE_VENDORIZED_NAMESPACE):
+                namespace = namespace.removeprefix(f"{CLUSTER_TYPE_VENDORIZED_NAMESPACE}.")
             # Maybe we should restrict this to CHIP cluster types (see deserialization?)
-            return {"_class": f"{obj.__module__}.{obj.__qualname__}"}
+            return {"_class": f"{namespace}.{obj.__qualname__}"}
         elif isinstance(obj, Enum):
             # Works for chip.clusters.Attributes.EventPriority,
             # might need more sophisticated solution for other Enums

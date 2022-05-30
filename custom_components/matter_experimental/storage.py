@@ -81,7 +81,7 @@ class MatterStorage:
     def _data_to_save(self) -> dict:
         data = dict(self.data)
         data["nodes"] = {
-            node_id: node.raw_data() if node else None
+            node_id: node.raw_data if node else None
             for node_id, node in data["nodes"].items()
         }
         return data

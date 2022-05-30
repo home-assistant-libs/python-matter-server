@@ -15,25 +15,17 @@ from operator import itemgetter
 from types import TracebackType
 from typing import Any, DefaultDict, Dict, List, cast
 
-from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
-
+from aiohttp import (ClientSession, ClientWebSocketResponse, WSMsgType,
+                     client_exceptions)
 
 from ..common.json_utils import CHIPJSONEncoder
-from .model.version import VersionInfoDataType
 from .const import MAX_SERVER_SCHEMA_VERSION, MIN_SERVER_SCHEMA_VERSION
 from .event import Event
-from .exceptions import (
-    CannotConnect,
-    ConnectionClosed,
-    ConnectionFailed,
-    FailedCommand,
-    InvalidMessage,
-    InvalidServerVersion,
-    InvalidState,
-    NotConnected,
-)
+from .exceptions import (CannotConnect, ConnectionClosed, ConnectionFailed,
+                         FailedCommand, InvalidMessage, InvalidServerVersion,
+                         InvalidState, NotConnected)
 from .model.driver import Driver
-from .model.version import VersionInfo
+from .model.version import VersionInfo, VersionInfoDataType
 
 SIZE_PARSE_JSON_EXECUTOR = 8192
 
@@ -364,8 +356,8 @@ class Client:
                 }
             )
 
-        event = Event(type=msg["event"]["event"], data=msg["event"])
-        self.driver.receive_event(event)  # type: ignore
+        #event = Event(type=msg["event"]["event"], data=msg["event"])
+        self.driver.receive_event(msg)  # type: ignore
 
     async def _send_json_message(self, message: Dict[str, Any]) -> None:
         """Send a message.

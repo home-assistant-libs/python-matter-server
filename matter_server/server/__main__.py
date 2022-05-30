@@ -10,10 +10,11 @@ from pprint import pformat
 
 import aiohttp
 import aiohttp.web
+from aiohttp import WSMsgType
 from chip.exceptions import ChipStackError
 
-from .server import CHIPControllerServer
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
+from .server import CHIPControllerServer
 
 logging.basicConfig(level=logging.WARN)
 _LOGGER = logging.getLogger(__name__)
@@ -43,6 +44,12 @@ def create_error_response(message, code):
         "errorCode": code,
     }
 
+def create_event_response(subscriptionId, payload):
+    return {
+        "type": "event",
+        "subscriptionId": subscriptionId,
+        "payload": payload,
+    }
 
 async def websocket_handler(request, server: CHIPControllerServer):
     _LOGGER.info("New connection...")
@@ -64,15 +71,35 @@ async def websocket_handler(request, server: CHIPControllerServer):
         _LOGGER.info("Sending message: %s", pformat(msg))
         await ws.send_json(msg, dumps=partial(json.dumps, cls=CHIPJSONEncoder))
 
-    async for msg in ws:
-        try:
-            await handle_message(send_msg, server, msg)
-        except Exception:
-            _LOGGER.exception("Error handling message: %s", msg)
+    event_task = asyncio.create_task(server.get_next_event())
+    ws_task = asyncio.create_task(ws.receive())
+    while True:
+        done, _ = await asyncio.wait([event_task, ws_task], return_when=asyncio.FIRST_COMPLETED)
+
+        if ws_task in done:
+            msg = ws_task.result()
+            if msg.type in (WSMsgType.CLOSE, WSMsgType.CLOSING, WSMsgType.CLOSED):
+                break
+
+            try:
+                await handle_message(send_msg, server, msg)
+            except Exception:
+                _LOGGER.exception("Error handling message: %s", msg)
+            ws_task = asyncio.create_task(ws.receive())
+
+        if event_task in done:
+            event = event_task.result()
+            try:
+                await handle_event(send_msg, event)
+            except Exception:
+                _LOGGER.exception("Error handling event: %s", event)
+            event_task = asyncio.create_task(server.get_next_event())
 
     _LOGGER.info("Websocket connection closed")
     return ws
 
+async def handle_event(send_msg, payload):
+    await send_msg(create_event_response("test", payload))
 
 async def handle_message(send_msg, server: CHIPControllerServer, msg: dict):
     if msg.type != aiohttp.WSMsgType.TEXT:
@@ -119,7 +146,7 @@ async def handle_message(send_msg, server: CHIPControllerServer, msg: dict):
             _LOGGER.warning("Received commissioning without Wi-Fi set")
 
         if command[0] != "_":
-            method = getattr(server.device_controller, command, None)
+            method = server.get_method(command)
         if not method:
             await send_msg(create_error_response(msg, "INVALID_COMMAND"))
             _LOGGER.error("Unknown command: %s", msg["command"])
@@ -171,11 +198,14 @@ async def handle_message(send_msg, server: CHIPControllerServer, msg: dict):
 
 
 def main() -> int:
+    # Create asyncio loop early e.g. for asyncio.Queue creation
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     server = CHIPControllerServer()
     server.setup(STORAGE_PATH)
     app = aiohttp.web.Application()
     app.router.add_route("GET", "/chip_ws", partial(websocket_handler, server=server))
-    aiohttp.web.run_app(app, host=HOST, port=PORT)
+    aiohttp.web.run_app(app, host=HOST, port=PORT, loop=loop)
     server.shutdown()
 
 
