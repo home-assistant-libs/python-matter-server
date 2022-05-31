@@ -20,6 +20,10 @@ class CHIPJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Nullable):
             return None
+        elif isinstance(obj, Exception):
+            # Work around for InteractionModelError/ValueError exceptions currently experiencing in
+            # the ThreadNetworkDiagnostics Cluster
+            return str(obj)
         elif isinstance(obj, type):
             namespace = obj.__module__
             if namespace.startswith(CLUSTER_TYPE_VENDORIZED_NAMESPACE):
