@@ -9,13 +9,17 @@ from homeassistant.core import callback
 from matter_server.client.client import Client
 from matter_server.client.exceptions import BaseMatterServerError, FailedCommand
 
+from .node import MatterNode
+
 if TYPE_CHECKING:
     from .adapter import AbstractMatterAdapter
 
-from .node import MatterNode
-
 
 class Matter:
+
+    next_node_id: int
+    _nodes: dict[int, MatterNode | None]
+
     def __init__(
         self,
         adapter: AbstractMatterAdapter,
@@ -28,7 +32,7 @@ class Matter:
 
     def get_node(self, node_id: int) -> MatterNode:
         """Get a node."""
-        node = self.adapter.get_storage().nodes[node_id]
+        node = self._nodes[node_id]
         if node is None:
             raise ValueError(f"Node {node_id} not interviewed")
         return node
@@ -36,37 +40,55 @@ class Matter:
     def get_nodes(self) -> list[MatterNode]:
         """Get nodes."""
         # node is None if not interviewed
-        return [node for node in self.adapter.get_storage().nodes.values() if node]
+        return [node for node in self._nodes.values() if node]
 
     async def connect(self):
         """Connect to the server."""
+        data = await self.adapter.load_data()
+
+        if data is None:
+            data = {"next_node_id": 4335, "nodes": {}}
+
+        self.next_node_id = data["next_node_id"]
+        # JSON stores dictionary keys as strings, convert to int
+        self._nodes = {
+            int(node_id): MatterNode(self, node_info) if node_info else None
+            for node_id, node_info in data["nodes"].items()
+        }
+
         await self.client.connect()
 
         # TODO verify server is same fabric ID or else reset storage.
         # expected_fabric_id = ...
-
-        await self.adapter.get_storage().async_initialize()
 
     async def disconnect(self):
         """Disconnect from the server."""
         self._listen_task.cancel()
         await self._listen_task
 
-    async def commission(self, code: str) -> None:
+    async def commission(self, code: str):
         """Commission a new device."""
         async with self._commission_lock:
-            node_id = self.adapter.get_storage().next_node_id
+            node_id = self.next_node_id
             await self.client.driver.device_controller.CommissionWithCode(code, node_id)
-            await self.adapter.get_storage().register_node()
+            self._nodes[node_id] = None
+            self.next_node_id += 1
+            # Save right away because we don't want to lose node IDs
+            await self.adapter.save_data(self._data_to_save())
 
         await self._interview_node(node_id)
+
+    def delete_node(self, node_id: int) -> None:
+        """Delete a node."""
+        # TODO notify anyone using MatterNode
+        # TODO can we factory reset node_id so it can be commissioned again?
+        self._nodes.pop(node_id)
+        self.adapter.delay_save_data(self._data_to_save)
 
     async def finish_pending_work(self) -> None:
         """Finish pending work."""
         to_interview = [
-            node_id
-            for node_id, info in self.adapter.get_storage().nodes.items()
-            if info is None
+            node_id for node_id, info in self._nodes.items() if info is None
         ]
         if not to_interview:
             return
@@ -87,8 +109,16 @@ class Matter:
             self.adapter.logger.error("Failed to interview node: %s", err)
             return
 
-        node = self.adapter.get_storage().update_node(node_id, node_info)
-        await self.adapter.setup_node(node)
+        node_info["node_id"] = node_id
+
+        if self._nodes[node_id]:
+            self._nodes[node_id].update_data(node_info)
+        else:
+            self._nodes[node_id] = MatterNode(self, node_info)
+
+        self.adapter.delay_save_data(self._data_to_save)
+
+        await self.adapter.setup_node(self._nodes[node_id])
 
     @callback
     def listen(self):
@@ -109,3 +139,12 @@ class Matter:
             self.adapter.logger.exception("Unexpected exception: %s", err)
 
         await self.adapter.handle_server_disconnected(should_reload)
+
+    def _data_to_save(self) -> dict:
+        return {
+            "next_node_id": self.next_node_id,
+            "nodes": {
+                node_id: node.raw_data if node else None
+                for node_id, node in self._nodes.items()
+            },
+        }

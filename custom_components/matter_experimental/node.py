@@ -1,11 +1,16 @@
 """Matter node."""
 from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .matter import Matter
 
 
 class MatterNode:
     """Matter node."""
 
-    def __init__(self, node_info):
+    def __init__(self, matter: Matter, node_info: dict) -> None:
+        self.matter = matter
         self.raw_data = node_info
 
     @property

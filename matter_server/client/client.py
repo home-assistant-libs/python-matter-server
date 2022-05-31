@@ -231,7 +231,6 @@ class Client:
 
             for future in self._result_futures.values():
                 future.cancel()
-            self._result_futures.clear()
 
             if not self._client.closed:
                 await self._client.close()

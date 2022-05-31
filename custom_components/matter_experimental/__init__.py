@@ -95,10 +95,9 @@ async def async_remove_config_entry_device(
 
     matter: Matter = hass.data[DOMAIN][config_entry.entry_id]
 
-    for node in matter.adapter.get_storage().nodes.values():
+    for node in matter.get_nodes():
         if node.unique_id == unique_id:
-            # TODO move this to Matter.delete_node and also factory reset device?
-            await matter.adapter.get_storage().delete_node(node.node_id)
+            await matter.delete_node(node.node_id)
             break
 
     return True
