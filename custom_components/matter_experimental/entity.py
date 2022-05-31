@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from homeassistant.helpers import entity
 
+from matter_server.client.node import MatterNode
+
 from .const import DOMAIN
-from .storage import MatterNode
 
 
 class MatterEntity(entity.Entity):

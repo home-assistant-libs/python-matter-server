@@ -4,6 +4,7 @@ import os
 import sys
 
 import aiohttp
+
 from matter_server.client.client import Client
 from matter_server.vendor.chip.clusters import Objects as Clusters
 

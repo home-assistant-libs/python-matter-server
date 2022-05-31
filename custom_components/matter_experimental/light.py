@@ -12,10 +12,10 @@ from matter_server.vendor.chip.clusters import Objects as Clusters
 
 from .const import DOMAIN
 from .entity import MatterEntity
-from .storage import MatterNode
 
 if TYPE_CHECKING:
-    from .matter import Matter
+    from matter_server.client.matter import Matter
+    from matter_server.client.node import MatterNode
 
 
 async def async_setup_entry(

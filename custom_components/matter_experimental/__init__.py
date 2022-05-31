@@ -13,10 +13,10 @@ from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.helpers.start import async_at_start
 
 from matter_server.client.exceptions import CannotConnect, FailedCommand
+from matter_server.client.matter import Matter
 
 from .adapter import MatterAdapter
 from .const import DOMAIN
-from .matter import Matter
 
 PLATFORMS = [Platform.LIGHT]
 

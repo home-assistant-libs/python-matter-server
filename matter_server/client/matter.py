@@ -4,10 +4,9 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from homeassistant.core import callback
-
 from matter_server.client.client import Client
-from matter_server.client.exceptions import BaseMatterServerError, FailedCommand
+from matter_server.client.exceptions import (BaseMatterServerError,
+                                             FailedCommand)
 
 from .node import MatterNode
 
@@ -120,7 +119,6 @@ class Matter:
 
         await self.adapter.setup_node(self._nodes[node_id])
 
-    @callback
     def listen(self):
         """Start listening to changes."""
         self._listen_task = asyncio.create_task(self._client_listen())

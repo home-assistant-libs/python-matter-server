@@ -1,8 +1,9 @@
 """Matter to HA adapter."""
 from __future__ import annotations
+
 import logging
 from abc import abstractmethod
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
@@ -11,44 +12,15 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
 
+from matter_server.client.adapter import AbstractMatterAdapter
+
 from .const import DOMAIN
-from .node import MatterNode
+
+if TYPE_CHECKING:
+    from matter_server.client.node import MatterNode
 
 STORAGE_MAJOR_VERSION = 1
 STORAGE_MINOR_VERSION = 0
-
-
-class AbstractMatterAdapter:
-
-    logger: logging.Logger
-
-    @abstractmethod
-    async def load_data(self) -> dict | None:
-        """Load data."""
-
-    @abstractmethod
-    async def save_data(self, data: dict) -> None:
-        """Save data."""
-
-    @abstractmethod
-    def delay_save_data(self, get_data: Callable[[], dict]) -> None:
-        """Save data, but not right now."""
-
-    @abstractmethod
-    def get_server_url(self) -> str:
-        """Return server URL."""
-
-    @abstractmethod
-    def get_client_session(self) -> aiohttp.ClientSession:
-        """Return aiohttp client session."""
-
-    @abstractmethod
-    async def setup_node(self, node: MatterNode) -> None:
-        """Set up an node."""
-
-    @abstractmethod
-    async def handle_server_disconnected(self, should_reload: bool) -> None:
-        """Server disconnected."""
 
 
 class MatterAdapter(AbstractMatterAdapter):
