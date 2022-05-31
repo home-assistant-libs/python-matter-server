@@ -7,10 +7,11 @@ from dataclasses import asdict, is_dataclass
 from functools import partial
 from pathlib import Path
 from pprint import pformat
+import weakref
 
 import aiohttp
 import aiohttp.web
-from aiohttp import WSMsgType
+from aiohttp import WSCloseCode, WSMsgType
 from chip.exceptions import ChipStackError
 
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
@@ -44,6 +45,7 @@ def create_error_response(message, code):
         "errorCode": code,
     }
 
+
 def create_event_response(subscriptionId, payload):
     return {
         "type": "event",
@@ -51,55 +53,65 @@ def create_event_response(subscriptionId, payload):
         "payload": payload,
     }
 
+
 async def websocket_handler(request, server: CHIPControllerServer):
     _LOGGER.info("New connection...")
     ws = aiohttp.web.WebSocketResponse()
     await ws.prepare(request)
 
-    await ws.send_json(
-        {
-            "driverVersion": 0,
-            "serverVersion": 0,
-            "minSchemaVersion": 1,
-            "maxSchemaVersion": 1,
-        }
-    )
+    request.app["websockets"].add(ws)
 
-    _LOGGER.info("Websocket connection ready")
+    try:
+        await ws.send_json(
+            {
+                "driverVersion": 0,
+                "serverVersion": 0,
+                "minSchemaVersion": 1,
+                "maxSchemaVersion": 1,
+            }
+        )
 
-    async def send_msg(msg):
-        _LOGGER.info("Sending message: %s", pformat(msg))
-        await ws.send_json(msg, dumps=partial(json.dumps, cls=CHIPJSONEncoder))
+        _LOGGER.info("Websocket connection ready")
 
-    event_task = asyncio.create_task(server.get_next_event())
-    ws_task = asyncio.create_task(ws.receive())
-    while True:
-        done, _ = await asyncio.wait([event_task, ws_task], return_when=asyncio.FIRST_COMPLETED)
+        async def send_msg(msg):
+            _LOGGER.info("Sending message: %s", pformat(msg))
+            await ws.send_json(msg, dumps=partial(json.dumps, cls=CHIPJSONEncoder))
 
-        if ws_task in done:
-            msg = ws_task.result()
-            if msg.type in (WSMsgType.CLOSE, WSMsgType.CLOSING, WSMsgType.CLOSED):
-                break
+        event_task = asyncio.create_task(server.get_next_event())
+        ws_task = asyncio.create_task(ws.receive())
+        while True:
+            done, _ = await asyncio.wait(
+                [event_task, ws_task], return_when=asyncio.FIRST_COMPLETED
+            )
 
-            try:
-                await handle_message(send_msg, server, msg)
-            except Exception:
-                _LOGGER.exception("Error handling message: %s", msg)
-            ws_task = asyncio.create_task(ws.receive())
+            if ws_task in done:
+                msg = ws_task.result()
+                if msg.type in (WSMsgType.CLOSE, WSMsgType.CLOSING, WSMsgType.CLOSED):
+                    break
 
-        if event_task in done:
-            event = event_task.result()
-            try:
-                await handle_event(send_msg, event)
-            except Exception:
-                _LOGGER.exception("Error handling event: %s", event)
-            event_task = asyncio.create_task(server.get_next_event())
+                try:
+                    await handle_message(send_msg, server, msg)
+                except Exception:
+                    _LOGGER.exception("Error handling message: %s", msg)
+                ws_task = asyncio.create_task(ws.receive())
+
+            if event_task in done:
+                event = event_task.result()
+                try:
+                    await handle_event(send_msg, event)
+                except Exception:
+                    _LOGGER.exception("Error handling event: %s", event)
+                event_task = asyncio.create_task(server.get_next_event())
+    finally:
+        request.app["websockets"].discard(ws)
 
     _LOGGER.info("Websocket connection closed")
     return ws
 
+
 async def handle_event(send_msg, payload):
     await send_msg(create_event_response("test", payload))
+
 
 async def handle_message(send_msg, server: CHIPControllerServer, msg: dict):
     if msg.type != aiohttp.WSMsgType.TEXT:
@@ -204,6 +216,14 @@ def main() -> int:
     server = CHIPControllerServer()
     server.setup(STORAGE_PATH)
     app = aiohttp.web.Application()
+    app["websockets"] = weakref.WeakSet()
+
+    async def on_shutdown(app):
+        for ws in set(app["websockets"]):
+            await ws.close(code=WSCloseCode.GOING_AWAY, message="Server shutdown")
+
+    app.on_shutdown.append(on_shutdown)
+
     app.router.add_route("GET", "/chip_ws", partial(websocket_handler, server=server))
     aiohttp.web.run_app(app, host=HOST, port=PORT, loop=loop)
     server.shutdown()
