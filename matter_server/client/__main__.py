@@ -4,7 +4,6 @@ import os
 import sys
 
 import aiohttp
-
 from matter_server.client.client import Client
 from matter_server.vendor.chip.clusters import Objects as Clusters
 
@@ -46,9 +45,16 @@ async def toggle_happiness(client: Client, is_initialized: asyncio.Event):
         await client.driver.device_controller.ResolveNode(nodeid)
 
         reportingTimingParams = (0, 10)
-        await client.driver.device_controller.Read(
+        subscription = await client.driver.device_controller.Read(
             nodeid, attributes=[Clusters.OnOff], reportInterval=reportingTimingParams
         )
+
+        def subscription_event(data):
+            _LOGGER.info("Received subscription event %s", data)
+
+        subscription.handler = subscription_event
+
+
 
         # This (now) throws exceptions if it fails
         # await client.driver.device_controller.ResolveNode(nodeid)

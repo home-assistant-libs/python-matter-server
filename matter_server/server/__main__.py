@@ -110,7 +110,7 @@ async def websocket_handler(request, server: CHIPControllerServer):
 
 
 async def handle_event(send_msg, payload):
-    await send_msg(create_event_response("test", payload))
+    await send_msg(create_event_response(payload["SubscriptionId"], payload))
 
 
 async def handle_message(send_msg, server: CHIPControllerServer, msg: dict):

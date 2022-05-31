@@ -17,7 +17,7 @@ class Driver:
         self.device_controller = DeviceController(client)
 
     def receive_event(self, event):
-        print("Received event", event)
+        self.device_controller.receive_event(event)
 
     async def send_toggle(self):
         await self._client.async_send_matter_command(

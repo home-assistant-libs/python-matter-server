@@ -7,6 +7,7 @@ from enum import Enum
 try:
     from chip.clusters import Objects as Clusters
     from chip.clusters.Types import Nullable
+    from chip.interaction_model import InteractionModelError
 except ImportError:
     from ..vendor.chip.clusters import Objects as Clusters
     from ..vendor.chip.clusters.Types import Nullable

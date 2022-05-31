@@ -22,11 +22,10 @@ class CHIPControllerServer:
     # To track if wifi credentials set this session.
     wifi_cred_set = False
     device_controller: ChipDeviceController
-    subscriptions: list[Attribute.SubscriptionTransaction]
+    subscriptions: dict[int, Attribute.SubscriptionTransaction]
 
     def __init__(self):
-        self._callback = None
-        self.subscriptions = []
+        self.subscriptions = {}
         self._queue = asyncio.Queue()
 
     def setup(self, storage_path):
@@ -82,9 +81,10 @@ class CHIPControllerServer:
             loop = asyncio.get_event_loop()
 
             # Subscription, we need to keep track on it server side
-            def DeviceAttributeChangeCallback(path: Attribute.TypedAttributePath, transaction: Attribute.SubscriptionTransaction):
-                data = transaction.GetAttribute(path)
+            def DeviceAttributeChangeCallback(path: Attribute.TypedAttributePath, subscription: Attribute.SubscriptionTransaction):
+                data = subscription.GetAttribute(path)
                 value = {
+                    'SubscriptionId': subscription._subscriptionId,
                     'FabridId': fabricid,
                     'NodeId': nodeid,
                     'Endpoint': path.Path.EndpointId,
@@ -92,27 +92,32 @@ class CHIPControllerServer:
                     'Value': data
                 }
                 _LOGGER.info("DeviceAttributeChangeCallback %s", value)
-                #loop.call_soon_threadsafe(functools.partial(self._callback(value)))
+
                 # For some reason, this callback is running in the CHIP Stack thread
                 loop.call_soon_threadsafe(self._queue.put_nowait, value)
 
 
-            subscription = await self.device_controller.Read(nodeid, attributes, dataVersionFilters, events, returnClusterObject, reportInterval, fabricFiltered, keepSubscriptions)
+
+            subscription: Attribute.SubscriptionTransaction = await self.device_controller.Read(
+                nodeid, attributes, dataVersionFilters, events, returnClusterObject, reportInterval, fabricFiltered, keepSubscriptions)
+
+            subscriptionId = subscription._subscriptionId
             _LOGGER.info("Setting callback for subscription of %s", attributes)
             subscription.SetAttributeUpdateCallback(DeviceAttributeChangeCallback)
-            self.subscriptions.append(subscription)
-            return None
-
-    def register_callback(self, callback):
-        self._callback = callback
+            _LOGGER.info(f"SubscriptionId {subscriptionId}")
+            if subscriptionId in self.subscriptions:
+                raise Exception()
+            else:
+                self.subscriptions[subscriptionId] = subscription
+            return subscriptionId
 
     async def get_next_event(self):
         return await self._queue.get()
 
 
     def shutdown(self):
-        for subscription in self.subscriptions:
-            _LOGGER.info("Shutdown subscription %s", subscription)
+        for subscriptionid, subscription in self.subscriptions.items():
+            _LOGGER.info("Shutdown subscription id %d", subscriptionid)
             subscription.Shutdown()
 
         _LOGGER.info("Shutdown CHIP Controller Server")

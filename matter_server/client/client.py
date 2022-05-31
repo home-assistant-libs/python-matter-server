@@ -199,7 +199,10 @@ class Client:
                 {"command": "start_listening", "messageId": START_LISTENING_MESSAGE_ID}
             )
 
-            state_msg = await self._receive_json_or_raise()
+            while True:
+                state_msg = await self._receive_json_or_raise()
+                if state_msg["type"] == "result":
+                    break
 
             if not state_msg["success"]:
                 await self._client.close()
@@ -335,8 +338,13 @@ class Client:
 
             future.set_exception(FailedCommand(msg["messageId"], msg["errorCode"]))
             return
-
-        if msg["type"] != "event":
+        elif msg["type"] == "event":
+            self._logger.debug(
+                "Received event: %s",
+                msg,
+            )
+            self.driver.receive_event(msg["payload"])
+        else:
             # Can't handle
             self._logger.debug(
                 "Received message with unknown type '%s': %s",
@@ -355,8 +363,8 @@ class Client:
                 }
             )
 
-        #event = Event(type=msg["event"]["event"], data=msg["event"])
-        self.driver.receive_event(msg)  # type: ignore
+        # event = Event(type=msg["event"]["event"], data=msg["event"])
+        #self.driver.receive_event(msg)  # type: ignore
 
     async def _send_json_message(self, message: Dict[str, Any]) -> None:
         """Send a message.

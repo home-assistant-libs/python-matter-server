@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import logging
 import typing
+from ast import Subscript
 from typing import TYPE_CHECKING
+
+from matter_server.client.model.subscription import Subscription
+
+_LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .. import client
@@ -10,6 +16,7 @@ if TYPE_CHECKING:
 class DeviceController:
     def __init__(self, client: client.Client):
         self.client = client
+        self.subscriptions: dict[int, Subscription] = {}
 
     async def CommissionWithCode(self, setupPayload: str, nodeid: int):
         return await self._async_send_command(
@@ -217,7 +224,7 @@ class DeviceController:
             When not provided, a read request will be sent.
         """
         # TODO add other args but only if set.
-        return await self._async_send_command(
+        read_result = await self._async_send_command(
             "Read",
             {
                 "nodeid": nodeid,
@@ -230,6 +237,25 @@ class DeviceController:
                 "keepSubscriptions": keepSubscriptions,
             },
         )
+
+        # Is this a subscription?
+        if reportInterval is not None:
+            # Then read result represnts the ID. We will get events with that ID
+            subscription = Subscription(read_result)
+            self.subscriptions[read_result] = subscription
+        return subscription
+
+    def receive_event(self, event):
+        subscriptionId = event["SubscriptionId"]
+        if subscriptionId not in self.subscriptions:
+            _LOGGER.warning("No Subscription object for Subscription Id %d present.", subscriptionId)
+            return
+        subscription = self.subscriptions[subscriptionId]
+        if not subscription.handler:
+            _LOGGER.debug("No Subscription handler.")
+            return
+        subscription.handler(event)
+
 
     async def ReadAttribute(
         self,
