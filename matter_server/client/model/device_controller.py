@@ -6,6 +6,7 @@ from ast import Subscript
 from typing import TYPE_CHECKING
 
 from matter_server.client.model.subscription import Subscription
+from matter_server.vendor.chip.clusters import Objects as ClusterObjects
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -248,14 +249,15 @@ class DeviceController:
     def receive_event(self, event):
         subscriptionId = event["SubscriptionId"]
         if subscriptionId not in self.subscriptions:
-            _LOGGER.warning("No Subscription object for Subscription Id %d present.", subscriptionId)
+            _LOGGER.warning(
+                "No Subscription object for Subscription Id %d present.", subscriptionId
+            )
             return
         subscription = self.subscriptions[subscriptionId]
         if not subscription.handler:
             _LOGGER.debug("No Subscription handler.")
             return
         subscription.handler(event)
-
 
     async def ReadAttribute(
         self,

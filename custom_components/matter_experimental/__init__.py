@@ -5,7 +5,7 @@ import asyncio
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 from homeassistant.helpers import device_registry as dr
@@ -17,8 +17,7 @@ from matter_server.client.matter import Matter
 
 from .adapter import MatterAdapter
 from .const import DOMAIN
-
-PLATFORMS = [Platform.LIGHT]
+from .device_platform import DEVICE_PLATFORM
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -55,7 +54,7 @@ async def _finish_entry_setup(
     await asyncio.gather(
         *[
             hass.config_entries.async_forward_entry_setup(entry, platform)
-            for platform in PLATFORMS
+            for platform in DEVICE_PLATFORM
         ]
     )
     tasks = [matter.adapter.setup_node(node) for node in matter.get_nodes()]
@@ -105,7 +104,9 @@ async def async_remove_config_entry_device(
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_success = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_success = await hass.config_entries.async_unload_platforms(
+        entry, DEVICE_PLATFORM
+    )
 
     if unload_success:
         matter: Matter = hass.data[DOMAIN].pop(entry.entry_id)

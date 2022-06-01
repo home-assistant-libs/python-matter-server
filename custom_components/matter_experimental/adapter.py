@@ -7,14 +7,16 @@ from typing import TYPE_CHECKING, Callable
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_URL
+from homeassistant.const import CONF_URL, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from matter_server.client.adapter import AbstractMatterAdapter
 
 from .const import DOMAIN
+from .device_platform import DEVICE_PLATFORM
 
 if TYPE_CHECKING:
     from matter_server.client.node import MatterNode
@@ -34,6 +36,12 @@ class MatterAdapter(AbstractMatterAdapter):
             DOMAIN,
             minor_version=STORAGE_MINOR_VERSION,
         )
+        self.platform_handlers: dict[Platform, AddEntitiesCallback] = {}
+
+    def register_platform_handler(
+        self, platform: Platform, add_entities: AddEntitiesCallback
+    ) -> None:
+        self.platform_handlers[platform] = add_entities
 
     @abstractmethod
     async def load_data(self) -> dict | None:
@@ -58,7 +66,32 @@ class MatterAdapter(AbstractMatterAdapter):
 
     async def setup_node(self, node: MatterNode) -> None:
         """Set up an node."""
-        self.logger.info("Setting up entities for node %s", node.node_id)
+        self.logger.debug("Setting up entities for node %s", node.node_id)
+        for device in node.devices:
+            created = False
+            device_type = type(device)
+
+            for platform, devices in DEVICE_PLATFORM.items():
+                entity_mapping = devices.get(device_type)
+
+                if entity_mapping is None:
+                    continue
+
+                self.logger.debug(
+                    "Creating %s entity for %s (%s)",
+                    platform,
+                    type(device),
+                    device.device_type,
+                )
+                self.platform_handlers[platform]([entity_mapping.entity_cls(device)])
+                created = True
+
+            if not created:
+                self.logger.warning(
+                    "Found unsupported device %s (%s)",
+                    type(device),
+                    device.device_type,
+                )
 
     async def handle_server_disconnected(self, should_reload: bool) -> None:
         # The entry needs to be reloaded since a new driver state
