@@ -56,12 +56,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, on_hass_stop)
     )
 
-    async def on_hass_start(event: Event) -> None:
-        """Handle Home Assistant start."""
-        await matter.finish_pending_work()
-
-    async_at_start(hass, on_hass_start)
-
     hass.config_entries.async_setup_platforms(entry, DEVICE_PLATFORM)
 
     return True

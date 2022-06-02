@@ -83,19 +83,6 @@ class Matter:
         self._nodes.pop(node_id)
         self.adapter.delay_save_data(self._data_to_save)
 
-    async def finish_pending_work(self) -> None:
-        """Finish pending work."""
-        to_interview = [
-            node_id for node_id, info in self._nodes.items() if info is None
-        ]
-        if not to_interview:
-            return
-
-        self.adapter.logger.info("Nodes that still need interviewing: %s", to_interview)
-
-        for node_id in to_interview:
-            await self._interview_node(node_id)
-
     async def _interview_node(self, node_id: int) -> None:
         """Interview a node."""
         self.adapter.logger.info("Interviewing node %s", node_id)
@@ -146,8 +133,20 @@ class Matter:
         """Handle driver ready."""
         await self.driver_ready.wait()
         tasks = [self.adapter.setup_node(node) for node in self.get_nodes()]
+
         if tasks:
             await asyncio.gather(*tasks)
+
+        to_interview = [
+            node_id for node_id, info in self._nodes.items() if info is None
+        ]
+        if not to_interview:
+            return
+
+        self.adapter.logger.info("Nodes that still need interviewing: %s", to_interview)
+
+        for node_id in to_interview:
+            await self._interview_node(node_id)
 
     def _data_to_save(self) -> dict:
         return {
