@@ -1,5 +1,6 @@
 """Matter to HA adapter."""
 from __future__ import annotations
+import asyncio
 
 import logging
 from abc import abstractmethod
@@ -38,11 +39,14 @@ class MatterAdapter(AbstractMatterAdapter):
             minor_version=STORAGE_MINOR_VERSION,
         )
         self.platform_handlers: dict[Platform, AddEntitiesCallback] = {}
+        self._platforms_set_up = asyncio.Event()
 
     def register_platform_handler(
         self, platform: Platform, add_entities: AddEntitiesCallback
     ) -> None:
         self.platform_handlers[platform] = add_entities
+        if len(self.platform_handlers) == len(DEVICE_PLATFORM):
+            self._platforms_set_up.set()
 
     @abstractmethod
     async def load_data(self) -> dict | None:
@@ -67,6 +71,7 @@ class MatterAdapter(AbstractMatterAdapter):
 
     async def setup_node(self, node: MatterNode) -> None:
         """Set up an node."""
+        await self._platforms_set_up.wait()
         self.logger.debug("Setting up entities for node %s", node.node_id)
 
         basic_info = node.root_device.basic_info

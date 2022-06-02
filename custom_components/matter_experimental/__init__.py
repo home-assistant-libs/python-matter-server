@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import async_timeout
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
@@ -35,31 +36,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ) from err
 
     matter.listen()
-    await matter.driver_ready.wait()
+    try:
+        async with async_timeout.timeout(30):
+            await matter.driver_ready.wait()
+    except asyncio.TimeoutError as err:
+        raise ConfigEntryNotReady("Matter driver not ready") from err
 
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
         _async_init_services(hass)
 
     hass.data[DOMAIN][entry.entry_id] = matter
-
-    hass.async_create_task(_finish_entry_setup(hass, entry, matter))
-
-    return True
-
-
-async def _finish_entry_setup(
-    hass: HomeAssistant, entry: ConfigEntry, matter: Matter
-) -> bool:
-    await asyncio.gather(
-        *[
-            hass.config_entries.async_forward_entry_setup(entry, platform)
-            for platform in DEVICE_PLATFORM
-        ]
-    )
-    tasks = [matter.adapter.setup_node(node) for node in matter.get_nodes()]
-    if tasks:
-        await asyncio.gather(*tasks)
 
     async def on_hass_stop(event: Event) -> None:
         """Handle incoming stop event from Home Assistant."""
@@ -74,6 +61,8 @@ async def _finish_entry_setup(
         await matter.finish_pending_work()
 
     async_at_start(hass, on_hass_start)
+
+    hass.config_entries.async_setup_platforms(entry, DEVICE_PLATFORM)
 
     return True
 

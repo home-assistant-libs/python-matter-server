@@ -25,6 +25,7 @@ class Matter:
         self.client = Client(adapter.get_server_url(), adapter.get_client_session())
         self.driver_ready = asyncio.Event()
         self._listen_task = None
+        self._handle_driver_ready_task = None
         self._commission_lock = asyncio.Lock()
 
     def get_node(self, node_id: int) -> MatterNode:
@@ -120,6 +121,9 @@ class Matter:
     def listen(self):
         """Start listening to changes."""
         self._listen_task = asyncio.create_task(self._client_listen())
+        self._handle_driver_ready_task = asyncio.create_task(
+            self._handle_driver_ready()
+        )
 
     async def _client_listen(self) -> None:
         """Listen with the client."""
@@ -134,7 +138,16 @@ class Matter:
             # We need to guard against unknown exceptions to not crash this task.
             self.adapter.logger.exception("Unexpected exception: %s", err)
 
+        self._handle_driver_ready_task.cancel()
+
         await self.adapter.handle_server_disconnected(should_reload)
+
+    async def _handle_driver_ready(self) -> None:
+        """Handle driver ready."""
+        await self.driver_ready.wait()
+        tasks = [self.adapter.setup_node(node) for node in self.get_nodes()]
+        if tasks:
+            await asyncio.gather(*tasks)
 
     def _data_to_save(self) -> dict:
         return {
