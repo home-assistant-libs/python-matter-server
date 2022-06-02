@@ -16,8 +16,6 @@ class MatterDevice:
     """Base class for Matter devices."""
 
     device_type: int
-    cluster_subscribes: list[Clusters.Cluster] = []
-    _subscription: Subscription | None = None
 
     def __init_subclass__(cls, *, device_type: int, **kwargs: Any) -> None:
         """Initialize a subclass, register if possible."""
@@ -31,7 +29,7 @@ class MatterDevice:
         self.node = node
         self.device_revision = device_revision
         self.endpoint_id = endpoint_id
-        self._on_update_listeners: list[SubscriberType] = []
+        self._on_update_listener: SubscriberType | None = None
 
     @property
     def data(self) -> dict:
@@ -52,27 +50,29 @@ class MatterDevice:
             timedRequestTimeoutMs=timedRequestTimeoutMs,
         )
 
-    async def subscribe_updates(self, subscriber: SubscriberType) -> Callable[[], None]:
+    async def subscribe_updates(
+        self, subscribe_attributes: list, subscriber: SubscriberType
+    ) -> Callable[[], None]:
         """Subscribe to updates."""
-        if not self.cluster_subscribes:
-            raise RuntimeError("No clusters to subscribe to")
+        if self._on_update_listener is not None:
+            raise RuntimeError("Cannot subscribe twice!")
 
-        self._on_update_listeners.append(subscriber)
+        self._on_update_listener = subscriber
 
-        if len(self._on_update_listeners) == 1:
-            # First subscriber, subscribe to updates
+        reporting_timing_params = (0, 10)
+        subscription = await self.node.matter.client.driver.device_controller.Read(
+            self.node.node_id,
+            attributes=subscribe_attributes,
+            reportInterval=reporting_timing_params,
+        )
+        subscription.handler = self._receive_event
 
-            reporting_timing_params = (0, 10)
-            self._subscription = (
-                await self.node.matter.client.driver.device_controller.Read(
-                    self.node.node_id,
-                    attributes=self.cluster_subscribes,
-                    reportInterval=reporting_timing_params,
-                )
-            )
-            self._subscription.handler = self._receive_event
+        async def unsubscribe() -> None:
+            self._on_update_listener = None
+            subscription.handler = None
+            # TODO actually unsubscribe
 
-        return lambda: self._on_update_listeners.remove(subscriber)
+        return unsubscribe
 
     def _receive_event(self, event):
         self.node.matter.adapter.logger.debug("Received subscription event %s", event)
@@ -113,19 +113,8 @@ class MatterDevice:
 
         self.data[cluster_name][attribute] = event["Value"]
 
-        for listener in self._on_update_listeners:
-            listener()
-
-    def _unsubscribe_listener(self, subscriber: SubscriberType) -> None:
-        """Unsubscribe a listener."""
-        self._on_update_listeners.remove(subscriber)
-
-        if self._on_update_listeners:
-            return
-
-        # No more listeners, unsubscribe
-        self._subscription = None
-        # TODO unsubscribe from server
+        if self._on_update_listener:
+            self._on_update_listener()
 
 
 class RootDevice(MatterDevice, device_type=22):
@@ -147,13 +136,9 @@ class RootDevice(MatterDevice, device_type=22):
 class OnOffLight(MatterDevice, device_type=256):
     """On/Off light."""
 
-    cluster_subscribes = [Clusters.OnOff]
-
 
 class DimmableLight(MatterDevice, device_type=257):
     """Dimmable light."""
-
-    cluster_subscribes = [Clusters.OnOff, Clusters.LevelControl]
 
 
 class OnOffLightSwitch(MatterDevice, device_type=259):

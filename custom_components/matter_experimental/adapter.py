@@ -92,9 +92,9 @@ class MatterAdapter(AbstractMatterAdapter):
             device_type = type(device)
 
             for platform, devices in DEVICE_PLATFORM.items():
-                entities_mapping = devices.get(device_type)
+                device_mappings = devices.get(device_type)
 
-                if entities_mapping is None:
+                if device_mappings is None:
                     continue
 
                 self.logger.debug(
@@ -104,13 +104,13 @@ class MatterAdapter(AbstractMatterAdapter):
                     device.device_type,
                 )
 
-                if not isinstance(entities_mapping, list):
-                    entities_mapping = [entities_mapping]
+                if not isinstance(device_mappings, list):
+                    device_mappings = [device_mappings]
 
                 self.platform_handlers[platform](
                     [
-                        entity_mapping.entity_cls(device)
-                        for entity_mapping in entities_mapping
+                        device_mapping.entity_cls(device, device_mapping)
+                        for device_mapping in device_mappings
                     ]
                 )
                 created = True

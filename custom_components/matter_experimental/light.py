@@ -40,10 +40,12 @@ class MatterLight(
     _attr_is_on = False
 
     def __init__(
-        self, device: matter_devices.OnOffLight | matter_devices.DimmableLight
+        self,
+        device: matter_devices.OnOffLight | matter_devices.DimmableLight,
+        mapping: DeviceMapping,
     ) -> None:
         """Initialize the light."""
-        super().__init__(device)
+        super().__init__(device, mapping)
         node = device.node
         self._attr_unique_id = node.unique_id
         self._attr_name = node.name or f"Matter Light {node.node_id}"
@@ -100,6 +102,15 @@ class MatterLight(
 DEVICE_ENTITY: dict[
     matter_devices.MatterDevice, DeviceMapping | list[DeviceMapping]
 ] = {
-    matter_devices.OnOffLight: DeviceMapping(entity_cls=MatterLight),
-    matter_devices.DimmableLight: DeviceMapping(entity_cls=MatterLight),
+    matter_devices.OnOffLight: DeviceMapping(
+        entity_cls=MatterLight,
+        subscribe_attributes=(Clusters.OnOff.Attributes.OnOff,),
+    ),
+    matter_devices.DimmableLight: DeviceMapping(
+        entity_cls=MatterLight,
+        subscribe_attributes=(
+            Clusters.OnOff.Attributes.OnOff,
+            Clusters.LevelControl.Attributes.CurrentLevel,
+        ),
+    ),
 }
