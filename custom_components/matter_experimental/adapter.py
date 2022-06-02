@@ -72,9 +72,9 @@ class MatterAdapter(AbstractMatterAdapter):
             device_type = type(device)
 
             for platform, devices in DEVICE_PLATFORM.items():
-                entity_mapping = devices.get(device_type)
+                entities_mapping = devices.get(device_type)
 
-                if entity_mapping is None:
+                if entities_mapping is None:
                     continue
 
                 self.logger.debug(
@@ -83,7 +83,16 @@ class MatterAdapter(AbstractMatterAdapter):
                     type(device),
                     device.device_type,
                 )
-                self.platform_handlers[platform]([entity_mapping.entity_cls(device)])
+
+                if not isinstance(entities_mapping, list):
+                    entities_mapping = [entities_mapping]
+
+                self.platform_handlers[platform](
+                    [
+                        entity_mapping.entity_cls(device)
+                        for entity_mapping in entities_mapping
+                    ]
+                )
                 created = True
 
             if not created:
@@ -97,7 +106,7 @@ class MatterAdapter(AbstractMatterAdapter):
         # The entry needs to be reloaded since a new driver state
         # will be acquired on reconnect.
         # All model instances will be replaced when the new state is acquired.
-        if should_reload:
+        if should_reload and self.hass.is_running:
             self.logger.info("Disconnected from server. Reloading")
             self.hass.async_create_task(
                 self.hass.config_entries.async_reload(self.config_entry.entry_id)

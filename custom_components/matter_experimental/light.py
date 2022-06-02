@@ -100,7 +100,9 @@ class MatterLight(
             )
 
 
-DEVICE_ENTITY: dict[matter_devices.MatterDevice, DeviceMapping] = {
+DEVICE_ENTITY: dict[
+    matter_devices.MatterDevice, DeviceMapping | list[DeviceMapping]
+] = {
     matter_devices.OnOffLight: DeviceMapping(entity_cls=MatterLight),
     matter_devices.DimmableLight: DeviceMapping(entity_cls=MatterLight),
 }
