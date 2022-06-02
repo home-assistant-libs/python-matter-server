@@ -1,11 +1,10 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable
 
-from matter_server.vendor.chip.clusters import Objects as Clusters
+from matter_server.vendor.chip.clusters import Objects as all_clusters
 
 if TYPE_CHECKING:
     from .node import MatterNode
-    from .subscription import Subscription
 
 DEVICE_TYPES = {}
 
@@ -16,6 +15,8 @@ class MatterDevice:
     """Base class for Matter devices."""
 
     device_type: int
+    clusters: set[type[all_clusters.Cluster]] = set()
+    optional_clusters: set[type[all_clusters.Cluster]] = set()
 
     def __init_subclass__(cls, *, device_type: int, **kwargs: Any) -> None:
         """Initialize a subclass, register if possible."""
@@ -37,7 +38,7 @@ class MatterDevice:
 
     async def send_command(
         self,
-        payload: Clusters.ClusterCommand,
+        payload: all_clusters.ClusterCommand,
         responseType=None,
         timedRequestTimeoutMs: int = None,
     ):
@@ -68,6 +69,8 @@ class MatterDevice:
         #     "_type": "chip.clusters.Attribute.AsyncReadTransaction.ReadResponse",
         # }
 
+        self.node.matter.adapter.logger.debug("Read result: %s", result)
+
         updated_data = result["attributes"].get(str(self.endpoint_id))
 
         for cluster_name, info in updated_data.items():
@@ -76,7 +79,7 @@ class MatterDevice:
             info = {key[0].lower() + key[1:]: value for key, value in info.items()}
             for attribute, value in info.items():
                 self.node.matter.adapter.logger.debug(
-                    "Updating node %s, endpoint %s, %s: %s=%s",
+                    "node %s, endpoint %s: updating %s, set %s=%s",
                     self.node.node_id,
                     self.endpoint_id,
                     cluster_name,
@@ -85,14 +88,19 @@ class MatterDevice:
                 )
                 self.data[cluster_name][attribute] = value
 
-        self.node.matter.adapter.logger.debug("Read result: %s", result)
-
     async def subscribe_updates(
         self, subscribe_attributes: list, subscriber: SubscriberType
     ) -> Callable[[], None]:
         """Subscribe to updates."""
         if self._on_update_listener is not None:
             raise RuntimeError("Cannot subscribe twice!")
+
+        self.node.matter.adapter.logger.debug(
+            "node %s, endpoint %s: subscribing to %s",
+            self.node.node_id,
+            self.endpoint_id,
+            subscribe_attributes,
+        )
 
         self._on_update_listener = subscriber
 
@@ -114,7 +122,12 @@ class MatterDevice:
         return unsubscribe
 
     def _receive_event(self, event):
-        self.node.matter.adapter.logger.debug("Received subscription event %s", event)
+        self.node.matter.adapter.logger.debug(
+            "node %s, endpoint %s: received subscription event %s",
+            self.node.node_id,
+            self.endpoint_id,
+            event,
+        )
 
         # 2022-06-01 23:19:08 DEBUG (MainThread) [custom_components.matter_experimental.adapter] Received subscription event
         # {
@@ -175,10 +188,32 @@ class RootDevice(MatterDevice, device_type=22):
 class OnOffLight(MatterDevice, device_type=256):
     """On/Off light."""
 
+    clusters = {
+        all_clusters.OnOff,
+    }
+    optional_clusters = {all_clusters.LevelControl}
+
 
 class DimmableLight(MatterDevice, device_type=257):
     """Dimmable light."""
 
+    clusters = {all_clusters.OnOff, all_clusters.LevelControl}
+
 
 class OnOffLightSwitch(MatterDevice, device_type=259):
     """On/Off Light Switch."""
+
+
+class OnOffPlugInUnit(MatterDevice, device_type=266):
+    """On/Off Plug-In Unit."""
+
+    clusters = {
+        all_clusters.OnOff,
+    }
+    optional_clusters = {all_clusters.LevelControl}
+
+
+class DimmablePlugInUnit(MatterDevice, device_type=267):
+    """Dimmable Plug-In Unit."""
+
+    clusters = {all_clusters.OnOff, all_clusters.LevelControl}

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .. import client
 
-from matter_server.vendor.chip.clusters import Objects as Clusters
+from matter_server.vendor.chip.clusters import Objects as clusters
 
 from .device_controller import DeviceController
 
@@ -21,5 +21,5 @@ class Driver:
 
     async def send_toggle(self):
         await self._client.async_send_matter_command(
-            nodeid=4335, endpoint=1, payload=Clusters.OnOff.Commands.Toggle()
+            nodeid=4335, endpoint=1, payload=clusters.OnOff.Commands.Toggle()
         )

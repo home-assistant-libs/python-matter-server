@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import percentage
 
-from matter_server.vendor.chip.clusters import Objects as Clusters
+from matter_server.vendor.chip.clusters import Objects as clusters
 from matter_server.client.model import device as matter_devices
 
 from .const import DOMAIN
@@ -50,16 +50,14 @@ class MatterLight(
         self._attr_unique_id = node.unique_id
         self._attr_name = node.name or f"Matter Light {node.node_id}"
         self._update_from_device()
-        self._attr_supported_color_modes = [ColorMode.BRIGHTNESS]
+        if self.has_cluster(clusters.LevelControl):
+            self._attr_supported_color_modes = [ColorMode.BRIGHTNESS]
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn light on."""
-        if (
-            self._device.device_type != matter_devices.DimmableLight.device_type
-            or ATTR_BRIGHTNESS not in kwargs
-        ):
+        if ATTR_BRIGHTNESS not in kwargs or not self.has_cluster(clusters.LevelControl):
             await self._device.send_command(
-                payload=Clusters.OnOff.Commands.On(),
+                payload=clusters.OnOff.Commands.On(),
             )
             return
 
@@ -73,13 +71,13 @@ class MatterLight(
         )
 
         await self._device.send_command(
-            payload=Clusters.LevelControl.Commands.MoveToLevelWithOnOff(level=level)
+            payload=clusters.LevelControl.Commands.MoveToLevelWithOnOff(level=level)
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn light off."""
         await self._device.send_command(
-            payload=Clusters.OnOff.Commands.Off(),
+            payload=clusters.OnOff.Commands.Off(),
         )
 
     @callback
@@ -87,7 +85,7 @@ class MatterLight(
         """Update from device."""
         self._attr_is_on = self._device.data["OnOff"]["onOff"]
 
-        if self._device.device_type == matter_devices.DimmableLight.device_type:
+        if self.has_cluster(clusters.LevelControl):
             level_control = self._device.data["LevelControl"]
             # Convert brightness to HA = 0..255
             self._attr_brightness = percentage.percentage_to_ranged_value(
@@ -104,13 +102,20 @@ DEVICE_ENTITY: dict[
 ] = {
     matter_devices.OnOffLight: DeviceMapping(
         entity_cls=MatterLight,
-        subscribe_attributes=(Clusters.OnOff.Attributes.OnOff,),
+        subscribe_attributes=(clusters.OnOff.Attributes.OnOff,),
     ),
     matter_devices.DimmableLight: DeviceMapping(
         entity_cls=MatterLight,
         subscribe_attributes=(
-            Clusters.OnOff.Attributes.OnOff,
-            Clusters.LevelControl.Attributes.CurrentLevel,
+            clusters.OnOff.Attributes.OnOff,
+            clusters.LevelControl.Attributes.CurrentLevel,
+        ),
+    ),
+    matter_devices.DimmablePlugInUnit: DeviceMapping(
+        entity_cls=MatterLight,
+        subscribe_attributes=(
+            clusters.OnOff.Attributes.OnOff,
+            clusters.LevelControl.Attributes.CurrentLevel,
         ),
     ),
 }

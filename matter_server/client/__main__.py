@@ -5,7 +5,7 @@ import sys
 
 import aiohttp
 from matter_server.client.client import Client
-from matter_server.vendor.chip.clusters import Objects as Clusters
+from matter_server.vendor.chip.clusters import Objects as clusters
 
 logging.basicConfig(level=logging.DEBUG)
 _LOGGER = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ async def toggle_happiness(client: Client, is_initialized: asyncio.Event):
 
         reportingTimingParams = (0, 10)
         subscription = await client.driver.device_controller.Read(
-            nodeid, attributes=[Clusters.OnOff], reportInterval=reportingTimingParams
+            nodeid, attributes=[clusters.OnOff], reportInterval=reportingTimingParams
         )
 
         def subscription_event(data):
@@ -54,13 +54,11 @@ async def toggle_happiness(client: Client, is_initialized: asyncio.Event):
 
         subscription.handler = subscription_event
 
-
-
         # This (now) throws exceptions if it fails
         # await client.driver.device_controller.ResolveNode(nodeid)
 
         # node = await client.driver.device_controller.Read(
-        #     nodeid, attributes=[Clusters.OnOff], events="*", returnClusterObject=True
+        #     nodeid, attributes=[clusters.OnOff], events="*", returnClusterObject=True
         # )
         # await asyncio.sleep(1)
 
@@ -75,7 +73,7 @@ async def toggle_happiness(client: Client, is_initialized: asyncio.Event):
         while True:
             await asyncio.sleep(5)
             await client.driver.device_controller.SendCommand(
-                nodeid=nodeid, endpoint=1, payload=Clusters.OnOff.Commands.Toggle()
+                nodeid=nodeid, endpoint=1, payload=clusters.OnOff.Commands.Toggle()
             )
     except Exception:
         _LOGGER.exception("No more Happiness")
