@@ -35,6 +35,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "Unknown error connecting to the Matter server"
         ) from err
 
+    async def on_hass_stop(event: Event) -> None:
+        """Handle incoming stop event from Home Assistant."""
+        await matter.disconnect()
+
+    entry.async_on_unload(
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, on_hass_stop)
+    )
+
     matter.listen()
     try:
         async with async_timeout.timeout(30):
@@ -47,14 +55,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _async_init_services(hass)
 
     hass.data[DOMAIN][entry.entry_id] = matter
-
-    async def on_hass_stop(event: Event) -> None:
-        """Handle incoming stop event from Home Assistant."""
-        await matter.disconnect()
-
-    entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, on_hass_stop)
-    )
 
     hass.config_entries.async_setup_platforms(entry, DEVICE_PLATFORM)
 
