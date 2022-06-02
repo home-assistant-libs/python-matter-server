@@ -20,6 +20,9 @@ class MatterEntity(entity.Entity):
     def __init__(self, device: MatterDevice, mapping: DeviceMapping) -> None:
         self._device = device
         self._device_mapping = mapping
+        self._attr_unique_id = (
+            f"{device.node.unique_id}-{device.endpoint_id}-{device.device_type}"
+        )
 
     @property
     def device_info(self) -> entity.DeviceInfo | None:
@@ -31,6 +34,7 @@ class MatterEntity(entity.Entity):
         await super().async_added_to_hass()
 
         if not self._device_mapping.subscribe_attributes:
+            self._update_from_device()
             return
 
         # Detect the clusters that this device has

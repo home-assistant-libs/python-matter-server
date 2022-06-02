@@ -31,25 +31,15 @@ async def async_setup_entry(
     matter.adapter.register_platform_handler(Platform.LIGHT, async_add_entities)
 
 
-class MatterLight(
-    MatterEntity,
-    LightEntity,
-):
+class MatterLight(MatterEntity, LightEntity):
     """Representation of a Matter light."""
 
-    _attr_is_on = False
-
     def __init__(
-        self,
-        device: matter_devices.OnOffLight | matter_devices.DimmableLight,
-        mapping: DeviceMapping,
+        self, device: matter_devices.MatterDevice, mapping: DeviceMapping
     ) -> None:
         """Initialize the light."""
         super().__init__(device, mapping)
-        node = device.node
-        self._attr_unique_id = node.unique_id
-        self._attr_name = node.name or f"Matter Light {node.node_id}"
-        self._update_from_device()
+        self._attr_name = device.node.name or f"Matter Light {device.node.node_id}"
         if self.has_cluster(clusters.LevelControl):
             self._attr_supported_color_modes = [ColorMode.BRIGHTNESS]
 
