@@ -88,25 +88,19 @@ class MatterLight(MatterEntity, LightEntity):
         self.async_write_ha_state()
 
 
+DEFAULT_MAPPING = DeviceMapping(
+    entity_cls=MatterLight,
+    subscribe_attributes=(
+        clusters.OnOff.Attributes.OnOff,
+        clusters.LevelControl.Attributes.CurrentLevel,
+    ),
+)
+
+
 DEVICE_ENTITY: dict[
     matter_devices.MatterDevice, DeviceMapping | list[DeviceMapping]
 ] = {
-    matter_devices.OnOffLight: DeviceMapping(
-        entity_cls=MatterLight,
-        subscribe_attributes=(clusters.OnOff.Attributes.OnOff,),
-    ),
-    matter_devices.DimmableLight: DeviceMapping(
-        entity_cls=MatterLight,
-        subscribe_attributes=(
-            clusters.OnOff.Attributes.OnOff,
-            clusters.LevelControl.Attributes.CurrentLevel,
-        ),
-    ),
-    matter_devices.DimmablePlugInUnit: DeviceMapping(
-        entity_cls=MatterLight,
-        subscribe_attributes=(
-            clusters.OnOff.Attributes.OnOff,
-            clusters.LevelControl.Attributes.CurrentLevel,
-        ),
-    ),
+    matter_devices.OnOffLight: DEFAULT_MAPPING,
+    matter_devices.DimmableLight: DEFAULT_MAPPING,
+    matter_devices.DimmablePlugInUnit: DEFAULT_MAPPING,
 }
