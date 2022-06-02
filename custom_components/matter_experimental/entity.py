@@ -7,7 +7,6 @@ from homeassistant.core import callback
 from homeassistant.helpers import entity
 
 from matter_server.client.model.device import MatterDevice
-from matter_server.vendor.chip.clusters import Objects as clusters
 
 from .const import DOMAIN
 from .device_platform_helper import DeviceMapping
@@ -64,16 +63,6 @@ class MatterEntity(entity.Entity):
         """Run when entity will be removed from hass."""
         if self._unsubscribe is not None:
             await self._unsubscribe()
-
-    def has_cluster(self, cluster: type[clusters.Cluster]) -> bool:
-        """Check if device has a specific cluster."""
-        if cluster in self._device.clusters:
-            return True
-
-        if cluster not in self._device.optional_clusters:
-            return False
-
-        return cluster.__name__ in self._device.data
 
     @callback
     def _update_from_device(self) -> None:

@@ -40,12 +40,14 @@ class MatterLight(MatterEntity, LightEntity):
         """Initialize the light."""
         super().__init__(device, mapping)
         self._attr_name = device.node.name or f"Matter Light {device.node.node_id}"
-        if self.has_cluster(clusters.LevelControl):
+        if self._device.has_cluster(clusters.LevelControl):
             self._attr_supported_color_modes = [ColorMode.BRIGHTNESS]
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn light on."""
-        if ATTR_BRIGHTNESS not in kwargs or not self.has_cluster(clusters.LevelControl):
+        if ATTR_BRIGHTNESS not in kwargs or not self._device.has_cluster(
+            clusters.LevelControl
+        ):
             await self._device.send_command(
                 payload=clusters.OnOff.Commands.On(),
             )
@@ -75,7 +77,7 @@ class MatterLight(MatterEntity, LightEntity):
         """Update from device."""
         self._attr_is_on = self._device.data["OnOff"]["onOff"]
 
-        if self.has_cluster(clusters.LevelControl):
+        if self._device.has_cluster(clusters.LevelControl):
             level_control = self._device.data["LevelControl"]
             # Convert brightness to HA = 0..255
             self._attr_brightness = percentage.percentage_to_ranged_value(
@@ -103,4 +105,12 @@ DEVICE_ENTITY: dict[
     matter_devices.OnOffLight: DEFAULT_MAPPING,
     matter_devices.DimmableLight: DEFAULT_MAPPING,
     matter_devices.DimmablePlugInUnit: DEFAULT_MAPPING,
+    matter_devices.OnOffPlugInUnit: DeviceMapping(
+        entity_cls=MatterLight,
+        subscribe_attributes=(
+            clusters.OnOff.Attributes.OnOff,
+            clusters.LevelControl.Attributes.CurrentLevel,
+        ),
+        ignore_device=lambda device: not device.has_cluster(clusters.LevelControl),
+    ),
 }

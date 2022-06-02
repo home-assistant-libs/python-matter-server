@@ -73,5 +73,6 @@ DEVICE_ENTITY: dict[
             key=None,
             device_class=SwitchDeviceClass.OUTLET,
         ),
+        ignore_device=lambda device: device.has_cluster(clusters.LevelControl),
     ),
 }

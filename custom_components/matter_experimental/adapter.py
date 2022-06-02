@@ -102,22 +102,26 @@ class MatterAdapter(AbstractMatterAdapter):
                 if device_mappings is None:
                     continue
 
-                self.logger.debug(
-                    "Creating %s entity for %s (%s)",
-                    platform,
-                    type(device),
-                    hex(device.device_type),
-                )
-
                 if not isinstance(device_mappings, list):
                     device_mappings = [device_mappings]
 
-                self.platform_handlers[platform](
-                    [
-                        device_mapping.entity_cls(device, device_mapping)
-                        for device_mapping in device_mappings
-                    ]
-                )
+                entities = []
+                for device_mapping in device_mappings:
+                    if (
+                        device_mapping.ignore_device is not None
+                        and device_mapping.ignore_device(device)
+                    ):
+                        continue
+
+                    self.logger.debug(
+                        "Creating %s entity for %s (%s)",
+                        platform,
+                        type(device),
+                        hex(device.device_type),
+                    )
+                    entities.append(device_mapping.entity_cls(device, device_mapping))
+
+                self.platform_handlers[platform](entities)
                 created = True
 
             if not created:

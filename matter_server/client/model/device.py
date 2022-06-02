@@ -36,6 +36,16 @@ class MatterDevice:
     def data(self) -> dict:
         return self.node.raw_data["attributes"][str(self.endpoint_id)]
 
+    def has_cluster(self, cluster: type[clusters.Cluster]) -> bool:
+        """Check if device has a specific cluster."""
+        if cluster in self.clusters:
+            return True
+
+        if cluster not in self.optional_clusters:
+            return False
+
+        return cluster.__name__ in self.data
+
     async def send_command(
         self,
         payload: all_clusters.ClusterCommand,
