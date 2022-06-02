@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from .device import DEVICE_TYPES, MatterDevice
 
 if TYPE_CHECKING:
-    from .matter import Matter
+    from ..matter import Matter
 
 
 class MatterNode:

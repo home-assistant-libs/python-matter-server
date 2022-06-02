@@ -20,7 +20,7 @@ from .const import DOMAIN
 from .device_platform import DEVICE_PLATFORM
 
 if TYPE_CHECKING:
-    from matter_server.client.node import MatterNode
+    from matter_server.client.model.node import MatterNode
 
 STORAGE_MAJOR_VERSION = 1
 STORAGE_MINOR_VERSION = 0

@@ -7,7 +7,7 @@ from typing import Callable
 
 import aiohttp
 
-from .node import MatterNode
+from .model.node import MatterNode
 
 
 class AbstractMatterAdapter:

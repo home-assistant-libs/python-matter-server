@@ -7,7 +7,7 @@ from .device_platform_helper import DeviceMapping
 from .light import DEVICE_ENTITY as LIGHT_DEVICE_ENTITY
 
 if TYPE_CHECKING:
-    from matter_server.client import device as matter_devices
+    from matter_server.client.model import device as matter_devices
 
 
 DEVICE_PLATFORM: dict[

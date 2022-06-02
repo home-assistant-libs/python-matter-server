@@ -11,7 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import percentage
 
 from matter_server.vendor.chip.clusters import Objects as Clusters
-from matter_server.client import device as matter_devices
+from matter_server.client.model import device as matter_devices
 
 from .const import DOMAIN
 from .entity import MatterEntity

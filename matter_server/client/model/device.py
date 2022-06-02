@@ -5,7 +5,7 @@ from matter_server.vendor.chip.clusters import Objects as Clusters
 
 if TYPE_CHECKING:
     from .node import MatterNode
-    from .model.subscription import Subscription
+    from .subscription import Subscription
 
 DEVICE_TYPES = {}
 

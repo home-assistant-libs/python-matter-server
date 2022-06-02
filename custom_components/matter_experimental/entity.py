@@ -4,7 +4,7 @@ from __future__ import annotations
 from homeassistant.core import callback
 from homeassistant.helpers import entity
 
-from matter_server.client.device import MatterDevice
+from matter_server.client.model.device import MatterDevice
 
 from .const import DOMAIN
 

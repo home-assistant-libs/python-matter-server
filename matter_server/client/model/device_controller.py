@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import typing
-from ast import Subscript
 from typing import TYPE_CHECKING
 
 from matter_server.client.model.subscription import Subscription

@@ -4,10 +4,9 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from matter_server.client.client import Client
-from matter_server.client.exceptions import BaseMatterServerError, FailedCommand
-
-from .node import MatterNode
+from .client import Client
+from .exceptions import BaseMatterServerError, FailedCommand
+from .model.node import MatterNode
 
 if TYPE_CHECKING:
     from .adapter import AbstractMatterAdapter
