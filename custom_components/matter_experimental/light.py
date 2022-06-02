@@ -85,6 +85,7 @@ class MatterLight(MatterEntity, LightEntity):
                     level_control["currentLevel"],
                 ),
             )
+        self.async_write_ha_state()
 
 
 DEVICE_ENTITY: dict[

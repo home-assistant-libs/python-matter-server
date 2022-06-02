@@ -60,6 +60,7 @@ class MatterSwitch(MatterEntity, SwitchEntity):
     def _update_from_device(self) -> None:
         """Update from device."""
         self._attr_is_on = self._device.data["OnOff"]["onOff"]
+        self.async_write_ha_state()
 
 
 DEVICE_ENTITY: dict[
