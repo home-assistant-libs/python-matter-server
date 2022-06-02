@@ -101,7 +101,7 @@ class MatterAdapter(AbstractMatterAdapter):
                     "Creating %s entity for %s (%s)",
                     platform,
                     type(device),
-                    device.device_type,
+                    hex(device.device_type),
                 )
 
                 if not isinstance(device_mappings, list):
@@ -119,7 +119,7 @@ class MatterAdapter(AbstractMatterAdapter):
                 self.logger.warning(
                     "Found unsupported device %s (%s)",
                     type(device).__name__,
-                    device.device_type,
+                    hex(device.device_type),
                 )
 
     async def handle_server_disconnected(self, should_reload: bool) -> None:

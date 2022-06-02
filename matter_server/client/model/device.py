@@ -169,7 +169,7 @@ class MatterDevice:
             self._on_update_listener()
 
 
-class RootDevice(MatterDevice, device_type=22):
+class RootDevice(MatterDevice, device_type=0x0016):
     """Root device."""
 
     @property
@@ -185,7 +185,7 @@ class RootDevice(MatterDevice, device_type=22):
         return self.data["Basic"]
 
 
-class OnOffLight(MatterDevice, device_type=256):
+class OnOffLight(MatterDevice, device_type=0x0100):
     """On/Off light."""
 
     clusters = {
@@ -194,17 +194,17 @@ class OnOffLight(MatterDevice, device_type=256):
     optional_clusters = {all_clusters.LevelControl}
 
 
-class DimmableLight(MatterDevice, device_type=257):
+class DimmableLight(MatterDevice, device_type=0x0101):
     """Dimmable light."""
 
     clusters = {all_clusters.OnOff, all_clusters.LevelControl}
 
 
-class OnOffLightSwitch(MatterDevice, device_type=259):
+class OnOffLightSwitch(MatterDevice, device_type=0x0103):
     """On/Off Light Switch."""
 
 
-class OnOffPlugInUnit(MatterDevice, device_type=266):
+class OnOffPlugInUnit(MatterDevice, device_type=0x010A):
     """On/Off Plug-In Unit."""
 
     clusters = {
@@ -213,7 +213,7 @@ class OnOffPlugInUnit(MatterDevice, device_type=266):
     optional_clusters = {all_clusters.LevelControl}
 
 
-class DimmablePlugInUnit(MatterDevice, device_type=267):
+class DimmablePlugInUnit(MatterDevice, device_type=0x010B):
     """Dimmable Plug-In Unit."""
 
     clusters = {all_clusters.OnOff, all_clusters.LevelControl}
