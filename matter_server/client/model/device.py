@@ -50,6 +50,43 @@ class MatterDevice:
             timedRequestTimeoutMs=timedRequestTimeoutMs,
         )
 
+    async def update_attributes(self, attributes: list) -> None:
+        """Update attributes."""
+        result = await self.node.matter.client.driver.device_controller.Read(
+            self.node.node_id,
+            attributes=[(self.endpoint_id, attribute) for attribute in attributes],
+        )
+
+        # {
+        #     "attributes": {
+        #         "1": {
+        #             "LevelControl": {"DataVersion": 2821513409, "CurrentLevel": 1},
+        #             "OnOff": {"DataVersion": 781696941, "OnOff": True},
+        #         }
+        #     },
+        #     "events": [],
+        #     "_type": "chip.clusters.Attribute.AsyncReadTransaction.ReadResponse",
+        # }
+
+        updated_data = result["attributes"].get(str(self.endpoint_id))
+
+        for cluster_name, info in updated_data.items():
+            info.pop("DataVersion")
+            # Convert to dictionary where all the keys start with lowercase
+            info = {key[0].lower() + key[1:]: value for key, value in info.items()}
+            for attribute, value in info.items():
+                self.node.matter.adapter.logger.debug(
+                    "Updating node %s, endpoint %s, %s: %s=%s",
+                    self.node.node_id,
+                    self.endpoint_id,
+                    cluster_name,
+                    attribute,
+                    value,
+                )
+                self.data[cluster_name][attribute] = value
+
+        self.node.matter.adapter.logger.debug("Read result: %s", result)
+
     async def subscribe_updates(
         self, subscribe_attributes: list, subscriber: SubscriberType
     ) -> Callable[[], None]:
@@ -62,7 +99,9 @@ class MatterDevice:
         reporting_timing_params = (0, 10)
         subscription = await self.node.matter.client.driver.device_controller.Read(
             self.node.node_id,
-            attributes=subscribe_attributes,
+            attributes=[
+                (self.endpoint_id, attribute) for attribute in subscribe_attributes
+            ],
             reportInterval=reporting_timing_params,
         )
         subscription.handler = self._receive_event

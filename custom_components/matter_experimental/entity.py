@@ -32,6 +32,11 @@ class MatterEntity(entity.Entity):
         if not self._device_mapping.subscribe_attributes:
             return
 
+        # Fetch latest info from the device.
+        await self._device.update_attributes(self._device_mapping.subscribe_attributes)
+        self._update_from_device()
+
+        # Subscribe to updates.
         self._unsubscribe = await self._device.subscribe_updates(
             self._device_mapping.subscribe_attributes, self._update_from_device
         )

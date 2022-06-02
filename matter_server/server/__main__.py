@@ -157,6 +157,16 @@ async def handle_message(send_msg, server: CHIPControllerServer, msg: dict):
         if command == "CommissionWithCode" and not server.wifi_cred_set:
             _LOGGER.warning("Received commissioning without Wi-Fi set")
 
+        if command == "Read" and isinstance(args.get("attributes"), list):
+            converted_attributes = []
+            for attribute in args["attributes"]:
+                if isinstance(attribute, list):
+                    converted_attributes.append(tuple(attribute))
+                else:
+                    converted_attributes.append(attribute)
+
+            args["attributes"] = converted_attributes
+
         if command[0] != "_":
             method = server.get_method(command)
         if not method:
