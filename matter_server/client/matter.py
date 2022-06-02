@@ -5,8 +5,7 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from matter_server.client.client import Client
-from matter_server.client.exceptions import (BaseMatterServerError,
-                                             FailedCommand)
+from matter_server.client.exceptions import BaseMatterServerError, FailedCommand
 
 from .node import MatterNode
 
@@ -77,7 +76,7 @@ class Matter:
 
         await self._interview_node(node_id)
 
-    def delete_node(self, node_id: int) -> None:
+    async def delete_node(self, node_id: int) -> None:
         """Delete a node."""
         # TODO notify anyone using MatterNode
         # TODO can we factory reset node_id so it can be commissioned again?

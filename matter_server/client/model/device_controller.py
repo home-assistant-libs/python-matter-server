@@ -239,11 +239,12 @@ class DeviceController:
             },
         )
 
-        # Is this a subscription?
-        if reportInterval is not None:
-            # Then read result represnts the ID. We will get events with that ID
-            subscription = Subscription(read_result)
-            self.subscriptions[read_result] = subscription
+        if reportInterval is None:
+            return read_result
+
+        # Is this a subscription the result represents the ID. We will get events with that ID
+        subscription = Subscription(read_result)
+        self.subscriptions[read_result] = subscription
         return subscription
 
     def receive_event(self, event):

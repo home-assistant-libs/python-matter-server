@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers import device_registry as dr
 
 from matter_server.client.adapter import AbstractMatterAdapter
 
@@ -67,6 +68,25 @@ class MatterAdapter(AbstractMatterAdapter):
     async def setup_node(self, node: MatterNode) -> None:
         """Set up an node."""
         self.logger.debug("Setting up entities for node %s", node.node_id)
+
+        basic_info = node.root_device.basic_info
+
+        kwargs = {}
+        if basic_info["nodeLabel"]:
+            kwargs["name"] = basic_info["nodeLabel"]
+        if basic_info["location"]:
+            kwargs["suggested_area"] = basic_info["location"]
+
+        dr.async_get(self.hass).async_get_or_create(
+            config_entry_id=self.config_entry.entry_id,
+            identifiers={(DOMAIN, basic_info["uniqueID"])},
+            hw_version=basic_info["hardwareVersionString"],
+            sw_version=basic_info["softwareVersionString"],
+            manufacturer=basic_info["vendorName"],
+            model=basic_info["productName"],
+            **kwargs,
+        )
+
         for device in node.devices:
             created = False
             device_type = type(device)
@@ -98,7 +118,7 @@ class MatterAdapter(AbstractMatterAdapter):
             if not created:
                 self.logger.warning(
                     "Found unsupported device %s (%s)",
-                    type(device),
+                    type(device).__name__,
                     device.device_type,
                 )
 

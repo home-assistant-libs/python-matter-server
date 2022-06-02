@@ -38,7 +38,6 @@ class MatterLight(
     """Representation of a Matter light."""
 
     _attr_is_on = False
-    _attr_assumed_state = True
 
     def __init__(
         self, device: matter_devices.OnOffLight | matter_devices.DimmableLight
@@ -60,7 +59,6 @@ class MatterLight(
             await self._device.send_command(
                 payload=Clusters.OnOff.Commands.On(),
             )
-            self._attr_is_on = True
             return
 
         level_control = self._device.data["LevelControl"]
@@ -81,7 +79,6 @@ class MatterLight(
         await self._device.send_command(
             payload=Clusters.OnOff.Commands.Off(),
         )
-        self._attr_is_on = False
 
     @callback
     def _update_from_device(self) -> None:

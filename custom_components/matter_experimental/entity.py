@@ -16,26 +16,18 @@ class MatterEntity(entity.Entity):
     @property
     def device_info(self) -> entity.DeviceInfo | None:
         """Return device info for device registry."""
-        basic_info = self._device.node.root_device.basic_info
-
-        info = {
-            "identifiers": {(DOMAIN, basic_info["uniqueID"])},
-            "hw_version": basic_info["hardwareVersionString"],
-            "sw_version": basic_info["softwareVersionString"],
-            "manufacturer": basic_info["vendorName"],
-            "model": basic_info["productName"],
-        }
-        if basic_info["nodeLabel"]:
-            info["name"] = basic_info["nodeLabel"]
-        if basic_info["location"]:
-            info["suggested_area"] = basic_info["location"]
-
-        return info
+        return {"identifiers": {(DOMAIN, self._device.node.unique_id)}}
 
     async def async_added_to_hass(self) -> None:
         """Handle being added to Home Assistant."""
         await super().async_added_to_hass()
-        # TODO subscribe to updates.
+
+        if not self._device.cluster_subscribes:
+            return
+
+        self.async_on_remove(
+            await self._device.subscribe_updates(self._update_from_device)
+        )
 
     @callback
     def _update_from_device(self) -> None:
