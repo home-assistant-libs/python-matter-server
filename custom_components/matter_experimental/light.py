@@ -75,8 +75,7 @@ class MatterLight(MatterEntity, LightEntity):
     @callback
     def _update_from_device(self) -> None:
         """Update from device."""
-        on_off: clusters.OnOff = self._device.data["OnOff"]
-        self._attr_is_on = on_off.onOff
+        self._attr_is_on = self._device.get_cluster(clusters.OnOff).onOff
 
         if level_control := self._device.get_cluster(clusters.LevelControl):
             # Convert brightness to HA = 0..255

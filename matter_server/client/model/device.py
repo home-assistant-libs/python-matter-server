@@ -57,6 +57,16 @@ class MatterDevice:
 
         return self.data[cluster.__name__]
 
+    def get_clusters(self) -> set[type[all_clusters.Cluster]]:
+        """Get all available cluster objects."""
+        clusters = [self.data[cluster.__name__] for cluster in self.clusters]
+
+        for cluster in self.optional_clusters:
+            if cluster.__name__ in self.data:
+                clusters.append(self.data[cluster.__name__])
+
+        return clusters
+
     async def send_command(
         self,
         payload: all_clusters.ClusterCommand,

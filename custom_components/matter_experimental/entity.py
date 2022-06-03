@@ -36,28 +36,22 @@ class MatterEntity(entity.Entity):
             self._update_from_device()
             return
 
-        # Detect the clusters that this device has
-        present_clusters = set(cluster.id for cluster in self._device.clusters)
-
-        for cluster in self._device.optional_clusters:
-            if cluster.__name__ in self._device.data:
-                present_clusters.add(cluster.id)
-
         # Filter out subscribe attributes belonging to optional clusters not present
-        subscribe_attributes = []
-
-        for attribute in self._device_mapping.subscribe_attributes:
-            if attribute.cluster_id in present_clusters:
-                subscribe_attributes.append(attribute)
-
-        # Fetch latest info from the device.
-        await self._device.update_attributes(subscribe_attributes)
-        self._update_from_device()
+        clusters = set(cluster.id for cluster in self._device.get_clusters())
+        subscribe_attributes = [
+            attribute
+            for attribute in self._device_mapping.subscribe_attributes
+            if attribute.cluster_id in clusters
+        ]
 
         # Subscribe to updates.
         self._unsubscribe = await self._device.subscribe_updates(
             subscribe_attributes, self._update_from_device
         )
+
+        # Fetch latest info from the device.
+        await self._device.update_attributes(subscribe_attributes)
+        self._update_from_device()
 
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
@@ -67,3 +61,4 @@ class MatterEntity(entity.Entity):
     @callback
     def _update_from_device(self) -> None:
         """Update from device."""
+        self.async_write_ha_state()
