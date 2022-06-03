@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Callable
 
 from matter_server.vendor.chip.clusters import Objects as all_clusters
@@ -139,30 +140,12 @@ class MatterDevice:
             event,
         )
 
-        # 2022-06-01 23:19:08 DEBUG (MainThread) [custom_components.matter_experimental.adapter] Received subscription event
-        # {
-        #     "SubscriptionId": 4032027010,
-        #     "FabridId": 1,
-        #     "NodeId": 4339,
-        #     "Endpoint": 1,
-        #     "Attribute": {
-        #         "_class": "chip.clusters.Objects.OnOff.Attributes.GlobalSceneControl"
-        #     },
-        #     "Value": True,
-        # }
-        # {
-        #     "SubscriptionId": 4032027010,
-        #     "FabridId": 1,
-        #     "NodeId": 4339,
-        #     "Endpoint": 1,
-        #     "Attribute": {"_class": "chip.clusters.Objects.OnOff.Attributes.OnOff"},
-        #     "Value": True,
-        # }
+        # 2022-06-03 11:30:52 DEBUG (MainThread) [custom_components.matter_experimental.adapter] node 4335, endpoint 1: received subscription event
+        # {'SubscriptionId': 2632459106, 'FabridId': 1, 'NodeId': 4335, 'Endpoint': 1, 'Attribute': <class 'matter_server.vendor.chip.clusters.Objects.OnOff.Attributes.OnOff'>, 'Value': False}
 
-        attribute_parts = event["Attribute"]["_class"].rsplit(".")
-        cluster_name = attribute_parts[-3]
-        attribute = attribute_parts[-1]
+        attribute = event["Attribute"].__name__
         attribute = attribute[0].lower() + attribute[1:]
+        cluster_name = event["Attribute"].__qualname__.rsplit(".")[0]
 
         self.node.matter.adapter.logger.debug(
             "Updating node %s, endpoint %s, %s: %s=%s",

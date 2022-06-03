@@ -20,6 +20,7 @@ except ImportError:
 
 MATTER_SERVER_NAMESPACE = "matter_server.common.model"
 CLUSTER_TYPE_NAMESPACE = "chip.clusters.Objects"
+CLUSTER_ATTRIBUTE_NAMESPACE = "chip.clusters.Attribute"
 CLUSTER_TYPE_VENDORIZED_NAMESPACE = "matter_server.vendor"
 
 
@@ -72,6 +73,10 @@ class CHIPJSONDecoder(json.JSONDecoder):
         elif type.startswith(MATTER_SERVER_NAMESPACE):
             matter_server_type = type.removeprefix(f"{MATTER_SERVER_NAMESPACE}.")
             return self._get_class_from_module(matter_server.common.model, matter_server_type)
+        if type.startswith(CLUSTER_ATTRIBUTE_NAMESPACE):
+            # TODO: How do we deal with that?
+            # chip.clusters.Attribute.AsyncReadTransaction.ReadResponse
+            return dict
         else:
             raise TypeError("Only CHIP cluster objects supported")
 
