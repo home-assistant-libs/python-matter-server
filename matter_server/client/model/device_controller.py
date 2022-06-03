@@ -250,7 +250,7 @@ class DeviceController:
         subscriptionId = event["SubscriptionId"]
         if subscriptionId not in self.subscriptions:
             _LOGGER.warning(
-                "No Subscription object for Subscription Id %d present.", subscriptionId
+                f"No Subscription object for Subscription Id 0x{subscriptionId:X} present."
             )
             return
         subscription = self.subscriptions[subscriptionId]

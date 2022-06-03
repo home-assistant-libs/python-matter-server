@@ -1,40 +1,25 @@
 from __future__ import annotations
+
 import asyncio
 import json
 import logging
+import weakref
 from dataclasses import asdict, is_dataclass
 from functools import partial
 from pprint import pformat
 from typing import TYPE_CHECKING
-import weakref
-
-from aiohttp.web import WebSocketResponse, Application, run_app, WSMsgType
 
 from aiohttp import WSCloseCode, WSMsgType
+from aiohttp.web import Application, WebSocketResponse, WSMsgType, run_app
 from chip.exceptions import ChipStackError
+from matter_server.common.model.message import (ErrorResultMessage,
+                                                SuccessResultMessage)
+from matter_server.common.model.version import VersionInfo
 
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 
 if TYPE_CHECKING:
     from .matter_stack import MatterStack
-
-
-def create_success_response(message, result):
-    return {
-        "type": "result",
-        "success": True,
-        "messageId": message["messageId"],
-        "result": result,
-    }
-
-
-def create_error_response(message, code):
-    return {
-        "type": "result",
-        "success": False,
-        "messageId": message["messageId"],
-        "errorCode": code,
-    }
 
 
 def create_event_response(subscriptionId, payload):
@@ -92,18 +77,11 @@ class MatterServerClient:
         await self.ws.close(code=WSCloseCode.GOING_AWAY, message="Server shutdown")
 
     async def handle_request(self):
-        self.logger.info("New connection...")
+        self.logger.info("New Client connection...")
         self.ws = WebSocketResponse()
         await self.ws.prepare(self.request)
 
-        await self.ws.send_json(
-            {
-                "driverVersion": 0,
-                "serverVersion": 0,
-                "minSchemaVersion": 1,
-                "maxSchemaVersion": 1,
-            }
-        )
+        await self.send_msg(VersionInfo(driver_version=0, server_version=0, min_schema_version=1, max_schema_version=1))
 
         self.logger.info("Websocket connection ready")
 
@@ -151,34 +129,11 @@ class MatterServerClient:
         self.logger.info("Received: %s", msg.data)
         msg = json.loads(msg.data, cls=CHIPJSONDecoder)
         self.logger.info("Deserialized message: %s", msg)
-        if msg["command"] == "start_listening":
-            await self.send_msg(
-                create_success_response(
-                    msg,
-                    {
-                        "state": {
-                            "device_controller": {
-                                # Enum chip.ChipDeviceCtrl.DCState
-                                "state": {
-                                    0: "NOT_INITIALIZED",
-                                    1: "IDLE",
-                                    2: "BLE_READY",
-                                    3: "RENDEZVOUS_ONGOING",
-                                    4: "RENDEZVOUS_CONNECTED",
-                                }.get(
-                                    self.server.stack.device_controller.state, "UNKNOWN"
-                                )
-                            }
-                        }
-                    },
-                )
-            )
-            return
 
         # See if it's an instance method
         instance, _, command = msg["command"].partition(".")
         if not instance or not command:
-            await self.send_msg(create_error_response(msg, "INVALID_COMMAND"))
+            await self.send_msg(ErrorResultMessage(msg["messageId"], "INVALID_COMMAND"))
             self.logger.warning("Unknown command: %s", msg["command"])
             return
 
@@ -202,7 +157,7 @@ class MatterServerClient:
             if command[0] != "_":
                 method = self.server.stack.get_method(command)
             if not method:
-                await self.send_msg(create_error_response(msg, "INVALID_COMMAND"))
+                await self.send_msg(ErrorResultMessage(msg["messageId"], "INVALID_COMMAND"))
                 self.logger.error("Unknown command: %s", msg["command"])
                 return
 
@@ -238,14 +193,13 @@ class MatterServerClient:
 
                 if command == "SetWiFiCredentials" and result == 0:
                     self.server.stack.wifi_cred_set = True
-
-                await self.send_msg(create_success_response(msg, result))
+                await self.send_msg(SuccessResultMessage(msg["messageId"], result))
             except ChipStackError as ex:
-                await self.send_msg(create_error_response(msg, str(ex)))
+                await self.send_msg(ErrorResultMessage(msg["messageId"], str(ex)))
             except Exception:
                 self.logger.exception("Error calling method: %s", msg["command"])
-                await self.send_msg(create_error_response(msg, "UNKNOWN"))
+                await self.send_msg(ErrorResultMessage(msg["messageId"], "UNKNOWN"))
 
         else:
             self.logger.warning("Unknown command: %s", msg["command"])
-            await self.send_msg(create_error_response(msg, "INVALID_COMMAND"))
+            await self.send_msg(ErrorResultMessage(msg["messageId"], "INVALID_COMMAND"))

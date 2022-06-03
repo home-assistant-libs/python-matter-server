@@ -15,22 +15,19 @@ from operator import itemgetter
 from types import TracebackType
 from typing import Any, DefaultDict, Dict, List, cast
 
-from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
+from aiohttp import (ClientSession, ClientWebSocketResponse, WSMsgType,
+                     client_exceptions)
+from matter_server.common.model.message import (ErrorResultMessage, Message,
+                                                ResultMessage,
+                                                SuccessResultMessage)
 
-from ..common.json_utils import CHIPJSONEncoder
+from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
+from ..common.model.version import VersionInfo
 from .const import MAX_SERVER_SCHEMA_VERSION, MIN_SERVER_SCHEMA_VERSION
-from .exceptions import (
-    CannotConnect,
-    ConnectionClosed,
-    ConnectionFailed,
-    FailedCommand,
-    InvalidMessage,
-    InvalidServerVersion,
-    InvalidState,
-    NotConnected,
-)
+from .exceptions import (CannotConnect, ConnectionClosed, ConnectionFailed,
+                         FailedCommand, InvalidMessage, InvalidServerVersion,
+                         InvalidState, NotConnected)
 from .model.driver import Driver
-from .model.version import VersionInfo, VersionInfoDataType
 
 SIZE_PARSE_JSON_EXECUTOR = 8192
 
@@ -139,9 +136,7 @@ class Client:
         ) as err:
             raise CannotConnect(err) from err
 
-        self.version = version = VersionInfo.from_message(
-            cast(VersionInfoDataType, await self._receive_json_or_raise())
-        )
+        self.version = version = await self._receive_message_or_raise()
 
         # basic check for server schema version compatibility
         if (
@@ -196,39 +191,13 @@ class Client:
         assert self._client
 
         try:
-            # await self.set_api_schema()
-
-            # send start_listening command to the server
-            # we will receive a full state dump and from now on get events
-            await self._send_json_message(
-                {"command": "start_listening", "messageId": START_LISTENING_MESSAGE_ID}
-            )
-
-            while True:
-                state_msg = await self._receive_json_or_raise()
-                if state_msg["type"] == "result":
-                    break
-
-            if not state_msg["success"]:
-                await self._client.close()
-                raise FailedCommand(state_msg["messageId"], state_msg["errorCode"])
-
-            self.driver = cast(
-                Driver,
-                await self._loop.run_in_executor(
-                    None,
-                    Driver,
-                    self,
-                    state_msg["result"]["state"],
-                ),
-            )
-
-            driver_ready.set()
+            self.driver = Driver(self, {})
 
             self._logger.info("Matter initialized.")
+            driver_ready.set()
 
             while not self._client.closed:
-                data = await self._receive_json_or_raise()
+                data = await self._receive_message_or_raise()
 
                 self._handle_incoming_message(data)
         except ConnectionClosed:
@@ -290,8 +259,8 @@ class Client:
 
         return list(data)
 
-    async def _receive_json_or_raise(self) -> dict:
-        """Receive json or raise."""
+    async def _receive_message_or_raise(self) -> Message:
+        """Receive message or raise."""
         assert self._client
         msg = await self._client.receive()
 
@@ -306,42 +275,48 @@ class Client:
 
         try:
             if len(msg.data) > SIZE_PARSE_JSON_EXECUTOR:
-                data: dict = await self._loop.run_in_executor(None, msg.json)
+                obj: dict = await self._loop.run_in_executor(None, lambda: json.loads(msg.data, cls=CHIPJSONDecoder))
             else:
-                data = msg.json()
+                obj = json.loads(msg.data, cls=CHIPJSONDecoder)
         except ValueError as err:
             raise InvalidMessage("Received invalid JSON.") from err
 
         if self._logger.isEnabledFor(logging.DEBUG):
             self._logger.debug("Received message:\n%s\n", pprint.pformat(msg))
 
-        return data
+        return obj
 
-    def _handle_incoming_message(self, msg: dict) -> None:
+    def _handle_incoming_message(self, msg: Any) -> None:
         """Handle incoming message.
 
         Run all async tasks in a wrapper to log appropriately.
         """
-        if msg["type"] == "result":
-            future = self._result_futures.get(msg["messageId"])
+        if isinstance(msg, ResultMessage):
+            msg: ResultMessage = msg
+            future = self._result_futures.get(msg.messageId)
 
             if future is None:
                 # no listener for this result
                 return
 
-            if self._record_messages and msg["messageId"] not in LISTEN_MESSAGE_IDS:
-                self._recorded_commands[msg["messageId"]].update(
+            if self._record_messages and msg.messageId not in LISTEN_MESSAGE_IDS:
+                self._recorded_commands[msg.messageId].update(
                     {
                         "result_ts": datetime.utcnow().isoformat(),
                         "result_msg": deepcopy(msg),
                     }
                 )
 
-            if msg["success"]:
-                future.set_result(msg["result"])
+            if isinstance(msg, SuccessResultMessage):
+                msg: SuccessResultMessage = msg
+                future.set_result(msg.result)
                 return
+            elif isinstance(msg, ErrorResultMessage):
+                msg: ErrorResultMessage = msg
+                future.set_exception(FailedCommand(msg.messageId, msg.errorCode))
+            else:
+                raise InvalidMessage("Invalid ResultMessage.")
 
-            future.set_exception(FailedCommand(msg["messageId"], msg["errorCode"]))
             return
         elif msg["type"] == "event":
             self._logger.debug(

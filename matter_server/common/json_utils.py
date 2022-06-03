@@ -1,7 +1,12 @@
 import base64
 import json
 import sys
+from dataclasses import asdict, is_dataclass
 from enum import Enum
+from types import ModuleType
+
+import matter_server.common.model
+from matter_server.common.model.message import Message
 
 # Compatible both with vendorized and not-vendorized
 try:
@@ -13,6 +18,7 @@ except ImportError:
     from ..vendor.chip.clusters.Types import Nullable
 
 
+MATTER_SERVER_NAMESPACE = "matter_server.common.model"
 CLUSTER_TYPE_NAMESPACE = "chip.clusters.Objects"
 CLUSTER_TYPE_VENDORIZED_NAMESPACE = "matter_server.vendor"
 
@@ -38,8 +44,13 @@ class CHIPJSONEncoder(json.JSONEncoder):
             return obj.value
         elif isinstance(obj, bytes):
             return {"_type": "bytes", "value": base64.b64encode(obj).decode("utf-8") }
-        # if is_dataclass(obj):
-        #     return asdict(obj)
+
+        if is_dataclass(obj):
+            result = asdict(obj)
+            cls = type(obj)
+            result["_type"] = f"{cls.__module__}.{cls.__qualname__}"
+            return result
+
         # Let the base class default method raise the TypeError
         return json.JSONEncoder.default(self, obj)
 
@@ -48,17 +59,21 @@ class CHIPJSONDecoder(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
         json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
 
+    def _get_class_from_module(self, cluster_cls, type: str):
+            for cluster_subtype in type.split("."):
+                cluster_cls = getattr(cluster_cls, cluster_subtype)
+
+            return cluster_cls
+
     def _get_class(self, type: str):
-        if not type.startswith(CLUSTER_TYPE_NAMESPACE):
+        if type.startswith(CLUSTER_TYPE_NAMESPACE):
+            cluster_type = type.removeprefix(f"{CLUSTER_TYPE_NAMESPACE}.")
+            return self._get_class_from_module(Clusters, cluster_type)
+        elif type.startswith(MATTER_SERVER_NAMESPACE):
+            matter_server_type = type.removeprefix(f"{MATTER_SERVER_NAMESPACE}.")
+            return self._get_class_from_module(matter_server.common.model, matter_server_type)
+        else:
             raise TypeError("Only CHIP cluster objects supported")
-
-        cluster_type = type.removeprefix(f"{CLUSTER_TYPE_NAMESPACE}.")
-
-        cluster_cls = Clusters
-        for cluster_subtype in cluster_type.split("."):
-            cluster_cls = getattr(cluster_cls, cluster_subtype)
-
-        return cluster_cls
 
     def object_hook(self, obj: dict):
         if type := obj.get("_type"):
