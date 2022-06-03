@@ -1,21 +1,23 @@
 """Matter to HA adapter."""
 from __future__ import annotations
 import asyncio
-
 import logging
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Callable
+import json
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_URL, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers import device_registry as dr
 
 from matter_server.client.adapter import AbstractMatterAdapter
+from matter_server.common.json_utils import CHIPJSONDecoder
 
 from .const import DOMAIN
 from .device_platform import DEVICE_PLATFORM
@@ -27,12 +29,60 @@ STORAGE_MAJOR_VERSION = 1
 STORAGE_MINOR_VERSION = 0
 
 
+def load_json(
+    filename: str, default: list | dict | None = None, decoder=None
+) -> list | dict:
+    """Load JSON data from a file and return as dict or list.
+
+    Defaults to returning empty dict if file is not found.
+
+    Temporarily copied from HA to allow decoder.
+    """
+    try:
+        with open(filename, encoding="utf-8") as fdesc:
+            return json.loads(fdesc.read(), cls=decoder)  # type: ignore[no-any-return]
+    except FileNotFoundError:
+        # This is not a fatal error
+        logging.getLogger(__name__).debug("JSON file not found: %s", filename)
+    except ValueError as error:
+        logging.getLogger(__name__).exception(
+            "Could not parse JSON content: %s", filename
+        )
+        raise HomeAssistantError(error) from error
+    except OSError as error:
+        logging.getLogger(__name__).exception("JSON file reading failed: %s", filename)
+        raise HomeAssistantError(error) from error
+    return {} if default is None else default
+
+
+class MatterStore(Store):
+    """Temporary fork to add support for using our JSON decorer."""
+
+    async def _async_load_data(self):
+        """Load the data with custom decoder."""
+        # Check if we have a pending write
+        if self._data is not None:
+            return await super()._async_load_data()
+
+        data = await self.hass.async_add_executor_job(
+            load_json, self.path, CHIPJSONDecoder
+        )
+
+        if data == {}:
+            return None
+
+        # We store it as a to-be-saved data so the load function will pick it up
+        # and run migration etc.
+        self._data = data
+        return await super()._async_load_data()
+
+
 class MatterAdapter(AbstractMatterAdapter):
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         self.hass = hass
         self.config_entry = config_entry
         self.logger = logging.getLogger(__name__)
-        self._store = Store(
+        self._store = MatterStore(
             hass,
             STORAGE_MAJOR_VERSION,
             DOMAIN,
