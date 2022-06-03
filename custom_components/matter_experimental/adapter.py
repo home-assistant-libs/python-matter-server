@@ -17,7 +17,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers import device_registry as dr
 
 from matter_server.client.adapter import AbstractMatterAdapter
-from matter_server.common.json_utils import CHIPJSONDecoder
+from matter_server.common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 
 from .const import DOMAIN
 from .device_platform import DEVICE_PLATFORM
