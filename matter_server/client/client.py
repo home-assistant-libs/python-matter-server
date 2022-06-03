@@ -413,12 +413,9 @@ class Client:
                 }
             )
 
-        try:
-            await self._client.send_json(
-                message, dumps=partial(json.dumps, cls=CHIPJSONEncoder)
-            )
-        except:
-            self._logger.exception("Error sending JSON")
+        await self._client.send_json(
+            message, dumps=partial(json.dumps, cls=CHIPJSONEncoder)
+        )
 
     async def __aenter__(self) -> "Client":
         """Connect to the websocket."""

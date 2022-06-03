@@ -79,19 +79,6 @@ async def toggle_happiness(client: Client, is_initialized: asyncio.Event):
         _LOGGER.exception("No more Happiness")
 
 
-def ipython():
-    scope_vars = {"client": client}
-
-    from traitlets.config import Config
-
-    c = Config()
-    c.InteractiveShellApp.exec_lines = ["await client.connect()"]
-
-    import IPython
-
-    IPython.start_ipython(config=c, argv=[], user_ns=scope_vars)
-
-
 if __name__ == "__main__":
     try:
         asyncio.run(main())

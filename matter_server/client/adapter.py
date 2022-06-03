@@ -36,7 +36,7 @@ class AbstractMatterAdapter:
 
     @abstractmethod
     async def setup_node(self, node: MatterNode) -> None:
-        """Set up an node."""
+        """Set up a node."""
 
     @abstractmethod
     async def handle_server_disconnected(self, should_reload: bool) -> None:

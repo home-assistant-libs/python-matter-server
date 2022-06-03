@@ -18,8 +18,3 @@ class Driver:
 
     def receive_event(self, event):
         self.device_controller.receive_event(event)
-
-    async def send_toggle(self):
-        await self._client.async_send_matter_command(
-            nodeid=4335, endpoint=1, payload=clusters.OnOff.Commands.Toggle()
-        )
