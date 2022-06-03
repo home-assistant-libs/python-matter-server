@@ -15,20 +15,30 @@ from operator import itemgetter
 from types import TracebackType
 from typing import Any, DefaultDict, Dict, List, cast
 
-from aiohttp import (ClientSession, ClientWebSocketResponse, WSMsgType,
-                     client_exceptions)
-from matter_server.common.model.message import (CommandMessage,
-                                                ErrorResultMessage, Message,
-                                                ResultMessage,
-                                                SubscriptionReportMessage,
-                                                SuccessResultMessage)
+from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
+
+from matter_server.common.model.message import (
+    CommandMessage,
+    ErrorResultMessage,
+    Message,
+    ResultMessage,
+    SubscriptionReportMessage,
+    SuccessResultMessage,
+)
 
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 from ..common.model.version import VersionInfo
 from .const import MAX_SERVER_SCHEMA_VERSION, MIN_SERVER_SCHEMA_VERSION
-from .exceptions import (CannotConnect, ConnectionClosed, ConnectionFailed,
-                         FailedCommand, InvalidMessage, InvalidServerVersion,
-                         InvalidState, NotConnected)
+from .exceptions import (
+    CannotConnect,
+    ConnectionClosed,
+    ConnectionFailed,
+    FailedCommand,
+    InvalidMessage,
+    InvalidServerVersion,
+    InvalidState,
+    NotConnected,
+)
 from .model.driver import Driver
 
 SIZE_PARSE_JSON_EXECUTOR = 8192
@@ -263,7 +273,9 @@ class Client:
 
         try:
             if len(msg.data) > SIZE_PARSE_JSON_EXECUTOR:
-                obj: dict = await self._loop.run_in_executor(None, lambda: json.loads(msg.data, cls=CHIPJSONDecoder))
+                obj: dict = await self._loop.run_in_executor(
+                    None, lambda: json.loads(msg.data, cls=CHIPJSONDecoder)
+                )
             else:
                 obj = json.loads(msg.data, cls=CHIPJSONDecoder)
         except ValueError as err:

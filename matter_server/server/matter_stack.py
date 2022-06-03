@@ -1,8 +1,6 @@
 import asyncio
-import functools
 import logging
 import typing
-from platform import node
 
 import chip.logging
 import chip.native
@@ -12,7 +10,6 @@ from chip.ChipStack import ChipStack
 from chip.clusters import Attribute as Attribute
 from chip.clusters import ClusterObjects as ClusterObjects
 from chip.FabricAdmin import FabricAdmin
-from matter_server.client.model import device_controller
 
 _LOGGER = logging.getLogger(__name__)
 

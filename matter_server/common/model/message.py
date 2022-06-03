@@ -6,6 +6,7 @@ from typing import Any
 class Message:
     pass
 
+
 @dataclass
 class ResultMessage:
     messageId: str
@@ -21,10 +22,12 @@ class SuccessResultMessage(ResultMessage):
 class ErrorResultMessage(ResultMessage):
     errorCode: Any
 
+
 @dataclass
 class SubscriptionReportMessage(Message):
     subscriptionId: str
     payload: Any
+
 
 @dataclass
 class CommandMessage(Message):

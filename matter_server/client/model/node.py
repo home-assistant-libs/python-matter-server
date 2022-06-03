@@ -3,12 +3,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-
 from .device import DEVICE_TYPES, MatterDevice
 
 if TYPE_CHECKING:
-    from ..matter import Matter
     from matter_server.vendor.chip.clusters.Objects import Descriptor
+
+    from ..matter import Matter
 
 
 class MatterNode:

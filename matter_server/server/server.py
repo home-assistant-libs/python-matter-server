@@ -4,22 +4,21 @@ import asyncio
 import json
 import logging
 import weakref
-from dataclasses import asdict, is_dataclass
 from functools import partial
 from pprint import pformat
 from typing import TYPE_CHECKING
 
-from aiohttp import WSCloseCode, WSMsgType
-from aiohttp.web import Application, WebSocketResponse, WSMsgType, run_app
+from aiohttp import WSCloseCode, WSMsgType, web
 from chip.exceptions import ChipStackError
-from matter_server.common.model.message import (CommandMessage,
-                                                ErrorResultMessage, Message,
-                                                SubscriptionReportMessage,
-                                                SuccessResultMessage)
-from matter_server.common.model.version import VersionInfo
-from setuptools import Command
 
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
+from ..common.model.message import (
+    CommandMessage,
+    ErrorResultMessage,
+    SubscriptionReportMessage,
+    SuccessResultMessage,
+)
+from ..common.model.version import VersionInfo
 
 if TYPE_CHECKING:
     from .matter_stack import MatterStack
@@ -31,7 +30,7 @@ class MatterServer:
     def __init__(self, stack: MatterStack):
         self.stack = stack
         self.logger = logging.getLogger(__name__)
-        self.app = Application()
+        self.app = web.Application()
         self.loop = asyncio.get_running_loop()
         self.clients = weakref.WeakSet()
         self.app.on_shutdown.append(self._handle_shutdown)
@@ -52,12 +51,12 @@ class MatterServer:
 
     def run(self, host, port):
         """Run the server."""
-        run_app(self.app, host=host, port=port, loop=self.loop)
+        web.run_app(self.app, host=host, port=port, loop=self.loop)
 
 
 class MatterServerClient:
 
-    ws: WebSocketResponse | None = None
+    ws: web.WebSocketResponse | None = None
 
     def __init__(self, server: MatterServer, request):
         self.server = server
@@ -73,22 +72,25 @@ class MatterServerClient:
 
     async def handle_request(self):
         self.logger.info("New Client connection...")
-        self.ws = WebSocketResponse()
+        self.ws = web.WebSocketResponse()
         await self.ws.prepare(self.request)
 
-        await self.send_msg(VersionInfo(driver_version=0, server_version=0, min_schema_version=1, max_schema_version=1))
+        await self.send_msg(
+            VersionInfo(
+                driver_version=0,
+                server_version=0,
+                min_schema_version=1,
+                max_schema_version=1,
+            )
+        )
 
         self.logger.info("Websocket connection ready")
 
-        sr_task = asyncio.create_task(self.server.stack.get_next_subscription_report())
-        ws_task = asyncio.create_task(self.ws.receive())
-        while True:
-            done, _ = await asyncio.wait(
-                [sr_task, ws_task], return_when=asyncio.FIRST_COMPLETED
-            )
+        subscription_task = asyncio.create_task(self._handle_subscription_reports())
 
-            if ws_task in done:
-                msg = ws_task.result()
+        try:
+            while not self.ws.closed:
+                msg = await self.ws.receive()
                 if msg.type in (
                     WSMsgType.CLOSE,
                     WSMsgType.CLOSING,
@@ -105,26 +107,25 @@ class MatterServerClient:
                     msg = json.loads(msg.data, cls=CHIPJSONDecoder)
                     self.logger.info("Deserialized message: %s", msg)
                     if not isinstance(msg, CommandMessage):
-                        self.logger.exception("Invalid Message received: %s", msg)
+                        self.logger.error("Invalid Message received: %s", msg.data)
                         continue
                     await self._handle_message(msg)
                 except Exception:
-                    self.logger.exception("Error handling message: %s", msg)
-                ws_task = asyncio.create_task(self.ws.receive())
+                    self.logger.exception("Error handling message: %s", msg.data)
+        finally:
+            self.logger.info("Websocket connection closed")
+            subscription_task.cancel()
+            await subscription_task
+            # TODO undo subscriptions.
 
-            if sr_task in done:
-                sr = sr_task.result()
-                try:
-                    await self._handle_subscription_report(sr)
-                except Exception:
-                    self.logger.exception("Error handling subscription report: %s", sr)
-                sr_task = asyncio.create_task(self.server.stack.get_next_subscription_report())
-
-        self.logger.info("Websocket connection closed")
         return self.ws
 
-    async def _handle_subscription_report(self, payload):
-        await self.send_msg(SubscriptionReportMessage(payload["SubscriptionId"], payload))
+    async def _handle_subscription_reports(self):
+        while True:
+            payload = await self.server.stack.get_next_subscription_report()
+            await self.send_msg(
+                SubscriptionReportMessage(payload["SubscriptionId"], payload)
+            )
 
     async def _handle_message(self, msg: CommandMessage):
         # See if it's an instance method
@@ -153,7 +154,9 @@ class MatterServerClient:
             if command[0] != "_":
                 method = self.server.stack.get_method(command)
             if not method:
-                await self.send_msg(ErrorResultMessage(msg.messageId, "INVALID_COMMAND"))
+                await self.send_msg(
+                    ErrorResultMessage(msg.messageId, "INVALID_COMMAND")
+                )
                 self.logger.error("Unknown command: %s", command)
                 return
 
