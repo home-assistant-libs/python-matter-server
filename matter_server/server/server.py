@@ -158,34 +158,10 @@ class MatterServerClient:
                 return
 
             try:
-                raw_result = method(**msg.args)
+                result = method(**msg.args)
 
-                if asyncio.iscoroutine(raw_result):
-                    raw_result = await raw_result
-
-                if is_dataclass(raw_result):
-                    result = asdict(raw_result)
-                    cls = type(raw_result)
-                    result["_type"] = f"{cls.__module__}.{cls.__qualname__}"
-
-                    # asdict doesn't convert dictionary keys that are dataclasses.
-                    # Rest already processed by `asdict`
-                    def convert_class_keys(val):
-                        if isinstance(val, dict):
-                            return {
-                                k.__name__
-                                if isinstance(k, type)
-                                else k: convert_class_keys(v)
-                                for k, v in val.items()
-                            }
-                        if isinstance(val, list):
-                            return [convert_class_keys(v) for v in val]
-                        return val
-
-                    result = convert_class_keys(result)
-
-                else:
-                    result = raw_result
+                if asyncio.iscoroutine(result):
+                    result = await result
 
                 if command == "SetWiFiCredentials" and result == 0:
                     self.server.stack.wifi_cred_set = True

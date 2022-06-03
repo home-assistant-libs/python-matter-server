@@ -4,6 +4,8 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
+from matter_server.common.json_utils import asdict_typed
+
 from .client import Client
 from .exceptions import BaseMatterServerError, FailedCommand
 from .model.node import MatterNode
@@ -94,6 +96,7 @@ class Matter:
             self.adapter.logger.error("Failed to interview node: %s", err)
             return
 
+        node_info = asdict_typed(node_info, dict)
         node_info["node_id"] = node_id
 
         if self._nodes[node_id]:

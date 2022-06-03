@@ -345,22 +345,6 @@ class Client:
         assert self._client
         assert isinstance(message, CommandMessage)
 
-        # Convert arguments that can be dataclasses.
-        if message.args:
-            for arg, value in message.args.items():
-                # Add type information to dataclasses
-                if is_dataclass(value):
-                    cmd_dict = asdict(value)
-                    cls = type(value)
-                    cmd_dict["_type"] = f"{cls.__module__}.{cls.__qualname__}"
-
-                    # Currently in client we have vendorized chip. Strip vendor prefix.
-                    strip_prefix = "matter_server.vendor."
-                    if cmd_dict["_type"].startswith(strip_prefix):
-                        cmd_dict["_type"] = cmd_dict["_type"][len(strip_prefix) :]
-
-                    message.args[arg] = cmd_dict
-
         if self._record_messages and message.messageId not in LISTEN_MESSAGE_IDS:
             # We don't need to deepcopy command_msg because it is always released by
             # the caller after the command is sent.
