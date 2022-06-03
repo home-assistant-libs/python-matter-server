@@ -59,7 +59,8 @@ class MatterSwitch(MatterEntity, SwitchEntity):
     @callback
     def _update_from_device(self) -> None:
         """Update from device."""
-        self._attr_is_on = self._device.data["OnOff"]["onOff"]
+        on_off: clusters.OnOff = self._device.data["OnOff"]
+        self._attr_is_on = on_off.onOff
         self.async_write_ha_state()
 
 
