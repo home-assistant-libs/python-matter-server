@@ -65,7 +65,7 @@ class MatterStore(Store):
             return await super()._async_load_data()
 
         data = await self.hass.async_add_executor_job(
-            load_json, self.path, CHIPJSONDecoder
+            load_json, self.path, None, CHIPJSONDecoder
         )
 
         if data == {}:
@@ -87,7 +87,7 @@ class MatterAdapter(AbstractMatterAdapter):
             STORAGE_MAJOR_VERSION,
             DOMAIN,
             minor_version=STORAGE_MINOR_VERSION,
-            encoder=CHIPJSONEncoder
+            encoder=CHIPJSONEncoder,
         )
         self.platform_handlers: dict[Platform, AddEntitiesCallback] = {}
         self._platforms_set_up = asyncio.Event()
