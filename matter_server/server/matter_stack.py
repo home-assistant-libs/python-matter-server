@@ -96,53 +96,53 @@ class MatterStack:
                 fabricFiltered=fabricFiltered,
                 keepSubscriptions=False,
             )
-        else:
-            _LOGGER.info("Setting up Subscription for %s", attributes)
 
-            fabricid = self.device_controller.GetFabricId()
-            loop = asyncio.get_event_loop()
+        _LOGGER.info("Setting up Subscription for %s", attributes)
 
-            # Subscription, we need to keep track on it server side
-            def DeviceAttributeChangeCallback(
-                path: Attribute.TypedAttributePath,
-                subscription: Attribute.SubscriptionTransaction,
-            ):
-                data = subscription.GetAttribute(path)
-                value = {
-                    "SubscriptionId": subscription._subscriptionId,
-                    "FabridId": fabricid,
-                    "NodeId": nodeid,
-                    "Endpoint": path.Path.EndpointId,
-                    "Attribute": path.AttributeType,
-                    "Value": data,
-                }
-                _LOGGER.info("DeviceAttributeChangeCallback %s", value)
+        fabricid = self.device_controller.GetFabricId()
+        loop = asyncio.get_event_loop()
 
-                # For some reason, this callback is running in the CHIP Stack thread
-                loop.call_soon_threadsafe(self._subscription_report.put_nowait, value)
+        # Subscription, we need to keep track on it server side
+        def DeviceAttributeChangeCallback(
+            path: Attribute.TypedAttributePath,
+            subscription: Attribute.SubscriptionTransaction,
+        ):
+            data = subscription.GetAttribute(path)
+            value = {
+                "SubscriptionId": subscription._subscriptionId,
+                "FabridId": fabricid,
+                "NodeId": nodeid,
+                "Endpoint": path.Path.EndpointId,
+                "Attribute": path.AttributeType,
+                "Value": data,
+            }
+            _LOGGER.info("DeviceAttributeChangeCallback %s", value)
 
-            subscription: Attribute.SubscriptionTransaction = (
-                await self.device_controller.Read(
-                    nodeid,
-                    attributes,
-                    dataVersionFilters,
-                    events,
-                    returnClusterObject,
-                    reportInterval,
-                    fabricFiltered,
-                    keepSubscriptions,
-                )
+            # For some reason, this callback is running in the CHIP Stack thread
+            loop.call_soon_threadsafe(self._subscription_report.put_nowait, value)
+
+        subscription: Attribute.SubscriptionTransaction = (
+            await self.device_controller.Read(
+                nodeid,
+                attributes,
+                dataVersionFilters,
+                events,
+                returnClusterObject,
+                reportInterval,
+                fabricFiltered,
+                keepSubscriptions,
             )
+        )
 
-            subscriptionId = subscription._subscriptionId
-            _LOGGER.info("Setting callback for subscription of %s", attributes)
-            subscription.SetAttributeUpdateCallback(DeviceAttributeChangeCallback)
-            _LOGGER.info(f"SubscriptionId {subscriptionId}")
-            if subscriptionId in self.subscriptions:
-                raise Exception()
-            else:
-                self.subscriptions[subscriptionId] = subscription
-            return subscriptionId
+        subscriptionId = subscription._subscriptionId
+        _LOGGER.info("Setting callback for subscription of %s", attributes)
+        subscription.SetAttributeUpdateCallback(DeviceAttributeChangeCallback)
+        _LOGGER.info(f"SubscriptionId {subscriptionId}")
+        if subscriptionId in self.subscriptions:
+            raise Exception()
+        else:
+            self.subscriptions[subscriptionId] = subscription
+        return subscriptionId
 
     async def get_next_subscription_report(self):
         return await self._subscription_report.get()
