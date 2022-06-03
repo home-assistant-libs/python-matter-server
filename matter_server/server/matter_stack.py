@@ -26,7 +26,7 @@ class MatterStack:
 
     def __init__(self):
         self.subscriptions = {}
-        self._queue = asyncio.Queue()
+        self._subscription_report = asyncio.Queue()
 
     def setup(self, storage_path):
         _LOGGER.info("Setup CHIP Controller Server")
@@ -122,7 +122,7 @@ class MatterStack:
                 _LOGGER.info("DeviceAttributeChangeCallback %s", value)
 
                 # For some reason, this callback is running in the CHIP Stack thread
-                loop.call_soon_threadsafe(self._queue.put_nowait, value)
+                loop.call_soon_threadsafe(self._subscription_report.put_nowait, value)
 
             subscription: Attribute.SubscriptionTransaction = (
                 await self.device_controller.Read(
@@ -147,8 +147,8 @@ class MatterStack:
                 self.subscriptions[subscriptionId] = subscription
             return subscriptionId
 
-    async def get_next_event(self):
-        return await self._queue.get()
+    async def get_next_subscription_report(self):
+        return await self._subscription_report.get()
 
     def shutdown(self):
         for subscriptionid, subscription in self.subscriptions.items():

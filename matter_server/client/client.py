@@ -17,8 +17,10 @@ from typing import Any, DefaultDict, Dict, List, cast
 
 from aiohttp import (ClientSession, ClientWebSocketResponse, WSMsgType,
                      client_exceptions)
-from matter_server.common.model.message import (ErrorResultMessage, Message,
+from matter_server.common.model.message import (CommandMessage,
+                                                ErrorResultMessage, Message,
                                                 ResultMessage,
+                                                SubscriptionReportMessage,
                                                 SuccessResultMessage)
 
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
@@ -87,7 +89,8 @@ class Client:
 
     async def async_send_command(
         self,
-        message: Dict[str, Any],
+        command: str,
+        args: dict[str, Any],
         require_schema: int | None = None,
     ) -> dict:
         """Send a command and get a response."""
@@ -96,17 +99,22 @@ class Client:
                 "Command not available due to incompatible server version. Update the Z-Wave "
                 f"JS Server to a version that supports at least api schema {require_schema}."
             )
+
+        message = CommandMessage(
+            messageId=uuid.uuid4().hex,
+            command=command,
+            args=args,
+        )
         future: asyncio.Future[dict] = self._loop.create_future()
-        message_id = message["messageId"] = uuid.uuid4().hex
-        self._result_futures[message_id] = future
-        await self._send_json_message(message)
+        self._result_futures[message.messageId] = future
+        await self._send_message(message)
         try:
             return await future
         finally:
-            self._result_futures.pop(message_id)
+            self._result_futures.pop(message.messageId)
 
     async def async_send_command_no_wait(
-        self, message: Dict[str, Any], require_schema: int | None = None
+        self, message: CommandMessage, require_schema: int | None = None
     ) -> None:
         """Send a command without waiting for the response."""
         if require_schema is not None and require_schema > self.schema_version:
@@ -114,8 +122,8 @@ class Client:
                 "Command not available due to incompatible server version. Update the Matter "
                 f"Server to a version that supports at least api schema {require_schema}."
             )
-        message["messageId"] = uuid.uuid4().hex
-        await self._send_json_message(message)
+        message.messageId = uuid.uuid4().hex
+        await self._send_message(message)
 
     async def connect(self) -> None:
         """Connect to the websocket server."""
@@ -162,26 +170,6 @@ class Client:
             version.driver_version,
             self.schema_version,
         )
-
-    # async def set_api_schema(self) -> None:
-    #     """Set API schema version on server."""
-    #     assert self._client
-
-    #     # set preferred schema version on the server
-    #     # note: we already check for (in)compatible schemas in the connect call
-    #     await self._send_json_message(
-    #         {
-    #             "command": "set_api_schema",
-    #             "messageId": SET_API_SCHEMA_MESSAGE_ID,
-    #             "schemaVersion": self.schema_version,
-    #         }
-    #     )
-    #     set_api_msg = await self._receive_json_or_raise()
-
-    #     if not set_api_msg["success"]:
-    #         # this should not happen, but just in case
-    #         await self._client.close()
-    #         raise FailedCommand(set_api_msg["messageId"], set_api_msg["errorCode"])
 
     async def listen(self, driver_ready: asyncio.Event) -> None:
         """Start listening to the websocket."""
@@ -318,35 +306,32 @@ class Client:
                 raise InvalidMessage("Invalid ResultMessage.")
 
             return
-        elif msg["type"] == "event":
+        elif isinstance(msg, SubscriptionReportMessage):
             self._logger.debug(
-                "Received event: %s",
+                "Received subscription report: %s",
                 msg,
             )
-            self.driver.receive_event(msg["payload"])
+
+            if self._record_messages:
+                self._recorded_events.append(
+                    {
+                        "record_type": "subscription_report",
+                        "ts": datetime.utcnow().isoformat(),
+                        "payload": deepcopy(msg),
+                    }
+                )
+
+            self.driver.receive_event(msg.payload)
         else:
             # Can't handle
             self._logger.debug(
                 "Received message with unknown type '%s': %s",
-                msg["type"],
+                type(msg),
                 msg,
             )
             return
 
-        if self._record_messages:
-            self._recorded_events.append(
-                {
-                    "record_type": "event",
-                    "ts": datetime.utcnow().isoformat(),
-                    "type": msg["event"]["event"],
-                    "event": deepcopy(msg),
-                }
-            )
-
-        # event = Event(type=msg["event"]["event"], data=msg["event"])
-        # self.driver.receive_event(msg)  # type: ignore
-
-    async def _send_json_message(self, message: Dict[str, Any]) -> None:
+    async def _send_message(self, message: CommandMessage) -> None:
         """Send a message.
 
         Raises NotConnected if client not connected.
@@ -358,11 +343,11 @@ class Client:
             self._logger.debug("Publishing message:\n%s\n", pprint.pformat(message))
 
         assert self._client
-        assert "messageId" in message
+        assert isinstance(message, CommandMessage)
 
         # Convert arguments that can be dataclasses.
-        if "args" in message:
-            for arg, value in message["args"].items():
+        if message.args:
+            for arg, value in message.args.items():
                 # Add type information to dataclasses
                 if is_dataclass(value):
                     cmd_dict = asdict(value)
@@ -374,12 +359,12 @@ class Client:
                     if cmd_dict["_type"].startswith(strip_prefix):
                         cmd_dict["_type"] = cmd_dict["_type"][len(strip_prefix) :]
 
-                    message["args"][arg] = cmd_dict
+                    message.args[arg] = cmd_dict
 
-        if self._record_messages and message["messageId"] not in LISTEN_MESSAGE_IDS:
+        if self._record_messages and message.messageId not in LISTEN_MESSAGE_IDS:
             # We don't need to deepcopy command_msg because it is always released by
             # the caller after the command is sent.
-            self._recorded_commands[message["messageId"]].update(
+            self._recorded_commands[message.messageId].update(
                 {
                     "record_type": "command",
                     "ts": datetime.utcnow().isoformat(),

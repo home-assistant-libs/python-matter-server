@@ -12,22 +12,17 @@ from typing import TYPE_CHECKING
 from aiohttp import WSCloseCode, WSMsgType
 from aiohttp.web import Application, WebSocketResponse, WSMsgType, run_app
 from chip.exceptions import ChipStackError
-from matter_server.common.model.message import (ErrorResultMessage,
+from matter_server.common.model.message import (CommandMessage,
+                                                ErrorResultMessage, Message,
+                                                SubscriptionReportMessage,
                                                 SuccessResultMessage)
 from matter_server.common.model.version import VersionInfo
+from setuptools import Command
 
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 
 if TYPE_CHECKING:
     from .matter_stack import MatterStack
-
-
-def create_event_response(subscriptionId, payload):
-    return {
-        "type": "event",
-        "subscriptionId": subscriptionId,
-        "payload": payload,
-    }
 
 
 class MatterServer:
@@ -85,11 +80,11 @@ class MatterServerClient:
 
         self.logger.info("Websocket connection ready")
 
-        event_task = asyncio.create_task(self.server.stack.get_next_event())
+        sr_task = asyncio.create_task(self.server.stack.get_next_subscription_report())
         ws_task = asyncio.create_task(self.ws.receive())
         while True:
             done, _ = await asyncio.wait(
-                [event_task, ws_task], return_when=asyncio.FIRST_COMPLETED
+                [sr_task, ws_task], return_when=asyncio.FIRST_COMPLETED
             )
 
             if ws_task in done:
@@ -101,68 +96,69 @@ class MatterServerClient:
                 ):
                     break
 
+                if msg.type != WSMsgType.TEXT:
+                    self.logger.debug("Ignoring %s", msg)
+                    continue
+
                 try:
+                    self.logger.info("Received: %s", msg.data)
+                    msg = json.loads(msg.data, cls=CHIPJSONDecoder)
+                    self.logger.info("Deserialized message: %s", msg)
+                    if not isinstance(msg, CommandMessage):
+                        self.logger.exception("Invalid Message received: %s", msg)
+                        continue
                     await self._handle_message(msg)
                 except Exception:
                     self.logger.exception("Error handling message: %s", msg)
                 ws_task = asyncio.create_task(self.ws.receive())
 
-            if event_task in done:
-                event = event_task.result()
+            if sr_task in done:
+                sr = sr_task.result()
                 try:
-                    await self._handle_event(event)
+                    await self._handle_subscription_report(sr)
                 except Exception:
-                    self.logger.exception("Error handling event: %s", event)
-                event_task = asyncio.create_task(self.server.stack.get_next_event())
+                    self.logger.exception("Error handling subscription report: %s", sr)
+                sr_task = asyncio.create_task(self.server.stack.get_next_subscription_report())
 
         self.logger.info("Websocket connection closed")
         return self.ws
 
-    async def _handle_event(self, payload):
-        await self.send_msg(create_event_response(payload["SubscriptionId"], payload))
+    async def _handle_subscription_report(self, payload):
+        await self.send_msg(SubscriptionReportMessage(payload["SubscriptionId"], payload))
 
-    async def _handle_message(self, msg: dict):
-        if msg.type != WSMsgType.TEXT:
-            self.logger.debug("Ignoring %s", msg)
-            return
-
-        self.logger.info("Received: %s", msg.data)
-        msg = json.loads(msg.data, cls=CHIPJSONDecoder)
-        self.logger.info("Deserialized message: %s", msg)
-
+    async def _handle_message(self, msg: CommandMessage):
         # See if it's an instance method
-        instance, _, command = msg["command"].partition(".")
+        instance, _, command = msg.command.partition(".")
         if not instance or not command:
-            await self.send_msg(ErrorResultMessage(msg["messageId"], "INVALID_COMMAND"))
-            self.logger.warning("Unknown command: %s", msg["command"])
+            await self.send_msg(ErrorResultMessage(msg.messageId, "INVALID_COMMAND"))
+            self.logger.warning("Unknown command: %s", msg.command)
             return
 
         if instance == "device_controller":
             method = None
-            args = msg["args"]
 
             if command == "CommissionWithCode" and not self.server.stack.wifi_cred_set:
                 self.logger.warning("Received commissioning without Wi-Fi set")
 
-            if command == "Read" and isinstance(args.get("attributes"), list):
+            if command == "Read" and isinstance(msg.args.get("attributes"), list):
                 converted_attributes = []
-                for attribute in args["attributes"]:
+                for attribute in msg.args["attributes"]:
                     if isinstance(attribute, list):
                         converted_attributes.append(tuple(attribute))
                     else:
                         converted_attributes.append(attribute)
 
-                args["attributes"] = converted_attributes
+                msg.args["attributes"] = converted_attributes
 
             if command[0] != "_":
                 method = self.server.stack.get_method(command)
             if not method:
-                await self.send_msg(ErrorResultMessage(msg["messageId"], "INVALID_COMMAND"))
-                self.logger.error("Unknown command: %s", msg["command"])
+                await self.send_msg(ErrorResultMessage(msg.messageId, "INVALID_COMMAND"))
+                self.logger.error("Unknown command: %s", command)
                 return
 
             try:
-                raw_result = method(**args)
+                raw_result = method(**msg.args)
 
                 if asyncio.iscoroutine(raw_result):
                     raw_result = await raw_result
@@ -193,13 +189,13 @@ class MatterServerClient:
 
                 if command == "SetWiFiCredentials" and result == 0:
                     self.server.stack.wifi_cred_set = True
-                await self.send_msg(SuccessResultMessage(msg["messageId"], result))
+                await self.send_msg(SuccessResultMessage(msg.messageId, result))
             except ChipStackError as ex:
-                await self.send_msg(ErrorResultMessage(msg["messageId"], str(ex)))
+                await self.send_msg(ErrorResultMessage(msg.messageId, str(ex)))
             except Exception:
-                self.logger.exception("Error calling method: %s", msg["command"])
-                await self.send_msg(ErrorResultMessage(msg["messageId"], "UNKNOWN"))
+                self.logger.exception("Error calling method: %s", command)
+                await self.send_msg(ErrorResultMessage(msg.messageId, "UNKNOWN"))
 
         else:
-            self.logger.warning("Unknown command: %s", msg["command"])
-            await self.send_msg(ErrorResultMessage(msg["messageId"], "INVALID_COMMAND"))
+            self.logger.warning("Unknown command: %s", command)
+            await self.send_msg(ErrorResultMessage(msg.messageId, "INVALID_COMMAND"))

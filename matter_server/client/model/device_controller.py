@@ -5,6 +5,7 @@ import typing
 from typing import TYPE_CHECKING
 
 from matter_server.client.model.subscription import Subscription
+from matter_server.common.model.message import CommandMessage
 from matter_server.vendor.chip.clusters import Objects as ClusterObjects
 
 _LOGGER = logging.getLogger(__name__)
@@ -411,5 +412,5 @@ class DeviceController:
     async def _async_send_command(self, command, args):
         """Send driver controller command."""
         return await self.client.async_send_command(
-            {"command": f"device_controller.{command}", "args": args}
+            f"device_controller.{command}", args
         )

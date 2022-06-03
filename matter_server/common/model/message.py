@@ -20,3 +20,14 @@ class SuccessResultMessage(ResultMessage):
 @dataclass
 class ErrorResultMessage(ResultMessage):
     errorCode: Any
+
+@dataclass
+class SubscriptionReportMessage(Message):
+    subscriptionId: str
+    payload: Any
+
+@dataclass
+class CommandMessage(Message):
+    messageId: str
+    command: str
+    args: dict[str, Any]
