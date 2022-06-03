@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from matter_server.vendor.chip.clusters.Objects import Descriptor
+
 from .device import DEVICE_TYPES, MatterDevice
 
 if TYPE_CHECKING:
@@ -21,16 +23,17 @@ class MatterNode:
         devices: list[MatterDevice] = []
 
         for endpoint_id, endpoint_info in node_info["attributes"].items():
-            for device_info in endpoint_info["Descriptor"]["deviceList"]:
-                device_cls = DEVICE_TYPES.get(device_info["type"])
+            descriptor: Descriptor = endpoint_info["Descriptor"]
+            for device_info in descriptor.deviceList:
+                device_cls = DEVICE_TYPES.get(device_info.type)
 
                 if device_cls is None:
                     matter.adapter.logger.warning(
-                        "Found unknown device type %s", device_info["type"]
+                        "Found unknown device type %s", device_info.type
                     )
                     continue
 
-                device = device_cls(self, int(endpoint_id), device_info["revision"])
+                device = device_cls(self, int(endpoint_id), device_info.revision)
                 if device.device_type == 22:
                     self.root_device = device
                 else:

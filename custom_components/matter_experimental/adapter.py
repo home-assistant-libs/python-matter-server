@@ -18,6 +18,7 @@ from homeassistant.helpers import device_registry as dr
 
 from matter_server.client.adapter import AbstractMatterAdapter
 from matter_server.common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
+from matter_server.vendor.chip.clusters import Objects as all_clusters
 
 from .const import DOMAIN
 from .device_platform import DEVICE_PLATFORM
@@ -125,21 +126,21 @@ class MatterAdapter(AbstractMatterAdapter):
         await self._platforms_set_up.wait()
         self.logger.debug("Setting up entities for node %s", node.node_id)
 
-        basic_info = node.root_device.basic_info
+        basic_info: all_clusters.Basic = node.root_device.basic_info
 
         kwargs = {}
-        if basic_info["nodeLabel"]:
-            kwargs["name"] = basic_info["nodeLabel"]
-        if basic_info["location"]:
-            kwargs["suggested_area"] = basic_info["location"]
+        if basic_info.nodeLabel:
+            kwargs["name"] = basic_info.nodeLabel
+        if basic_info.location:
+            kwargs["suggested_area"] = basic_info.location
 
         dr.async_get(self.hass).async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
-            identifiers={(DOMAIN, basic_info["uniqueID"])},
-            hw_version=basic_info["hardwareVersionString"],
-            sw_version=basic_info["softwareVersionString"],
-            manufacturer=basic_info["vendorName"],
-            model=basic_info["productName"],
+            identifiers={(DOMAIN, basic_info.uniqueID)},
+            hw_version=basic_info.hardwareVersionString,
+            sw_version=basic_info.softwareVersionString,
+            manufacturer=basic_info.vendorName,
+            model=basic_info.productName,
             **kwargs,
         )
 

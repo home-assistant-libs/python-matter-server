@@ -53,9 +53,9 @@ class MatterLight(MatterEntity, LightEntity):
             )
             return
 
-        level_control = self._device.data["LevelControl"]
+        level_control: clusters.LevelControl = self._device.data["LevelControl"]
         level = percentage.percentage_to_ranged_value(
-            (level_control["minLevel"], level_control["maxLevel"]),
+            (level_control.minLevel, level_control.maxLevel),
             percentage.ranged_value_to_percentage(
                 (0, 255),
                 kwargs[ATTR_BRIGHTNESS],
@@ -75,16 +75,17 @@ class MatterLight(MatterEntity, LightEntity):
     @callback
     def _update_from_device(self) -> None:
         """Update from device."""
-        self._attr_is_on = self._device.data["OnOff"]["onOff"]
+        on_off: clusters.OnOff = self._device.data["OnOff"]
+        self._attr_is_on = on_off.onOff
 
         if self._device.has_cluster(clusters.LevelControl):
-            level_control = self._device.data["LevelControl"]
+            level_control: clusters.LevelControl = self._device.data["LevelControl"]
             # Convert brightness to HA = 0..255
             self._attr_brightness = percentage.percentage_to_ranged_value(
                 (0, 255),
                 percentage.ranged_value_to_percentage(
-                    (level_control["minLevel"], level_control["maxLevel"]),
-                    level_control["currentLevel"],
+                    (level_control.minLevel, level_control.maxLevel),
+                    level_control.currentLevel,
                 ),
             )
         self.async_write_ha_state()

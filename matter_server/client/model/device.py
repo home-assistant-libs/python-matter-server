@@ -97,7 +97,7 @@ class MatterDevice:
                     attribute,
                     value,
                 )
-                self.data[cluster_name][attribute] = value
+                setattr(self.data[cluster_name], attribute, value)
 
     async def subscribe_updates(
         self, subscribe_attributes: list, subscriber: SubscriberType
@@ -156,7 +156,7 @@ class MatterDevice:
             event["Value"],
         )
 
-        self.data[cluster_name][attribute] = event["Value"]
+        setattr(self.data[cluster_name], attribute, event["Value"])
 
         if self._on_update_listener:
             self._on_update_listener()
@@ -167,14 +167,14 @@ class RootDevice(MatterDevice, device_type=0x0016):
 
     @property
     def name(self) -> str:
-        return self.basic_info["nodeLabel"]
+        return self.basic_info.nodeLabel
 
     @property
     def unique_id(self) -> str:
-        return self.basic_info["uniqueID"]
+        return self.basic_info.uniqueID
 
     @property
-    def basic_info(self) -> dict:
+    def basic_info(self) -> all_clusters.Basic:
         return self.data["Basic"]
 
 

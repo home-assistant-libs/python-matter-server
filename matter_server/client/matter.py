@@ -96,7 +96,6 @@ class Matter:
             self.adapter.logger.error("Failed to interview node: %s", err)
             return
 
-        node_info = asdict_typed(node_info, dict)
         node_info["node_id"] = node_id
 
         if self._nodes[node_id]:
