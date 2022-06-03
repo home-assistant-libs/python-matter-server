@@ -15,7 +15,7 @@ from aiohttp import WSCloseCode, WSMsgType
 from chip.exceptions import ChipStackError
 
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
-from .server import CHIPControllerServer
+from .matter_stack import MatterStack
 
 logging.basicConfig(level=logging.WARN)
 _LOGGER = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ def create_event_response(subscriptionId, payload):
     }
 
 
-async def websocket_handler(request, server: CHIPControllerServer):
+async def websocket_handler(request, server: MatterStack):
     _LOGGER.info("New connection...")
     ws = aiohttp.web.WebSocketResponse()
     await ws.prepare(request)
@@ -113,7 +113,7 @@ async def handle_event(send_msg, payload):
     await send_msg(create_event_response(payload["SubscriptionId"], payload))
 
 
-async def handle_message(send_msg, server: CHIPControllerServer, msg: dict):
+async def handle_message(send_msg, server: MatterStack, msg: dict):
     if msg.type != aiohttp.WSMsgType.TEXT:
         _LOGGER.debug("Ignoring %s", msg)
         return
@@ -223,7 +223,7 @@ def main() -> int:
     # Create asyncio loop early e.g. for asyncio.Queue creation
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    server = CHIPControllerServer()
+    server = MatterStack()
     server.setup(STORAGE_PATH)
     app = aiohttp.web.Application()
     app["websockets"] = weakref.WeakSet()
