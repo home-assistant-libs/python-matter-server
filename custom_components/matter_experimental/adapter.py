@@ -87,6 +87,7 @@ class MatterAdapter(AbstractMatterAdapter):
             STORAGE_MAJOR_VERSION,
             DOMAIN,
             minor_version=STORAGE_MINOR_VERSION,
+            encoder=CHIPJSONEncoder
         )
         self.platform_handlers: dict[Platform, AddEntitiesCallback] = {}
         self._platforms_set_up = asyncio.Event()
