@@ -12,7 +12,7 @@ DEVICE_TYPES = {}
 SubscriberType = Callable[[], None]
 
 
-_CLUSTER = TypeVar("_CLUSTER", all_clusters.Cluster)
+_CLUSTER_T = TypeVar("_CLUSTER_T", bound=all_clusters.Cluster)
 
 
 class MatterDevice:
@@ -50,7 +50,7 @@ class MatterDevice:
 
         return cluster.__name__ in self.data
 
-    def get_cluster(self, cluster: type[_CLUSTER]) -> _CLUSTER | None:
+    def get_cluster(self, cluster: type[_CLUSTER_T]) -> _CLUSTER_T | None:
         """Get the cluster object."""
         if not self.has_cluster(cluster):
             return None
