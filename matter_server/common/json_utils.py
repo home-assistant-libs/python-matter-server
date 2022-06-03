@@ -61,8 +61,7 @@ def asdict_typed(obj, dict_factory):
 
 class CHIPJSONEncoder(json.JSONEncoder):
     def _encode_dataclasses_and_dict_keys(self, obj):
-        if is_dataclass(obj):
-            obj = asdict_typed(obj, dict)
+        obj = asdict_typed(obj, dict)
 
         # Matter uses Cluster Attribute classes as dict keys.
         # Arbitrary types as not allowed by JSON encoder
