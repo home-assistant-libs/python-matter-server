@@ -53,7 +53,7 @@ class MatterLight(MatterEntity, LightEntity):
             )
             return
 
-        level_control: clusters.LevelControl = self._device.data["LevelControl"]
+        level_control = self._device.get_cluster(clusters.LevelControl)
         level = percentage.percentage_to_ranged_value(
             (level_control.minLevel, level_control.maxLevel),
             percentage.ranged_value_to_percentage(
@@ -78,8 +78,7 @@ class MatterLight(MatterEntity, LightEntity):
         on_off: clusters.OnOff = self._device.data["OnOff"]
         self._attr_is_on = on_off.onOff
 
-        if self._device.has_cluster(clusters.LevelControl):
-            level_control: clusters.LevelControl = self._device.data["LevelControl"]
+        if level_control := self._device.get_cluster(clusters.LevelControl):
             # Convert brightness to HA = 0..255
             self._attr_brightness = percentage.percentage_to_ranged_value(
                 (0, 255),

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from matter_server.vendor.chip.clusters import Objects as all_clusters
 
@@ -10,6 +10,9 @@ if TYPE_CHECKING:
 DEVICE_TYPES = {}
 
 SubscriberType = Callable[[], None]
+
+
+_CLUSTER = TypeVar("_CLUSTER", all_clusters.Cluster)
 
 
 class MatterDevice:
@@ -46,6 +49,13 @@ class MatterDevice:
             return False
 
         return cluster.__name__ in self.data
+
+    def get_cluster(self, cluster: type[_CLUSTER]) -> _CLUSTER | None:
+        """Get the cluster object."""
+        if not self.has_cluster(cluster):
+            return None
+
+        return self.data[cluster.__name__]
 
     async def send_command(
         self,
