@@ -4,6 +4,8 @@ import os
 import sys
 from pathlib import Path
 
+import coloredlogs
+
 from .matter_stack import MatterStack
 from .server import MatterServer
 
@@ -20,8 +22,8 @@ def main() -> int:
         str(Path.home() / ".chip-storage/python-kv.json"),
     )
 
-    stack = MatterStack()
-    stack.setup(storage_path)
+    coloredlogs.install(level=logging.INFO)
+    stack = MatterStack(storage_path)
 
     loop = asyncio.get_event_loop()
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import suppress
 import json
+import typing
 from typing import TYPE_CHECKING, Coroutine, Final
 from concurrent import futures
 
@@ -21,6 +22,7 @@ from ..backports.enum import StrEnum
 
 if TYPE_CHECKING:
     from .server import MatterServer
+    from chip.clusters import Attribute, ClusterObjects
 
 MAX_PENDING_MSG = 512
 CANCELLATION_ERRORS: Final = (asyncio.CancelledError, futures.CancelledError)
@@ -62,6 +64,8 @@ class MatterServerClient:
         self.request = request
         self.logger = server.logger
         self._to_write: asyncio.Queue = asyncio.Queue(maxsize=MAX_PENDING_MSG)
+        self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
+        self._shutdown_event: asyncio.Event | None = None
 
     def _send_message(self, message) -> None:
         """Send a message to the client."""
@@ -74,7 +78,9 @@ class MatterServerClient:
             asyncio.get_running_loop().create_task(self.disconnect())
 
     async def disconnect(self):
+        self._shutdown_event = asyncio.Event()
         await self.wsock.close(code=WSCloseCode.GOING_AWAY, message="Server shutdown")
+        await self._shutdown_event.wait()
 
     async def handle_request(self):
         self.logger.info("New Client connection...")
@@ -92,7 +98,6 @@ class MatterServerClient:
 
         self.logger.info("Websocket connection ready")
 
-        subscription_task = asyncio.create_task(self._handle_subscription_reports())
         writer_task = asyncio.create_task(self._writer())
 
         try:
@@ -127,20 +132,17 @@ class MatterServerClient:
                 self._handle_message(msg)
         finally:
             self.logger.info("Websocket connection closed")
-            subscription_task.cancel()
             writer_task.cancel()
-            await subscription_task
+
+            for subscriptionid, subscription in self._subscriptions.items():
+                self.logger.info("Shutdown subscription id %d", subscriptionid)
+                subscription.Shutdown()
+
             await writer_task
-            # TODO undo subscriptions.
+            if self._shutdown_event:
+                self._shutdown_event.set()
 
         return self.wsock
-
-    async def _handle_subscription_reports(self):
-        while True:
-            payload = await self.server.stack.get_next_subscription_report()
-            self._send_message(
-                SubscriptionReportMessage(payload["SubscriptionId"], payload)
-            )
 
     async def _writer(self) -> None:
         """Write outgoing messages."""
@@ -176,7 +178,10 @@ class MatterServerClient:
             self._send_message(ErrorResultMessage(msg.messageId, "Unknown error"))
 
     def _handle_device_controller_message(self, msg: CommandMessage, command: str):
-        method = self.server.stack.get_method(command)
+        if command == "Read" and msg.args.get("reportInterval") is not None:
+            method = self._handle_device_controller_subscribe_message
+        else:
+            method = getattr(self.server.stack.device_controller, command)
 
         if command == "CommissionWithCode" and not self.server.stack.wifi_cred_set:
             self.logger.warning("Received commissioning without Wi-Fi set")
@@ -204,6 +209,102 @@ class MatterServerClient:
             self.server.stack.wifi_cred_set = True
 
         self._send_message(SuccessResultMessage(msg.messageId, result))
+
+    async def _handle_device_controller_subscribe_message(
+        self,
+        nodeid: int,
+        # Moved up f
+        reportInterval: typing.Tuple[int, int],
+        attributes: typing.List[
+            typing.Union[
+                None,  # Empty tuple, all wildcard
+                typing.Tuple[int],  # Endpoint
+                # Wildcard endpoint, Cluster id present
+                typing.Tuple[typing.Type[ClusterObjects.Cluster]],
+                # Wildcard endpoint, Cluster + Attribute present
+                typing.Tuple[typing.Type[ClusterObjects.ClusterAttributeDescriptor]],
+                # Wildcard attribute id
+                typing.Tuple[int, typing.Type[ClusterObjects.Cluster]],
+                # Concrete path
+                typing.Tuple[
+                    int, typing.Type[ClusterObjects.ClusterAttributeDescriptor]
+                ],
+            ]
+        ] = None,
+        dataVersionFilters: typing.List[
+            typing.Tuple[int, typing.Type[ClusterObjects.Cluster], int]
+        ] = None,
+        events: typing.List[
+            typing.Union[
+                None,  # Empty tuple, all wildcard
+                typing.Tuple[str, int],  # all wildcard with urgency set
+                typing.Tuple[int, int],  # Endpoint,
+                # Wildcard endpoint, Cluster id present
+                typing.Tuple[typing.Type[ClusterObjects.Cluster], int],
+                # Wildcard endpoint, Cluster + Event present
+                typing.Tuple[typing.Type[ClusterObjects.ClusterEvent], int],
+                # Wildcard event id
+                typing.Tuple[int, typing.Type[ClusterObjects.Cluster], int],
+                # Concrete path
+                typing.Tuple[int, typing.Type[ClusterObjects.ClusterEvent], int],
+            ]
+        ] = None,
+        returnClusterObject: bool = False,
+        fabricFiltered: bool = True,
+        keepSubscriptions: bool = False,
+    ):
+        """
+        Handle a Read that results in a subscription.
+
+        Type signature is copied from Read except reportInterval is made mandatory.
+        """
+        self.logger.info("Setting up Subscription for %s", attributes)
+
+        fabricid = self.server.stack.device_controller.GetFabricId()
+        loop = asyncio.get_event_loop()
+
+        subscription: Attribute.SubscriptionTransaction = (
+            await self.server.stack.device_controller.Read(
+                nodeid,
+                attributes,
+                dataVersionFilters,
+                events,
+                returnClusterObject,
+                reportInterval,
+                fabricFiltered,
+                keepSubscriptions,
+            )
+        )
+
+        # pylint: disable=protected-access
+        subscription_id = subscription._subscriptionId
+
+        # Subscription, we need to keep track on it server side
+        def subscription_callback(
+            path: Attribute.TypedAttributePath,
+            subscription: Attribute.SubscriptionTransaction,
+        ):
+            data = subscription.GetAttribute(path)
+            value = {
+                "SubscriptionId": subscription_id,
+                "FabridId": fabricid,
+                "NodeId": nodeid,
+                "Endpoint": path.Path.EndpointId,
+                "Attribute": path.AttributeType,
+                "Value": data,
+            }
+            self.logger.info("subscription_callback %s", value)
+
+            # This callback is running in the CHIP stack thread
+            loop.call_soon_threadsafe(
+                self._send_message, SubscriptionReportMessage(subscription_id, value)
+            )
+
+        self.logger.info("Setting callback for subscription of %s", attributes)
+        subscription.SetAttributeUpdateCallback(subscription_callback)
+        self.logger.info(f"SubscriptionId {subscription_id}")
+        self._subscriptions[subscription_id] = subscription
+        return subscription_id
 
     async def _handle_coroutine_command(self, msg: CommandMessage, action: Coroutine):
         try:

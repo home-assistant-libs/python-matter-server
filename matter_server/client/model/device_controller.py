@@ -5,7 +5,6 @@ import typing
 from typing import TYPE_CHECKING
 
 from matter_server.client.model.subscription import Subscription
-from matter_server.common.model.message import CommandMessage
 from matter_server.vendor.chip.clusters import Objects as ClusterObjects
 
 _LOGGER = logging.getLogger(__name__)
