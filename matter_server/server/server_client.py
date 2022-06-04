@@ -286,12 +286,13 @@ class MatterServerClient:
         ):
             data = subscription.GetAttribute(path)
             value = {
-                "SubscriptionId": subscription_id,
-                "FabridId": fabricid,
-                "NodeId": nodeid,
-                "Endpoint": path.Path.EndpointId,
-                "Attribute": path.AttributeType,
-                "Value": data,
+                "subscriptionId": subscription_id,
+                "fabridId": fabricid,
+                "nodeId": nodeid,
+                "endpoint": path.Path.EndpointId,
+                "cluster": path.ClusterType,
+                "attribute": path.AttributeName,
+                "value": data,
             }
             self.logger.info("subscription_callback %s", value)
 

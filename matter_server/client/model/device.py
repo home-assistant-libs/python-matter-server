@@ -163,20 +163,18 @@ class MatterDevice:
         # 2022-06-03 11:30:52 DEBUG (MainThread) [custom_components.matter_experimental.adapter] node 4335, endpoint 1: received subscription event
         # {'SubscriptionId': 2632459106, 'FabridId': 1, 'NodeId': 4335, 'Endpoint': 1, 'Attribute': <class 'matter_server.vendor.chip.clusters.Objects.OnOff.Attributes.OnOff'>, 'Value': False}
 
-        attribute = event["Attribute"].__name__
-        attribute = attribute[0].lower() + attribute[1:]
-        cluster_name = event["Attribute"].__qualname__.rsplit(".")[0]
-
         self.node.matter.adapter.logger.debug(
             "Updating node %s, endpoint %s, %s: %s=%s",
             self.node.node_id,
             self.endpoint_id,
-            cluster_name,
-            attribute,
-            event["Value"],
+            event["cluster"].__name__,
+            event["attribute"],
+            event["value"],
         )
 
-        setattr(self.data[cluster_name], attribute, event["Value"])
+        setattr(
+            self.data[event["cluster"].__name__], event["attribute"], event["value"]
+        )
 
         if self._on_update_listener:
             self._on_update_listener()
