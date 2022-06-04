@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from aiohttp import web
 
-from .server_client import MatterServerClient
+from .active_connection import ActiveConnection
 
 if TYPE_CHECKING:
     from .matter_stack import MatterStack
@@ -27,7 +27,7 @@ class MatterServer:
         self.app.router.add_route("GET", "/chip_ws", self._handle_chip_ws)
 
     async def _handle_chip_ws(self, request):
-        connection = MatterServerClient(self, request)
+        connection = ActiveConnection(self, request)
         try:
             self.clients.add(connection)
             return await connection.handle_request()

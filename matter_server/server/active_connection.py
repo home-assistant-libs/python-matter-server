@@ -55,7 +55,7 @@ PROTOCOL = {
 }
 
 
-class MatterServerClient:
+class ActiveConnection:
 
     wsock: web.WebSocketResponse | None = None
 
