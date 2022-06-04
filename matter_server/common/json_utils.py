@@ -1,9 +1,9 @@
 import base64
 import copy
-import json
-import sys
 from dataclasses import asdict, fields, is_dataclass
 from enum import Enum
+import json
+import sys
 from types import ModuleType
 
 import matter_server.common.model

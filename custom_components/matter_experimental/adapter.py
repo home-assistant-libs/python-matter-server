@@ -1,20 +1,21 @@
 """Matter to HA adapter."""
 from __future__ import annotations
-import asyncio
-import logging
+
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Callable
+import asyncio
 import json
+import logging
+from typing import TYPE_CHECKING, Callable
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_URL, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.storage import Store
 
 from matter_server.client.adapter import AbstractMatterAdapter
 from matter_server.common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder

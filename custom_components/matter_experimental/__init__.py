@@ -2,16 +2,15 @@
 from __future__ import annotations
 
 import asyncio
-import async_timeout
 
-import voluptuous as vol
+import async_timeout
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.helpers.start import async_at_start
+import voluptuous as vol
 
 from matter_server.client.exceptions import CannotConnect, FailedCommand
 from matter_server.client.matter import Matter

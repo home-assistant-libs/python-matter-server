@@ -2,12 +2,12 @@ import asyncio
 import logging
 import typing
 
-import chip.logging
-import chip.native
 from chip.ChipDeviceCtrl import ChipDeviceController
 from chip.ChipStack import ChipStack
-from chip.clusters import Attribute, ClusterObjects
 from chip.FabricAdmin import FabricAdmin
+from chip.clusters import Attribute, ClusterObjects
+import chip.logging
+import chip.native
 
 _LOGGER = logging.getLogger(__name__)
 

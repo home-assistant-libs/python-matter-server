@@ -6,6 +6,7 @@ from matter_server.vendor.chip.clusters import Objects as all_clusters
 
 if TYPE_CHECKING:
     from .node import MatterNode
+    from .subscription import Subscription
 
 DEVICE_TYPES = {}
 
@@ -136,18 +137,21 @@ class MatterDevice:
         self._on_update_listener = subscriber
 
         reporting_timing_params = (0, 10)
-        subscription = await self.node.matter.client.driver.device_controller.Read(
-            self.node.node_id,
-            attributes=[
-                (self.endpoint_id, attribute) for attribute in subscribe_attributes
-            ],
-            reportInterval=reporting_timing_params,
+        subscription: Subscription = (
+            await self.node.matter.client.driver.device_controller.Read(
+                self.node.node_id,
+                attributes=[
+                    (self.endpoint_id, attribute) for attribute in subscribe_attributes
+                ],
+                reportInterval=reporting_timing_params,
+            )
         )
         subscription.handler = self._receive_event
 
-        async def unsubscribe() -> None:
+        def unsubscribe() -> None:
             self._on_update_listener = None
             subscription.handler = None
+
             # TODO actually unsubscribe
 
         return unsubscribe

@@ -1,8 +1,8 @@
 """Matter adapter."""
 from __future__ import annotations
 
-import logging
 from abc import abstractmethod
+import logging
 from typing import Callable
 
 import aiohttp

@@ -2,18 +2,18 @@
 from __future__ import annotations
 
 import asyncio
-import json
-import logging
-import pprint
-import uuid
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from functools import partial
+import json
+import logging
 from operator import itemgetter
+import pprint
 from types import TracebackType
 from typing import Any, DefaultDict, Dict, List, cast
+import uuid
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
 
@@ -124,7 +124,7 @@ class Client:
             self._result_futures.pop(message.messageId)
 
     async def async_send_command_no_wait(
-        self, message: CommandMessage, require_schema: int | None = None
+        self, command: str, args: dict[str, Any], require_schema: int | None = None
     ) -> None:
         """Send a command without waiting for the response."""
         if require_schema is not None and require_schema > self.schema_version:

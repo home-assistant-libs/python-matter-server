@@ -3,19 +3,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.const import Platform
-from homeassistant.components.light import LightEntity, ColorMode, ATTR_BRIGHTNESS
+from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import percentage
 
-from matter_server.vendor.chip.clusters import Objects as clusters
 from matter_server.client.model import device as matter_devices
+from matter_server.vendor.chip.clusters import Objects as clusters
 
 from .const import DOMAIN
-from .entity import MatterEntity
 from .device_platform_helper import DeviceMapping
+from .entity import MatterEntity
 
 if TYPE_CHECKING:
     from matter_server.client.matter import Matter

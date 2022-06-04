@@ -1,7 +1,7 @@
 """Tests for json_util."""
 
-import json
 from dataclasses import dataclass
+import json
 
 from matter_server.common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 from matter_server.common.model.message import CommandMessage

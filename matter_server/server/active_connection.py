@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+from concurrent import futures
 from contextlib import suppress
+from functools import partial
 import json
 import typing
 from typing import TYPE_CHECKING, Coroutine, Final
-from concurrent import futures
 
 from aiohttp import WSCloseCode, WSMsgType, web
 from chip.exceptions import ChipStackError
 
+from ..backports.enum import StrEnum
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 from ..common.model.message import (
     CommandMessage,
@@ -18,11 +20,11 @@ from ..common.model.message import (
     SuccessResultMessage,
 )
 from ..common.model.version import VersionInfo
-from ..backports.enum import StrEnum
 
 if TYPE_CHECKING:
-    from .server import MatterServer
     from chip.clusters import Attribute, ClusterObjects
+
+    from .server import MatterServer
 
 MAX_PENDING_MSG = 512
 CANCELLATION_ERRORS: Final = (asyncio.CancelledError, futures.CancelledError)
@@ -41,6 +43,9 @@ class DeviceControllerCommands(StrEnum):
     SEND_COMMAND = "SendCommand"
     SET_THREAD_OPERATIONAL_DATASET = "SetThreadOperationalDataset"
     SET_WIFI_CREDENTIALS = "SetWiFiCredentials"
+
+    # Custom commands
+    UNSUBSCRIBE = "Unsubscribe"
 
 
 PROTOCOL = {
@@ -178,7 +183,12 @@ class ActiveConnection:
             self._send_message(ErrorResultMessage(msg.messageId, "Unknown error"))
 
     def _handle_device_controller_message(self, msg: CommandMessage, command: str):
-        if command == "Read" and msg.args.get("reportInterval") is not None:
+        if command == DeviceControllerCommands.UNSUBSCRIBE:
+            method = partial(self._handle_device_controller_unsubscribe_message, msg)
+        elif (
+            command == DeviceControllerCommands.READ
+            and msg.args.get("reportInterval") is not None
+        ):
             method = self._handle_device_controller_subscribe_message
         else:
             method = getattr(self.server.stack.device_controller, command)
@@ -307,6 +317,18 @@ class ActiveConnection:
         self._subscriptions[subscription_id] = subscription
         return subscription_id
 
+    def _handle_device_controller_unsubscribe_message(
+        self, msg: CommandMessage, subscription_id: int
+    ):
+        """Unsubscribe."""
+        subscription = self._subscriptions.pop(subscription_id, None)
+        if subscription is None:
+            self._send_message(ErrorResultMessage(msg.messageId, "not_found"))
+            return
+
+        subscription.shutdown()
+        self._send_message(SuccessResultMessage(msg.messageId, None))
+
     async def _handle_coroutine_command(self, msg: CommandMessage, action: Coroutine):
         try:
             result = await action
@@ -314,6 +336,6 @@ class ActiveConnection:
             self._send_message(ErrorResultMessage(msg.messageId, str(ex)))
         except Exception:
             self.logger.exception("Error handling message: %s", msg.data)
-            self._send_message(ErrorResultMessage(msg.messageId, "Unknown error"))
+            self._send_message(ErrorResultMessage(msg.messageId, "unknown_error"))
 
         self._send_message(SuccessResultMessage(msg.messageId, result))

@@ -1,11 +1,12 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from homeassistant.const import Platform
 
 from .device_platform_helper import DeviceMapping
-from .switch import DEVICE_ENTITY as SWITCH_DEVICE_ENTITY
 from .light import DEVICE_ENTITY as LIGHT_DEVICE_ENTITY
+from .switch import DEVICE_ENTITY as SWITCH_DEVICE_ENTITY
 
 if TYPE_CHECKING:
     from matter_server.client.model import device as matter_devices

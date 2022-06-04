@@ -247,13 +247,13 @@ class DeviceController:
         return subscription
 
     def receive_event(self, event):
-        subscriptionId = event["subscriptionId"]
-        if subscriptionId not in self.subscriptions:
+        subscription_id = event["subscriptionId"]
+        if subscription_id not in self.subscriptions:
             _LOGGER.warning(
-                f"No Subscription object for Subscription Id 0x{subscriptionId:X} present."
+                f"No Subscription object for Subscription Id 0x{subscription_id:X} present."
             )
             return
-        subscription = self.subscriptions[subscriptionId]
+        subscription = self.subscriptions[subscription_id]
         if not subscription.handler:
             _LOGGER.debug("No Subscription handler.")
             return

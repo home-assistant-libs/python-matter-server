@@ -2,8 +2,8 @@ from typing import Callable
 
 
 class Subscription:
-    subscriptionId: int
+    subscription_id: int
     handler: Callable[[dict], None]
 
-    def __init__(self, subscriptionId):
-        self.subscriptionId = subscriptionId
+    def __init__(self, subscription_id):
+        self.subscription_id = subscription_id
