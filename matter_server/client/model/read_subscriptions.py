@@ -1,6 +1,9 @@
 from __future__ import annotations
+from contextlib import suppress
 
 from typing import TYPE_CHECKING, Callable
+
+from matter_server.client.exceptions import NotConnected
 
 if TYPE_CHECKING:
     from ..client import Client
@@ -43,10 +46,11 @@ class ReadSubscriptions:
         self.subscriptions[read_result["subscription_id"]] = subscription_callback
 
         async def unsubscribe():
-            await self.client.async_send_command(
-                "device_controller.Unsubscribe",
-                {"subscription_id": read_result["subscription_id"]},
-            )
+            with suppress(NotConnected):
+                await self.client.async_send_command(
+                    "device_controller.Unsubscribe",
+                    {"subscription_id": read_result["subscription_id"]},
+                )
 
         return unsubscribe
 
