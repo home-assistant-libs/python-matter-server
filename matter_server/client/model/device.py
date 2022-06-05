@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, TypeVar
 
 from matter_server.vendor.chip.clusters import Objects as all_clusters
 
@@ -75,7 +75,7 @@ class MatterDevice:
         timedRequestTimeoutMs: int = None,
     ):
         """Send a command to the device."""
-        return await self.node.matter.client.driver.device_controller.SendCommand(
+        return await self.node.matter.client.driver.device_controller.send_command(
             nodeid=self.node.node_id,
             endpoint=self.endpoint_id,
             payload=payload,
@@ -85,7 +85,7 @@ class MatterDevice:
 
     async def update_attributes(self, attributes: list) -> None:
         """Update attributes."""
-        result = await self.node.matter.client.driver.device_controller.Read(
+        result = await self.node.matter.client.driver.device_controller.read(
             self.node.node_id,
             attributes=[(self.endpoint_id, attribute) for attribute in attributes],
         )
@@ -122,7 +122,7 @@ class MatterDevice:
 
     async def subscribe_updates(
         self, subscribe_attributes: list, subscriber: SubscriberType
-    ) -> Callable[[], None]:
+    ) -> Callable[[], Coroutine[None]]:
         """Subscribe to updates."""
         if self._on_update_listener is not None:
             raise RuntimeError("Cannot subscribe twice!")
@@ -137,22 +137,27 @@ class MatterDevice:
         self._on_update_listener = subscriber
 
         reporting_timing_params = (0, 10)
-        subscription: Subscription = (
-            await self.node.matter.client.driver.device_controller.Read(
-                self.node.node_id,
+
+        unsub_subscription = (
+            await self.node.matter.client.driver.read_subscriptions.subscribe_node(
+                nodeid=self.node.node_id,
+                subscription_callback=self._receive_event,
                 attributes=[
                     (self.endpoint_id, attribute) for attribute in subscribe_attributes
                 ],
                 reportInterval=reporting_timing_params,
             )
         )
-        subscription.handler = self._receive_event
 
-        def unsubscribe() -> None:
+        async def unsubscribe() -> None:
+            self.node.matter.adapter.logger.debug(
+                "node %s, endpoint %s: unsubscribing from %s",
+                self.node.node_id,
+                self.endpoint_id,
+                subscribe_attributes,
+            )
             self._on_update_listener = None
-            subscription.handler = None
-
-            # TODO actually unsubscribe
+            await unsub_subscription()
 
         return unsubscribe
 

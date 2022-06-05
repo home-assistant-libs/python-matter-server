@@ -70,7 +70,9 @@ class Matter:
         """Commission a new device."""
         async with self._commission_lock:
             node_id = self.next_node_id
-            await self.client.driver.device_controller.CommissionWithCode(code, node_id)
+            await self.client.driver.device_controller.commission_with_code(
+                code, node_id
+            )
             self._nodes[node_id] = None
             self.next_node_id += 1
             # Save right away because we don't want to lose node IDs
@@ -89,7 +91,7 @@ class Matter:
         """Interview a node."""
         self.adapter.logger.info("Interviewing node %s", node_id)
         try:
-            node_info = await self.client.driver.device_controller.Read(
+            node_info = await self.client.driver.device_controller.read(
                 node_id, attributes="*", events="*", returnClusterObject=True
             )
         except FailedCommand as err:

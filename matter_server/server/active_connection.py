@@ -210,5 +210,5 @@ class ActiveConnection:
             self._send_message(ErrorResultMessage(msg.messageId, "not_found"))
             return
 
-        await self.loop.run_in_executor(None, subscription.shutdown)
+        await self.loop.run_in_executor(None, subscription.Shutdown)
         self._send_message(SuccessResultMessage(msg.messageId, None))

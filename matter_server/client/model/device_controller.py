@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import typing
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Coroutine
 
 from matter_server.client.model.subscription import Subscription
 from matter_server.vendor.chip.clusters import Objects as ClusterObjects
@@ -13,12 +13,46 @@ if TYPE_CHECKING:
     from .. import client
 
 
+ReadAttributesType = typing.List[
+    typing.Union[
+        None,  # Empty tuple, all wildcard
+        typing.Tuple[int],  # Endpoint
+        # Wildcard endpoint, Cluster id present
+        typing.Tuple[typing.Type[ClusterObjects.Cluster]],
+        # Wildcard endpoint, Cluster + Attribute present
+        typing.Tuple[typing.Type[ClusterObjects.ClusterAttributeDescriptor]],
+        # Wildcard attribute id
+        typing.Tuple[int, typing.Type[ClusterObjects.Cluster]],
+        # Concrete path
+        typing.Tuple[int, typing.Type[ClusterObjects.ClusterAttributeDescriptor]],
+    ]
+]
+ReadDataVersionFiltersType = typing.List[
+    typing.Tuple[int, typing.Type[ClusterObjects.Cluster], int]
+]
+ReadEventsType = typing.List[
+    typing.Union[
+        None,  # Empty tuple, all wildcard
+        typing.Tuple[str, int],  # all wildcard with urgency set
+        typing.Tuple[int, int],  # Endpoint,
+        # Wildcard endpoint, Cluster id present
+        typing.Tuple[typing.Type[ClusterObjects.Cluster], int],
+        # Wildcard endpoint, Cluster + Event present
+        typing.Tuple[typing.Type[ClusterObjects.ClusterEvent], int],
+        # Wildcard event id
+        typing.Tuple[int, typing.Type[ClusterObjects.Cluster], int],
+        # Concrete path
+        typing.Tuple[int, typing.Type[ClusterObjects.ClusterEvent], int],
+    ]
+]
+
+
 class DeviceController:
     def __init__(self, client: client.Client):
         self.client = client
         self.subscriptions: dict[int, Subscription] = {}
 
-    async def CommissionWithCode(self, setupPayload: str, nodeid: int):
+    async def commission_with_code(self, setupPayload: str, nodeid: int):
         return await self._async_send_command(
             "CommissionWithCode",
             {
@@ -27,7 +61,7 @@ class DeviceController:
             },
         )
 
-    async def SetWiFiCredentials(self, ssid, credentials):
+    async def set_wifi_credentials(self, ssid: str, credentials: str):
         return await self._async_send_command(
             "SetWiFiCredentials",
             {
@@ -36,7 +70,7 @@ class DeviceController:
             },
         )
 
-    async def SetThreadOperationalDataset(self, dataset):
+    async def set_thread_operational_dataset(self, dataset: bytes):
         return await self._async_send_command(
             "SetThreadOperationalDataset",
             {
@@ -44,7 +78,7 @@ class DeviceController:
             },
         )
 
-    async def ResolveNode(self, nodeid: int):
+    async def resolve_node(self, nodeid: int):
         return await self._async_send_command(
             "ResolveNode",
             {
@@ -52,54 +86,7 @@ class DeviceController:
             },
         )
 
-    def GetAddressAndPort(self, nodeid):
-        raise NotImplementedError
-
-    def DiscoverCommissionableNodesLongDiscriminator(self, long_discriminator):
-        raise NotImplementedError
-
-    def DiscoverCommissionableNodesShortDiscriminator(self, short_discriminator):
-        raise NotImplementedError
-
-    def DiscoverCommissionableNodesVendor(self, vendor):
-        raise NotImplementedError
-
-    def DiscoverCommissionableNodesDeviceType(self, device_type):
-        raise NotImplementedError
-
-    def DiscoverCommissionableNodesCommissioningEnabled(self):
-        raise NotImplementedError
-
-    def PrintDiscoveredDevices(self):
-        raise NotImplementedError
-
-    def ParseQRCode(self, qrCode, output):
-        raise NotImplementedError
-
-    def GetIPForDiscoveredDevice(self, idx, addrStr, length):
-        raise NotImplementedError
-
-    def DiscoverAllCommissioning(self):
-        raise NotImplementedError
-
-    def OpenCommissioningWindow(
-        self, nodeid, timeout, iteration, discriminator, option
-    ):
-        raise NotImplementedError
-
-    def GetCompressedFabricId(self):
-        raise NotImplementedError
-
-    def GetFabricId(self):
-        raise NotImplementedError
-
-    def GetClusterHandler(self):
-        raise NotImplementedError
-
-    def GetConnectedDeviceSync(self, nodeid):
-        raise NotImplementedError
-
-    async def SendCommand(
+    async def send_command(
         self,
         nodeid: int,
         endpoint: int,
@@ -126,63 +113,12 @@ class DeviceController:
             },
         )
 
-    async def WriteAttribute(
+    async def read(
         self,
         nodeid: int,
-        attributes: typing.List[
-            typing.Tuple[int, ClusterObjects.ClusterAttributeDescriptor, int]
-        ],
-        timedRequestTimeoutMs: int = None,
-    ):
-        """
-        Write a list of attributes on a target node.
-
-        nodeId: Target's Node ID
-        timedWriteTimeoutMs: Timeout for a timed write request. Omit or set to 'None' to indicate a non-timed request.
-        attributes: A list of tuples of type (endpoint, cluster-object):
-
-        E.g
-            (1, Clusters.TestCluster.Attributes.XYZAttribute('hello')) -- Write 'hello' to the XYZ attribute on the test cluster to endpoint 1
-        """
-        raise NotImplementedError
-
-    async def Read(
-        self,
-        nodeid: int,
-        attributes: typing.List[
-            typing.Union[
-                None,  # Empty tuple, all wildcard
-                typing.Tuple[int],  # Endpoint
-                # Wildcard endpoint, Cluster id present
-                typing.Tuple[typing.Type[ClusterObjects.Cluster]],
-                # Wildcard endpoint, Cluster + Attribute present
-                typing.Tuple[typing.Type[ClusterObjects.ClusterAttributeDescriptor]],
-                # Wildcard attribute id
-                typing.Tuple[int, typing.Type[ClusterObjects.Cluster]],
-                # Concrete path
-                typing.Tuple[
-                    int, typing.Type[ClusterObjects.ClusterAttributeDescriptor]
-                ],
-            ]
-        ] = None,
-        dataVersionFilters: typing.List[
-            typing.Tuple[int, typing.Type[ClusterObjects.Cluster], int]
-        ] = None,
-        events: typing.List[
-            typing.Union[
-                None,  # Empty tuple, all wildcard
-                typing.Tuple[str, int],  # all wildcard with urgency set
-                typing.Tuple[int, int],  # Endpoint,
-                # Wildcard endpoint, Cluster id present
-                typing.Tuple[typing.Type[ClusterObjects.Cluster], int],
-                # Wildcard endpoint, Cluster + Event present
-                typing.Tuple[typing.Type[ClusterObjects.ClusterEvent], int],
-                # Wildcard event id
-                typing.Tuple[int, typing.Type[ClusterObjects.Cluster], int],
-                # Concrete path
-                typing.Tuple[int, typing.Type[ClusterObjects.ClusterEvent], int],
-            ]
-        ] = None,
+        attributes: ReadAttributesType = None,
+        dataVersionFilters: ReadDataVersionFiltersType = None,
+        events: ReadEventsType = None,
         returnClusterObject: bool = False,
         reportInterval: typing.Tuple[int, int] = None,
         fabricFiltered: bool = True,
@@ -223,8 +159,7 @@ class DeviceController:
         reportInterval: A tuple of two int-s for (MinIntervalFloor, MaxIntervalCeiling). Used by establishing subscriptions.
             When not provided, a read request will be sent.
         """
-        # TODO add other args but only if set.
-        read_result = await self._async_send_command(
+        return await self._async_send_command(
             "Read",
             {
                 "nodeid": nodeid,
@@ -237,176 +172,6 @@ class DeviceController:
                 "keepSubscriptions": keepSubscriptions,
             },
         )
-
-        if reportInterval is None:
-            return read_result
-
-        # Is this a subscription the result represents the ID. We will get events with that ID
-        subscription = Subscription(read_result["subscription_id"])
-        self.subscriptions[subscription.subscription_id] = subscription
-        return subscription
-
-    def receive_event(self, event):
-        subscription_id = event["subscriptionId"]
-        if subscription_id not in self.subscriptions:
-            _LOGGER.warning(
-                f"No Subscription object for Subscription Id 0x{subscription_id:X} present."
-            )
-            return
-        subscription = self.subscriptions[subscription_id]
-        if not subscription.handler:
-            _LOGGER.debug("No Subscription handler.")
-            return
-        subscription.handler(event)
-
-    async def ReadAttribute(
-        self,
-        nodeid: int,
-        attributes: typing.List[
-            typing.Union[
-                None,  # Empty tuple, all wildcard
-                typing.Tuple[int],  # Endpoint
-                # Wildcard endpoint, Cluster id present
-                typing.Tuple[typing.Type[ClusterObjects.Cluster]],
-                # Wildcard endpoint, Cluster + Attribute present
-                typing.Tuple[typing.Type[ClusterObjects.ClusterAttributeDescriptor]],
-                # Wildcard attribute id
-                typing.Tuple[int, typing.Type[ClusterObjects.Cluster]],
-                # Concrete path
-                typing.Tuple[
-                    int, typing.Type[ClusterObjects.ClusterAttributeDescriptor]
-                ],
-            ]
-        ],
-        dataVersionFilters: typing.List[
-            typing.Tuple[int, typing.Type[ClusterObjects.Cluster], int]
-        ] = None,
-        returnClusterObject: bool = False,
-        reportInterval: typing.Tuple[int, int] = None,
-        fabricFiltered: bool = True,
-        keepSubscriptions: bool = False,
-    ):
-        """
-        Read a list of attributes from a target node, this is a wrapper of DeviceController.Read()
-
-        nodeId: Target's Node ID
-        attributes: A list of tuples of varying types depending on the type of read being requested:
-            (endpoint, Clusters.ClusterA.AttributeA):   Endpoint = specific,    Cluster = specific,   Attribute = specific
-            (endpoint, Clusters.ClusterA):              Endpoint = specific,    Cluster = specific,   Attribute = *
-            (Clusters.ClusterA.AttributeA):             Endpoint = *,           Cluster = specific,   Attribute = specific
-            endpoint:                                   Endpoint = specific,    Cluster = *,          Attribute = *
-            Clusters.ClusterA:                          Endpoint = *,           Cluster = specific,   Attribute = *
-            '*' or ():                                  Endpoint = *,           Cluster = *,          Attribute = *
-
-            The cluster and attributes specified above are to be selected from the generated cluster objects.
-
-            e.g.
-                ReadAttribute(1, [ 1 ] ) -- case 4 above.
-                ReadAttribute(1, [ Clusters.Basic ] ) -- case 5 above.
-                ReadAttribute(1, [ (1, Clusters.Basic.Attributes.Location ] ) -- case 1 above.
-
-        returnClusterObject: This returns the data as consolidated cluster objects, with all attributes for a cluster inside
-                             a single cluster-wide cluster object.
-
-        reportInterval: A tuple of two int-s for (MinIntervalFloor, MaxIntervalCeiling). Used by establishing subscriptions.
-            When not provided, a read request will be sent.
-        """
-        raise NotImplementedError
-
-    async def ReadEvent(
-        self,
-        nodeid: int,
-        events: typing.List[
-            typing.Union[
-                None,  # Empty tuple, all wildcard
-                typing.Tuple[str, int],  # all wildcard with urgency set
-                typing.Tuple[int, int],  # Endpoint,
-                # Wildcard endpoint, Cluster id present
-                typing.Tuple[typing.Type[ClusterObjects.Cluster], int],
-                # Wildcard endpoint, Cluster + Event present
-                typing.Tuple[typing.Type[ClusterObjects.ClusterEvent], int],
-                # Wildcard event id
-                typing.Tuple[int, typing.Type[ClusterObjects.Cluster], int],
-                # Concrete path
-                typing.Tuple[int, typing.Type[ClusterObjects.ClusterEvent], int],
-            ]
-        ],
-        reportInterval: typing.Tuple[int, int] = None,
-        keepSubscriptions: bool = False,
-    ):
-        """
-        Read a list of events from a target node, this is a wrapper of DeviceController.Read()
-
-        nodeId: Target's Node ID
-        events: A list of tuples of varying types depending on the type of read being requested:
-            (endpoint, Clusters.ClusterA.EventA, urgent):       Endpoint = specific,    Cluster = specific,   Event = specific, Urgent = True/False
-            (endpoint, Clusters.ClusterA, urgent):              Endpoint = specific,    Cluster = specific,   Event = *, Urgent = True/False
-            (Clusters.ClusterA.EventA, urgent):                 Endpoint = *,           Cluster = specific,   Event = specific, Urgent = True/False
-            endpoint:                                   Endpoint = specific,    Cluster = *,          Event = *, Urgent = True/False
-            Clusters.ClusterA:                          Endpoint = *,           Cluster = specific,   Event = *, Urgent = True/False
-            '*' or ():                                  Endpoint = *,           Cluster = *,          Event = *, Urgent = True/False
-
-        The cluster and events specified above are to be selected from the generated cluster objects.
-
-        e.g.
-            ReadEvent(1, [ 1 ] ) -- case 4 above.
-            ReadEvent(1, [ Clusters.Basic ] ) -- case 5 above.
-            ReadEvent(1, [ (1, Clusters.Basic.Events.Location ] ) -- case 1 above.
-
-        reportInterval: A tuple of two int-s for (MinIntervalFloor, MaxIntervalCeiling). Used by establishing subscriptions.
-            When not provided, a read request will be sent.
-        """
-        raise NotImplementedError
-
-    def ZCLSend(
-        self, cluster, command, nodeid, endpoint, groupid, args, blocking=False
-    ):
-        raise NotImplementedError
-
-    def ZCLReadAttribute(
-        self, cluster, attribute, nodeid, endpoint, groupid, blocking=True
-    ):
-        raise NotImplementedError
-
-    def ZCLWriteAttribute(
-        self,
-        cluster: str,
-        attribute: str,
-        nodeid,
-        endpoint,
-        groupid,
-        value,
-        dataVersion=0,
-        blocking=True,
-    ):
-        raise NotImplementedError
-
-    def ZCLSubscribeAttribute(
-        self,
-        cluster,
-        attribute,
-        nodeid,
-        endpoint,
-        minInterval,
-        maxInterval,
-        blocking=True,
-    ):
-        raise NotImplementedError
-
-    def ZCLCommandList(self):
-        raise NotImplementedError
-
-    def ZCLAttributeList(self):
-        raise NotImplementedError
-
-    def SetLogFilter(self, category):
-        raise NotImplementedError
-
-    def GetLogFilter(self):
-        raise NotImplementedError
-
-    def SetBlockingCB(self, blockingCB):
-        raise NotImplementedError
 
     async def _async_send_command(self, command, args):
         """Send driver controller command."""

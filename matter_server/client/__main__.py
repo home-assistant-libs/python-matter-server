@@ -43,10 +43,10 @@ async def toggle_happiness(client: Client, is_initialized: asyncio.Event):
 
         nodeid = 4335
 
-        await client.driver.device_controller.ResolveNode(nodeid)
+        await client.driver.device_controller.resolve_node(nodeid)
 
         reportingTimingParams = (0, 10)
-        subscription = await client.driver.device_controller.Read(
+        subscription = await client.driver.device_controller.read(
             nodeid, attributes=[clusters.OnOff], reportInterval=reportingTimingParams
         )
 
@@ -73,7 +73,7 @@ async def toggle_happiness(client: Client, is_initialized: asyncio.Event):
 
         while True:
             await asyncio.sleep(5)
-            await client.driver.device_controller.SendCommand(
+            await client.driver.device_controller.send_command(
                 nodeid=nodeid, endpoint=1, payload=clusters.OnOff.Commands.Toggle()
             )
     except Exception:

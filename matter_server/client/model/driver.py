@@ -2,19 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .device_controller import DeviceController
+from .read_subscriptions import ReadSubscriptions
+
 if TYPE_CHECKING:
     from .. import client
 
-from matter_server.vendor.chip.clusters import Objects as clusters
-
-from .device_controller import DeviceController
-
 
 class Driver:
-    def __init__(self, client: client.Client, initial_state: dict):
+    def __init__(self, client: client.Client):
         self._client = client
-        self.state = initial_state
         self.device_controller = DeviceController(client)
-
-    def receive_event(self, event):
-        self.device_controller.receive_event(event)
+        self.read_subscriptions = ReadSubscriptions(client)

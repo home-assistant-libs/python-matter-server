@@ -121,7 +121,7 @@ def _async_init_services(hass: HomeAssistant) -> None:
         """Handle set wifi creds."""
         matter: Matter = list(hass.data[DOMAIN].values())[0]
         try:
-            await matter.client.driver.device_controller.SetWiFiCredentials(
+            await matter.client.driver.device_controller.set_wifi_credentials(
                 call.data["network_name"], call.data["password"]
             )
         except FailedCommand as err:
@@ -145,7 +145,7 @@ def _async_init_services(hass: HomeAssistant) -> None:
         matter: Matter = list(hass.data[DOMAIN].values())[0]
         thread_dataset = bytes.fromhex(call.data["thread_operation_dataset"])
         try:
-            await matter.client.driver.device_controller.SetThreadOperationalDataset(
+            await matter.client.driver.device_controller.set_thread_operational_dataset(
                 thread_dataset
             )
         except FailedCommand as err:

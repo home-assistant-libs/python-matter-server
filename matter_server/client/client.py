@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 from collections import defaultdict
 from copy import deepcopy
-from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from functools import partial
 import json
@@ -12,12 +11,12 @@ import logging
 from operator import itemgetter
 import pprint
 from types import TracebackType
-from typing import Any, DefaultDict, Dict, List, cast
+from typing import Any, DefaultDict, Dict, List
 import uuid
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
 
-from matter_server.common.model.message import (
+from ..common.model.message import (
     CommandMessage,
     ErrorResultMessage,
     Message,
@@ -56,7 +55,7 @@ LISTEN_MESSAGE_IDS = (
 
 
 class Client:
-    """Class to manage the IoT connection."""
+    """Class to manage the connection to the Matter server."""
 
     def __init__(
         self,
@@ -74,7 +73,7 @@ class Client:
         # Version of the connected server
         self.version: VersionInfo | None = None
         self.schema_version: int = schema_version
-        self._logger = logging.getLogger(__package__)
+        self.logger = logging.getLogger(__package__)
         self._loop = asyncio.get_running_loop()
         self._result_futures: Dict[str, asyncio.Future] = {}
         self._shutdown_complete_event: asyncio.Event | None = None
@@ -132,7 +131,11 @@ class Client:
                 "Command not available due to incompatible server version. Update the Matter "
                 f"Server to a version that supports at least api schema {require_schema}."
             )
-        message.messageId = uuid.uuid4().hex
+        message = CommandMessage(
+            messageId=uuid.uuid4().hex,
+            command=command,
+            args=args,
+        )
         await self._send_message(message)
 
     async def connect(self) -> None:
@@ -140,7 +143,7 @@ class Client:
         if self.driver is not None:
             raise InvalidState("Re-connected with existing driver")
 
-        self._logger.debug("Trying to connect")
+        self.logger.debug("Trying to connect")
         try:
             self._client = await self.aiohttp_session.ws_connect(
                 self.ws_server_url,
@@ -174,7 +177,7 @@ class Client:
         if self.version.max_schema_version < MAX_SERVER_SCHEMA_VERSION:
             self.schema_version = self.version.max_schema_version
 
-        self._logger.info(
+        self.logger.info(
             "Connected to Server %s, Driver %s, Using Schema %s",
             version.server_version,
             version.driver_version,
@@ -189,9 +192,9 @@ class Client:
         assert self._client
 
         try:
-            self.driver = Driver(self, {})
+            self.driver = Driver(self)
 
-            self._logger.info("Matter initialized.")
+            self.logger.info("Matter initialized.")
             driver_ready.set()
 
             while not self._client.closed:
@@ -202,7 +205,7 @@ class Client:
             pass
 
         finally:
-            self._logger.debug("Listen completed. Cleaning up")
+            self.logger.debug("Listen completed. Cleaning up")
 
             for future in self._result_futures.values():
                 future.cancel()
@@ -215,7 +218,7 @@ class Client:
 
     async def disconnect(self) -> None:
         """Disconnect the client."""
-        self._logger.debug("Closing client connection")
+        self.logger.debug("Closing client connection")
 
         if not self.connected:
             return
@@ -281,8 +284,8 @@ class Client:
         except ValueError as err:
             raise InvalidMessage("Received invalid JSON.") from err
 
-        if self._logger.isEnabledFor(logging.DEBUG):
-            self._logger.debug("Received message:\n%s\n", pprint.pformat(msg))
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug("Received message:\n%s\n", pprint.pformat(msg))
 
         return obj
 
@@ -319,7 +322,7 @@ class Client:
 
             return
         elif isinstance(msg, SubscriptionReportMessage):
-            self._logger.debug(
+            self.logger.debug(
                 "Received subscription report: %s",
                 msg,
             )
@@ -333,10 +336,10 @@ class Client:
                     }
                 )
 
-            self.driver.receive_event(msg.payload)
+            self.driver.read_subscriptions.receive_event(msg.payload)
         else:
             # Can't handle
-            self._logger.debug(
+            self.logger.debug(
                 "Received message with unknown type '%s': %s",
                 type(msg),
                 msg,
@@ -351,8 +354,8 @@ class Client:
         if not self.connected:
             raise NotConnected
 
-        if self._logger.isEnabledFor(logging.DEBUG):
-            self._logger.debug("Publishing message:\n%s\n", pprint.pformat(message))
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug("Publishing message:\n%s\n", pprint.pformat(message))
 
         assert self._client
         assert isinstance(message, CommandMessage)
