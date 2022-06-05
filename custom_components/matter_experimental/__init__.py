@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import async_timeout
 from homeassistant.config_entries import ConfigEntry
@@ -15,7 +16,7 @@ import voluptuous as vol
 from matter_server.client.exceptions import CannotConnect, FailedCommand
 from matter_server.client.matter import Matter
 
-from .adapter import MatterAdapter
+from .adapter import MatterAdapter, get_matter_store
 from .const import DOMAIN
 from .device_platform import DEVICE_PLATFORM
 
@@ -58,6 +59,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.config_entries.async_setup_platforms(entry, DEVICE_PLATFORM)
 
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Config entry is being removed."""
+    # Remove storage file.
+    storage_path = get_matter_store(hass, entry).path
+    await hass.async_add_executor_job(Path(storage_path).unlink)
 
 
 async def async_remove_config_entry_device(

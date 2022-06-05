@@ -79,18 +79,23 @@ class MatterStore(Store):
         return await super()._async_load_data()
 
 
+def get_matter_store(hass: HomeAssistant, config_entry: ConfigEntry) -> MatterStore:
+    """Get the store for the config entry."""
+    return MatterStore(
+        hass,
+        STORAGE_MAJOR_VERSION,
+        f"{DOMAIN}_{config_entry.entry_id}",
+        minor_version=STORAGE_MINOR_VERSION,
+        encoder=CHIPJSONEncoder,
+    )
+
+
 class MatterAdapter(AbstractMatterAdapter):
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         self.hass = hass
         self.config_entry = config_entry
         self.logger = logging.getLogger(__name__)
-        self._store = MatterStore(
-            hass,
-            STORAGE_MAJOR_VERSION,
-            f"{DOMAIN}_{config_entry.entry_id}",
-            minor_version=STORAGE_MINOR_VERSION,
-            encoder=CHIPJSONEncoder,
-        )
+        self._store = get_matter_store(hass, config_entry)
         self.platform_handlers: dict[Platform, AddEntitiesCallback] = {}
         self._platforms_set_up = asyncio.Event()
 
