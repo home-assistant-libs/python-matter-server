@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
-from matter_server.common.json_utils import asdict_typed
+from homeassistant.helpers.event import async_call_later
 
 from .client import Client
 from .exceptions import BaseMatterServerError, FailedCommand
@@ -14,10 +14,18 @@ if TYPE_CHECKING:
     from .adapter import AbstractMatterAdapter
 
 
+INTERVIEW_RETRY_TIME = 60  # seconds
+
+
 class Matter:
 
     next_node_id: int
     _nodes: dict[int, MatterNode | None]
+    _listen_task: asyncio.Task | None = None
+    _handle_driver_ready_task: asyncio.Task | None = None
+    _reinterview_unsub: Callable[[], None] | None = None
+    _reinterview_nodes: set[int] | None = None
+    _commission_lock: asyncio.Lock | None = None
 
     def __init__(
         self,
@@ -26,9 +34,6 @@ class Matter:
         self.adapter = adapter
         self.client = Client(adapter.get_server_url(), adapter.get_client_session())
         self.driver_ready = asyncio.Event()
-        self._listen_task = None
-        self._handle_driver_ready_task = None
-        self._commission_lock = asyncio.Lock()
 
     def get_node(self, node_id: int) -> MatterNode:
         """Get a node."""
@@ -68,6 +73,9 @@ class Matter:
 
     async def commission(self, code: str):
         """Commission a new device."""
+        if self._commission_lock is None:
+            self._commission_lock = asyncio.Lock()
+
         async with self._commission_lock:
             node_id = self.next_node_id
             await self.client.driver.device_controller.commission_with_code(
@@ -97,6 +105,7 @@ class Matter:
             )
         except FailedCommand as err:
             self.adapter.logger.error("Failed to interview node: %s", err)
+            self._schedule_interview_retry({node_id})
             return
 
         node_info["node_id"] = node_id
@@ -109,6 +118,38 @@ class Matter:
         self.adapter.delay_save_data(self._data_to_save)
 
         await self.adapter.setup_node(self._nodes[node_id])
+
+    def _schedule_interview_retry(self, nodes: set[int], timeout=INTERVIEW_RETRY_TIME):
+        """Schedule a retry of failed nodes."""
+        if self._reinterview_unsub is None:
+            loop = asyncio.get_running_loop()
+            self._reinterview_unsub = loop.call_later(
+                timeout, lambda: loop.create_task(self._interview_nodes_retry())
+            ).cancel
+
+        if self._reinterview_nodes is None:
+            self._reinterview_nodes = nodes
+        else:
+            self._reinterview_nodes |= nodes
+
+    async def _interview_nodes_retry(self) -> None:
+        """Retry failed nodes."""
+        # Keep track of tried to guard re-interviewing the same node
+        tried: set[int] = set()
+        assert isinstance(self._reinterview_nodes, set)
+
+        while to_handle := self._reinterview_nodes - tried:
+            node_id = to_handle.pop()
+            tried.add(node_id)
+            await self._interview_node(node_id)
+            self._reinterview_nodes.discard(node_id)
+
+        self._reinterview_unsub = None
+
+        if self._reinterview_nodes:
+            self._schedule_interview_retry(self._reinterview_nodes)
+        else:
+            self._reinterview_nodes = None
 
     def listen(self):
         """Start listening to changes."""
@@ -142,16 +183,14 @@ class Matter:
         if tasks:
             await asyncio.gather(*tasks)
 
-        to_interview = [
+        to_interview = {
             node_id for node_id, info in self._nodes.items() if info is None
-        ]
+        }
         if not to_interview:
             return
 
         self.adapter.logger.info("Nodes that still need interviewing: %s", to_interview)
-
-        for node_id in to_interview:
-            await self._interview_node(node_id)
+        self._schedule_interview_retry(to_interview, 0)
 
     def _data_to_save(self) -> dict:
         return {
