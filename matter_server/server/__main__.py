@@ -10,7 +10,7 @@ from .matter_stack import MatterStack
 from .server import MatterServer
 
 logging.basicConfig(level=logging.WARN)
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__package__)
 _LOGGER.setLevel(logging.DEBUG)
 
 
@@ -22,7 +22,7 @@ def main() -> int:
         str(Path.home() / ".chip-storage/python-kv.json"),
     )
 
-    coloredlogs.install(level=logging.INFO)
+    coloredlogs.install(level=logging.DEBUG)
     stack = MatterStack(storage_path)
 
     loop = asyncio.get_event_loop()
