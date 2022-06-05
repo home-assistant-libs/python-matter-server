@@ -91,6 +91,7 @@ class Matter:
         """Interview a node."""
         self.adapter.logger.info("Interviewing node %s", node_id)
         try:
+            await self.client.driver.device_controller.resolve_node(node_id)
             node_info = await self.client.driver.device_controller.read(
                 node_id, attributes="*", events="*", returnClusterObject=True
             )
