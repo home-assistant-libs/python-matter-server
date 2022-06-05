@@ -87,7 +87,7 @@ class MatterAdapter(AbstractMatterAdapter):
         self._store = MatterStore(
             hass,
             STORAGE_MAJOR_VERSION,
-            DOMAIN,
+            f"{DOMAIN}_{config_entry.entry_id}",
             minor_version=STORAGE_MINOR_VERSION,
             encoder=CHIPJSONEncoder,
         )

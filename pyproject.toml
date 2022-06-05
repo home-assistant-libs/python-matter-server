@@ -35,7 +35,6 @@ src_paths = [
   "matter_server/client",
   "matter_server/common",
   "matter_server/server",
-  "matter_server/backports",
 ]
 known_first_party = [
     "custom_components",

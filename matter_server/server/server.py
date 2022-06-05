@@ -3,11 +3,10 @@ from __future__ import annotations
 import asyncio
 import logging
 from typing import TYPE_CHECKING
-import weakref
 
 from aiohttp import web
 
-from .active_connection import ActiveConnection
+from .websocket import mount_websocket
 
 if TYPE_CHECKING:
     from .matter_stack import MatterStack
@@ -21,22 +20,7 @@ class MatterServer:
         self.logger = logging.getLogger(__name__)
         self.app = web.Application()
         self.loop = asyncio.get_running_loop()
-        self.clients = weakref.WeakSet()
-        self.app.on_shutdown.append(self._handle_shutdown)
-
-        self.app.router.add_route("GET", "/chip_ws", self._handle_chip_ws)
-
-    async def _handle_chip_ws(self, request):
-        connection = ActiveConnection(self, request)
-        try:
-            self.clients.add(connection)
-            return await connection.handle_request()
-        finally:
-            self.clients.remove(connection)
-
-    async def _handle_shutdown(self, app):
-        for client in set(self.clients):
-            await client.disconnect()
+        mount_websocket(self, "/chip_ws")
 
     def run(self, host, port):
         """Run the server."""

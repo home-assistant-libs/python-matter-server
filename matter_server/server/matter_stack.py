@@ -5,7 +5,6 @@ import typing
 from chip.ChipDeviceCtrl import ChipDeviceController
 from chip.ChipStack import ChipStack
 from chip.FabricAdmin import FabricAdmin
-from chip.clusters import Attribute, ClusterObjects
 import chip.logging
 import chip.native
 

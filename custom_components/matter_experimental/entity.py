@@ -56,7 +56,7 @@ class MatterEntity(entity.Entity):
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
         if self._unsubscribe is not None:
-            await self._unsubscribe()
+            self._unsubscribe()
 
     @callback
     def _update_from_device(self) -> None:
