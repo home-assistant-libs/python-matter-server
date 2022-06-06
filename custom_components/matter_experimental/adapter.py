@@ -137,8 +137,6 @@ class MatterAdapter(AbstractMatterAdapter):
         kwargs = {}
         if basic_info.nodeLabel:
             kwargs["name"] = basic_info.nodeLabel
-        if basic_info.location:
-            kwargs["suggested_area"] = basic_info.location
 
         dr.async_get(self.hass).async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
