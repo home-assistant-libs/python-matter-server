@@ -15,7 +15,7 @@ _LOGGER.setLevel(logging.DEBUG)
 
 
 def main() -> int:
-    host = os.getenv("CHIP_WS_SERVER_HOST", "0.0.0.0")
+    host = os.getenv("CHIP_WS_SERVER_HOST", "::")
     port = int(os.getenv("CHIP_WS_SERVER_PORT", "8080"))
     storage_path = os.getenv(
         "CHIP_WS_STORAGE",
