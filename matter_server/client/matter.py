@@ -60,6 +60,7 @@ class Matter:
                 "Connected to a server with a new fabric ID. Resetting data"
             )
             data = None
+            # TODO can we detect all known nodes to the server and interview them?
 
         if data is None:
             data = {"next_node_id": 4335, "nodes": {}}
