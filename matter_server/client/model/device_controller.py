@@ -185,10 +185,10 @@ class DeviceController:
             "OpenCommissioningWindow",
             {
                 "nodeid": nodeid,
-                "timeout": 60,
+                "timeout": 300,
                 "iteration": 1000,
                 "discriminator": 3840,
-                "option": 1,
+                "option": 0,
             },
         )
 
