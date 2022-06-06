@@ -47,7 +47,19 @@ class Matter:
 
     async def connect(self):
         """Connect to the server."""
+        await self.client.connect()
+
         data = await self.adapter.load_data()
+
+        if (
+            data
+            and data.get("compressed_fabric_id")
+            != self.client.server_info.compressedFabricId
+        ):
+            self.adapter.logger.warning(
+                "Connected to a server with a new fabric ID. Resetting data"
+            )
+            data = None
 
         if data is None:
             data = {"next_node_id": 4335, "nodes": {}}
@@ -58,11 +70,6 @@ class Matter:
             int(node_id): MatterNode(self, node_info) if node_info else None
             for node_id, node_info in data["nodes"].items()
         }
-
-        await self.client.connect()
-
-        # TODO verify server is same fabric ID or else reset storage.
-        # expected_fabric_id = ...
 
     async def disconnect(self):
         """Disconnect from the server."""
@@ -192,6 +199,7 @@ class Matter:
 
     def _data_to_save(self) -> dict:
         return {
+            "compressed_fabric_id": self.client.driver.compressed_fabric_id,
             "next_node_id": self.next_node_id,
             "nodes": {
                 node_id: node.raw_data if node else None

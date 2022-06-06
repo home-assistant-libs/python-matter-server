@@ -1,19 +1,15 @@
 import base64
 import copy
-from dataclasses import asdict, fields, is_dataclass
+from dataclasses import fields, is_dataclass
 from enum import Enum
 import json
-import sys
-from types import ModuleType
 
 import matter_server.common.model
-from matter_server.common.model.message import Message
 
 # Compatible both with vendorized and not-vendorized
 try:
     from chip.clusters import Objects as Clusters
     from chip.clusters.Types import Nullable
-    from chip.interaction_model import InteractionModelError
 except ImportError:
     from ..vendor.chip.clusters import Objects as Clusters
     from ..vendor.chip.clusters.Types import Nullable

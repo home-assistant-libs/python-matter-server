@@ -21,6 +21,7 @@ from ..common.model.message import (
     ErrorResultMessage,
     Message,
     ResultMessage,
+    ServerInformation,
     SubscriptionReportMessage,
     SuccessResultMessage,
 )
@@ -72,6 +73,7 @@ class Client:
         self._client: ClientWebSocketResponse | None = None
         # Version of the connected server
         self.version: VersionInfo | None = None
+        self.server_info: ServerInformation | None = None
         self.schema_version: int = schema_version
         self.logger = logging.getLogger(__package__)
         self._loop = asyncio.get_running_loop()
@@ -177,6 +179,26 @@ class Client:
         if self.version.max_schema_version < MAX_SERVER_SCHEMA_VERSION:
             self.schema_version = self.version.max_schema_version
 
+        await self._send_message(
+            CommandMessage(
+                messageId="server-get-info",
+                command="server.GetInfo",
+                args={},
+            )
+        )
+        msg = await self._receive_message_or_raise()
+
+        if (
+            not isinstance(msg, SuccessResultMessage)
+            or not isinstance(msg.result, ServerInformation)
+            or msg.messageId != "server-get-info"
+        ):
+            raise InvalidMessage(
+                "Expected a SuccessResultMessage with messageId 'server-get-info'"
+            )
+
+        self.server_info = msg.result
+
         self.logger.info(
             "Connected to Server %s, Driver %s, Using Schema %s",
             version.server_version,
@@ -192,7 +214,7 @@ class Client:
         assert self._client
 
         try:
-            self.driver = Driver(self)
+            self.driver = Driver(self, self.server_info)
 
             self.logger.info("Matter initialized.")
             driver_ready.set()

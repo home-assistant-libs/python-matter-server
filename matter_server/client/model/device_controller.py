@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import typing
-from typing import TYPE_CHECKING, Callable, Coroutine
+from typing import TYPE_CHECKING
 
 from matter_server.client.model.subscription import Subscription
 from matter_server.vendor.chip.clusters import Objects as ClusterObjects

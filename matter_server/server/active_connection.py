@@ -11,13 +11,14 @@ from chip.exceptions import ChipStackError
 from ..common.model.message import (
     CommandMessage,
     ErrorResultMessage,
+    ServerInformation,
     SubscriptionReportMessage,
     SuccessResultMessage,
 )
 from ..common.model.version import VersionInfo
 
 if TYPE_CHECKING:
-    from chip.clusters import Attribute, ClusterObjects
+    from chip.clusters import Attribute
 
     from .server import MatterServer
 
@@ -62,9 +63,6 @@ class ActiveConnection:
 
     async def async_initialize(self):
         """Initialize connection."""
-        self.fabric_id = await self.loop.run_in_executor(
-            None, self.server.stack.device_controller.GetFabricId
-        )
         self._send_message(
             VersionInfo(
                 driver_version=0,
@@ -99,6 +97,20 @@ class ActiveConnection:
         except Exception:  # pylint: disable=broad-except
             self.logger.exception("Error handling message: %s", msg)
             self._send_message(ErrorResultMessage(msg.messageId, "unknown_error"))
+
+    # pylint: disable=invalid-name
+
+    @commands.register("server.GetInfo")
+    async def _handle_server_GetInfo(self, msg: CommandMessage):
+        self._send_message(
+            SuccessResultMessage(
+                msg.messageId,
+                ServerInformation(
+                    fabricId=self.server.stack.fabric_id,
+                    compressedFabricId=self.server.stack.compressed_fabric_id,
+                ),
+            )
+        )
 
     @commands.register("device_controller.CommissionWithCode")
     async def _handle_device_controller_CommissionWithCode(self, msg: CommandMessage):
@@ -144,7 +156,7 @@ class ActiveConnection:
             data = subscription.GetAttribute(path)
             value = {
                 "subscriptionId": subscription_id,
-                "fabridId": self.fabric_id,
+                "fabridId": self.server.stack.fabric_id,
                 "nodeId": msg.args["nodeid"],
                 "endpoint": path.Path.EndpointId,
                 "cluster": path.ClusterType,

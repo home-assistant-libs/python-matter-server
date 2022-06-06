@@ -1,6 +1,4 @@
-import asyncio
 import logging
-import typing
 
 from chip.ChipDeviceCtrl import ChipDeviceController
 from chip.ChipStack import ChipStack
@@ -22,9 +20,11 @@ class MatterStack:
         chip.native.GetLibraryHandle()
         chip.logging.RedirectToPythonLogging()
         self.stack = ChipStack(persistentStoragePath=storage_path)
-        self.fabricAdmin = FabricAdmin()
-        self.device_controller = self.fabricAdmin.NewController()
+        self.fabric_admin = FabricAdmin()
+        self.device_controller = self.fabric_admin.NewController()
         _LOGGER.info("CHIP Controller Stack initialized")
+        self.fabric_id = self.device_controller.GetFabricId()
+        self.compressed_fabric_id = self.device_controller.GetCompressedFabricId()
 
     def shutdown(self):
         _LOGGER.info("Shutdown CHIP Controller Server")

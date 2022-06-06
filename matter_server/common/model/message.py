@@ -34,3 +34,9 @@ class CommandMessage(Message):
     messageId: str
     command: str
     args: dict[str, Any]
+
+
+@dataclass
+class ServerInformation:
+    fabricId: int
+    compressedFabricId: int
