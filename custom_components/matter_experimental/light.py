@@ -8,7 +8,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util import percentage
 
 from matter_server.client.model import device as matter_devices
 from matter_server.vendor.chip.clusters import Objects as clusters
@@ -16,6 +15,7 @@ from matter_server.vendor.chip.clusters import Objects as clusters
 from .const import DOMAIN
 from .device_platform_helper import DeviceMapping
 from .entity import MatterEntity
+from .util import renormalize
 
 if TYPE_CHECKING:
     from matter_server.client.matter import Matter
@@ -54,12 +54,12 @@ class MatterLight(MatterEntity, LightEntity):
             return
 
         level_control = self._device.get_cluster(clusters.LevelControl)
-        level = percentage.percentage_to_ranged_value(
-            (level_control.minLevel, level_control.maxLevel),
-            percentage.ranged_value_to_percentage(
-                (0, 255),
+        level = round(
+            renormalize(
                 kwargs[ATTR_BRIGHTNESS],
-            ),
+                (0, 255),
+                (level_control.minLevel, level_control.maxLevel),
+            )
         )
 
         await self._device.send_command(
@@ -79,12 +79,12 @@ class MatterLight(MatterEntity, LightEntity):
 
         if level_control := self._device.get_cluster(clusters.LevelControl):
             # Convert brightness to HA = 0..255
-            self._attr_brightness = percentage.percentage_to_ranged_value(
-                (0, 255),
-                percentage.ranged_value_to_percentage(
-                    (level_control.minLevel, level_control.maxLevel),
+            self._attr_brightness = round(
+                renormalize(
                     level_control.currentLevel,
-                ),
+                    (level_control.minLevel, level_control.maxLevel),
+                    (0, 255),
+                )
             )
         self.async_write_ha_state()
 

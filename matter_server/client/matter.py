@@ -4,8 +4,6 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Callable
 
-from homeassistant.helpers.event import async_call_later
-
 from .client import Client
 from .exceptions import BaseMatterServerError, FailedCommand
 from .model.node import MatterNode
