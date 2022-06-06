@@ -34,3 +34,16 @@ set_thread:
       required: true
       selector:
         text:
+open_commissioning_window:
+  name: Open Commissioning Window
+  description: >
+    Open Commissioning Window of a Matter node for 60s.
+  fields:
+    node_id:
+      name: Matter Node ID
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 18446744004990074879
+          mode: box

@@ -173,6 +173,26 @@ class DeviceController:
             },
         )
 
+    async def open_commissioning_window(self, nodeid):
+        """Open commissioning window."""
+        # TODO: We need to generate a discriminator and tell the user
+        # We might also opt to use Basic Commissioning Mode, but
+        # it seems to be an optional feature :o)
+        # option:
+        #  1 to use Enhanced Commissioning Method.
+        #  0 to use Basic Commissioning Method.
+        return await self._async_send_command(
+            "OpenCommissioningWindow",
+            {
+                "nodeid": nodeid,
+                "timeout": 60,
+                "iteration": 1000,
+                "discriminator": 3840,
+                "option": 1,
+            },
+        )
+
+
     async def _async_send_command(self, command, args):
         """Send driver controller command."""
         return await self.client.async_send_command(

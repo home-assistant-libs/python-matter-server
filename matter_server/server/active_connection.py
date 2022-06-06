@@ -202,6 +202,19 @@ class ActiveConnection:
         )
         self._send_message(SuccessResultMessage(msg.messageId, {"raw": result}))
 
+    @commands.register("device_controller.OpenCommissioningWindow")
+    async def _handle_device_controller_OpenCommissioningWindow(
+        self, msg: CommandMessage
+    ):
+        result = await self.loop.run_in_executor(
+            None,
+            partial(
+                self.server.stack.device_controller.OpenCommissioningWindow,
+                **msg.args,
+            ),
+        )
+        self._send_message(SuccessResultMessage(msg.messageId, {"raw": result}))
+
     @commands.register("device_controller.SetWiFiCredentials")
     async def _handle_device_controller_SetWiFiCredentials(self, msg: CommandMessage):
         result = await self.loop.run_in_executor(

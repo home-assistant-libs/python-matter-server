@@ -166,3 +166,21 @@ def _async_init_services(hass: HomeAssistant) -> None:
         set_thread,
         vol.Schema({"thread_operation_dataset": str}),
     )
+
+    async def open_commissioning_window(call: ServiceCall) -> None:
+        """Open commissioning window on specific node."""
+        matter: Matter = list(hass.data[DOMAIN].values())[0]
+        try:
+            await matter.client.driver.device_controller.open_commissioning_window(
+                call.data["node_id"]
+            )
+        except FailedCommand as err:
+            raise HomeAssistantError(str(err)) from err
+
+    async_register_admin_service(
+        hass,
+        DOMAIN,
+        "open_commissioning_window",
+        open_commissioning_window,
+        vol.Schema({"node_id": int}),
+    )
