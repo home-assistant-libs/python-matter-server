@@ -3,11 +3,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    SensorEntityDescription,
-    SensorStateClass,
+from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
+    BinarySensorEntity,
+    BinarySensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -16,7 +15,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from matter_server.client.model import devices as matter_devices
 from matter_server.vendor.chip.clusters import Objects as clusters
-from matter_server.vendor.chip.clusters.Types import Nullable
 
 from .const import DOMAIN
 from .device_platform_helper import DeviceMapping
@@ -33,11 +31,11 @@ async def async_setup_entry(
 ) -> None:
     """Set up Matter Light from Config Entry."""
     matter: Matter = hass.data[DOMAIN][config_entry.entry_id]
-    matter.adapter.register_platform_handler(Platform.SENSOR, async_add_entities)
+    matter.adapter.register_platform_handler(Platform.BINARY_SENSOR, async_add_entities)
 
 
-class MatterSensor(MatterEntity, SensorEntity):
-    """Representation of a Matter sensor."""
+class MatterBinarySensor(MatterEntity, BinarySensorEntity):
+    """Representation of a Matter binary sensor."""
 
     def __init__(
         self, device: matter_devices.MatterDevice, mapping: DeviceMapping
@@ -46,37 +44,21 @@ class MatterSensor(MatterEntity, SensorEntity):
         super().__init__(device, mapping)
         self._attr_name = device.node.name or f"Matter Sensor {device.node.node_id}"
 
-
-class MatterTemperatureSesnor(MatterSensor):
-    """Representation of a Matter temperature sensor."""
-
     @callback
     def _update_from_device(self) -> None:
         """Update from device."""
-        measurement = self._device.get_cluster(
-            clusters.TemperatureMeasurement
-        ).measuredValue
-
-        if measurement is Nullable:
-            measurement = None
-        else:
-            measurement /= 100
-
-        self._attr_native_value = measurement
+        self._attr_is_on = self._device.get_cluster(clusters.BooleanState).stateValue
 
 
 DEVICE_ENTITY: dict[
     matter_devices.MatterDevice, DeviceMapping | list[DeviceMapping]
 ] = {
-    matter_devices.TemperatureSensor: DeviceMapping(
-        entity_cls=MatterTemperatureSesnor,
-        subscribe_attributes=(
-            clusters.TemperatureMeasurement.Attributes.MeasuredValue,
-        ),
-        entity_description=SensorEntityDescription(
+    matter_devices.ContactSensor: DeviceMapping(
+        entity_cls=MatterBinarySensor,
+        subscribe_attributes=(clusters.BooleanState.Attributes.StateValue,),
+        entity_description=BinarySensorEntityDescription(
             key=None,
-            device_class=SensorDeviceClass.TEMPERATURE,
-            state_class=SensorStateClass.MEASUREMENT,
+            device_class=BinarySensorDeviceClass.DOOR,
         ),
     ),
 }
