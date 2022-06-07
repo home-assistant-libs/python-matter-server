@@ -8,15 +8,22 @@ from matter_server.client.model import devices
 
 
 IGNORE_DEVICES = {
-    devices.OrphanClusters,
-    devices.RootNode,
-    devices.OtaRequestor,
-    devices.OtaProvider,
+    devices.AllClustersAppServerExample,
     devices.Bridge,
     devices.BridgedDevice,
+    devices.ColorDimmerSwitch,
     devices.ControlBridge,
-    devices.AllClustersAppServerExample,
+    devices.DimmerSwitch,
+    devices.DoorLockController,
+    devices.OnOffLightSwitch,
+    devices.OnOffSensor,
+    devices.OrphanClusters,
+    devices.OtaProvider,
+    devices.OtaRequestor,
+    devices.PumpController,
+    devices.RootNode,
     devices.SecondaryNetworkCommissioningDeviceType,
+    devices.WindowCoveringController,
 }
 
 
