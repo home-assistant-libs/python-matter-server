@@ -21,8 +21,9 @@ def main() -> int:
         "CHIP_WS_STORAGE",
         str(Path.home() / ".chip-storage/python-kv.json"),
     )
+    debug = os.getenv("CHIP_WS_DEBUG") is not None
 
-    coloredlogs.install(level=logging.DEBUG)
+    coloredlogs.install(level=logging.DEBUG if debug else logging.INFO)
     stack = MatterStack(storage_path)
 
     loop = asyncio.get_event_loop()
