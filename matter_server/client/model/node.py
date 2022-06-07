@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .device import DEVICE_TYPES, MatterDevice
+from .devices import RootNode
 
 from matter_server.vendor.chip.clusters import Objects as all_clusters
 
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
 class MatterNode:
     """Matter node."""
 
-    root_device: MatterDevice
+    root_device: RootNode
 
     def __init__(self, matter: Matter, node_info: dict) -> None:
         self.matter = matter
@@ -34,7 +35,7 @@ class MatterNode:
                     continue
 
                 device = device_cls(self, int(endpoint_id), device_info.revision)
-                if device.device_type == 22:
+                if isinstance(device, RootNode):
                     self.root_device = device
                 else:
                     devices.append(device)
