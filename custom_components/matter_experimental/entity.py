@@ -36,21 +36,13 @@ class MatterEntity(entity.Entity):
             self._update_from_device()
             return
 
-        # Filter out subscribe attributes belonging to optional clusters not present
-        clusters = set(cluster.id for cluster in self._device.get_clusters())
-        subscribe_attributes = [
-            attribute
-            for attribute in self._device_mapping.subscribe_attributes
-            if attribute.cluster_id in clusters
-        ]
-
         # Subscribe to updates.
         self._unsubscribe = await self._device.subscribe_updates(
-            subscribe_attributes, self._update_from_device
+            self._device_mapping.subscribe_attributes, self._update_from_device
         )
 
         # Fetch latest info from the device.
-        await self._device.update_attributes(subscribe_attributes)
+        await self._device.update_attributes(self._device_mapping.subscribe_attributes)
         self._update_from_device()
 
     async def async_will_remove_from_hass(self) -> None:

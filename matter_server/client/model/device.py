@@ -20,7 +20,6 @@ class MatterDevice:
 
     device_type: int
     clusters: set[type[all_clusters.Cluster]] = set()
-    optional_clusters: set[type[all_clusters.Cluster]] = set()
 
     def __init_subclass__(cls, *, device_type: int, **kwargs: Any) -> None:
         """Initialize a subclass, register if possible."""
@@ -42,13 +41,7 @@ class MatterDevice:
 
     def has_cluster(self, cluster: type[clusters.Cluster]) -> bool:
         """Check if device has a specific cluster."""
-        if cluster in self.clusters:
-            return True
-
-        if cluster not in self.optional_clusters:
-            return False
-
-        return cluster.__name__ in self.data
+        return cluster in self.clusters and cluster.__name__ in self.data
 
     def get_cluster(self, cluster: type[_CLUSTER_T]) -> _CLUSTER_T | None:
         """Get the cluster object."""
@@ -56,16 +49,6 @@ class MatterDevice:
             return None
 
         return self.data[cluster.__name__]
-
-    def get_clusters(self) -> set[type[all_clusters.Cluster]]:
-        """Get all available cluster objects."""
-        clusters = [self.data[cluster.__name__] for cluster in self.clusters]
-
-        for cluster in self.optional_clusters:
-            if cluster.__name__ in self.data:
-                clusters.append(self.data[cluster.__name__])
-
-        return clusters
 
     async def send_command(
         self,

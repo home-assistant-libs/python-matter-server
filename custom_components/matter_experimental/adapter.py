@@ -163,12 +163,6 @@ class MatterAdapter(AbstractMatterAdapter):
 
                 entities = []
                 for device_mapping in device_mappings:
-                    if (
-                        device_mapping.ignore_device is not None
-                        and device_mapping.ignore_device(device)
-                    ):
-                        continue
-
                     self.logger.debug(
                         "Creating %s entity for %s (%s)",
                         platform,

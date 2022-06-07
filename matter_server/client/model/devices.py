@@ -19,7 +19,6 @@ class OnOffLight(MatterDevice, device_type=0x0100):
     clusters = {
         all_clusters.OnOff,
     }
-    optional_clusters = {all_clusters.LevelControl}
 
 
 class DimmableLight(MatterDevice, device_type=0x0101):
@@ -38,7 +37,6 @@ class OnOffPlugInUnit(MatterDevice, device_type=0x010A):
     clusters = {
         all_clusters.OnOff,
     }
-    optional_clusters = {all_clusters.LevelControl}
 
 
 class DimmablePlugInUnit(MatterDevice, device_type=0x010B):

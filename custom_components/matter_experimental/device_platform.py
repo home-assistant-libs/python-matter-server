@@ -1,3 +1,4 @@
+"""All mappings of Matter devices to HA platforms."""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

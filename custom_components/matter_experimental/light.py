@@ -40,14 +40,19 @@ class MatterLight(MatterEntity, LightEntity):
         """Initialize the light."""
         super().__init__(device, mapping)
         self._attr_name = device.node.name or f"Matter Light {device.node.node_id}"
-        if self._device.has_cluster(clusters.LevelControl):
+        if self._supports_brightness():
             self._attr_supported_color_modes = [ColorMode.BRIGHTNESS]
+
+    def _supports_brightness(self):
+        """Return if device supports brightness."""
+        return (
+            clusters.LevelControl.Attributes.CurrentLevel
+            in self._device_mapping.subscribe_attributes
+        )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn light on."""
-        if ATTR_BRIGHTNESS not in kwargs or not self._device.has_cluster(
-            clusters.LevelControl
-        ):
+        if ATTR_BRIGHTNESS not in kwargs or not self._supports_brightness():
             await self._device.send_command(
                 payload=clusters.OnOff.Commands.On(),
             )
@@ -77,7 +82,12 @@ class MatterLight(MatterEntity, LightEntity):
         """Update from device."""
         self._attr_is_on = self._device.get_cluster(clusters.OnOff).onOff
 
-        if level_control := self._device.get_cluster(clusters.LevelControl):
+        if (
+            clusters.LevelControl.Attributes.CurrentLevel
+            in self._device_mapping.subscribe_attributes
+        ):
+            level_control = self._device.get_cluster(clusters.LevelControl)
+
             # Convert brightness to HA = 0..255
             self._attr_brightness = round(
                 renormalize(
@@ -86,30 +96,29 @@ class MatterLight(MatterEntity, LightEntity):
                     (0, 255),
                 )
             )
+
         self.async_write_ha_state()
-
-
-DEFAULT_MAPPING = DeviceMapping(
-    entity_cls=MatterLight,
-    subscribe_attributes=(
-        clusters.OnOff.Attributes.OnOff,
-        clusters.LevelControl.Attributes.CurrentLevel,
-    ),
-)
 
 
 DEVICE_ENTITY: dict[
     matter_devices.MatterDevice, DeviceMapping | list[DeviceMapping]
 ] = {
-    matter_devices.OnOffLight: DEFAULT_MAPPING,
-    matter_devices.DimmableLight: DEFAULT_MAPPING,
-    matter_devices.DimmablePlugInUnit: DEFAULT_MAPPING,
-    matter_devices.OnOffPlugInUnit: DeviceMapping(
+    matter_devices.OnOffLight: DeviceMapping(
+        entity_cls=MatterLight,
+        subscribe_attributes=(clusters.OnOff.Attributes.OnOff,),
+    ),
+    matter_devices.DimmableLight: DeviceMapping(
         entity_cls=MatterLight,
         subscribe_attributes=(
             clusters.OnOff.Attributes.OnOff,
             clusters.LevelControl.Attributes.CurrentLevel,
         ),
-        ignore_device=lambda device: not device.has_cluster(clusters.LevelControl),
+    ),
+    matter_devices.DimmablePlugInUnit: DeviceMapping(
+        entity_cls=MatterLight,
+        subscribe_attributes=(
+            clusters.OnOff.Attributes.OnOff,
+            clusters.LevelControl.Attributes.CurrentLevel,
+        ),
     ),
 }
