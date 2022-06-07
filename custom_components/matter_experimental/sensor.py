@@ -16,7 +16,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from matter_server.client.model import devices as matter_devices
 from matter_server.vendor.chip.clusters import Objects as clusters
-from matter_server.vendor.chip.clusters.Types import Nullable
+from matter_server.vendor.chip.clusters.Types import NullValue, Nullable
 
 from .const import DOMAIN
 from .device_platform_helper import DeviceMapping
@@ -62,7 +62,7 @@ class MatterTemperatureSesnor(MatterSensor):
             clusters.TemperatureMeasurement
         ).measuredValue
 
-        if measurement is Nullable:
+        if measurement is NullValue:
             measurement = None
         else:
             measurement /= 100
@@ -83,7 +83,25 @@ class MatterPressureSesnor(MatterSensor):
             clusters.PressureMeasurement
         ).measuredValue
 
-        if measurement is Nullable:
+        if measurement is NullValue:
+            measurement = None
+        else:
+            measurement /= 10
+
+        self._attr_native_value = measurement
+
+
+class MatterFlowSesnor(MatterSensor):
+    """Representation of a Matter flow sensor."""
+
+    _attr_native_unit_of_measurement = "m³/h"
+
+    @callback
+    def _update_from_device(self) -> None:
+        """Update from device."""
+        measurement = self._device.get_cluster(clusters.FlowMeasurement).measuredValue
+
+        if measurement is NullValue:
             measurement = None
         else:
             measurement /= 10
@@ -103,5 +121,9 @@ DEVICE_ENTITY: dict[
     matter_devices.PressureSensor: DeviceMapping(
         entity_cls=MatterPressureSesnor,
         subscribe_attributes=(clusters.PressureMeasurement.Attributes.MeasuredValue,),
+    ),
+    matter_devices.FlowSensor: DeviceMapping(
+        entity_cls=MatterFlowSesnor,
+        subscribe_attributes=(clusters.FlowMeasurement.Attributes.MeasuredValue,),
     ),
 }
