@@ -430,6 +430,16 @@ class Thermostat(MatterDevice, device_type=0x0301):
     }
 
 
+class Fan(MatterDevice, device_type=0x002B):
+    """Fan."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.Groups,
+        all_clusters.FanControl,
+    }
+
+
 class VideoPlayer(MatterDevice, device_type=0x0023):
     """Video Player."""
 
