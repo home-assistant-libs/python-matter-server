@@ -132,7 +132,7 @@ class MatterAdapter(AbstractMatterAdapter):
         await self._platforms_set_up.wait()
         self.logger.debug("Setting up entities for node %s", node.node_id)
 
-        basic_info: all_clusters.Basic = node.root_device.basic_info
+        basic_info = node.root_device.get_cluster(all_clusters.Basic)
 
         kwargs = {}
         if basic_info.nodeLabel:

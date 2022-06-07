@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING
 
 from .device import DEVICE_TYPES, MatterDevice
 
-if TYPE_CHECKING:
-    from matter_server.vendor.chip.clusters.Objects import Descriptor
+from matter_server.vendor.chip.clusters import Objects as all_clusters
 
+if TYPE_CHECKING:
     from ..matter import Matter
 
 
@@ -23,7 +23,7 @@ class MatterNode:
         devices: list[MatterDevice] = []
 
         for endpoint_id, endpoint_info in node_info["attributes"].items():
-            descriptor: Descriptor = endpoint_info["Descriptor"]
+            descriptor: all_clusters.Descriptor = endpoint_info["Descriptor"]
             for device_info in descriptor.deviceList:
                 device_cls = DEVICE_TYPES.get(device_info.type)
 
@@ -50,11 +50,11 @@ class MatterNode:
 
     @property
     def name(self) -> str:
-        return self.root_device.name
+        return self.root_device.get_cluster(all_clusters.Basic).nodeLabel
 
     @property
     def unique_id(self) -> str:
-        return self.root_device.unique_id
+        return self.root_device.get_cluster(all_clusters.Basic).uniqueID
 
     def update_data(self, node_info):
         self.raw_data = node_info

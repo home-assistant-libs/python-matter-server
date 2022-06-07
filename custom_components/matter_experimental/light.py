@@ -9,7 +9,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from matter_server.client.model import device as matter_devices
+from matter_server.client.model import devices as matter_devices
 from matter_server.vendor.chip.clusters import Objects as clusters
 
 from .const import DOMAIN
