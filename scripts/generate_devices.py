@@ -83,8 +83,12 @@ from matter_server.vendor.chip.clusters import Objects as all_clusters
                 + ",".join(
                     f"all_clusters.{gen_cls_name(cluster['@cluster'])}"
                     for cluster in clusters
+                    # It's a server cluster
+                    if cluster["@server"] == "true"
+                    # It's optional server cluster
+                    or cluster["@serverLocked"] == "false"
                 )
-                + "}"
+                + ",}"  # extra comma to force black to do a cluster per line
             )
 
         output.append(

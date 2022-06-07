@@ -48,7 +48,6 @@ class PowerSource(MatterDevice, device_type=0x0011):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.PowerSource,
     }
 
@@ -59,9 +58,7 @@ class OtaRequestor(MatterDevice, device_type=0x0012):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.OtaSoftwareUpdateRequestor,
-        all_clusters.OtaSoftwareUpdateProvider,
     }
 
 
@@ -71,9 +68,7 @@ class OtaProvider(MatterDevice, device_type=0x0014):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.OtaSoftwareUpdateProvider,
-        all_clusters.OtaSoftwareUpdateRequestor,
     }
 
 
@@ -83,7 +78,6 @@ class Bridge(MatterDevice, device_type=0x000E):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.BridgedActions,
     }
 
@@ -94,7 +88,6 @@ class BridgedDevice(MatterDevice, device_type=0x0013):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.BridgedDeviceBasic,
         all_clusters.PowerSourceConfiguration,
         all_clusters.PowerSource,
@@ -107,12 +100,10 @@ class OnOffLight(MatterDevice, device_type=0x0100):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
         all_clusters.OnOff,
         all_clusters.LevelControl,
-        all_clusters.OccupancySensing,
     }
 
 
@@ -122,12 +113,10 @@ class DimmableLight(MatterDevice, device_type=0x0101):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
         all_clusters.OnOff,
         all_clusters.LevelControl,
-        all_clusters.OccupancySensing,
     }
 
 
@@ -137,7 +126,6 @@ class ColorTemperatureLight(MatterDevice, device_type=0x010C):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
         all_clusters.OnOff,
@@ -152,7 +140,6 @@ class ExtendedColorLight(MatterDevice, device_type=0x010D):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
         all_clusters.OnOff,
@@ -167,7 +154,6 @@ class OnOffPlugInUnit(MatterDevice, device_type=0x010A):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
         all_clusters.OnOff,
@@ -181,7 +167,6 @@ class DimmablePlugInUnit(MatterDevice, device_type=0x010B):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
         all_clusters.OnOff,
@@ -195,7 +180,6 @@ class Pump(MatterDevice, device_type=0x0303):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
         all_clusters.OnOff,
@@ -204,7 +188,6 @@ class Pump(MatterDevice, device_type=0x0303):
         all_clusters.TemperatureMeasurement,
         all_clusters.PressureMeasurement,
         all_clusters.FlowMeasurement,
-        all_clusters.OccupancySensing,
     }
 
 
@@ -214,10 +197,8 @@ class OnOffLightSwitch(MatterDevice, device_type=0x0103):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
-        all_clusters.OnOff,
     }
 
 
@@ -227,11 +208,8 @@ class DimmerSwitch(MatterDevice, device_type=0x0104):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
-        all_clusters.OnOff,
-        all_clusters.LevelControl,
     }
 
 
@@ -241,12 +219,8 @@ class ColorDimmerSwitch(MatterDevice, device_type=0x0105):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
-        all_clusters.OnOff,
-        all_clusters.LevelControl,
-        all_clusters.ColorControl,
     }
 
 
@@ -256,14 +230,8 @@ class ControlBridge(MatterDevice, device_type=0x0840):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
-        all_clusters.OnOff,
-        all_clusters.LevelControl,
-        all_clusters.ColorControl,
-        all_clusters.IlluminanceMeasurement,
-        all_clusters.OccupancySensing,
     }
 
 
@@ -273,15 +241,8 @@ class PumpController(MatterDevice, device_type=0x0304):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
-        all_clusters.OnOff,
-        all_clusters.PumpConfigurationAndControl,
-        all_clusters.LevelControl,
-        all_clusters.TemperatureMeasurement,
-        all_clusters.PressureMeasurement,
-        all_clusters.FlowMeasurement,
     }
 
 
@@ -291,7 +252,6 @@ class GenericSwitch(MatterDevice, device_type=0x000F):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
         all_clusters.Switch,
@@ -306,9 +266,7 @@ class ContactSensor(MatterDevice, device_type=0x0015):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
-        all_clusters.BooleanState,
     }
 
 
@@ -318,7 +276,6 @@ class LightSensor(MatterDevice, device_type=0x0106):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.IlluminanceMeasurement,
     }
@@ -330,7 +287,6 @@ class OccupancySensor(MatterDevice, device_type=0x0107):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.OccupancySensing,
     }
@@ -342,7 +298,6 @@ class TemperatureSensor(MatterDevice, device_type=0x0302):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.TemperatureMeasurement,
     }
@@ -354,7 +309,6 @@ class PressureSensor(MatterDevice, device_type=0x0305):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.PressureMeasurement,
     }
@@ -366,7 +320,6 @@ class FlowSensor(MatterDevice, device_type=0x0306):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.FlowMeasurement,
     }
@@ -378,7 +331,6 @@ class HumiditySensor(MatterDevice, device_type=0x0307):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.RelativeHumidityMeasurement,
     }
@@ -390,12 +342,8 @@ class OnOffSensor(MatterDevice, device_type=0x0850):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
-        all_clusters.OnOff,
-        all_clusters.LevelControl,
-        all_clusters.ColorControl,
     }
 
 
@@ -405,14 +353,12 @@ class DoorLock(MatterDevice, device_type=0x000A):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Scenes,
         all_clusters.Groups,
         all_clusters.DoorLock,
         all_clusters.Alarms,
         all_clusters.PollControl,
         all_clusters.ElectricalMeasurement,
-        all_clusters.Time,
         all_clusters.TimeSynchronization,
     }
 
@@ -423,10 +369,8 @@ class DoorLockController(MatterDevice, device_type=0x000B):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Scenes,
         all_clusters.Groups,
-        all_clusters.DoorLock,
         all_clusters.TimeSynchronization,
     }
 
@@ -437,7 +381,6 @@ class WindowCovering(MatterDevice, device_type=0x0202):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Scenes,
         all_clusters.Groups,
         all_clusters.WindowCovering,
@@ -450,10 +393,8 @@ class WindowCoveringController(MatterDevice, device_type=0x0203):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Scenes,
         all_clusters.Groups,
-        all_clusters.WindowCovering,
     }
 
 
@@ -463,13 +404,11 @@ class HeatingCoolingUnit(MatterDevice, device_type=0x0300):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Thermostat,
         all_clusters.FanControl,
         all_clusters.LevelControl,
         all_clusters.OnOff,
-        all_clusters.Time,
     }
 
 
@@ -479,7 +418,6 @@ class Thermostat(MatterDevice, device_type=0x0301):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.Scenes,
         all_clusters.Groups,
         all_clusters.Alarms,
@@ -489,7 +427,6 @@ class Thermostat(MatterDevice, device_type=0x0301):
         all_clusters.TemperatureMeasurement,
         all_clusters.OccupancySensing,
         all_clusters.RelativeHumidityMeasurement,
-        all_clusters.Time,
     }
 
 
@@ -499,7 +436,6 @@ class VideoPlayer(MatterDevice, device_type=0x0023):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.MediaPlayback,
         all_clusters.KeypadInput,
         all_clusters.ApplicationLauncher,
@@ -521,7 +457,6 @@ class Speaker(MatterDevice, device_type=0x0022):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.OnOff,
         all_clusters.LevelControl,
     }
@@ -533,7 +468,6 @@ class ContentApplication(MatterDevice, device_type=0x0024):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.ApplicationBasic,
         all_clusters.KeypadInput,
         all_clusters.ApplicationLauncher,
@@ -551,7 +485,6 @@ class ModeSelect(MatterDevice, device_type=0x0027):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.ModeSelect,
     }
 
@@ -562,7 +495,6 @@ class AllClustersAppServerExample(MatterDevice, device_type=0x0000):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.BarrierControl,
         all_clusters.ColorControl,
         all_clusters.DoorLock,
@@ -578,4 +510,6 @@ class AllClustersAppServerExample(MatterDevice, device_type=0x0000):
 class SecondaryNetworkCommissioningDeviceType(MatterDevice, device_type=0xF002):
     """Secondary Network Commissioning Device Type."""
 
-    clusters = {all_clusters.NetworkCommissioning}
+    clusters = {
+        all_clusters.NetworkCommissioning,
+    }
