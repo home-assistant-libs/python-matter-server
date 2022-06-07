@@ -51,6 +51,12 @@ class MatterEntity(entity.Entity):
             await self._unsubscribe()
 
     @callback
+    def _subscription_update(self) -> None:
+        """Called when subscription updated."""
+        self._update_from_device()
+        self.async_write_ha_state()
+
+    @callback
     def _update_from_device(self) -> None:
-        """Update from device."""
+        """Update data from Matter device."""
         self.async_write_ha_state()
