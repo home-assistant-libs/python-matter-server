@@ -53,6 +53,8 @@ class MatterBinarySensor(MatterEntity, BinarySensorEntity):
 class MatterOccupancySensor(MatterEntity, BinarySensorEntity):
     """Representation of a Matter occupancy sensor."""
 
+    _attr_device_class = BinarySensorDeviceClass.OCCUPANCY
+
     @callback
     def _update_from_device(self) -> None:
         """Update from device."""
@@ -75,9 +77,5 @@ DEVICE_ENTITY: dict[
     matter_devices.OccupancySensor: DeviceMapping(
         entity_cls=MatterOccupancySensor,
         subscribe_attributes=(clusters.OccupancySensing.Attributes.Occupancy,),
-        entity_description=BinarySensorEntityDescription(
-            key=None,
-            device_class=BinarySensorDeviceClass.OCCUPANCY,
-        ),
     ),
 }
