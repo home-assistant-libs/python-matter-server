@@ -1,11 +1,26 @@
 from __future__ import annotations
 
-from .device import MatterDevice
+import typing
 
-from matter_server.vendor.chip.clusters import Objects as all_clusters
+from .chip.clusters import Objects as all_clusters
+
+ALL_TYPES: dict[int, type["DeviceType"]] = {}
 
 
-class OrphanClusters(MatterDevice, device_type=0xF001):
+class DeviceType:
+    """Base class for Matter devices."""
+
+    device_type: int
+    clusters: set[type[all_clusters.Cluster]] = set()
+
+    def __init_subclass__(cls, *, device_type: int, **kwargs: typing.Any) -> None:
+        """Initialize a subclass, register if possible."""
+        super().__init_subclass__(**kwargs)
+        cls.device_type = device_type
+        ALL_TYPES[device_type] = cls
+
+
+class OrphanClusters(DeviceType, device_type=0xF001):
     """Orphan Clusters."""
 
     clusters = {
@@ -16,7 +31,7 @@ class OrphanClusters(MatterDevice, device_type=0xF001):
     }
 
 
-class RootNode(MatterDevice, device_type=0x0016):
+class RootNode(DeviceType, device_type=0x0016):
     """Root Node."""
 
     clusters = {
@@ -42,7 +57,7 @@ class RootNode(MatterDevice, device_type=0x0016):
     }
 
 
-class PowerSource(MatterDevice, device_type=0x0011):
+class PowerSource(DeviceType, device_type=0x0011):
     """Power Source."""
 
     clusters = {
@@ -52,7 +67,7 @@ class PowerSource(MatterDevice, device_type=0x0011):
     }
 
 
-class OtaRequestor(MatterDevice, device_type=0x0012):
+class OtaRequestor(DeviceType, device_type=0x0012):
     """OTA Requestor."""
 
     clusters = {
@@ -62,7 +77,7 @@ class OtaRequestor(MatterDevice, device_type=0x0012):
     }
 
 
-class OtaProvider(MatterDevice, device_type=0x0014):
+class OtaProvider(DeviceType, device_type=0x0014):
     """OTA Provider."""
 
     clusters = {
@@ -72,7 +87,7 @@ class OtaProvider(MatterDevice, device_type=0x0014):
     }
 
 
-class Bridge(MatterDevice, device_type=0x000E):
+class Bridge(DeviceType, device_type=0x000E):
     """Bridge."""
 
     clusters = {
@@ -82,7 +97,7 @@ class Bridge(MatterDevice, device_type=0x000E):
     }
 
 
-class BridgedDevice(MatterDevice, device_type=0x0013):
+class BridgedDevice(DeviceType, device_type=0x0013):
     """Bridged Device."""
 
     clusters = {
@@ -94,7 +109,7 @@ class BridgedDevice(MatterDevice, device_type=0x0013):
     }
 
 
-class OnOffLight(MatterDevice, device_type=0x0100):
+class OnOffLight(DeviceType, device_type=0x0100):
     """On/Off Light."""
 
     clusters = {
@@ -107,7 +122,7 @@ class OnOffLight(MatterDevice, device_type=0x0100):
     }
 
 
-class DimmableLight(MatterDevice, device_type=0x0101):
+class DimmableLight(DeviceType, device_type=0x0101):
     """Dimmable Light."""
 
     clusters = {
@@ -120,7 +135,7 @@ class DimmableLight(MatterDevice, device_type=0x0101):
     }
 
 
-class ColorTemperatureLight(MatterDevice, device_type=0x010C):
+class ColorTemperatureLight(DeviceType, device_type=0x010C):
     """Color Temperature Light."""
 
     clusters = {
@@ -134,7 +149,7 @@ class ColorTemperatureLight(MatterDevice, device_type=0x010C):
     }
 
 
-class ExtendedColorLight(MatterDevice, device_type=0x010D):
+class ExtendedColorLight(DeviceType, device_type=0x010D):
     """Extended Color Light."""
 
     clusters = {
@@ -148,7 +163,7 @@ class ExtendedColorLight(MatterDevice, device_type=0x010D):
     }
 
 
-class OnOffPlugInUnit(MatterDevice, device_type=0x010A):
+class OnOffPlugInUnit(DeviceType, device_type=0x010A):
     """On/Off Plug-in Unit."""
 
     clusters = {
@@ -161,7 +176,7 @@ class OnOffPlugInUnit(MatterDevice, device_type=0x010A):
     }
 
 
-class DimmablePlugInUnit(MatterDevice, device_type=0x010B):
+class DimmablePlugInUnit(DeviceType, device_type=0x010B):
     """Dimmable Plug-in Unit."""
 
     clusters = {
@@ -174,7 +189,7 @@ class DimmablePlugInUnit(MatterDevice, device_type=0x010B):
     }
 
 
-class Pump(MatterDevice, device_type=0x0303):
+class Pump(DeviceType, device_type=0x0303):
     """Pump."""
 
     clusters = {
@@ -191,7 +206,7 @@ class Pump(MatterDevice, device_type=0x0303):
     }
 
 
-class OnOffLightSwitch(MatterDevice, device_type=0x0103):
+class OnOffLightSwitch(DeviceType, device_type=0x0103):
     """On/Off Light Switch."""
 
     clusters = {
@@ -202,7 +217,7 @@ class OnOffLightSwitch(MatterDevice, device_type=0x0103):
     }
 
 
-class DimmerSwitch(MatterDevice, device_type=0x0104):
+class DimmerSwitch(DeviceType, device_type=0x0104):
     """Dimmer Switch."""
 
     clusters = {
@@ -213,7 +228,7 @@ class DimmerSwitch(MatterDevice, device_type=0x0104):
     }
 
 
-class ColorDimmerSwitch(MatterDevice, device_type=0x0105):
+class ColorDimmerSwitch(DeviceType, device_type=0x0105):
     """Color Dimmer Switch."""
 
     clusters = {
@@ -224,7 +239,7 @@ class ColorDimmerSwitch(MatterDevice, device_type=0x0105):
     }
 
 
-class ControlBridge(MatterDevice, device_type=0x0840):
+class ControlBridge(DeviceType, device_type=0x0840):
     """Control Bridge."""
 
     clusters = {
@@ -235,7 +250,7 @@ class ControlBridge(MatterDevice, device_type=0x0840):
     }
 
 
-class PumpController(MatterDevice, device_type=0x0304):
+class PumpController(DeviceType, device_type=0x0304):
     """Pump Controller."""
 
     clusters = {
@@ -246,7 +261,7 @@ class PumpController(MatterDevice, device_type=0x0304):
     }
 
 
-class GenericSwitch(MatterDevice, device_type=0x000F):
+class GenericSwitch(DeviceType, device_type=0x000F):
     """Generic Switch."""
 
     clusters = {
@@ -260,7 +275,7 @@ class GenericSwitch(MatterDevice, device_type=0x000F):
     }
 
 
-class ContactSensor(MatterDevice, device_type=0x0015):
+class ContactSensor(DeviceType, device_type=0x0015):
     """Contact Sensor."""
 
     clusters = {
@@ -270,7 +285,7 @@ class ContactSensor(MatterDevice, device_type=0x0015):
     }
 
 
-class LightSensor(MatterDevice, device_type=0x0106):
+class LightSensor(DeviceType, device_type=0x0106):
     """Light Sensor."""
 
     clusters = {
@@ -281,7 +296,7 @@ class LightSensor(MatterDevice, device_type=0x0106):
     }
 
 
-class OccupancySensor(MatterDevice, device_type=0x0107):
+class OccupancySensor(DeviceType, device_type=0x0107):
     """Occupancy Sensor."""
 
     clusters = {
@@ -292,7 +307,7 @@ class OccupancySensor(MatterDevice, device_type=0x0107):
     }
 
 
-class TemperatureSensor(MatterDevice, device_type=0x0302):
+class TemperatureSensor(DeviceType, device_type=0x0302):
     """Temperature Sensor."""
 
     clusters = {
@@ -303,7 +318,7 @@ class TemperatureSensor(MatterDevice, device_type=0x0302):
     }
 
 
-class PressureSensor(MatterDevice, device_type=0x0305):
+class PressureSensor(DeviceType, device_type=0x0305):
     """Pressure Sensor."""
 
     clusters = {
@@ -314,7 +329,7 @@ class PressureSensor(MatterDevice, device_type=0x0305):
     }
 
 
-class FlowSensor(MatterDevice, device_type=0x0306):
+class FlowSensor(DeviceType, device_type=0x0306):
     """Flow Sensor."""
 
     clusters = {
@@ -325,7 +340,7 @@ class FlowSensor(MatterDevice, device_type=0x0306):
     }
 
 
-class HumiditySensor(MatterDevice, device_type=0x0307):
+class HumiditySensor(DeviceType, device_type=0x0307):
     """Humidity Sensor."""
 
     clusters = {
@@ -336,7 +351,7 @@ class HumiditySensor(MatterDevice, device_type=0x0307):
     }
 
 
-class OnOffSensor(MatterDevice, device_type=0x0850):
+class OnOffSensor(DeviceType, device_type=0x0850):
     """On/Off Sensor."""
 
     clusters = {
@@ -347,7 +362,7 @@ class OnOffSensor(MatterDevice, device_type=0x0850):
     }
 
 
-class DoorLock(MatterDevice, device_type=0x000A):
+class DoorLock(DeviceType, device_type=0x000A):
     """Door Lock."""
 
     clusters = {
@@ -363,7 +378,7 @@ class DoorLock(MatterDevice, device_type=0x000A):
     }
 
 
-class DoorLockController(MatterDevice, device_type=0x000B):
+class DoorLockController(DeviceType, device_type=0x000B):
     """Door Lock Controller."""
 
     clusters = {
@@ -375,7 +390,7 @@ class DoorLockController(MatterDevice, device_type=0x000B):
     }
 
 
-class WindowCovering(MatterDevice, device_type=0x0202):
+class WindowCovering(DeviceType, device_type=0x0202):
     """Window Covering."""
 
     clusters = {
@@ -387,7 +402,7 @@ class WindowCovering(MatterDevice, device_type=0x0202):
     }
 
 
-class WindowCoveringController(MatterDevice, device_type=0x0203):
+class WindowCoveringController(DeviceType, device_type=0x0203):
     """Window Covering Controller."""
 
     clusters = {
@@ -398,7 +413,7 @@ class WindowCoveringController(MatterDevice, device_type=0x0203):
     }
 
 
-class HeatingCoolingUnit(MatterDevice, device_type=0x0300):
+class HeatingCoolingUnit(DeviceType, device_type=0x0300):
     """Heating/Cooling Unit."""
 
     clusters = {
@@ -412,7 +427,7 @@ class HeatingCoolingUnit(MatterDevice, device_type=0x0300):
     }
 
 
-class Thermostat(MatterDevice, device_type=0x0301):
+class Thermostat(DeviceType, device_type=0x0301):
     """Thermostat."""
 
     clusters = {
@@ -430,7 +445,7 @@ class Thermostat(MatterDevice, device_type=0x0301):
     }
 
 
-class Fan(MatterDevice, device_type=0x002B):
+class Fan(DeviceType, device_type=0x002B):
     """Fan."""
 
     clusters = {
@@ -440,7 +455,7 @@ class Fan(MatterDevice, device_type=0x002B):
     }
 
 
-class VideoPlayer(MatterDevice, device_type=0x0023):
+class VideoPlayer(DeviceType, device_type=0x0023):
     """Video Player."""
 
     clusters = {
@@ -461,7 +476,7 @@ class VideoPlayer(MatterDevice, device_type=0x0023):
     }
 
 
-class Speaker(MatterDevice, device_type=0x0022):
+class Speaker(DeviceType, device_type=0x0022):
     """Speaker."""
 
     clusters = {
@@ -472,7 +487,7 @@ class Speaker(MatterDevice, device_type=0x0022):
     }
 
 
-class ContentApplication(MatterDevice, device_type=0x0024):
+class ContentApplication(DeviceType, device_type=0x0024):
     """Content Application."""
 
     clusters = {
@@ -489,7 +504,7 @@ class ContentApplication(MatterDevice, device_type=0x0024):
     }
 
 
-class ModeSelect(MatterDevice, device_type=0x0027):
+class ModeSelect(DeviceType, device_type=0x0027):
     """Mode Select."""
 
     clusters = {
@@ -499,7 +514,7 @@ class ModeSelect(MatterDevice, device_type=0x0027):
     }
 
 
-class AllClustersAppServerExample(MatterDevice, device_type=0x0000):
+class AllClustersAppServerExample(DeviceType, device_type=0x0000):
     """All-clusters-app Server Example."""
 
     clusters = {
@@ -517,7 +532,7 @@ class AllClustersAppServerExample(MatterDevice, device_type=0x0000):
     }
 
 
-class SecondaryNetworkCommissioningDeviceType(MatterDevice, device_type=0xF002):
+class SecondaryNetworkCommissioningDeviceType(DeviceType, device_type=0xF002):
     """Secondary Network Commissioning Device Type."""
 
     clusters = {

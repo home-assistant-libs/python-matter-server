@@ -13,7 +13,8 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from matter_server.client.model import devices as matter_devices
+from matter_server.client.model.device import MatterDevice
+from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as clusters
 
 from .const import DOMAIN
@@ -37,9 +38,7 @@ async def async_setup_entry(
 class MatterSwitch(MatterEntity, SwitchEntity):
     """Representation of a Matter switch."""
 
-    def __init__(
-        self, device: matter_devices.MatterDevice, mapping: DeviceMapping
-    ) -> None:
+    def __init__(self, device: MatterDevice, mapping: DeviceMapping) -> None:
         """Initialize the switch."""
         super().__init__(device, mapping)
         self._attr_name = device.node.name or f"Matter Switch {device.node.node_id}"
@@ -63,9 +62,9 @@ class MatterSwitch(MatterEntity, SwitchEntity):
 
 
 DEVICE_ENTITY: dict[
-    matter_devices.MatterDevice, DeviceMapping | list[DeviceMapping]
+    type[device_types.DeviceType], DeviceMapping | list[DeviceMapping]
 ] = {
-    matter_devices.OnOffPlugInUnit: DeviceMapping(
+    device_types.OnOffPlugInUnit: DeviceMapping(
         entity_cls=MatterSwitch,
         subscribe_attributes=(clusters.OnOff.Attributes.OnOff,),
         entity_description=SwitchEntityDescription(

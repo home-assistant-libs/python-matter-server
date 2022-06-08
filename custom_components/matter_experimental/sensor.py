@@ -20,7 +20,8 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from matter_server.client.model import devices as matter_devices
+from matter_server.client.model.device import MatterDevice
+from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as clusters
 from matter_server.vendor.chip.clusters.Types import NullValue
 
@@ -47,9 +48,7 @@ class MatterSensor(MatterEntity, SensorEntity):
 
     _attr_state_class = SensorStateClass.MEASUREMENT
 
-    def __init__(
-        self, device: matter_devices.MatterDevice, mapping: DeviceMapping
-    ) -> None:
+    def __init__(self, device: MatterDevice, mapping: DeviceMapping) -> None:
         """Initialize the sensor."""
         super().__init__(device, mapping)
         self._attr_name = device.node.name or f"Matter Sensor {device.node.node_id}"
@@ -158,29 +157,29 @@ class MatterLightSensor(MatterSensor):
 
 
 DEVICE_ENTITY: dict[
-    matter_devices.MatterDevice, DeviceMapping | list[DeviceMapping]
+    type[device_types.DeviceType], DeviceMapping | list[DeviceMapping]
 ] = {
-    matter_devices.TemperatureSensor: DeviceMapping(
+    device_types.TemperatureSensor: DeviceMapping(
         entity_cls=MatterTemperatureSensor,
         subscribe_attributes=(
             clusters.TemperatureMeasurement.Attributes.MeasuredValue,
         ),
     ),
-    matter_devices.PressureSensor: DeviceMapping(
+    device_types.PressureSensor: DeviceMapping(
         entity_cls=MatterPressureSensor,
         subscribe_attributes=(clusters.PressureMeasurement.Attributes.MeasuredValue,),
     ),
-    matter_devices.FlowSensor: DeviceMapping(
+    device_types.FlowSensor: DeviceMapping(
         entity_cls=MatterFlowSensor,
         subscribe_attributes=(clusters.FlowMeasurement.Attributes.MeasuredValue,),
     ),
-    matter_devices.HumiditySensor: DeviceMapping(
+    device_types.HumiditySensor: DeviceMapping(
         entity_cls=MatterHumiditySensor,
         subscribe_attributes=(
             clusters.RelativeHumidityMeasurement.Attributes.MeasuredValue,
         ),
     ),
-    matter_devices.LightSensor: DeviceMapping(
+    device_types.LightSensor: DeviceMapping(
         entity_cls=MatterLightSensor,
         subscribe_attributes=(
             clusters.IlluminanceMeasurement.Attributes.MeasuredValue,

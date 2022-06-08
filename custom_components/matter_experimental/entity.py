@@ -14,14 +14,13 @@ from .device_platform_helper import DeviceMapping
 
 class MatterEntity(entity.Entity):
 
+    _attr_should_poll = False
     _unsubscribe: Callable[..., Coroutine[Any, Any, None]] | None = None
 
     def __init__(self, device: MatterDevice, mapping: DeviceMapping) -> None:
         self._device = device
         self._device_mapping = mapping
-        self._attr_unique_id = (
-            f"{device.node.unique_id}-{device.endpoint_id}-{device.device_type}"
-        )
+        self._attr_unique_id = f"{device.node.unique_id}-{device.endpoint_id}-{device.device_type.device_type}"
 
     @property
     def device_info(self) -> entity.DeviceInfo | None:
@@ -38,7 +37,7 @@ class MatterEntity(entity.Entity):
 
         # Subscribe to updates.
         self._unsubscribe = await self._device.subscribe_updates(
-            self._device_mapping.subscribe_attributes, self._update_from_device
+            self._device_mapping.subscribe_attributes, self._subscription_update
         )
 
         # Fetch latest info from the device.

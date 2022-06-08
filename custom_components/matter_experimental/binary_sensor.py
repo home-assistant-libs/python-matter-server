@@ -13,7 +13,8 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from matter_server.client.model import devices as matter_devices
+from matter_server.client.model.device import MatterDevice
+from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as clusters
 
 from .const import DOMAIN
@@ -37,9 +38,7 @@ async def async_setup_entry(
 class MatterBinarySensor(MatterEntity, BinarySensorEntity):
     """Representation of a Matter binary sensor."""
 
-    def __init__(
-        self, device: matter_devices.MatterDevice, mapping: DeviceMapping
-    ) -> None:
+    def __init__(self, device: MatterDevice, mapping: DeviceMapping) -> None:
         """Initialize the sensor."""
         super().__init__(device, mapping)
         self._attr_name = device.node.name or f"Matter Sensor {device.node.node_id}"
@@ -64,9 +63,9 @@ class MatterOccupancySensor(MatterEntity, BinarySensorEntity):
 
 
 DEVICE_ENTITY: dict[
-    matter_devices.MatterDevice, DeviceMapping | list[DeviceMapping]
+    type[device_types.DeviceType], DeviceMapping | list[DeviceMapping]
 ] = {
-    matter_devices.ContactSensor: DeviceMapping(
+    device_types.ContactSensor: DeviceMapping(
         entity_cls=MatterBinarySensor,
         subscribe_attributes=(clusters.BooleanState.Attributes.StateValue,),
         entity_description=BinarySensorEntityDescription(
@@ -74,7 +73,7 @@ DEVICE_ENTITY: dict[
             device_class=BinarySensorDeviceClass.DOOR,
         ),
     ),
-    matter_devices.OccupancySensor: DeviceMapping(
+    device_types.OccupancySensor: DeviceMapping(
         entity_cls=MatterOccupancySensor,
         subscribe_attributes=(clusters.OccupancySensing.Attributes.Occupancy,),
     ),

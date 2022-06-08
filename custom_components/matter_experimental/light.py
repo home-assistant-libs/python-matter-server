@@ -9,7 +9,8 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from matter_server.client.model import devices as matter_devices
+from matter_server.client.model.device import MatterDevice
+from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as clusters
 
 from .const import DOMAIN
@@ -34,9 +35,7 @@ async def async_setup_entry(
 class MatterLight(MatterEntity, LightEntity):
     """Representation of a Matter light."""
 
-    def __init__(
-        self, device: matter_devices.MatterDevice, mapping: DeviceMapping
-    ) -> None:
+    def __init__(self, device: MatterDevice, mapping: DeviceMapping) -> None:
         """Initialize the light."""
         super().__init__(device, mapping)
         self._attr_name = device.node.name or f"Matter Light {device.node.node_id}"
@@ -99,20 +98,20 @@ class MatterLight(MatterEntity, LightEntity):
 
 
 DEVICE_ENTITY: dict[
-    matter_devices.MatterDevice, DeviceMapping | list[DeviceMapping]
+    type[device_types.DeviceType], DeviceMapping | list[DeviceMapping]
 ] = {
-    matter_devices.OnOffLight: DeviceMapping(
+    device_types.OnOffLight: DeviceMapping(
         entity_cls=MatterLight,
         subscribe_attributes=(clusters.OnOff.Attributes.OnOff,),
     ),
-    matter_devices.DimmableLight: DeviceMapping(
+    device_types.DimmableLight: DeviceMapping(
         entity_cls=MatterLight,
         subscribe_attributes=(
             clusters.OnOff.Attributes.OnOff,
             clusters.LevelControl.Attributes.CurrentLevel,
         ),
     ),
-    matter_devices.DimmablePlugInUnit: DeviceMapping(
+    device_types.DimmablePlugInUnit: DeviceMapping(
         entity_cls=MatterLight,
         subscribe_attributes=(
             clusters.OnOff.Attributes.OnOff,

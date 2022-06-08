@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .device import DEVICE_TYPES, MatterDevice
-from .devices import RootNode
-
 from matter_server.vendor.chip.clusters import Objects as all_clusters
+from matter_server.vendor import device_types
+
+from .device import MatterDevice
+
 
 if TYPE_CHECKING:
     from ..matter import Matter
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 class MatterNode:
     """Matter node."""
 
-    root_device: RootNode
+    root_device: MatterDevice[device_types.RootNode]
 
     def __init__(self, matter: Matter, node_info: dict) -> None:
         self.matter = matter
@@ -26,16 +27,18 @@ class MatterNode:
         for endpoint_id, endpoint_info in node_info["attributes"].items():
             descriptor: all_clusters.Descriptor = endpoint_info["Descriptor"]
             for device_info in descriptor.deviceList:
-                device_cls = DEVICE_TYPES.get(device_info.type)
+                device_type = device_types.ALL_TYPES.get(device_info.type)
 
-                if device_cls is None:
+                if device_type is None:
                     matter.adapter.logger.warning(
                         "Found unknown device type %s", device_info.type
                     )
                     continue
 
-                device = device_cls(self, int(endpoint_id), device_info.revision)
-                if isinstance(device, RootNode):
+                device = MatterDevice(
+                    self, device_type, int(endpoint_id), device_info.revision
+                )
+                if device_type is device_types.RootNode:
                     self.root_device = device
                 else:
                     devices.append(device)

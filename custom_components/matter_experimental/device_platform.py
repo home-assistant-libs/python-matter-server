@@ -11,13 +11,13 @@ from .sensor import DEVICE_ENTITY as SENSOR_DEVICE_ENTITY
 from .switch import DEVICE_ENTITY as SWITCH_DEVICE_ENTITY
 
 if TYPE_CHECKING:
-    from matter_server.client.model import device as matter_devices
+    from matter_server.vendor.device_types import DeviceType
 
     from .device_platform_helper import DeviceMapping
 
 
 DEVICE_PLATFORM: dict[
-    Platform, dict[matter_devices.MatterDevice, DeviceMapping | list[DeviceMapping]]
+    Platform, dict[type[DeviceType], DeviceMapping | list[DeviceMapping]]
 ] = {
     Platform.BINARY_SENSOR: BINARY_SENSOR_DEVICE_ENTITY,
     Platform.LIGHT: LIGHT_DEVICE_ENTITY,

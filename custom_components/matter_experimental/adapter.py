@@ -150,10 +150,9 @@ class MatterAdapter(AbstractMatterAdapter):
 
         for device in node.devices:
             created = False
-            device_type = type(device)
 
             for platform, devices in DEVICE_PLATFORM.items():
-                device_mappings = devices.get(device_type)
+                device_mappings = devices.get(device.device_type)
 
                 if device_mappings is None:
                     continue
@@ -167,7 +166,7 @@ class MatterAdapter(AbstractMatterAdapter):
                         "Creating %s entity for %s (%s)",
                         platform,
                         type(device),
-                        hex(device.device_type),
+                        hex(device.device_type.device_type),
                     )
                     entities.append(device_mapping.entity_cls(device, device_mapping))
 
@@ -178,7 +177,7 @@ class MatterAdapter(AbstractMatterAdapter):
                 self.logger.warning(
                     "Found unsupported device %s (%s)",
                     type(device).__name__,
-                    hex(device.device_type),
+                    hex(device.device_type.device_type),
                 )
 
     async def handle_server_disconnected(self, should_reload: bool) -> None:

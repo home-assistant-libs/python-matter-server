@@ -1,36 +1,32 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, TypeVar
+from typing import TYPE_CHECKING, Callable, Coroutine, Generic, TypeVar
 
+from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as all_clusters
 
 if TYPE_CHECKING:
     from .node import MatterNode
 
-DEVICE_TYPES = {}
-
 SubscriberType = Callable[[], None]
 
 
+_DEVICE_TYPE_T = TypeVar("_DEVICE_TYPE_T", bound=device_types.DeviceType)
 _CLUSTER_T = TypeVar("_CLUSTER_T", bound=all_clusters.Cluster)
 
 
-class MatterDevice:
+class MatterDevice(Generic[_DEVICE_TYPE_T]):
     """Base class for Matter devices."""
 
-    device_type: int
-    clusters: set[type[all_clusters.Cluster]] = set()
-
-    def __init_subclass__(cls, *, device_type: int, **kwargs: Any) -> None:
-        """Initialize a subclass, register if possible."""
-        super().__init_subclass__(**kwargs)
-        cls.device_type = device_type
-        DEVICE_TYPES[device_type] = cls
-
     def __init__(
-        self, node: MatterNode, endpoint_id: int, device_revision: int
+        self,
+        node: MatterNode,
+        device_type: _DEVICE_TYPE_T,
+        endpoint_id: int,
+        device_revision: int,
     ) -> None:
         self.node = node
+        self.device_type = device_type
         self.device_revision = device_revision
         self.endpoint_id = endpoint_id
         self._on_update_listener: SubscriberType | None = None
@@ -39,9 +35,9 @@ class MatterDevice:
     def data(self) -> dict:
         return self.node.raw_data["attributes"][str(self.endpoint_id)]
 
-    def has_cluster(self, cluster: type[clusters.Cluster]) -> bool:
+    def has_cluster(self, cluster: type[all_clusters.Cluster]) -> bool:
         """Check if device has a specific cluster."""
-        return cluster in self.clusters and cluster.__name__ in self.data
+        return cluster in self.device_type.clusters and cluster.__name__ in self.data
 
     def get_cluster(self, cluster: type[_CLUSTER_T]) -> _CLUSTER_T | None:
         """Get the cluster object."""

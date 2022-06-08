@@ -8,15 +8,13 @@ REPO_ROOT = pathlib.Path(__file__).parent.parent
 CHIP_ROOT = REPO_ROOT / "../connectedhomeip"
 DEVICE_XML = CHIP_ROOT / "src/app/zap-templates/zcl/data-model/chip/matter-devices.xml"
 
-OUTPUT_PYTHON = REPO_ROOT / "matter_server/client/model/devices.py"
+OUTPUT_PYTHON = REPO_ROOT / "matter_server/vendor/device_types.py"
 
 
 def gen_cls_name(name: str):
-    # Temp, class definition is wrong.
-    # https://github.com/project-chip/connectedhomeip/pull/19281
+    # Temp, class definition of ContentApplication: Channel is wrong.
     if patched := {
         "TV Channel": "Channel",
-        "AdministratorCommissioning": "Administrator Commissioning",
     }.get(name):
         name = patched
 
@@ -49,9 +47,26 @@ def main():
         """
 from __future__ import annotations
 
-from .device import MatterDevice
+import typing
 
-from matter_server.vendor.chip.clusters import Objects as all_clusters
+from .chip.clusters import Objects as all_clusters
+
+ALL_TYPES: dict[int, type["DeviceType"]] = {}
+
+
+
+class DeviceType:
+    \"""Base class for Matter devices.\"""
+
+    device_type: int
+    clusters: set[type[all_clusters.Cluster]] = set()
+
+    def __init_subclass__(cls, *, device_type: int, **kwargs: typing.Any) -> None:
+        \"""Initialize a subclass, register if possible.\"""
+        super().__init_subclass__(**kwargs)
+        cls.device_type = device_type
+        ALL_TYPES[device_type] = cls
+
 """
     ]
 
@@ -118,7 +133,7 @@ from matter_server.vendor.chip.clusters import Objects as all_clusters
         output.append(
             """
 
-class {cls_name}(MatterDevice, device_type={device_id}):
+class {cls_name}(DeviceType, device_type={device_id}):
     \"""{device_name}.\"""
 
     clusters = {output_clusters}
