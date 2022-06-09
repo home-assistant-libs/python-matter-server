@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class DeviceMapping:
+    """Map a matter device to a HA entity."""
 
     entity_cls: type[MatterEntity]
     subscribe_attributes: tuple | None = None
