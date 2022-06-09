@@ -16,6 +16,7 @@ import uuid
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
 
+from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 from ..common.model.message import (
     CommandMessage,
     ErrorResultMessage,
@@ -25,8 +26,6 @@ from ..common.model.message import (
     SubscriptionReportMessage,
     SuccessResultMessage,
 )
-
-from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 from ..common.model.version import VersionInfo
 from .const import MAX_SERVER_SCHEMA_VERSION, MIN_SERVER_SCHEMA_VERSION
 from .exceptions import (

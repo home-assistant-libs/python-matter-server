@@ -1,6 +1,6 @@
 from __future__ import annotations
-from contextlib import suppress
 
+from contextlib import suppress
 from typing import TYPE_CHECKING, Callable
 
 from matter_server.client.exceptions import NotConnected

@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-
 from .device_controller import DeviceController
 from .read_subscriptions import ReadSubscriptions
 
 if TYPE_CHECKING:
     from matter_server.common.model.message import ServerInformation
+
     from .. import client
 
 

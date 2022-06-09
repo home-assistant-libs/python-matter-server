@@ -10,12 +10,12 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    Platform,
-    TEMP_CELSIUS,
-    PERCENTAGE,
     LIGHT_LUX,
-    VOLUME_FLOW_RATE_CUBIC_METERS_PER_HOUR,
+    PERCENTAGE,
     PRESSURE_KPA,
+    TEMP_CELSIUS,
+    VOLUME_FLOW_RATE_CUBIC_METERS_PER_HOUR,
+    Platform,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback

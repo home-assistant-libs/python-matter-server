@@ -3,11 +3,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from matter_server.vendor.chip.clusters import Objects as all_clusters
 from matter_server.vendor import device_types
+from matter_server.vendor.chip.clusters import Objects as all_clusters
 
 from .device import MatterDevice
-
 
 if TYPE_CHECKING:
     from ..matter import Matter
