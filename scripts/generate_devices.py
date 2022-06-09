@@ -56,13 +56,13 @@ ALL_TYPES: dict[int, type["DeviceType"]] = {}
 
 
 class DeviceType:
-    \"""Base class for Matter devices.\"""
+    \"""Base class for Matter device types.\"""
 
     device_type: int
-    clusters: set[type[all_clusters.Cluster]] = set()
+    clusters: set[type[all_clusters.Cluster]]
 
     def __init_subclass__(cls, *, device_type: int, **kwargs: typing.Any) -> None:
-        \"""Initialize a subclass, register if possible.\"""
+        \"""Register a subclass.\"""
         super().__init_subclass__(**kwargs)
         cls.device_type = device_type
         ALL_TYPES[device_type] = cls
@@ -115,7 +115,7 @@ class DeviceType:
         print()
 
         if not clusters:
-            output_clusters = "{}"
+            output_clusters = "set()"
         else:
             output_clusters = (
                 "{"
