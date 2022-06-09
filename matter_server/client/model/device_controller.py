@@ -192,7 +192,6 @@ class DeviceController:
             },
         )
 
-
     async def _async_send_command(self, command, args):
         """Send driver controller command."""
         return await self.client.async_send_command(
