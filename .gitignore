@@ -1,3 +1,4 @@
 *.py[cod]
 venv
 *.egg-info
+*.log
