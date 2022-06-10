@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_URL, default="http://127.0.0.1:8080/chip_ws"): str,
+        vol.Required(CONF_URL, default="http://172.30.32.1:5580/chip_ws"): str,
     }
 )
 

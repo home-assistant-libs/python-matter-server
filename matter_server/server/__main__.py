@@ -16,7 +16,7 @@ _LOGGER.setLevel(logging.DEBUG)
 
 def main() -> int:
     host = os.getenv("CHIP_WS_SERVER_HOST", "::,0.0.0.0").split(",")
-    port = int(os.getenv("CHIP_WS_SERVER_PORT", "8080"))
+    port = int(os.getenv("CHIP_WS_SERVER_PORT", "5580"))
     storage_path = os.getenv(
         "CHIP_WS_STORAGE",
         str(Path.home() / ".chip-storage/python-kv.json"),
