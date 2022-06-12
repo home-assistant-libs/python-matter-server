@@ -29,6 +29,12 @@ def get_arguments() -> argparse.Namespace:
         default=None,
         help="Log file to write to.  If not set, matter_server.log is used",
     )
+    parser.add_argument(
+        "-log",
+        "--loglevel",
+        default="info",
+        help="Provide logging level. Example --loglevel debug, default=info, possible=(critical, error, warning, info, debug)",
+    )
 
     arguments = parser.parse_args()
 
@@ -43,7 +49,7 @@ def main() -> int:
             "matter_server.log" if args.log_file is None else args.log_file
         )
 
-    logging.basicConfig(handlers=[file_handler], level=logging.WARN)
+    logging.basicConfig(handlers=[file_handler], level=args.loglevel.upper())
 
     host = os.getenv("CHIP_WS_SERVER_HOST", "::,0.0.0.0").split(",")
     port = int(os.getenv("CHIP_WS_SERVER_PORT", "5580"))
@@ -53,7 +59,7 @@ def main() -> int:
     )
     debug = os.getenv("CHIP_WS_DEBUG") is not None
 
-    coloredlogs.install(level=logging.DEBUG if debug else logging.INFO)
+    coloredlogs.install(level=logging.DEBUG if debug else args.loglevel.upper())
     stack = MatterStack(storage_path)
 
     loop = asyncio.get_event_loop()
