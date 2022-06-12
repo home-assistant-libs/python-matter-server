@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.DEBUG)
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_HOST = "127.0.0.1" if len(sys.argv) < 2 else sys.argv[1]
-DEFAULT_PORT = "8080" if len(sys.argv) < 3 else sys.argv[2]
+DEFAULT_PORT = "5580" if len(sys.argv) < 3 else sys.argv[2]
 HOST = os.getenv("CHIP_WS_SERVER_HOST", DEFAULT_HOST)
 PORT = int(os.getenv("CHIP_WS_SERVER_PORT", DEFAULT_PORT))
 URL = f"http://{HOST}:{PORT}/chip_ws"
