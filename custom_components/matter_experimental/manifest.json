@@ -3,7 +3,7 @@
   "name": "Matter (Experimental)",
   "config_flow": true,
   "documentation": "https://github.com/home-assistant-libs/python-matter-server",
-  "requirements": ["dacite==1.6.0"],
+  "requirements": ["dacite==1.6.0", "python-matter-server==0.1.0"],
   "iot_class": "local_push",
   "version": "0.1"
 }
