@@ -1,14 +1,40 @@
 [build-system]
-requires = ["setuptools~=60.5", "wheel~=0.37.1"]
+requires = ["setuptools~=62.3", "wheel~=0.37.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
-dependencies    = [
-  "dacite"
+name = "python-matter-server"
+version = "0.1.0"
+license     = {text = "Apache-2.0"}
+description = "Python Matter WebSocket Server"
+readme = "README.md"
+authors = [
+    {name = "The Home Assistant Authors", email = "hello@home-assistant.io"}
 ]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Environment :: Console",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Home Automation",
+]
+dependencies = [
+  "aiohttp",
+  "dacite",
+]
+
+[project.scripts]
+matter-server = "matter_server.server.__main__:main"
+
+[tool.setuptools]
+platforms = ["any"]
+zip-safe  = false
+include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["matter_server*"]
+
 
 [tool.pylint.BASIC]
 class-const-naming-style = "any"
