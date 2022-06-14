@@ -19,6 +19,7 @@ from homeassistant.helpers.storage import Store
 
 from matter_server.client.adapter import AbstractMatterAdapter
 from matter_server.common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
+from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as all_clusters
 
 from .const import DOMAIN
@@ -91,6 +92,8 @@ def get_matter_store(hass: HomeAssistant, config_entry: ConfigEntry) -> MatterSt
 
 
 class MatterAdapter(AbstractMatterAdapter):
+    """Connect Matter into Home Assistant."""
+
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         self.hass = hass
         self.config_entry = config_entry
@@ -134,18 +137,22 @@ class MatterAdapter(AbstractMatterAdapter):
 
         basic_info = node.root_device.get_cluster(all_clusters.Basic)
 
-        kwargs = {}
-        if basic_info.nodeLabel:
-            kwargs["name"] = basic_info.nodeLabel
+        name = basic_info.nodeLabel
+        if not name:
+            for device in node.devices:
+                if device.device_type is device_types.RootNode:
+                    continue
+
+                name = device.device_type.__doc__[:-1]
 
         dr.async_get(self.hass).async_get_or_create(
+            name=name,
             config_entry_id=self.config_entry.entry_id,
             identifiers={(DOMAIN, basic_info.uniqueID)},
             hw_version=basic_info.hardwareVersionString,
             sw_version=basic_info.softwareVersionString,
             manufacturer=basic_info.vendorName,
             model=basic_info.productName,
-            **kwargs,
         )
 
         for device in node.devices:
