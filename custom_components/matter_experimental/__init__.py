@@ -167,12 +167,45 @@ def _async_init_services(hass: HomeAssistant) -> None:
         vol.Schema({"thread_operation_dataset": str}),
     )
 
+    @callback
+    def _node_id_from_ha_device_id(ha_device_id: str) -> str | None:
+        """Get node id from ha device id."""
+        dev_reg = dr.async_get(hass)
+        device = dev_reg.async_get(ha_device_id)
+
+        if device is None:
+            return None
+
+        matter_iden = [iden for iden in device.identifiers if iden[0] == DOMAIN]
+
+        if not matter_iden:
+            return None
+
+        unique_id = matter_iden[0][1]
+
+        matter: Matter = list(hass.data[DOMAIN].values())[0]
+
+        # This could be more efficient
+        for node in matter.get_nodes():
+            if node.unique_id == unique_id:
+                return node.node_id
+
+        return None
+
     async def open_commissioning_window(call: ServiceCall) -> None:
         """Open commissioning window on specific node."""
+        node_id = _node_id_from_ha_device_id(call.data["device_id"])
+
+        if node_id is None:
+            raise HomeAssistantError("This is not a Matter device")
+
         matter: Matter = list(hass.data[DOMAIN].values())[0]
+
+        # We are sending device ID .
+
         try:
             await matter.client.driver.device_controller.open_commissioning_window(
-                call.data["node_id"]
+                node_id
             )
         except FailedCommand as err:
             raise HomeAssistantError(str(err)) from err
@@ -182,5 +215,5 @@ def _async_init_services(hass: HomeAssistant) -> None:
         DOMAIN,
         "open_commissioning_window",
         open_commissioning_window,
-        vol.Schema({"node_id": int}),
+        vol.Schema({"device_id": str}),
     )

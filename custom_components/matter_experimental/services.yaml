@@ -37,13 +37,11 @@ set_thread:
 open_commissioning_window:
   name: Open Commissioning Window
   description: >
-    Open Commissioning Window of a Matter node for 60s.
+    Open Commissioning Window of a Matter device for 60s.
   fields:
-    node_id:
-      name: Matter Node ID
+    device_id:
+      name: Device
       required: true
       selector:
-        number:
-          min: 0
-          max: 18446744004990074879
-          mode: box
+        device:
+          integration: matter_experimental
