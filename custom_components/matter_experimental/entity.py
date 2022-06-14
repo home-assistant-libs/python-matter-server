@@ -1,11 +1,10 @@
 """Matter entity base class."""
 from __future__ import annotations
-import asyncio
 
+import asyncio
 from typing import Any, Callable, Coroutine
 
 import async_timeout
-
 from homeassistant.core import callback
 from homeassistant.helpers import entity
 
