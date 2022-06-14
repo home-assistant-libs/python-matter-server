@@ -13,7 +13,6 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from matter_server.client.model.device import MatterDevice
 from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as clusters
 
@@ -37,11 +36,6 @@ async def async_setup_entry(
 
 class MatterSwitch(MatterEntity, SwitchEntity):
     """Representation of a Matter switch."""
-
-    def __init__(self, device: MatterDevice, mapping: DeviceMapping) -> None:
-        """Initialize the switch."""
-        super().__init__(device, mapping)
-        self._attr_name = device.node.name or f"Matter Switch {device.node.node_id}"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn switch on."""

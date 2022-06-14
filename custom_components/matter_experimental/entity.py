@@ -22,6 +22,22 @@ class MatterEntity(entity.Entity):
         self._device_mapping = mapping
         self._attr_unique_id = f"{device.node.unique_id}-{device.endpoint_id}-{device.device_type.device_type}"
 
+        device_type_name = device.device_type.__doc__[:-1]
+        name = device.node.name
+        if name:
+            name += f" {device_type_name}"
+        else:
+            name = f"{device_type_name} {device.node.node_id}"
+
+        # If this device has multiple of this device type, add their endpoint.
+        if (
+            sum(dev.device_type is device.device_type for dev in device.node.devices)
+            > 1
+        ):
+            name += f" ({device.endpoint_id})"
+
+        self._attr_name = name
+
     @property
     def device_info(self) -> entity.DeviceInfo | None:
         """Return device info for device registry."""

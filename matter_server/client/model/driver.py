@@ -17,13 +17,3 @@ class Driver:
         self._client = client
         self.device_controller = DeviceController(client)
         self.read_subscriptions = ReadSubscriptions(client)
-
-    @property
-    def fabric_id(self) -> int:
-        """Fabric ID."""
-        return self.server_info.fabricId
-
-    @property
-    def compressed_fabric_id(self) -> int:
-        """Compressed fabric ID."""
-        return self.server_info.compressedFabricId

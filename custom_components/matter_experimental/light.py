@@ -38,7 +38,6 @@ class MatterLight(MatterEntity, LightEntity):
     def __init__(self, device: MatterDevice, mapping: DeviceMapping) -> None:
         """Initialize the light."""
         super().__init__(device, mapping)
-        self._attr_name = device.node.name or f"Matter Light {device.node.node_id}"
         if self._supports_brightness():
             self._attr_supported_color_modes = [ColorMode.BRIGHTNESS]
 
