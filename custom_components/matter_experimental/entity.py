@@ -1,7 +1,10 @@
 """Matter entity base class."""
 from __future__ import annotations
+import asyncio
 
 from typing import Any, Callable, Coroutine
+
+import async_timeout
 
 from homeassistant.core import callback
 from homeassistant.helpers import entity
@@ -51,13 +54,25 @@ class MatterEntity(entity.Entity):
             self._update_from_device()
             return
 
-        # Subscribe to updates.
-        self._unsubscribe = await self._device.subscribe_updates(
-            self._device_mapping.subscribe_attributes, self._subscription_update
-        )
+        try:
+            # Subscribe to updates.
+            async with async_timeout.timeout(5):
+                self._unsubscribe = await self._device.subscribe_updates(
+                    self._device_mapping.subscribe_attributes, self._subscription_update
+                )
 
-        # Fetch latest info from the device.
-        await self._device.update_attributes(self._device_mapping.subscribe_attributes)
+            # Fetch latest info from the device.
+            async with async_timeout.timeout(5):
+                await self._device.update_attributes(
+                    self._device_mapping.subscribe_attributes
+                )
+        except asyncio.TimeoutError:
+            self._device.node.matter.adapter.logger.warning(
+                "Timeout interacting with %s, marking device as unavailable. Recovery is not implemented yet. Reload config entry when device is available again.",
+                self.entity_id,
+            )
+            self._attr_available = False
+
         self._update_from_device()
 
     async def async_will_remove_from_hass(self) -> None:

@@ -172,7 +172,7 @@ class MatterAdapter(AbstractMatterAdapter):
                     self.logger.debug(
                         "Creating %s entity for %s (%s)",
                         platform,
-                        type(device),
+                        device.device_type.__name__,
                         hex(device.device_type.device_type),
                     )
                     entities.append(device_mapping.entity_cls(device, device_mapping))

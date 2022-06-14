@@ -1,7 +1,7 @@
 commission:
   name: Commission device
   description: >
-    Commission a new device
+    Add a new device to your Matter network.
   fields:
     code:
       name: Pairing code
@@ -11,7 +11,7 @@ commission:
 set_wifi:
   name: Set Wi-Fi credentials
   description: >
-    This is needed to set-up new Wi-Fi devices.
+    The Wi-Fi credentials will be sent as part of comissioning to a Matter device so it can connect to the Wi-Fi network.
   fields:
     network_name:
       name: Network name
@@ -27,7 +27,9 @@ set_wifi:
 set_thread:
   name: Set Thread network operational dataset
   description: >
-    Required to set-up new Thread devices. Use "ot-ctl dataset active -x" on the OTBR.
+    The Thread keys will be used as part of comissioning to let a Matter device join the Thread network.
+
+    Get keys by running `ot-ctl dataset active -x` on the Open Thread Border Router.
   fields:
     thread_operation_dataset:
       name: Thread Operational Dataset
@@ -37,7 +39,7 @@ set_thread:
 open_commissioning_window:
   name: Open Commissioning Window
   description: >
-    Open Commissioning Window of a Matter device for 60s.
+    Allow adding one of your devices to another Matter network by opening the commissioning window for this Matter device for 60 seconds.
   fields:
     device_id:
       name: Device
