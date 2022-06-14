@@ -31,8 +31,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-test.txt
       - name: Flake8
-        run: flake8 custom_components matter_server/backports matter_server/client matter_server/common matter_server/server
+        run: flake8 custom_components matter_server/client matter_server/common matter_server/server
       - name: Black
-        run: black --check custom_components matter_server/backports matter_server/client matter_server/common matter_server/server
+        run: black --check custom_components matter_server/client matter_server/common matter_server/server
       - name: isort
-        run: isort --check custom_components matter_server/backports matter_server/client matter_server/common matter_server/server
+        run: isort --check custom_components matter_server/client matter_server/common matter_server/server
