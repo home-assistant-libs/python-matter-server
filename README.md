@@ -130,7 +130,7 @@ _On MacOs you will have to run above command with 'sudo' as it requires to inter
 ### Deploying a new version
 
 1. Update Matter Server PyPI package [`pyproject.toml`](https://github.com/home-assistant-libs/python-matter-server/blob/main/pyproject.toml) with the new version.
-1. Update custom integration [`manifest.json`](https://github.com/home-assistant-libs/python-matter-server/blob/main/custom_components/matter_experimental/manifest.json) with the new version.
+1. Update custom integration [`manifest.json`](https://github.com/home-assistant-libs/python-matter-server/blob/main/custom_components/matter_experimental/manifest.json) with the new version for both `requirements` and `version`.
 1. Tag a new release in this repository with the new version.
 
 Updating the Matter Server add-on
