@@ -1,6 +1,7 @@
 """Matter entity base class."""
 from __future__ import annotations
 
+from abc import abstractmethod
 import asyncio
 from typing import Any, Callable, Coroutine
 
@@ -91,6 +92,6 @@ class MatterEntity(entity.Entity):
         self.async_write_ha_state()
 
     @callback
+    @abstractmethod
     def _update_from_device(self) -> None:
         """Update data from Matter device."""
-        self.async_write_ha_state()
