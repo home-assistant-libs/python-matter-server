@@ -143,7 +143,8 @@ class MatterAdapter(AbstractMatterAdapter):
                 if device.device_type is device_types.RootNode:
                     continue
 
-                name = device.device_type.__doc__[:-1]
+                name = f"{device.device_type.__doc__[:-1]} {node.node_id}"
+                break
 
         dr.async_get(self.hass).async_get_or_create(
             name=name,
