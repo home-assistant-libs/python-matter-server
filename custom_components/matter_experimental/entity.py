@@ -6,7 +6,7 @@ from typing import Any, Callable, Coroutine
 
 import async_timeout
 from homeassistant.core import callback
-from homeassistant.helpers import entity
+from homeassistant.helpers import entity, device_registry
 
 from matter_server.client.model.device import MatterDevice
 
@@ -24,22 +24,6 @@ class MatterEntity(entity.Entity):
         self._device_mapping = mapping
         self._attr_unique_id = f"{device.node.unique_id}-{device.endpoint_id}-{device.device_type.device_type}"
 
-        device_type_name = device.device_type.__doc__[:-1]
-        name = device.node.name
-        if name:
-            name += f" {device_type_name}"
-        else:
-            name = f"{device_type_name} {device.node.node_id}"
-
-        # If this device has multiple of this device type, add their endpoint.
-        if (
-            sum(dev.device_type is device.device_type for dev in device.node.devices)
-            > 1
-        ):
-            name += f" ({device.endpoint_id})"
-
-        self._attr_name = name
-
     @property
     def device_info(self) -> entity.DeviceInfo | None:
         """Return device info for device registry."""
@@ -48,6 +32,27 @@ class MatterEntity(entity.Entity):
     async def async_added_to_hass(self) -> None:
         """Handle being added to Home Assistant."""
         await super().async_added_to_hass()
+
+        device_name = (
+            device_registry.async_get(self.hass)
+            .async_get(self.registry_entry.device_id)
+            .name
+        )
+
+        device_type_name = self._device.device_type.__doc__[:-1]
+        name = f"{device_name} {device_type_name}"
+
+        # If this device has multiple of this device type, add their endpoint.
+        if (
+            sum(
+                dev.device_type is self._device.device_type
+                for dev in self._device.node.devices
+            )
+            > 1
+        ):
+            name += f" ({self._device.endpoint_id})"
+
+        self._attr_name = name
 
         if not self._device_mapping.subscribe_attributes:
             self._update_from_device()
