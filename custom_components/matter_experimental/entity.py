@@ -22,7 +22,7 @@ class MatterEntity(entity.Entity):
     def __init__(self, device: MatterDevice, mapping: DeviceMapping) -> None:
         self._device = device
         self._device_mapping = mapping
-        self._attr_unique_id = f"{device.node.unique_id}-{device.endpoint_id}-{device.device_type.device_type}"
+        self._attr_unique_id = f"{device.node.matter.client.server_info.compressedFabricId}-{device.node.unique_id}-{device.endpoint_id}-{device.device_type.device_type}"
 
     @property
     def device_info(self) -> entity.DeviceInfo | None:
