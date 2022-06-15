@@ -6,7 +6,7 @@ from typing import Any, Callable, Coroutine
 
 import async_timeout
 from homeassistant.core import callback
-from homeassistant.helpers import entity, device_registry
+from homeassistant.helpers import device_registry, entity
 
 from matter_server.client.model.device import MatterDevice
 
