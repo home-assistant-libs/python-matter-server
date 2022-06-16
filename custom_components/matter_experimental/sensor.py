@@ -83,7 +83,7 @@ def _get_attribute_value(
     # Find the attribute descriptor so we know the instance variable to fetch
     attribute_descriptor: clusters.ClusterObjectFieldDescriptor = next(
         descriptor
-        for descriptor in cluster_cls.descriptor()
+        for descriptor in cluster_cls.descriptor.Fields
         if descriptor.Tag == attribute.attribute_id
     )
 
