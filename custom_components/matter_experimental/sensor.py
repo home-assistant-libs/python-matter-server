@@ -79,7 +79,7 @@ class SensorDeviceMapping(DeviceMapping, SensorDeviceMappingMixin):
 
 
 # You can't set default values on inherited data classes
-SensorDeviceMappingCls = partial(SensorDeviceMapping, entity_cls=SensorEntity)
+SensorDeviceMappingCls = partial(SensorDeviceMapping, entity_cls=MatterSensor)
 SensorEntityDescriptionKey = partial(SensorEntityDescription, key=None)
 
 
