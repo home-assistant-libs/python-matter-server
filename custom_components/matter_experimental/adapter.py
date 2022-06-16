@@ -91,7 +91,9 @@ def get_matter_store(hass: HomeAssistant, config_entry: ConfigEntry) -> MatterSt
     )
 
 
-def get_matter_fallback_store(hass: HomeAssistant, config_entry: ConfigEntry) -> MatterStore:
+def get_matter_fallback_store(
+    hass: HomeAssistant, config_entry: ConfigEntry
+) -> MatterStore:
     """Get the store for the config entry."""
     return Store(
         hass,

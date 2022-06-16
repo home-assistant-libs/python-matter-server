@@ -69,7 +69,7 @@ class Matter:
         if data is None:
             data = {"next_node_id": 4335, "nodes": {}}
         elif data.get("node_interview_version") != CLUSTER_OBJECT_VERSION:
-            data['nodes'] = {key: None for key in data['nodes']}
+            data["nodes"] = {key: None for key in data["nodes"]}
 
         self.next_node_id = data["next_node_id"]
         # JSON stores dictionary keys as strings, convert to int
