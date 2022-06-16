@@ -57,7 +57,9 @@ class Matter:
             != self.client.server_info.compressedFabricId
         ):
             self.adapter.logger.warning(
-                "Connected to a server with a new fabric ID. Resetting data"
+                "Connected to a server with a new fabric ID (current: %s, server: %s). Resetting data",
+                data.get("compressed_fabric_id"),
+                self.client.server_info.compressedFabricId,
             )
             data = None
             # TODO can we detect all known nodes to the server and interview them?
@@ -123,7 +125,12 @@ class Matter:
 
         self.adapter.delay_save_data(self._data_to_save)
 
-        await self.adapter.setup_node(self._nodes[node_id])
+        try:
+            await self.adapter.setup_node(self._nodes[node_id])
+        except Exception:  # pylint: disable=broad-except
+            self.adapter.logger.exception(
+                "Unexptected error setting up node %s", node_id
+            )
 
     def _schedule_interview_retry(self, nodes: set[int], timeout=INTERVIEW_RETRY_TIME):
         """Schedule a retry of failed nodes."""
@@ -184,10 +191,19 @@ class Matter:
     async def _handle_driver_ready(self) -> None:
         """Handle driver ready."""
         await self.driver_ready.wait()
-        tasks = [self.adapter.setup_node(node) for node in self.get_nodes()]
+        nodes = self.get_nodes()
+        tasks = [self.adapter.setup_node(node) for node in nodes]
 
         if tasks:
-            await asyncio.gather(*tasks)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            for node, result in zip(nodes, results):
+                if isinstance(result, Exception):
+                    self.adapter.logger.error(
+                        "Unexpected error setting up node %s",
+                        node.node_id,
+                        exc_info=result,
+                    )
 
         to_interview = {
             node_id for node_id, info in self._nodes.items() if info is None
@@ -200,7 +216,7 @@ class Matter:
 
     def _data_to_save(self) -> dict:
         return {
-            "compressed_fabric_id": self.client.driver.compressed_fabric_id,
+            "compressed_fabric_id": self.client.server_info.compressedFabricId,
             "next_node_id": self.next_node_id,
             "nodes": {
                 node_id: node.raw_data if node else None
