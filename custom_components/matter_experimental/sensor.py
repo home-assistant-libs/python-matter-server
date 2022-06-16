@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import partial
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -23,9 +23,10 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from matter_server.client.model.device import MatterDevice
 from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as clusters
-from matter_server.vendor.chip.clusters.Types import NullValue
+from matter_server.vendor.chip.clusters.Types import Nullable, NullValue
 
 from .const import DOMAIN
 from .device_platform_helper import DeviceMapping
@@ -54,9 +55,11 @@ class MatterSensor(MatterEntity, SensorEntity):
     @callback
     def _update_from_device(self) -> None:
         """Update from device."""
-        measurement = self._device.get_cluster(
-            clusters.TemperatureMeasurement
-        ).measuredValue
+        measurement: Nullable | float = _get_attribute_value(
+            self._device,
+            # We always subscribe to a single value
+            self._device_mapping.subscribe_attributes[0],
+        )
 
         if measurement is NullValue:
             measurement = None
@@ -64,6 +67,28 @@ class MatterSensor(MatterEntity, SensorEntity):
             measurement = self._device_mapping.measurement_to_ha(measurement)
 
         self._attr_native_value = measurement
+
+
+def _get_attribute_value(
+    device: MatterDevice, attribute: clusters.ClusterAttributeDescriptor
+) -> Any:
+    """Return the value of an attribute."""
+    # Find the cluster for this attribute. We don't have a lookup table yet.
+    cluster_cls: clusters.Cluster = next(
+        cluster
+        for cluster in device.device_type.clusters
+        if cluster.id == attribute.cluster_id
+    )
+
+    # Find the attribute descriptor so we know the instance variable to fetch
+    attribute_descriptor: clusters.ClusterObjectFieldDescriptor = next(
+        descriptor
+        for descriptor in cluster_cls.descriptor()
+        if descriptor.Tag == attribute.attribute_id
+    )
+
+    cluster_data = device.get_cluster(cluster_cls)
+    return getattr(cluster_data, attribute_descriptor.Label)
 
 
 @dataclass
