@@ -1,5 +1,6 @@
 """Matter node."""
 from __future__ import annotations
+import asyncio
 
 from typing import TYPE_CHECKING
 
@@ -16,6 +17,7 @@ class MatterNode:
     """Matter node."""
 
     root_device: MatterDevice[device_types.RootNode]
+    node_lock = asyncio.Lock()
 
     def __init__(self, matter: Matter, node_info: dict) -> None:
         self.matter = matter

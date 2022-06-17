@@ -30,10 +30,8 @@ class MatterEntity(entity.Entity):
         """Return device info for device registry."""
         return {"identifiers": {(DOMAIN, self._device.node.unique_id)}}
 
-    async def async_added_to_hass(self) -> None:
-        """Handle being added to Home Assistant."""
-        await super().async_added_to_hass()
-
+    async def init_matter_device(self) -> None:
+        """Initialize and subscribe device attributes."""
         device_name = (
             device_registry.async_get(self.hass)
             .async_get(self.registry_entry.device_id)
@@ -79,6 +77,13 @@ class MatterEntity(entity.Entity):
             self._attr_available = False
 
         self._update_from_device()
+
+    async def async_added_to_hass(self) -> None:
+        """Handle being added to Home Assistant."""
+        await super().async_added_to_hass()
+
+        async with self._device.node.node_lock:
+            await self.init_matter_device()
 
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
