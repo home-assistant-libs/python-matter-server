@@ -114,6 +114,7 @@ class MatterAdapter(AbstractMatterAdapter):
         self._fallback_store = get_matter_fallback_store(hass, config_entry)
         self.platform_handlers: dict[Platform, AddEntitiesCallback] = {}
         self._platforms_set_up = asyncio.Event()
+        self._node_lock: dict[int, asyncio.Lock] = {}
 
     def register_platform_handler(
         self, platform: Platform, add_entities: AddEntitiesCallback
@@ -148,6 +149,11 @@ class MatterAdapter(AbstractMatterAdapter):
 
     def get_client_session(self) -> aiohttp.ClientSession:
         return async_get_clientsession(self.hass)
+
+    def get_node_lock(self, nodeid) -> asyncio.Lock:
+        if nodeid not in self._node_lock:
+            self._node_lock[nodeid] = asyncio.Lock()
+        return self._node_lock[nodeid]
 
     async def setup_node(self, node: MatterNode) -> None:
         """Set up an node."""
