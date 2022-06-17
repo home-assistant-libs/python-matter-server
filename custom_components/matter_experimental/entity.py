@@ -82,7 +82,9 @@ class MatterEntity(entity.Entity):
         """Handle being added to Home Assistant."""
         await super().async_added_to_hass()
 
-        async with self._device.node.matter.adapter.get_node_lock(self._device.node.node_id):
+        async with self._device.node.matter.adapter.get_node_lock(
+            self._device.node.node_id
+        ):
             await self.init_matter_device()
 
     async def async_will_remove_from_hass(self) -> None:
