@@ -136,7 +136,6 @@ class MatterAdapter(AbstractMatterAdapter):
             self._node_lock[nodeid] = asyncio.Lock()
         return self._node_lock[nodeid]
 
-
     async def setup_node(self, node: MatterNode) -> None:
         """Set up an node."""
         await self._platforms_set_up.wait()
