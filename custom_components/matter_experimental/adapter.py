@@ -59,7 +59,7 @@ def load_json(
 
 
 class MatterStore(Store):
-    """Temporary fork to add support for using our JSON decorer."""
+    """Temporary fork to add support for using our JSON decoder."""
 
     async def _async_load_data(self):
         """Load the data with custom decoder."""
@@ -91,6 +91,18 @@ def get_matter_store(hass: HomeAssistant, config_entry: ConfigEntry) -> MatterSt
     )
 
 
+def get_matter_fallback_store(
+    hass: HomeAssistant, config_entry: ConfigEntry
+) -> MatterStore:
+    """Get the store for the config entry."""
+    return Store(
+        hass,
+        STORAGE_MAJOR_VERSION,
+        f"{DOMAIN}_{config_entry.entry_id}",
+        minor_version=STORAGE_MINOR_VERSION,
+    )
+
+
 class MatterAdapter(AbstractMatterAdapter):
     """Connect Matter into Home Assistant."""
 
@@ -99,6 +111,7 @@ class MatterAdapter(AbstractMatterAdapter):
         self.config_entry = config_entry
         self.logger = logging.getLogger(__name__)
         self._store = get_matter_store(hass, config_entry)
+        self._fallback_store = get_matter_fallback_store(hass, config_entry)
         self.platform_handlers: dict[Platform, AddEntitiesCallback] = {}
         self._platforms_set_up = asyncio.Event()
 
@@ -112,7 +125,13 @@ class MatterAdapter(AbstractMatterAdapter):
     @abstractmethod
     async def load_data(self) -> dict | None:
         """Load data."""
-        return await self._store.async_load()
+        try:
+            return await self._store.async_load()
+        except Exception:
+            data = await self._fallback_store.async_load()
+            # Make sure the stack does not attempt to use node data
+            del data["node_interview_version"]
+            return data
 
     @abstractmethod
     async def save_data(self, data: dict) -> None:
