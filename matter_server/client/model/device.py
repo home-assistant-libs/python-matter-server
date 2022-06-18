@@ -165,3 +165,6 @@ class MatterDevice(Generic[_DEVICE_TYPE_T]):
 
         if self._on_update_listener:
             self._on_update_listener()
+
+    def __repr__(self):
+        return f"<MatterDevice {self.device_type.__name__} (N:{self.node.node_id}, E:{self.endpoint_id})>"
