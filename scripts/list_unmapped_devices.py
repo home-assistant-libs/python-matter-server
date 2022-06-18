@@ -5,7 +5,6 @@ Run with python3 -m scripts.list_unmapped_devices
 from custom_components.matter_experimental.device_platform import DEVICE_PLATFORM
 from matter_server.vendor import device_types
 
-
 IGNORE_DEVICES = {
     device_types.AllClustersAppServerExample,
     device_types.Bridge,
