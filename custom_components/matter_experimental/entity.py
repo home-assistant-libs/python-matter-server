@@ -2,10 +2,8 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-import asyncio
 from typing import Any, Callable, Coroutine
 
-import async_timeout
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry, entity
 from matter_server.client.exceptions import FailedCommand
@@ -73,7 +71,7 @@ class MatterEntity(entity.Entity):
                 "Error interacting with node %d (%s): %s. Marking device as unavailable. Recovery is not implemented yet. Reload config entry when device is available again.",
                 self._device.node.node_id,
                 self.entity_id,
-                str(err.error_code)
+                str(err.error_code),
             )
             self._attr_available = False
 
