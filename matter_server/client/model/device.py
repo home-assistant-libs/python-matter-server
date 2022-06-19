@@ -124,6 +124,7 @@ class MatterDevice(Generic[_DEVICE_TYPE_T]):
                     (self.endpoint_id, attribute) for attribute in subscribe_attributes
                 ],
                 reportInterval=reporting_timing_params,
+                keepSubscriptions=True,
             )
         )
 
