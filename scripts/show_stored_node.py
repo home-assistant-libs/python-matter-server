@@ -55,6 +55,20 @@ def print_device(device: MatterDevice):
             for key, value in sorted(dataclasses.asdict(device_mapping).items()):
                 if value is None:
                     continue
+
+                if key == "entity_description":
+                    print(f"      {key}:")
+                    for ed_key, ed_value in sorted(value.items()):
+                        if ed_value is None or (  # filter out default values
+                            device_mapping.entity_description.__dataclass_fields__[
+                                ed_key
+                            ].default
+                            is ed_value
+                        ):
+                            continue
+                        print(f"        {ed_key}: {ed_value}")
+                    continue
+
                 if key == "entity_cls":
                     value = value.__name__
 
@@ -62,7 +76,7 @@ def print_device(device: MatterDevice):
                     print(f"      {key}: {value}")
                     continue
 
-                print("      Subscriptions:")
+                print("      subscriptions:")
 
                 for sub in value:
                     print(f"       - {sub.__qualname__}")
@@ -72,7 +86,7 @@ def print_device(device: MatterDevice):
 
     # Do not warng on root node
     if not created:
-        print("  ** WARNING: NOT MAPPED IN HOME ASSISTANT")
+        print("    ** WARNING: NOT MAPPED IN HOME ASSISTANT")
 
 
 def main():
