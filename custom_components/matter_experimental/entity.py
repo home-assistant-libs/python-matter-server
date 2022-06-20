@@ -2,13 +2,12 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-import asyncio
 from typing import Any, Callable, Coroutine
 
-import async_timeout
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry, entity
 
+from matter_server.client.exceptions import FailedCommand
 from matter_server.client.model.device import MatterDevice
 
 from .const import DOMAIN
@@ -61,20 +60,20 @@ class MatterEntity(entity.Entity):
 
         try:
             # Subscribe to updates.
-            async with async_timeout.timeout(5):
-                self._unsubscribe = await self._device.subscribe_updates(
-                    self._device_mapping.subscribe_attributes, self._subscription_update
-                )
+            self._unsubscribe = await self._device.subscribe_updates(
+                self._device_mapping.subscribe_attributes, self._subscription_update
+            )
 
             # Fetch latest info from the device.
-            async with async_timeout.timeout(5):
-                await self._device.update_attributes(
-                    self._device_mapping.subscribe_attributes
-                )
-        except asyncio.TimeoutError:
+            await self._device.update_attributes(
+                self._device_mapping.subscribe_attributes
+            )
+        except FailedCommand as err:
             self._device.node.matter.adapter.logger.warning(
-                "Timeout interacting with %s, marking device as unavailable. Recovery is not implemented yet. Reload config entry when device is available again.",
+                "Error interacting with node %d (%s): %s. Marking device as unavailable. Recovery is not implemented yet. Reload config entry when device is available again.",
+                self._device.node.node_id,
                 self.entity_id,
+                str(err.error_code),
             )
             self._attr_available = False
 
