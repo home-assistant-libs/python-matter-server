@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as all_clusters
 
-from .device import MatterDevice
+from .endpoint_device_type_instance import MatterEndpointDeviceTypeInstance
 
 if TYPE_CHECKING:
     from ..matter import Matter
@@ -15,13 +15,13 @@ if TYPE_CHECKING:
 class MatterNode:
     """Matter node."""
 
-    root_device: MatterDevice[device_types.RootNode]
+    root_device: MatterEndpointDeviceTypeInstance[device_types.RootNode]
 
     def __init__(self, matter: Matter, node_info: dict) -> None:
         self.matter = matter
         self.raw_data = node_info
 
-        devices: list[MatterDevice] = []
+        endpoint_device_type_instances: list[MatterEndpointDeviceTypeInstance] = []
 
         for endpoint_id, endpoint_info in node_info["attributes"].items():
             descriptor: all_clusters.Descriptor = endpoint_info["Descriptor"]
@@ -34,15 +34,15 @@ class MatterNode:
                     )
                     continue
 
-                device = MatterDevice(
+                device = MatterEndpointDeviceTypeInstance(
                     self, device_type, int(endpoint_id), device_info.revision
                 )
                 if device_type is device_types.RootNode:
                     self.root_device = device
                 else:
-                    devices.append(device)
+                    endpoint_device_type_instances.append(device)
 
-        self.devices = devices
+        self.endpoint_device_type_instances = endpoint_device_type_instances
 
         if not hasattr(self, "root_device"):
             raise ValueError("No root device found")

@@ -7,7 +7,9 @@ import pathlib
 import sys
 
 from custom_components.matter_experimental.device_platform import DEVICE_PLATFORM
-from matter_server.client.model.device import MatterDevice
+from matter_server.client.model.endpoint_device_type_instance import (
+    MatterEndpointDeviceTypeInstance,
+)
 from matter_server.client.model.node import MatterNode
 from matter_server.common import json_utils
 
@@ -42,17 +44,21 @@ def print_node(node: MatterNode):
     print(node)
     item_space_printer = PrintButFirst()
 
-    for device in node.devices:
+    for endpoint_device_type_instance in node.endpoint_device_type_instances:
         item_space_printer()
-        print_device(device)
+        print_endpoint_device_type_instance(endpoint_device_type_instance)
 
 
-def print_device(device: MatterDevice):
+def print_endpoint_device_type_instance(
+    endpoint_device_type_instance: MatterEndpointDeviceTypeInstance,
+):
     created = False
-    print(f"  {device}")
+    print(f"  {endpoint_device_type_instance}")
 
-    for platform, devices in DEVICE_PLATFORM.items():
-        entity_descriptions = devices.get(device.device_type)
+    for platform, platform_mappings in DEVICE_PLATFORM.items():
+        entity_descriptions = platform_mappings.get(
+            endpoint_device_type_instance.device_type
+        )
 
         if entity_descriptions is None:
             continue
@@ -86,7 +92,9 @@ def print_device(device: MatterDevice):
                     print(f"       - {sub.__qualname__}")
 
                 # Try instantiating to ensure the entity description doesn't crash
-                entity_description.entity_cls(device, entity_description)
+                entity_description.entity_cls(
+                    endpoint_device_type_instance, entity_description
+                )
 
     # Do not warng on root node
     if not created:

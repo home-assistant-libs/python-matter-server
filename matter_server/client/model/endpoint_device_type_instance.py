@@ -15,8 +15,8 @@ _DEVICE_TYPE_T = TypeVar("_DEVICE_TYPE_T", bound=device_types.DeviceType)
 _CLUSTER_T = TypeVar("_CLUSTER_T", bound=all_clusters.Cluster)
 
 
-class MatterDevice(Generic[_DEVICE_TYPE_T]):
-    """Base class for Matter devices."""
+class MatterEndpointDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
+    """Base class for Matter device types on endpoints."""
 
     def __init__(
         self,
@@ -168,4 +168,4 @@ class MatterDevice(Generic[_DEVICE_TYPE_T]):
             self._on_update_listener()
 
     def __repr__(self):
-        return f"<MatterDevice {self.device_type.__name__} (N:{self.node.node_id}, E:{self.endpoint_id})>"
+        return f"<MatterEndpointDeviceTypeInstance {self.device_type.__name__} (N:{self.node.node_id}, E:{self.endpoint_id})>"

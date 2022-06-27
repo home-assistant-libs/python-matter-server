@@ -12,7 +12,6 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from matter_server.client.model.device import MatterDevice
 from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as clusters
 
@@ -40,12 +39,6 @@ class MatterLight(MatterEntity, LightEntity):
 
     entity_description: MatterLightEntityDescription
 
-    def __init__(self, device: MatterDevice, mapping: MatterEntityDescription) -> None:
-        """Initialize the light."""
-        super().__init__(device, mapping)
-        if self._supports_brightness():
-            self._attr_supported_color_modes = [ColorMode.BRIGHTNESS]
-
     def _supports_brightness(self):
         """Return if device supports brightness."""
         return (
@@ -56,12 +49,14 @@ class MatterLight(MatterEntity, LightEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn light on."""
         if ATTR_BRIGHTNESS not in kwargs or not self._supports_brightness():
-            await self._device.send_command(
+            await self._endpoint_device_type_instance.send_command(
                 payload=clusters.OnOff.Commands.On(),
             )
             return
 
-        level_control = self._device.get_cluster(clusters.LevelControl)
+        level_control = self._endpoint_device_type_instance.get_cluster(
+            clusters.LevelControl
+        )
         level = round(
             renormalize(
                 kwargs[ATTR_BRIGHTNESS],
@@ -70,26 +65,34 @@ class MatterLight(MatterEntity, LightEntity):
             )
         )
 
-        await self._device.send_command(
+        await self._endpoint_device_type_instance.send_command(
             payload=clusters.LevelControl.Commands.MoveToLevelWithOnOff(level=level)
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn light off."""
-        await self._device.send_command(
+        await self._endpoint_device_type_instance.send_command(
             payload=clusters.OnOff.Commands.Off(),
         )
 
     @callback
     def _update_from_device(self) -> None:
         """Update from device."""
-        self._attr_is_on = self._device.get_cluster(clusters.OnOff).onOff
+        if self._attr_supported_color_modes is None:
+            if self._supports_brightness():
+                self._attr_supported_color_modes = [ColorMode.BRIGHTNESS]
+
+        self._attr_is_on = self._endpoint_device_type_instance.get_cluster(
+            clusters.OnOff
+        ).onOff
 
         if (
             clusters.LevelControl.Attributes.CurrentLevel
             in self.entity_description.subscribe_attributes
         ):
-            level_control = self._device.get_cluster(clusters.LevelControl)
+            level_control = self._endpoint_device_type_instance.get_cluster(
+                clusters.LevelControl
+            )
 
             # Convert brightness to HA = 0..255
             self._attr_brightness = round(
