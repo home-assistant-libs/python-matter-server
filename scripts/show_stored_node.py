@@ -2,16 +2,30 @@
 
 import dataclasses
 import json
-import logging
 import os
 import pathlib
 import sys
-from unittest.mock import Mock
 
 from custom_components.matter_experimental.device_platform import DEVICE_PLATFORM
 from matter_server.client.model.device import MatterDevice
 from matter_server.client.model.node import MatterNode
 from matter_server.common import json_utils
+
+from tests.test_utils.mock_matter import get_mock_matter
+
+
+class PrintButFirst:
+    first = True
+
+    def __init__(self, lines=1) -> None:
+        self.lines = lines
+
+    def __call__(self):
+        if self.first:
+            self.first = False
+        else:
+            for _ in range(self.lines):
+                print()
 
 
 def resolve_input():
@@ -26,12 +40,10 @@ def resolve_input():
 
 def print_node(node: MatterNode):
     print(node)
-    first = True
+    item_space_printer = PrintButFirst()
+
     for device in node.devices:
-        if first:
-            first = False
-        else:
-            print()
+        item_space_printer()
         print_device(device)
 
 
@@ -89,28 +101,33 @@ def print_device(device: MatterDevice):
         print("    ** WARNING: NOT MAPPED IN HOME ASSISTANT")
 
 
-def main():
-    raw_data = resolve_input()
-    data = json.loads(raw_data, cls=json_utils.CHIPJSONDecoder)
+def parse_data(data):
+    return json.loads(data, cls=json_utils.CHIPJSONDecoder)
 
+
+def nodes_from_data(data):
     # This is a HA storage file. Extract nodes
     if "key" in data and data["key"].startswith("matter_experimental_"):
-        nodes = [d for d in data["data"]["nodes"].values() if d is not None]
-    else:
-        nodes = [data]
+        return [d for d in data["data"]["nodes"].values() if d is not None]
 
-    first = True
+    return [data]
 
-    mock_matter = Mock(adapter=Mock(logger=logging.getLogger("show_mappings")))
 
-    for node_data in nodes:
-        if first:
-            first = False
-        else:
-            print()
-            print()
+def get_nodes():
+    mock_matter = get_mock_matter()
 
-        print_node(MatterNode(mock_matter, node_data))
+    return [
+        MatterNode(mock_matter, node_data)
+        for node_data in nodes_from_data(parse_data(resolve_input()))
+    ]
+
+
+def main():
+    item_space_printer = PrintButFirst(2)
+
+    for node in get_nodes():
+        item_space_printer()
+        print_node(node)
 
 
 if __name__ == "__main__":
