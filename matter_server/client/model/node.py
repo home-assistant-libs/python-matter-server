@@ -7,6 +7,11 @@ from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as all_clusters
 
 from .device_type_instance import MatterDeviceTypeInstance
+from .node_device import (
+    AbstractMatterNodeDevice,
+    MatterBridgedNodeDevice,
+    MatterNodeDevice,
+)
 
 if TYPE_CHECKING:
     from ..matter import Matter
@@ -16,6 +21,11 @@ class MatterNode:
     """Matter node."""
 
     root_device_type_instance: MatterDeviceTypeInstance[device_types.RootNode]
+    bridge_device_type_instance: MatterDeviceTypeInstance[
+        device_types.Bridge
+    ] | None = None
+    device_type_instances: list[MatterDeviceTypeInstance]
+    node_devices: list[AbstractMatterNodeDevice]
 
     def __init__(self, matter: Matter, node_info: dict) -> None:
         self.matter = matter
@@ -39,6 +49,8 @@ class MatterNode:
                 )
                 if device_type is device_types.RootNode:
                     self.root_device_type_instance = instance
+                elif device_type is device_types.Bridge:
+                    self.bridge_device_type_instance = instance
                 else:
                     device_type_instances.append(instance)
 
@@ -46,6 +58,16 @@ class MatterNode:
 
         if not hasattr(self, "root_device_type_instance"):
             raise ValueError("No root device found")
+
+        self.node_devices = []
+
+        if self.bridge_device_type_instance:
+            for instance in device_type_instances:
+                if instance.device_type == device_types.BridgedDevice:
+                    self.node_devices.append(MatterBridgedNodeDevice(instance))
+
+        else:
+            self.node_devices.append(MatterNodeDevice(self))
 
     @property
     def node_id(self) -> int:

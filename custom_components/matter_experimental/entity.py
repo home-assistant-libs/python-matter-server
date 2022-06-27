@@ -9,6 +9,7 @@ from homeassistant.helpers import device_registry, entity
 
 from matter_server.client.exceptions import FailedCommand
 from matter_server.client.model.device_type_instance import MatterDeviceTypeInstance
+from matter_server.client.model.node_device import AbstractMatterNodeDevice
 
 from .const import DOMAIN
 from .entity_description import MatterEntityDescriptionBaseClass
@@ -22,9 +23,11 @@ class MatterEntity(entity.Entity):
 
     def __init__(
         self,
+        node_device: AbstractMatterNodeDevice,
         device_type_instance: MatterDeviceTypeInstance,
         entity_description: MatterEntityDescriptionBaseClass,
     ) -> None:
+        self._node_device = node_device
         self._device_type_instance = device_type_instance
         self.entity_description = entity_description
         node = device_type_instance.node
@@ -33,7 +36,7 @@ class MatterEntity(entity.Entity):
     @property
     def device_info(self) -> entity.DeviceInfo | None:
         """Return device info for device registry."""
-        return {"identifiers": {(DOMAIN, self._device_type_instance.node.unique_id)}}
+        return {"identifiers": {(DOMAIN, self._node_device.device_info().uniqueID)}}
 
     async def init_matter_device(self) -> None:
         """Initialize and subscribe device attributes."""
@@ -50,7 +53,7 @@ class MatterEntity(entity.Entity):
         if (
             sum(
                 inst.device_type is self._device_type_instance.device_type
-                for inst in self._device_type_instance.node.device_type_instances
+                for inst in self._node_device.device_type_instances()
             )
             > 1
         ):

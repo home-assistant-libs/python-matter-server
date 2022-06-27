@@ -16,6 +16,7 @@ from tests.test_utils.mock_matter import get_mock_matter
 
 if TYPE_CHECKING:
     from matter_server.client.model.device_type_instance import MatterDeviceTypeInstance
+    from matter_server.client.model.node_device import AbstractMatterNodeDevice
 
 
 class PrintButFirst:
@@ -46,16 +47,26 @@ def print_node(node: MatterNode):
     print(node)
     item_space_printer = PrintButFirst()
 
-    for instance in node.device_type_instances:
+    for node_device in node.node_devices:
         item_space_printer()
-        print_device_type_instance(instance)
+        print_node_device(node_device)
+
+
+def print_node_device(node_device: AbstractMatterNodeDevice):
+    print(f"  {node_device}")
+    item_space_printer = PrintButFirst()
+
+    for instance in node_device.device_type_instances():
+        item_space_printer()
+        print_device_type_instance(node_device, instance)
 
 
 def print_device_type_instance(
+    node_device: AbstractMatterNodeDevice,
     device_type_instance: MatterDeviceTypeInstance,
 ):
     created = False
-    print(f"  {device_type_instance}")
+    print(f"    {device_type_instance}")
 
     for platform, platform_mappings in DEVICE_PLATFORM.items():
         entity_descriptions = platform_mappings.get(device_type_instance.device_type)
@@ -68,7 +79,7 @@ def print_device_type_instance(
 
         for entity_description in entity_descriptions:
             created = True
-            print(f"    - Platform: {platform}")
+            print(f"      - Platform: {platform}")
 
             for key, value in sorted(dataclasses.asdict(entity_description).items()):
                 if value is None:
@@ -83,20 +94,22 @@ def print_device_type_instance(
                     value = value.__name__
 
                 if key != "subscribe_attributes":
-                    print(f"      {key}: {value}")
+                    print(f"        {key}: {value}")
                     continue
 
                 print("      subscriptions:")
 
                 for sub in value:
-                    print(f"       - {sub.__qualname__}")
+                    print(f"         - {sub.__qualname__}")
 
                 # Try instantiating to ensure the entity description doesn't crash
-                entity_description.entity_cls(device_type_instance, entity_description)
+                entity_description.entity_cls(
+                    node_device, device_type_instance, entity_description
+                )
 
     # Do not warng on root node
     if not created:
-        print("    ** WARNING: NOT MAPPED IN HOME ASSISTANT")
+        print("      ** WARNING: NOT MAPPED IN HOME ASSISTANT")
 
 
 def parse_data(data):

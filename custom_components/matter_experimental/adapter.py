@@ -18,8 +18,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.storage import Store
 
 from matter_server.client.adapter import AbstractMatterAdapter
+from matter_server.client.model.node_device import AbstractMatterNodeDevice
 from matter_server.common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
-from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as all_clusters
 
 from .const import DOMAIN
@@ -160,28 +160,50 @@ class MatterAdapter(AbstractMatterAdapter):
         await self._platforms_set_up.wait()
         self.logger.debug("Setting up entities for node %s", node.node_id)
 
-        basic_info = node.root_device_type_instance.get_cluster(all_clusters.Basic)
+        bridge_unique_id: str | None = None
 
-        name = basic_info.nodeLabel
-        if not name:
-            for instance in node.device_type_instances:
-                if instance.device_type is device_types.RootNode:
-                    continue
+        if node.bridge_device_type_instance is not None:
+            node_info = node.root_device_type_instance.get_cluster(all_clusters.Basic)
+            self._create_device_registry(
+                node_info, node_info.nodeLabel or "Hub device", None
+            )
+            bridge_unique_id = node_info.uniqueID
 
-                name = f"{instance.device_type.__doc__[:-1]} {node.node_id}"
-                break
+        for node_device in node.node_devices:
+            self._setup_node_device(node_device, bridge_unique_id)
 
+    def _create_device_registry(
+        self,
+        info: all_clusters.Basic | all_clusters.BridgedDeviceBasic,
+        name: str,
+        bridge_unique_id: str | None,
+    ) -> None:
         dr.async_get(self.hass).async_get_or_create(
             name=name,
             config_entry_id=self.config_entry.entry_id,
-            identifiers={(DOMAIN, basic_info.uniqueID)},
-            hw_version=basic_info.hardwareVersionString,
-            sw_version=basic_info.softwareVersionString,
-            manufacturer=basic_info.vendorName,
-            model=basic_info.productName,
+            identifiers={(DOMAIN, info.uniqueID)},
+            hw_version=info.hardwareVersionString,
+            sw_version=info.softwareVersionString,
+            manufacturer=info.vendorName,
+            model=info.productName,
+            via_device=(DOMAIN, bridge_unique_id) if bridge_unique_id else None,
         )
 
-        for instance in node.device_type_instances:
+    def _setup_node_device(
+        self, node_device: AbstractMatterNodeDevice, bridge_unique_id: str | None
+    ) -> None:
+        """Set up a node device."""
+        node = node_device.node()
+        basic_info = node_device.device_info()
+        device_type_instances = node_device.device_type_instances()
+
+        name = basic_info.nodeLabel
+        if not name and device_type_instances:
+            name = f"{device_type_instances[0].device_type.__doc__[:-1]} {node.node_id}"
+
+        self._create_device_registry(basic_info, name, bridge_unique_id)
+
+        for instance in device_type_instances:
             created = False
 
             for platform, devices in DEVICE_PLATFORM.items():
@@ -202,7 +224,9 @@ class MatterAdapter(AbstractMatterAdapter):
                         hex(instance.device_type.device_type),
                     )
                     entities.append(
-                        entity_description.entity_cls(instance, entity_description)
+                        entity_description.entity_cls(
+                            node_device, instance, entity_description
+                        )
                     )
 
                 self.platform_handlers[platform](entities)
