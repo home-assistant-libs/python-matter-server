@@ -160,15 +160,15 @@ class MatterAdapter(AbstractMatterAdapter):
         await self._platforms_set_up.wait()
         self.logger.debug("Setting up entities for node %s", node.node_id)
 
-        basic_info = node.root_device.get_cluster(all_clusters.Basic)
+        basic_info = node.root_device_type_instance.get_cluster(all_clusters.Basic)
 
         name = basic_info.nodeLabel
         if not name:
-            for device in node.devices:
-                if device.device_type is device_types.RootNode:
+            for instance in node.device_type_instances:
+                if instance.device_type is device_types.RootNode:
                     continue
 
-                name = f"{device.device_type.__doc__[:-1]} {node.node_id}"
+                name = f"{instance.device_type.__doc__[:-1]} {node.node_id}"
                 break
 
         dr.async_get(self.hass).async_get_or_create(
@@ -181,11 +181,11 @@ class MatterAdapter(AbstractMatterAdapter):
             model=basic_info.productName,
         )
 
-        for device in node.devices:
+        for instance in node.device_type_instances:
             created = False
 
             for platform, devices in DEVICE_PLATFORM.items():
-                entity_descriptions = devices.get(device.device_type)
+                entity_descriptions = devices.get(instance.device_type)
 
                 if entity_descriptions is None:
                     continue
@@ -198,11 +198,11 @@ class MatterAdapter(AbstractMatterAdapter):
                     self.logger.debug(
                         "Creating %s entity for %s (%s)",
                         platform,
-                        device.device_type.__name__,
-                        hex(device.device_type.device_type),
+                        instance.device_type.__name__,
+                        hex(instance.device_type.device_type),
                     )
                     entities.append(
-                        entity_description.entity_cls(device, entity_description)
+                        entity_description.entity_cls(instance, entity_description)
                     )
 
                 self.platform_handlers[platform](entities)
@@ -211,8 +211,8 @@ class MatterAdapter(AbstractMatterAdapter):
             if not created:
                 self.logger.warning(
                     "Found unsupported device %s (%s)",
-                    type(device).__name__,
-                    hex(device.device_type.device_type),
+                    type(instance).__name__,
+                    hex(instance.device_type.device_type),
                 )
 
     async def handle_server_disconnected(self, should_reload: bool) -> None:
