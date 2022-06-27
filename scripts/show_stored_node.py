@@ -52,33 +52,25 @@ def print_device(device: MatterDevice):
     print(f"  {device}")
 
     for platform, devices in DEVICE_PLATFORM.items():
-        device_mappings = devices.get(device.device_type)
+        entity_descriptions = devices.get(device.device_type)
 
-        if device_mappings is None:
+        if entity_descriptions is None:
             continue
 
-        if not isinstance(device_mappings, list):
-            device_mappings = [device_mappings]
+        if not isinstance(entity_descriptions, list):
+            entity_descriptions = [entity_descriptions]
 
-        for device_mapping in device_mappings:
+        for entity_description in entity_descriptions:
             created = True
             print(f"    - Platform: {platform}")
 
-            for key, value in sorted(dataclasses.asdict(device_mapping).items()):
+            for key, value in sorted(dataclasses.asdict(entity_description).items()):
                 if value is None:
                     continue
 
-                if key == "entity_description":
-                    print(f"      {key}:")
-                    for ed_key, ed_value in sorted(value.items()):
-                        if ed_value is None or (  # filter out default values
-                            device_mapping.entity_description.__dataclass_fields__[
-                                ed_key
-                            ].default
-                            is ed_value
-                        ):
-                            continue
-                        print(f"        {ed_key}: {ed_value}")
+                if value is None or (  # filter out default values
+                    entity_description.__dataclass_fields__[key].default is value
+                ):
                     continue
 
                 if key == "entity_cls":
@@ -93,8 +85,8 @@ def print_device(device: MatterDevice):
                 for sub in value:
                     print(f"       - {sub.__qualname__}")
 
-                # Try instantiating to ensure the device mapping doesn't crash
-                device_mapping.entity_cls(device, device_mapping)
+                # Try instantiating to ensure the entity description doesn't crash
+                entity_description.entity_cls(device, entity_description)
 
     # Do not warng on root node
     if not created:
