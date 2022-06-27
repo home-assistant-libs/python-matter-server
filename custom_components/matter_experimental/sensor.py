@@ -109,7 +109,7 @@ class MatterSensorEntityDescription(
 
 # You can't set default values on inherited data classes
 MatterSensorEntityDescriptionFactory = partial(
-    MatterSensorEntityDescription, key=None, entity_cls=MatterSensor
+    MatterSensorEntityDescription, entity_cls=MatterSensor
 )
 
 
@@ -118,6 +118,7 @@ DEVICE_ENTITY: dict[
     MatterEntityDescription | list[MatterEntityDescription],
 ] = {
     device_types.TemperatureSensor: MatterSensorEntityDescriptionFactory(
+        key=device_types.TemperatureSensor,
         measurement_to_ha=lambda x: x / 100,
         subscribe_attributes=(
             clusters.TemperatureMeasurement.Attributes.MeasuredValue,
@@ -126,17 +127,20 @@ DEVICE_ENTITY: dict[
         device_class=SensorDeviceClass.TEMPERATURE,
     ),
     device_types.PressureSensor: MatterSensorEntityDescriptionFactory(
+        key=device_types.PressureSensor,
         measurement_to_ha=lambda x: x / 10,
         subscribe_attributes=(clusters.PressureMeasurement.Attributes.MeasuredValue,),
         native_unit_of_measurement=PRESSURE_KPA,
         device_class=SensorDeviceClass.PRESSURE,
     ),
     device_types.FlowSensor: MatterSensorEntityDescriptionFactory(
+        key=device_types.FlowSensor,
         measurement_to_ha=lambda x: x / 10,
         subscribe_attributes=(clusters.FlowMeasurement.Attributes.MeasuredValue,),
         native_unit_of_measurement=VOLUME_FLOW_RATE_CUBIC_METERS_PER_HOUR,
     ),
     device_types.HumiditySensor: MatterSensorEntityDescriptionFactory(
+        key=device_types.HumiditySensor,
         measurement_to_ha=lambda x: x / 100,
         subscribe_attributes=(
             clusters.RelativeHumidityMeasurement.Attributes.MeasuredValue,
@@ -145,6 +149,7 @@ DEVICE_ENTITY: dict[
         device_class=SensorDeviceClass.HUMIDITY,
     ),
     device_types.LightSensor: MatterSensorEntityDescriptionFactory(
+        key=device_types.LightSensor,
         measurement_to_ha=lambda x: round(pow(10, ((x - 1) / 10000)), 1),
         subscribe_attributes=(
             clusters.IlluminanceMeasurement.Attributes.MeasuredValue,

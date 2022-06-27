@@ -111,7 +111,7 @@ class MatterLightEntityDescription(
 
 # You can't set default values on inherited data classes
 MatterLightEntityDescriptionFactory = partial(
-    MatterLightEntityDescription, key=None, entity_cls=MatterLight
+    MatterLightEntityDescription, entity_cls=MatterLight
 )
 
 
@@ -120,15 +120,18 @@ DEVICE_ENTITY: dict[
     MatterEntityDescription | list[MatterEntityDescription],
 ] = {
     device_types.OnOffLight: MatterLightEntityDescriptionFactory(
+        key=device_types.OnOffLight,
         subscribe_attributes=(clusters.OnOff.Attributes.OnOff,),
     ),
     device_types.DimmableLight: MatterLightEntityDescriptionFactory(
+        key=device_types.DimmableLight,
         subscribe_attributes=(
             clusters.OnOff.Attributes.OnOff,
             clusters.LevelControl.Attributes.CurrentLevel,
         ),
     ),
     device_types.DimmablePlugInUnit: MatterLightEntityDescriptionFactory(
+        key=device_types.DimmablePlugInUnit,
         subscribe_attributes=(
             clusters.OnOff.Attributes.OnOff,
             clusters.LevelControl.Attributes.CurrentLevel,

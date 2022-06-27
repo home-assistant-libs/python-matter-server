@@ -70,7 +70,7 @@ class MatterBinarySensorEntityDescription(
 
 # You can't set default values on inherited data classes
 MatterSensorEntityDescriptionFactory = partial(
-    MatterBinarySensorEntityDescription, key=None, entity_cls=MatterBinarySensor
+    MatterBinarySensorEntityDescription, entity_cls=MatterBinarySensor
 )
 
 DEVICE_ENTITY: dict[
@@ -78,10 +78,12 @@ DEVICE_ENTITY: dict[
     MatterEntityDescription | list[MatterEntityDescription],
 ] = {
     device_types.ContactSensor: MatterSensorEntityDescriptionFactory(
+        key=device_types.ContactSensor,
         subscribe_attributes=(clusters.BooleanState.Attributes.StateValue,),
         device_class=BinarySensorDeviceClass.DOOR,
     ),
     device_types.OccupancySensor: MatterSensorEntityDescriptionFactory(
+        key=device_types.OccupancySensor,
         entity_cls=MatterOccupancySensor,
         subscribe_attributes=(clusters.OccupancySensing.Attributes.Occupancy,),
     ),

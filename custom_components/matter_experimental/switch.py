@@ -69,7 +69,7 @@ class MatterSwitchEntityDescription(
 
 # You can't set default values on inherited data classes
 MatterSwitchEntityDescriptionFactory = partial(
-    MatterSwitchEntityDescription, key=None, entity_cls=MatterSwitch
+    MatterSwitchEntityDescription, entity_cls=MatterSwitch
 )
 
 
@@ -78,6 +78,7 @@ DEVICE_ENTITY: dict[
     MatterEntityDescription | list[MatterEntityDescription],
 ] = {
     device_types.OnOffPlugInUnit: MatterSwitchEntityDescriptionFactory(
+        key=device_types.OnOffPlugInUnit,
         subscribe_attributes=(clusters.OnOff.Attributes.OnOff,),
         device_class=SwitchDeviceClass.OUTLET,
     ),
