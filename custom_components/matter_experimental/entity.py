@@ -28,7 +28,7 @@ class MatterEntity(entity.Entity):
         self._device_type_instance = device_type_instance
         self.entity_description = entity_description
         node = device_type_instance.node
-        self._attr_unique_id = f"{node.matter.client.server_info.compressedFabricId}-{node.unique_id}-{endpoint_device_type_instance.endpoint_id}-{endpoint_device_type_instance.device_type.device_type}"
+        self._attr_unique_id = f"{node.matter.client.server_info.compressedFabricId}-{node.unique_id}-{device_type_instance.endpoint_id}-{device_type_instance.device_type.device_type}"
 
     @property
     def device_info(self) -> entity.DeviceInfo | None:
