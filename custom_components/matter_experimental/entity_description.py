@@ -18,5 +18,5 @@ class MatterEntityDescription:
 
 
 @dataclass
-class MatterEntityDescriptionBaseClass(MatterEntityDescription, EntityDescription):
+class MatterEntityDescriptionBaseClass(EntityDescription, MatterEntityDescription):
     """For typing a base class that inherits from both entity descriptions."""
