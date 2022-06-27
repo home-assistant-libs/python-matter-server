@@ -11,19 +11,20 @@ from matter_server.client.exceptions import FailedCommand
 from matter_server.client.model.device import MatterDevice
 
 from .const import DOMAIN
-from .device_platform_helper import DeviceMapping
+from .entity_description import MatterEntityDescriptionBaseClass
 
 
 class MatterEntity(entity.Entity):
 
+    entity_description: MatterEntityDescriptionBaseClass
     _attr_should_poll = False
     _unsubscribe: Callable[..., Coroutine[Any, Any, None]] | None = None
 
-    def __init__(self, device: MatterDevice, mapping: DeviceMapping) -> None:
+    def __init__(
+        self, device: MatterDevice, entity_description: MatterEntityDescriptionBaseClass
+    ) -> None:
         self._device = device
-        self._device_mapping = mapping
-        if mapping.entity_description:
-            self.entity_description = mapping.entity_description
+        self.entity_description = entity_description
         self._attr_unique_id = f"{device.node.matter.client.server_info.compressedFabricId}-{device.node.unique_id}-{device.endpoint_id}-{device.device_type.device_type}"
 
     @property
@@ -54,19 +55,19 @@ class MatterEntity(entity.Entity):
 
         self._attr_name = name
 
-        if not self._device_mapping.subscribe_attributes:
+        if not self.entity_description.subscribe_attributes:
             self._update_from_device()
             return
 
         try:
             # Subscribe to updates.
             self._unsubscribe = await self._device.subscribe_updates(
-                self._device_mapping.subscribe_attributes, self._subscription_update
+                self.entity_description.subscribe_attributes, self._subscription_update
             )
 
             # Fetch latest info from the device.
             await self._device.update_attributes(
-                self._device_mapping.subscribe_attributes
+                self.entity_description.subscribe_attributes
             )
         except FailedCommand as err:
             self._device.node.matter.adapter.logger.warning(

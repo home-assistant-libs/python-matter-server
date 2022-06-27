@@ -1,8 +1,11 @@
 """Matter light."""
 from __future__ import annotations
+from dataclasses import dataclass
+from functools import partial
 
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.helpers.entity import EntityDescription
 from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -14,7 +17,7 @@ from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as clusters
 
 from .const import DOMAIN
-from .device_platform_helper import DeviceMapping
+from .entity_description import MatterEntityDescription
 from .entity import MatterEntity
 from .util import renormalize
 
@@ -35,7 +38,9 @@ async def async_setup_entry(
 class MatterLight(MatterEntity, LightEntity):
     """Representation of a Matter light."""
 
-    def __init__(self, device: MatterDevice, mapping: DeviceMapping) -> None:
+    entity_description: MatterLightEntityDescription
+
+    def __init__(self, device: MatterDevice, mapping: MatterEntityDescription) -> None:
         """Initialize the light."""
         super().__init__(device, mapping)
         if self._supports_brightness():
@@ -45,7 +50,7 @@ class MatterLight(MatterEntity, LightEntity):
         """Return if device supports brightness."""
         return (
             clusters.LevelControl.Attributes.CurrentLevel
-            in self._device_mapping.subscribe_attributes
+            in self.entity_description.subscribe_attributes
         )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -82,7 +87,7 @@ class MatterLight(MatterEntity, LightEntity):
 
         if (
             clusters.LevelControl.Attributes.CurrentLevel
-            in self._device_mapping.subscribe_attributes
+            in self.entity_description.subscribe_attributes
         ):
             level_control = self._device.get_cluster(clusters.LevelControl)
 
@@ -96,22 +101,34 @@ class MatterLight(MatterEntity, LightEntity):
             )
 
 
+@dataclass
+class MatterLightEntityDescription(
+    EntityDescription,
+    MatterEntityDescription,
+):
+    """Matter light entity description."""
+
+
+# You can't set default values on inherited data classes
+MatterLightEntityDescriptionFactory = partial(
+    MatterLightEntityDescription, key=None, entity_cls=MatterLight
+)
+
+
 DEVICE_ENTITY: dict[
-    type[device_types.DeviceType], DeviceMapping | list[DeviceMapping]
+    type[device_types.DeviceType],
+    MatterEntityDescription | list[MatterEntityDescription],
 ] = {
-    device_types.OnOffLight: DeviceMapping(
-        entity_cls=MatterLight,
+    device_types.OnOffLight: MatterLightEntityDescriptionFactory(
         subscribe_attributes=(clusters.OnOff.Attributes.OnOff,),
     ),
-    device_types.DimmableLight: DeviceMapping(
-        entity_cls=MatterLight,
+    device_types.DimmableLight: MatterLightEntityDescriptionFactory(
         subscribe_attributes=(
             clusters.OnOff.Attributes.OnOff,
             clusters.LevelControl.Attributes.CurrentLevel,
         ),
     ),
-    device_types.DimmablePlugInUnit: DeviceMapping(
-        entity_cls=MatterLight,
+    device_types.DimmablePlugInUnit: MatterLightEntityDescriptionFactory(
         subscribe_attributes=(
             clusters.OnOff.Attributes.OnOff,
             clusters.LevelControl.Attributes.CurrentLevel,

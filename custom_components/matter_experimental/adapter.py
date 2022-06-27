@@ -185,23 +185,25 @@ class MatterAdapter(AbstractMatterAdapter):
             created = False
 
             for platform, devices in DEVICE_PLATFORM.items():
-                device_mappings = devices.get(device.device_type)
+                entity_descriptions = devices.get(device.device_type)
 
-                if device_mappings is None:
+                if entity_descriptions is None:
                     continue
 
-                if not isinstance(device_mappings, list):
-                    device_mappings = [device_mappings]
+                if not isinstance(entity_descriptions, list):
+                    entity_descriptions = [entity_descriptions]
 
                 entities = []
-                for device_mapping in device_mappings:
+                for entity_description in entity_descriptions:
                     self.logger.debug(
                         "Creating %s entity for %s (%s)",
                         platform,
                         device.device_type.__name__,
                         hex(device.device_type.device_type),
                     )
-                    entities.append(device_mapping.entity_cls(device, device_mapping))
+                    entities.append(
+                        entity_description.entity_cls(device, entity_description)
+                    )
 
                 self.platform_handlers[platform](entities)
                 created = True

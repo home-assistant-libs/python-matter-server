@@ -29,7 +29,7 @@ from matter_server.vendor.chip.clusters import Objects as clusters
 from matter_server.vendor.chip.clusters.Types import Nullable, NullValue
 
 from .const import DOMAIN
-from .device_platform_helper import DeviceMapping
+from .entity_description import MatterEntityDescription
 from .entity import MatterEntity
 
 if TYPE_CHECKING:
@@ -50,7 +50,7 @@ class MatterSensor(MatterEntity, SensorEntity):
     """Representation of a Matter sensor."""
 
     _attr_state_class = SensorStateClass.MEASUREMENT
-    _device_mapping: SensorDeviceMapping
+    entity_description: MatterSensorEntityDescription
 
     @callback
     def _update_from_device(self) -> None:
@@ -58,13 +58,13 @@ class MatterSensor(MatterEntity, SensorEntity):
         measurement: Nullable | float = _get_attribute_value(
             self._device,
             # We always subscribe to a single value
-            self._device_mapping.subscribe_attributes[0],
+            self.entity_description.subscribe_attributes[0],
         )
 
         if measurement is NullValue:
             measurement = None
         else:
-            measurement = self._device_mapping.measurement_to_ha(measurement)
+            measurement = self.entity_description.measurement_to_ha(measurement)
 
         self._attr_native_value = measurement
 
@@ -92,68 +92,64 @@ def _get_attribute_value(
 
 
 @dataclass
-class SensorDeviceMappingMixin:
+class MatterSensorEntityDescriptionMixin:
     """Required fields for sensor device mapping."""
 
     measurement_to_ha: Callable[[float], float]
 
 
 @dataclass
-class SensorDeviceMapping(DeviceMapping, SensorDeviceMappingMixin):
-    """Matter Sensor device mapping."""
+class MatterSensorEntityDescription(
+    SensorEntityDescription,
+    MatterSensorEntityDescriptionMixin,
+    MatterEntityDescription,
+):
+    """Matter Sensor entity description."""
 
 
 # You can't set default values on inherited data classes
-SensorDeviceMappingCls = partial(SensorDeviceMapping, entity_cls=MatterSensor)
-SensorEntityDescriptionKey = partial(SensorEntityDescription, key=None)
+MatterSensorEntityDescriptionFactory = partial(
+    MatterSensorEntityDescription, key=None, entity_cls=MatterSensor
+)
 
 
 DEVICE_ENTITY: dict[
-    type[device_types.DeviceType], DeviceMapping | list[DeviceMapping]
+    type[device_types.DeviceType],
+    MatterEntityDescription | list[MatterEntityDescription],
 ] = {
-    device_types.TemperatureSensor: SensorDeviceMappingCls(
+    device_types.TemperatureSensor: MatterSensorEntityDescriptionFactory(
         measurement_to_ha=lambda x: x / 100,
         subscribe_attributes=(
             clusters.TemperatureMeasurement.Attributes.MeasuredValue,
         ),
-        entity_description=SensorEntityDescriptionKey(
-            native_unit_of_measurement=TEMP_CELSIUS,
-            device_class=SensorDeviceClass.TEMPERATURE,
-        ),
+        native_unit_of_measurement=TEMP_CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
     ),
-    device_types.PressureSensor: SensorDeviceMappingCls(
+    device_types.PressureSensor: MatterSensorEntityDescriptionFactory(
         measurement_to_ha=lambda x: x / 10,
         subscribe_attributes=(clusters.PressureMeasurement.Attributes.MeasuredValue,),
-        entity_description=SensorEntityDescriptionKey(
-            native_unit_of_measurement=PRESSURE_KPA,
-            device_class=SensorDeviceClass.PRESSURE,
-        ),
+        native_unit_of_measurement=PRESSURE_KPA,
+        device_class=SensorDeviceClass.PRESSURE,
     ),
-    device_types.FlowSensor: SensorDeviceMappingCls(
+    device_types.FlowSensor: MatterSensorEntityDescriptionFactory(
         measurement_to_ha=lambda x: x / 10,
         subscribe_attributes=(clusters.FlowMeasurement.Attributes.MeasuredValue,),
-        entity_description=SensorEntityDescriptionKey(
-            native_unit_of_measurement=VOLUME_FLOW_RATE_CUBIC_METERS_PER_HOUR,
-        ),
+        native_unit_of_measurement=VOLUME_FLOW_RATE_CUBIC_METERS_PER_HOUR,
     ),
-    device_types.HumiditySensor: SensorDeviceMappingCls(
+    device_types.HumiditySensor: MatterSensorEntityDescriptionFactory(
         measurement_to_ha=lambda x: x / 100,
         subscribe_attributes=(
             clusters.RelativeHumidityMeasurement.Attributes.MeasuredValue,
         ),
-        entity_description=SensorEntityDescriptionKey(
-            native_unit_of_measurement=PERCENTAGE,
-            device_class=SensorDeviceClass.HUMIDITY,
-        ),
+        native_unit_of_measurement=PERCENTAGE,
+        device_class=SensorDeviceClass.HUMIDITY,
     ),
-    device_types.LightSensor: SensorDeviceMappingCls(
+    device_types.LightSensor: MatterSensorEntityDescriptionFactory(
         measurement_to_ha=lambda x: round(pow(10, ((x - 1) / 10000)), 1),
         subscribe_attributes=(
             clusters.IlluminanceMeasurement.Attributes.MeasuredValue,
         ),
-        entity_description=SensorEntityDescriptionKey(
-            native_unit_of_measurement=LIGHT_LUX,
-            device_class=SensorDeviceClass.ILLUMINANCE,
-        ),
+        native_unit_of_measurement=LIGHT_LUX,
+        device_class=SensorDeviceClass.ILLUMINANCE,
     ),
 }

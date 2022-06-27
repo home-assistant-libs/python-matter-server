@@ -1,5 +1,7 @@
 """Matter switches."""
 from __future__ import annotations
+from dataclasses import dataclass
+from functools import partial
 
 from typing import TYPE_CHECKING, Any
 
@@ -17,7 +19,7 @@ from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as clusters
 
 from .const import DOMAIN
-from .device_platform_helper import DeviceMapping
+from .entity_description import MatterEntityDescription
 from .entity import MatterEntity
 
 if TYPE_CHECKING:
@@ -37,6 +39,8 @@ async def async_setup_entry(
 class MatterSwitch(MatterEntity, SwitchEntity):
     """Representation of a Matter switch."""
 
+    entity_description: MatterSwitchEntityDescription
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn switch on."""
         await self._device.send_command(
@@ -55,15 +59,26 @@ class MatterSwitch(MatterEntity, SwitchEntity):
         self._attr_is_on = self._device.get_cluster(clusters.OnOff).onOff
 
 
+@dataclass
+class MatterSwitchEntityDescription(
+    SwitchEntityDescription,
+    MatterEntityDescription,
+):
+    """Matter Sensor entity description."""
+
+
+# You can't set default values on inherited data classes
+MatterSwitchEntityDescriptionFactory = partial(
+    MatterSwitchEntityDescription, key=None, entity_cls=MatterSwitch
+)
+
+
 DEVICE_ENTITY: dict[
-    type[device_types.DeviceType], DeviceMapping | list[DeviceMapping]
+    type[device_types.DeviceType],
+    MatterEntityDescription | list[MatterEntityDescription],
 ] = {
-    device_types.OnOffPlugInUnit: DeviceMapping(
-        entity_cls=MatterSwitch,
+    device_types.OnOffPlugInUnit: MatterSwitchEntityDescriptionFactory(
         subscribe_attributes=(clusters.OnOff.Attributes.OnOff,),
-        entity_description=SwitchEntityDescription(
-            key=None,
-            device_class=SwitchDeviceClass.OUTLET,
-        ),
+        device_class=SwitchDeviceClass.OUTLET,
     ),
 }
