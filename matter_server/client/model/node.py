@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as all_clusters
 
-from .endpoint_device_type_instance import MatterEndpointDeviceTypeInstance
+from .device_type_instance import MatterDeviceTypeInstance
 
 if TYPE_CHECKING:
     from ..matter import Matter
@@ -15,13 +15,13 @@ if TYPE_CHECKING:
 class MatterNode:
     """Matter node."""
 
-    root_device: MatterEndpointDeviceTypeInstance[device_types.RootNode]
+    root_device_type_instance: MatterDeviceTypeInstance[device_types.RootNode]
 
     def __init__(self, matter: Matter, node_info: dict) -> None:
         self.matter = matter
         self.raw_data = node_info
 
-        endpoint_device_type_instances: list[MatterEndpointDeviceTypeInstance] = []
+        device_type_instances: list[MatterDeviceTypeInstance] = []
 
         for endpoint_id, endpoint_info in node_info["attributes"].items():
             descriptor: all_clusters.Descriptor = endpoint_info["Descriptor"]
@@ -34,17 +34,17 @@ class MatterNode:
                     )
                     continue
 
-                device = MatterEndpointDeviceTypeInstance(
+                instance = MatterDeviceTypeInstance(
                     self, device_type, int(endpoint_id), device_info.revision
                 )
                 if device_type is device_types.RootNode:
-                    self.root_device = device
+                    self.root_device_type_instance = instance
                 else:
-                    endpoint_device_type_instances.append(device)
+                    device_type_instances.append(instance)
 
-        self.endpoint_device_type_instances = endpoint_device_type_instances
+        self.device_type_instances = device_type_instances
 
-        if not hasattr(self, "root_device"):
+        if not hasattr(self, "root_device_type_instance"):
             raise ValueError("No root device found")
 
     @property
@@ -53,11 +53,11 @@ class MatterNode:
 
     @property
     def name(self) -> str:
-        return self.root_device.get_cluster(all_clusters.Basic).nodeLabel
+        return self.root_device_type_instance.get_cluster(all_clusters.Basic).nodeLabel
 
     @property
     def unique_id(self) -> str:
-        return self.root_device.get_cluster(all_clusters.Basic).uniqueID
+        return self.root_device_type_instance.get_cluster(all_clusters.Basic).uniqueID
 
     def update_data(self, node_info):
         self.raw_data = node_info

@@ -8,9 +8,7 @@ from homeassistant.core import callback
 from homeassistant.helpers import device_registry, entity
 
 from matter_server.client.exceptions import FailedCommand
-from matter_server.client.model.endpoint_device_type_instance import (
-    MatterEndpointDeviceTypeInstance,
-)
+from matter_server.client.model.device_type_instance import MatterDeviceTypeInstance
 
 from .const import DOMAIN
 from .entity_description import MatterEntityDescriptionBaseClass
@@ -24,22 +22,18 @@ class MatterEntity(entity.Entity):
 
     def __init__(
         self,
-        endpoint_device_type_instance: MatterEndpointDeviceTypeInstance,
+        device_type_instance: MatterDeviceTypeInstance,
         entity_description: MatterEntityDescriptionBaseClass,
     ) -> None:
-        self._endpoint_device_type_instance = endpoint_device_type_instance
+        self._device_type_instance = device_type_instance
         self.entity_description = entity_description
-        node = endpoint_device_type_instance.node
+        node = device_type_instance.node
         self._attr_unique_id = f"{node.matter.client.server_info.compressedFabricId}-{node.unique_id}-{endpoint_device_type_instance.endpoint_id}-{endpoint_device_type_instance.device_type.device_type}"
 
     @property
     def device_info(self) -> entity.DeviceInfo | None:
         """Return device info for device registry."""
-        return {
-            "identifiers": {
-                (DOMAIN, self._endpoint_device_type_instance.node.unique_id)
-            }
-        }
+        return {"identifiers": {(DOMAIN, self._device_type_instance.node.unique_id)}}
 
     async def init_matter_device(self) -> None:
         """Initialize and subscribe device attributes."""
@@ -49,18 +43,18 @@ class MatterEntity(entity.Entity):
             .name
         )
 
-        device_type_name = self._endpoint_device_type_instance.device_type.__doc__[:-1]
+        device_type_name = self._device_type_instance.device_type.__doc__[:-1]
         name = f"{device_name} {device_type_name}"
 
         # If this device has multiple of this device type, add their endpoint.
         if (
             sum(
-                dev.device_type is self._endpoint_device_type_instance.device_type
-                for dev in self._endpoint_device_type_instance.node.endpoint_device_type_instances
+                inst.device_type is self._device_type_instance.device_type
+                for inst in self._device_type_instance.node.device_type_instances
             )
             > 1
         ):
-            name += f" ({self._endpoint_device_type_instance.endpoint_id})"
+            name += f" ({self._device_type_instance.endpoint_id})"
 
         self._attr_name = name
 
@@ -70,21 +64,19 @@ class MatterEntity(entity.Entity):
 
         try:
             # Subscribe to updates.
-            self._unsubscribe = (
-                await self._endpoint_device_type_instance.subscribe_updates(
-                    self.entity_description.subscribe_attributes,
-                    self._subscription_update,
-                )
+            self._unsubscribe = await self._device_type_instance.subscribe_updates(
+                self.entity_description.subscribe_attributes,
+                self._subscription_update,
             )
 
             # Fetch latest info from the device.
-            await self._endpoint_device_type_instance.update_attributes(
+            await self._device_type_instance.update_attributes(
                 self.entity_description.subscribe_attributes
             )
         except FailedCommand as err:
-            self._endpoint_device_type_instance.node.matter.adapter.logger.warning(
+            self._device_type_instance.node.matter.adapter.logger.warning(
                 "Error interacting with node %d (%s): %s. Marking device as unavailable. Recovery is not implemented yet. Reload config entry when device is available again.",
-                self._endpoint_device_type_instance.node.node_id,
+                self._device_type_instance.node.node_id,
                 self.entity_id,
                 str(err.error_code),
             )
@@ -96,8 +88,8 @@ class MatterEntity(entity.Entity):
         """Handle being added to Home Assistant."""
         await super().async_added_to_hass()
 
-        async with self._endpoint_device_type_instance.node.matter.adapter.get_node_lock(
-            self._endpoint_device_type_instance.node.node_id
+        async with self._device_type_instance.node.matter.adapter.get_node_lock(
+            self._device_type_instance.node.node_id
         ):
             await self.init_matter_device()
 

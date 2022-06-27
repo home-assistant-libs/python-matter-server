@@ -23,9 +23,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from matter_server.client.model.endpoint_device_type_instance import (
-    MatterEndpointDeviceTypeInstance,
-)
+from matter_server.client.model.device_type_instance import MatterDeviceTypeInstance
 from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as clusters
 from matter_server.vendor.chip.clusters.Types import Nullable, NullValue
@@ -58,7 +56,7 @@ class MatterSensor(MatterEntity, SensorEntity):
     def _update_from_device(self) -> None:
         """Update from device."""
         measurement: Nullable | float = _get_attribute_value(
-            self._endpoint_device_type_instance,
+            self._device_type_instance,
             # We always subscribe to a single value
             self.entity_description.subscribe_attributes[0],
         )
@@ -72,14 +70,14 @@ class MatterSensor(MatterEntity, SensorEntity):
 
 
 def _get_attribute_value(
-    endpoint_device_type_instance: MatterEndpointDeviceTypeInstance,
+    device_type_instance: MatterDeviceTypeInstance,
     attribute: clusters.ClusterAttributeDescriptor,
 ) -> Any:
     """Return the value of an attribute."""
     # Find the cluster for this attribute. We don't have a lookup table yet.
     cluster_cls: clusters.Cluster = next(
         cluster
-        for cluster in endpoint_device_type_instance.device_type.clusters
+        for cluster in device_type_instance.device_type.clusters
         if cluster.id == attribute.cluster_id
     )
 
@@ -90,7 +88,7 @@ def _get_attribute_value(
         if descriptor.Tag == attribute.attribute_id
     )
 
-    cluster_data = endpoint_device_type_instance.get_cluster(cluster_cls)
+    cluster_data = device_type_instance.get_cluster(cluster_cls)
     return getattr(cluster_data, attribute_descriptor.Label)
 
 

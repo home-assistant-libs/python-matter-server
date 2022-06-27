@@ -15,7 +15,7 @@ _DEVICE_TYPE_T = TypeVar("_DEVICE_TYPE_T", bound=device_types.DeviceType)
 _CLUSTER_T = TypeVar("_CLUSTER_T", bound=all_clusters.Cluster)
 
 
-class MatterEndpointDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
+class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
     """Base class for Matter device types on endpoints."""
 
     def __init__(

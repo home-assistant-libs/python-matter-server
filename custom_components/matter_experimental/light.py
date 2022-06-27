@@ -49,14 +49,12 @@ class MatterLight(MatterEntity, LightEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn light on."""
         if ATTR_BRIGHTNESS not in kwargs or not self._supports_brightness():
-            await self._endpoint_device_type_instance.send_command(
+            await self._device_type_instance.send_command(
                 payload=clusters.OnOff.Commands.On(),
             )
             return
 
-        level_control = self._endpoint_device_type_instance.get_cluster(
-            clusters.LevelControl
-        )
+        level_control = self._device_type_instance.get_cluster(clusters.LevelControl)
         level = round(
             renormalize(
                 kwargs[ATTR_BRIGHTNESS],
@@ -65,13 +63,13 @@ class MatterLight(MatterEntity, LightEntity):
             )
         )
 
-        await self._endpoint_device_type_instance.send_command(
+        await self._device_type_instance.send_command(
             payload=clusters.LevelControl.Commands.MoveToLevelWithOnOff(level=level)
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn light off."""
-        await self._endpoint_device_type_instance.send_command(
+        await self._device_type_instance.send_command(
             payload=clusters.OnOff.Commands.Off(),
         )
 
@@ -82,15 +80,13 @@ class MatterLight(MatterEntity, LightEntity):
             if self._supports_brightness():
                 self._attr_supported_color_modes = [ColorMode.BRIGHTNESS]
 
-        self._attr_is_on = self._endpoint_device_type_instance.get_cluster(
-            clusters.OnOff
-        ).onOff
+        self._attr_is_on = self._device_type_instance.get_cluster(clusters.OnOff).onOff
 
         if (
             clusters.LevelControl.Attributes.CurrentLevel
             in self.entity_description.subscribe_attributes
         ):
-            level_control = self._endpoint_device_type_instance.get_cluster(
+            level_control = self._device_type_instance.get_cluster(
                 clusters.LevelControl
             )
 
