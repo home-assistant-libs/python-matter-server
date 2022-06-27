@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 
 
 class Driver:
-    def __init__(self, client: client.Client, server_info: ServerInformation):
-        self.server_info = server_info
+    def __init__(self, client: client.Client):
+        self.server_info = client.server_info
         self._client = client
         self.device_controller = DeviceController(client)
         self.read_subscriptions = ReadSubscriptions(client)
