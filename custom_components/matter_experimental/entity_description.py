@@ -1,3 +1,4 @@
+"""Matter entity description base class."""
 from __future__ import annotations
 
 from dataclasses import dataclass
