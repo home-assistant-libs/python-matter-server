@@ -1,8 +1,8 @@
 """Matter switches."""
 from __future__ import annotations
+
 from dataclasses import dataclass
 from functools import partial
-
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.switch import (
@@ -19,8 +19,8 @@ from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as clusters
 
 from .const import DOMAIN
-from .entity_description import MatterEntityDescription
 from .entity import MatterEntity
+from .entity_description import MatterEntityDescription
 
 if TYPE_CHECKING:
     from matter_server.client.matter import Matter
@@ -64,7 +64,7 @@ class MatterSwitchEntityDescription(
     SwitchEntityDescription,
     MatterEntityDescription,
 ):
-    """Matter Sensor entity description."""
+    """Matter Switch entity description."""
 
 
 # You can't set default values on inherited data classes

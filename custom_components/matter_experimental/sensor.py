@@ -29,8 +29,8 @@ from matter_server.vendor.chip.clusters import Objects as clusters
 from matter_server.vendor.chip.clusters.Types import Nullable, NullValue
 
 from .const import DOMAIN
-from .entity_description import MatterEntityDescription
 from .entity import MatterEntity
+from .entity_description import MatterEntityDescription
 
 if TYPE_CHECKING:
     from matter_server.client.matter import Matter

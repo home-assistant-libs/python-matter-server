@@ -1,15 +1,15 @@
 """Matter light."""
 from __future__ import annotations
+
 from dataclasses import dataclass
 from functools import partial
-
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.helpers.entity import EntityDescription
 from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from matter_server.client.model.device import MatterDevice
@@ -17,8 +17,8 @@ from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as clusters
 
 from .const import DOMAIN
-from .entity_description import MatterEntityDescription
 from .entity import MatterEntity
+from .entity_description import MatterEntityDescription
 from .util import renormalize
 
 if TYPE_CHECKING:
