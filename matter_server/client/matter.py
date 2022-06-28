@@ -123,6 +123,7 @@ class Matter:
         node_info["node_id"] = node_id
 
         if self._nodes[node_id]:
+            # TODO this updates data but doesn't re-run init work or update anyone
             self._nodes[node_id].update_data(node_info)
         else:
             self._nodes[node_id] = MatterNode(self, node_info)

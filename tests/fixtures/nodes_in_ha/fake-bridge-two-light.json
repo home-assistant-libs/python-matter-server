@@ -1,0 +1,39 @@
+{
+  "is_bridge": true,
+  "node_devices": [
+    {
+      "uniqueID": "mock-id-kitchen-ceiling",
+      "vendorName": "Mock Vendor",
+      "productName": "Mock Light",
+      "device_type_instances": [
+        {
+          "type": "OnOffLight",
+          "platforms": ["light"],
+          "entities": [
+            {
+              "entity_id": "light.matter_experimental_1234_mock_hub_id_9_256",
+              "state": "on"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "uniqueID": "mock-id-living-room-ceiling",
+      "vendorName": "Mock Vendor",
+      "productName": "Mock Light",
+      "device_type_instances": [
+        {
+          "type": "OnOffLight",
+          "platforms": ["light"],
+          "entities": [
+            {
+              "entity_id": "light.matter_experimental_1234_mock_hub_id_10_256",
+              "state": "off"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

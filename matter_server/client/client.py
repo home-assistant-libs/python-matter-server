@@ -213,7 +213,7 @@ class Client:
         assert self._client
 
         try:
-            self.driver = Driver(self, self.server_info)
+            self.driver = Driver(self)
 
             self.logger.info("Matter initialized.")
             driver_ready.set()

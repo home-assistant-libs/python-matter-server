@@ -1,0 +1,26 @@
+{
+  "is_bridge": false,
+  "node_devices": [
+    {
+      "uniqueID": "BE8F70AA40DDAE41",
+      "vendorName": "Nabu Casa",
+      "productName": "M5STAMP Lighting App",
+      "device_type_instances": [
+        {
+          "type": "DimmableLight",
+          "platforms": ["light"],
+          "entities": [
+            {
+              "entity_id": "light.matter_experimental_1234_be8f70aa40ddae41_1_257",
+              "state": "off",
+              "attributes": {
+                "supported_features": 0,
+                "supported_color_modes": ["brightness"]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

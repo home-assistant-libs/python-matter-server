@@ -9,6 +9,7 @@ from homeassistant.helpers import device_registry, entity
 
 from matter_server.client.exceptions import FailedCommand
 from matter_server.client.model.device_type_instance import MatterDeviceTypeInstance
+from matter_server.client.model.node_device import AbstractMatterNodeDevice
 
 from .const import DOMAIN
 from .entity_description import MatterEntityDescriptionBaseClass
@@ -22,9 +23,11 @@ class MatterEntity(entity.Entity):
 
     def __init__(
         self,
+        node_device: AbstractMatterNodeDevice,
         device_type_instance: MatterDeviceTypeInstance,
         entity_description: MatterEntityDescriptionBaseClass,
     ) -> None:
+        self._node_device = node_device
         self._device_type_instance = device_type_instance
         self.entity_description = entity_description
         node = device_type_instance.node
@@ -33,35 +36,10 @@ class MatterEntity(entity.Entity):
     @property
     def device_info(self) -> entity.DeviceInfo | None:
         """Return device info for device registry."""
-        return {"identifiers": {(DOMAIN, self._device_type_instance.node.unique_id)}}
+        return {"identifiers": {(DOMAIN, self._node_device.device_info().uniqueID)}}
 
     async def init_matter_device(self) -> None:
         """Initialize and subscribe device attributes."""
-        device_name = (
-            device_registry.async_get(self.hass)
-            .async_get(self.registry_entry.device_id)
-            .name
-        )
-
-        device_type_name = self._device_type_instance.device_type.__doc__[:-1]
-        name = f"{device_name} {device_type_name}"
-
-        # If this device has multiple of this device type, add their endpoint.
-        if (
-            sum(
-                inst.device_type is self._device_type_instance.device_type
-                for inst in self._device_type_instance.node.device_type_instances
-            )
-            > 1
-        ):
-            name += f" ({self._device_type_instance.endpoint_id})"
-
-        self._attr_name = name
-
-        if not self.entity_description.subscribe_attributes:
-            self._update_from_device()
-            return
-
         try:
             # Subscribe to updates.
             self._unsubscribe = await self._device_type_instance.subscribe_updates(
@@ -87,6 +65,31 @@ class MatterEntity(entity.Entity):
     async def async_added_to_hass(self) -> None:
         """Handle being added to Home Assistant."""
         await super().async_added_to_hass()
+
+        device_name = (
+            device_registry.async_get(self.hass)
+            .async_get(self.registry_entry.device_id)
+            .name
+        )
+
+        device_type_name = self._device_type_instance.device_type.__doc__[:-1]
+        name = f"{device_name} {device_type_name}"
+
+        # If this device has multiple of this device type, add their endpoint.
+        if (
+            sum(
+                inst.device_type is self._device_type_instance.device_type
+                for inst in self._node_device.device_type_instances()
+            )
+            > 1
+        ):
+            name += f" ({self._device_type_instance.endpoint_id})"
+
+        self._attr_name = name
+
+        if not self.entity_description.subscribe_attributes:
+            self._update_from_device()
+            return
 
         async with self._device_type_instance.node.matter.adapter.get_node_lock(
             self._device_type_instance.node.node_id
