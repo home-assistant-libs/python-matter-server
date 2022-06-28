@@ -44,17 +44,6 @@ class MockClient(Client):
         self.mock_client_disconnect = asyncio.Event()
         await self.mock_client_disconnect.wait()
 
-    # async def async_send_command(
-    #     self,
-    #     command: str,
-    #     args: dict[str, Any],
-    #     require_schema: int | None = None,
-    # ):
-    #     if command == "device_controller.Read":
-    #         if args.get("reportInterval"):
-    #             return {"subscription_id": 1}
-    #         return {}
-
 
 @pytest.mark.parametrize("node_fixture", NODE_FIXTURES_ROOT.iterdir())
 async def test_fixture(hass: HomeAssistant, hass_storage, node_fixture):
