@@ -1,6 +1,7 @@
 """Test that fixtures result in right data in Home Assistant."""
 from __future__ import annotations
 import asyncio
+import logging
 
 import json
 from typing import TYPE_CHECKING
@@ -8,12 +9,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from custom_components.matter_experimental.const import DOMAIN
 from custom_components.matter_experimental.device_platform import DEVICE_PLATFORM
 from matter_server.client.client import Client
 from matter_server.client.model.driver import Driver
 from matter_server.client.model.node import MatterNode
 from matter_server.common import json_utils
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from matter_server.vendor.chip.clusters.ObjectsVersion import CLUSTER_OBJECT_VERSION
 
@@ -26,6 +29,7 @@ if TYPE_CHECKING:
 
 
 MOCK_COMPR_FABRIC_ID = 1234
+LOGGER = logging.getLogger(__name__)
 
 
 class MockClient(Client):
@@ -66,31 +70,6 @@ async def test_fixture(hass: HomeAssistant, hass_storage, node_fixture):
 
     assert len(node.node_devices) == len(checks["node_devices"])
 
-    entities_to_check = []
-
-    # Make sure all devices of this node are mapped in HA
-    for md_idx, node_device in enumerate(node.node_devices):
-        nd_checks = checks["node_devices"][md_idx]
-
-        info = node_device.device_info()
-        for key in "vendorName", "productName", "uniqueID":
-            assert getattr(info, key) == nd_checks[key], key
-
-        for d_idx, device in enumerate(node_device.device_type_instances()):
-            dti_checks = nd_checks["device_type_instances"][d_idx]
-            assert device.device_type.__name__ == dti_checks["type"]
-            platforms = []
-
-            for platform, devices in DEVICE_PLATFORM.items():
-                device_mappings = devices.get(device.device_type)
-
-                if device_mappings is not None:
-                    platforms.append(platform)
-
-            assert platforms == dti_checks["platforms"]
-
-            entities_to_check.extend(dti_checks["entities"])
-
     # Set up HA
     config_entry = MockConfigEntry(
         domain="matter_experimental", data={"url": "http://mock-matter-server-url"}
@@ -120,13 +99,68 @@ async def test_fixture(hass: HomeAssistant, hass_storage, node_fixture):
         assert await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()
 
-    for entity_check in entities_to_check:
-        state = hass.states.get(entity_check["entity_id"])
-        assert state is not None, entity_check["entity_id"]
-        assert state.state == entity_check["state"]
+    dev_reg = dr.async_get(hass)
+    ent_reg = er.async_get(hass)
 
-        if "attributes" not in entity_check:
-            continue
+    # Make sure all devices of this node are mapped in HA
+    for md_idx, node_device in enumerate(node.node_devices):
+        LOGGER.info("Checking device #%s %s", md_idx, node_device)
+        nd_checks = checks["node_devices"][md_idx]
 
-        for attr, expected_value in entity_check["attributes"].items():
-            assert state.attributes.get(attr) == expected_value, attr
+        # Validate device info
+        info = node_device.device_info()
+        for key in "vendorName", "productName", "uniqueID":
+            assert getattr(info, key) == nd_checks[key], key
+
+        # Validate device registry
+        device_entry = dev_reg.async_get_device({(DOMAIN, nd_checks["uniqueID"])})
+        assert device_entry is not None
+        assert device_entry.manufacturer == nd_checks["vendorName"]
+        assert device_entry.model == nd_checks["productName"]
+
+        # Validate via device
+        if node.bridge_device_type_instance:
+            via_device_id = dev_reg.async_get_device({(DOMAIN, node.unique_id)}).id
+        else:
+            via_device_id = None
+
+        assert device_entry.via_device_id == via_device_id
+
+        node_entities = {
+            ent.entity_id: ent
+            for ent in er.async_entries_for_device(
+                ent_reg, device_entry.id, include_disabled_entities=True
+            )
+        }
+
+        for d_idx, instance in enumerate(node_device.device_type_instances()):
+            LOGGER.info("Checking device type instance #%s %s", d_idx, instance)
+            dti_checks = nd_checks["device_type_instances"][d_idx]
+            assert instance.device_type.__name__ == dti_checks["type"]
+            platforms = []
+
+            for platform, devices in DEVICE_PLATFORM.items():
+                entity_descriptions = devices.get(instance.device_type)
+
+                if entity_descriptions is not None:
+                    platforms.append(platform)
+
+            assert platforms == dti_checks["platforms"]
+
+            for entity_check in dti_checks["entities"]:
+                assert entity_check["entity_id"] in node_entities
+                node_entities.pop(entity_check["entity_id"])
+
+                state = hass.states.get(entity_check["entity_id"])
+                assert state is not None, entity_check["entity_id"]
+                assert state.state == entity_check["state"]
+
+                if "attributes" not in entity_check:
+                    continue
+
+                for attr, expected_value in entity_check["attributes"].items():
+                    assert state.attributes.get(attr) == expected_value, attr
+
+        assert (
+            node_entities == {}
+        ), f"Not all entities specified in check file: {', '.join(node_entities)}"
