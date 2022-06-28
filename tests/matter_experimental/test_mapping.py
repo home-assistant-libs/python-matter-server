@@ -1,13 +1,15 @@
 """Test that fixtures result in right data in Home Assistant."""
 from __future__ import annotations
-import asyncio
-import logging
 
+import asyncio
 import json
+import logging
 from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.matter_experimental.const import DOMAIN
 from custom_components.matter_experimental.device_platform import DEVICE_PLATFORM
@@ -15,9 +17,6 @@ from matter_server.client.client import Client
 from matter_server.client.model.driver import Driver
 from matter_server.client.model.node import MatterNode
 from matter_server.common import json_utils
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-
 from matter_server.vendor.chip.clusters.ObjectsVersion import CLUSTER_OBJECT_VERSION
 
 from ..fixtures import NODE_FIXTURES_ROOT, NODE_IN_HA_FIXTURES_ROOT
