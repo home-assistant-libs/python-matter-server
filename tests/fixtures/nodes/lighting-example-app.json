@@ -59,7 +59,7 @@
         "vendorID": 65521,
         "productName": "M5STAMP Lighting App",
         "productID": 32768,
-        "nodeLabel": "",
+        "nodeLabel": "My Cool Light",
         "location": "XX",
         "hardwareVersion": 0,
         "hardwareVersionString": "v1.0",

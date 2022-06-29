@@ -2,9 +2,6 @@
   "is_bridge": true,
   "node_devices": [
     {
-      "uniqueID": "mock-id-kitchen-ceiling",
-      "vendorName": "Mock Vendor",
-      "productName": "Mock Light",
       "device_type_instances": [
         {
           "type": "OnOffLight",
@@ -19,9 +16,6 @@
       ]
     },
     {
-      "uniqueID": "mock-id-living-room-ceiling",
-      "vendorName": "Mock Vendor",
-      "productName": "Mock Light",
       "device_type_instances": [
         {
           "type": "OnOffLight",
