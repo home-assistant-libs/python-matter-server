@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from functools import lru_cache
-import logging
+from functools import cache
 import json
 import asyncio
 from typing import TYPE_CHECKING
@@ -23,7 +22,6 @@ if TYPE_CHECKING:
 
 
 MOCK_COMPR_FABRIC_ID = 1234
-LOGGER = logging.getLogger(__name__)
 
 
 class MockClient(Client):
@@ -40,7 +38,7 @@ class MockClient(Client):
         await self.mock_client_disconnect.wait()
 
 
-@lru_cache(maxsize=None)
+@cache
 def load_node_fixture(fixture: str) -> str:
     """Load a fixture."""
     return (NODE_FIXTURES_ROOT / f"{fixture}.json").read_text()
