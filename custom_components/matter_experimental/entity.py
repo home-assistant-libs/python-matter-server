@@ -1,33 +1,66 @@
 """Matter entity base class."""
 from __future__ import annotations
 
-import asyncio
+from abc import abstractmethod
 from typing import Any, Callable, Coroutine
 
-import async_timeout
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry, entity
 
-from matter_server.client.model.device import MatterDevice
+from matter_server.client.exceptions import FailedCommand
+from matter_server.client.model.device_type_instance import MatterDeviceTypeInstance
+from matter_server.client.model.node_device import AbstractMatterNodeDevice
 
 from .const import DOMAIN
-from .device_platform_helper import DeviceMapping
+from .entity_description import MatterEntityDescriptionBaseClass
 
 
 class MatterEntity(entity.Entity):
 
+    entity_description: MatterEntityDescriptionBaseClass
     _attr_should_poll = False
     _unsubscribe: Callable[..., Coroutine[Any, Any, None]] | None = None
 
-    def __init__(self, device: MatterDevice, mapping: DeviceMapping) -> None:
-        self._device = device
-        self._device_mapping = mapping
-        self._attr_unique_id = f"{device.node.matter.client.server_info.compressedFabricId}-{device.node.unique_id}-{device.endpoint_id}-{device.device_type.device_type}"
+    def __init__(
+        self,
+        node_device: AbstractMatterNodeDevice,
+        device_type_instance: MatterDeviceTypeInstance,
+        entity_description: MatterEntityDescriptionBaseClass,
+    ) -> None:
+        self._node_device = node_device
+        self._device_type_instance = device_type_instance
+        self.entity_description = entity_description
+        node = device_type_instance.node
+        self._attr_unique_id = f"{node.matter.client.server_info.compressedFabricId}-{node.unique_id}-{device_type_instance.endpoint_id}-{device_type_instance.device_type.device_type}"
 
     @property
     def device_info(self) -> entity.DeviceInfo | None:
         """Return device info for device registry."""
-        return {"identifiers": {(DOMAIN, self._device.node.unique_id)}}
+        return {"identifiers": {(DOMAIN, self._node_device.device_info().uniqueID)}}
+
+    async def init_matter_device(self) -> None:
+        """Initialize and subscribe device attributes."""
+        try:
+            # Subscribe to updates.
+            self._unsubscribe = await self._device_type_instance.subscribe_updates(
+                self.entity_description.subscribe_attributes,
+                self._subscription_update,
+            )
+
+            # Fetch latest info from the device.
+            await self._device_type_instance.update_attributes(
+                self.entity_description.subscribe_attributes
+            )
+        except FailedCommand as err:
+            self._device_type_instance.node.matter.adapter.logger.warning(
+                "Error interacting with node %d (%s): %s. Marking device as unavailable. Recovery is not implemented yet. Reload config entry when device is available again.",
+                self._device_type_instance.node.node_id,
+                self.entity_id,
+                str(err.error_code),
+            )
+            self._attr_available = False
+
+        self._update_from_device()
 
     async def async_added_to_hass(self) -> None:
         """Handle being added to Home Assistant."""
@@ -39,45 +72,29 @@ class MatterEntity(entity.Entity):
             .name
         )
 
-        device_type_name = self._device.device_type.__doc__[:-1]
+        device_type_name = self._device_type_instance.device_type.__doc__[:-1]
         name = f"{device_name} {device_type_name}"
 
         # If this device has multiple of this device type, add their endpoint.
         if (
             sum(
-                dev.device_type is self._device.device_type
-                for dev in self._device.node.devices
+                inst.device_type is self._device_type_instance.device_type
+                for inst in self._node_device.device_type_instances()
             )
             > 1
         ):
-            name += f" ({self._device.endpoint_id})"
+            name += f" ({self._device_type_instance.endpoint_id})"
 
         self._attr_name = name
 
-        if not self._device_mapping.subscribe_attributes:
+        if not self.entity_description.subscribe_attributes:
             self._update_from_device()
             return
 
-        try:
-            # Subscribe to updates.
-            async with async_timeout.timeout(5):
-                self._unsubscribe = await self._device.subscribe_updates(
-                    self._device_mapping.subscribe_attributes, self._subscription_update
-                )
-
-            # Fetch latest info from the device.
-            async with async_timeout.timeout(5):
-                await self._device.update_attributes(
-                    self._device_mapping.subscribe_attributes
-                )
-        except asyncio.TimeoutError:
-            self._device.node.matter.adapter.logger.warning(
-                "Timeout interacting with %s, marking device as unavailable. Recovery is not implemented yet. Reload config entry when device is available again.",
-                self.entity_id,
-            )
-            self._attr_available = False
-
-        self._update_from_device()
+        async with self._device_type_instance.node.matter.adapter.get_node_lock(
+            self._device_type_instance.node.node_id
+        ):
+            await self.init_matter_device()
 
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
@@ -91,6 +108,6 @@ class MatterEntity(entity.Entity):
         self.async_write_ha_state()
 
     @callback
+    @abstractmethod
     def _update_from_device(self) -> None:
         """Update data from Matter device."""
-        self.async_write_ha_state()

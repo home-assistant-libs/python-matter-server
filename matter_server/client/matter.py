@@ -4,6 +4,8 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Callable
 
+from matter_server.vendor.chip.clusters.ObjectsVersion import CLUSTER_OBJECT_VERSION
+
 from .client import Client
 from .exceptions import BaseMatterServerError, FailedCommand
 from .model.node import MatterNode
@@ -66,6 +68,8 @@ class Matter:
 
         if data is None:
             data = {"next_node_id": 4335, "nodes": {}}
+        elif data.get("node_interview_version") != CLUSTER_OBJECT_VERSION:
+            data["nodes"] = {key: None for key in data["nodes"]}
 
         self.next_node_id = data["next_node_id"]
         # JSON stores dictionary keys as strings, convert to int
@@ -119,6 +123,7 @@ class Matter:
         node_info["node_id"] = node_id
 
         if self._nodes[node_id]:
+            # TODO this updates data but doesn't re-run init work or update anyone
             self._nodes[node_id].update_data(node_info)
         else:
             self._nodes[node_id] = MatterNode(self, node_info)
@@ -218,6 +223,7 @@ class Matter:
         return {
             "compressed_fabric_id": self.client.server_info.compressedFabricId,
             "next_node_id": self.next_node_id,
+            "node_interview_version": CLUSTER_OBJECT_VERSION,
             "nodes": {
                 node_id: node.raw_data if node else None
                 for node_id, node in self._nodes.items()

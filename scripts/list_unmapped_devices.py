@@ -5,12 +5,12 @@ Run with python3 -m scripts.list_unmapped_devices
 from custom_components.matter_experimental.device_platform import DEVICE_PLATFORM
 from matter_server.vendor import device_types
 
-
 IGNORE_DEVICES = {
     device_types.AllClustersAppServerExample,
     device_types.Bridge,
     device_types.BridgedDevice,
     device_types.ColorDimmerSwitch,
+    device_types.ContentApplication,
     device_types.ControlBridge,
     device_types.DimmerSwitch,
     device_types.DoorLockController,
@@ -22,6 +22,7 @@ IGNORE_DEVICES = {
     device_types.PumpController,
     device_types.RootNode,
     device_types.SecondaryNetworkCommissioningDeviceType,
+    device_types.Speaker,
     device_types.WindowCoveringController,
 }
 

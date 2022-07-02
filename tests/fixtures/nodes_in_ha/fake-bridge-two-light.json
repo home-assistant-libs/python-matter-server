@@ -1,0 +1,33 @@
+{
+  "is_bridge": true,
+  "node_devices": [
+    {
+      "device_type_instances": [
+        {
+          "type": "OnOffLight",
+          "platforms": ["light"],
+          "entities": [
+            {
+              "entity_id": "light.matter_experimental_1234_mock_hub_id_9_256",
+              "state": "on"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "device_type_instances": [
+        {
+          "type": "OnOffLight",
+          "platforms": ["light"],
+          "entities": [
+            {
+              "entity_id": "light.matter_experimental_1234_mock_hub_id_10_256",
+              "state": "off"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 """Matter switches."""
 from __future__ import annotations
 
+from dataclasses import dataclass
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.switch import (
@@ -17,8 +19,8 @@ from matter_server.vendor import device_types
 from matter_server.vendor.chip.clusters import Objects as clusters
 
 from .const import DOMAIN
-from .device_platform_helper import DeviceMapping
 from .entity import MatterEntity
+from .entity_description import MatterEntityDescription
 
 if TYPE_CHECKING:
     from matter_server.client.matter import Matter
@@ -36,6 +38,8 @@ async def async_setup_entry(
 
 class MatterSwitch(MatterEntity, SwitchEntity):
     """Representation of a Matter switch."""
+
+    entity_description: MatterSwitchEntityDescription
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn switch on."""
@@ -55,15 +59,27 @@ class MatterSwitch(MatterEntity, SwitchEntity):
         self._attr_is_on = self._device.get_cluster(clusters.OnOff).onOff
 
 
+@dataclass
+class MatterSwitchEntityDescription(
+    SwitchEntityDescription,
+    MatterEntityDescription,
+):
+    """Matter Switch entity description."""
+
+
+# You can't set default values on inherited data classes
+MatterSwitchEntityDescriptionFactory = partial(
+    MatterSwitchEntityDescription, entity_cls=MatterSwitch
+)
+
+
 DEVICE_ENTITY: dict[
-    type[device_types.DeviceType], DeviceMapping | list[DeviceMapping]
+    type[device_types.DeviceType],
+    MatterEntityDescription | list[MatterEntityDescription],
 ] = {
-    device_types.OnOffPlugInUnit: DeviceMapping(
-        entity_cls=MatterSwitch,
+    device_types.OnOffPlugInUnit: MatterSwitchEntityDescriptionFactory(
+        key=device_types.OnOffPlugInUnit,
         subscribe_attributes=(clusters.OnOff.Attributes.OnOff,),
-        entity_description=SwitchEntityDescription(
-            key=None,
-            device_class=SwitchDeviceClass.OUTLET,
-        ),
+        device_class=SwitchDeviceClass.OUTLET,
     ),
 }
