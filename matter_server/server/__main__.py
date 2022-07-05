@@ -19,10 +19,6 @@ def get_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=" Matter Controller Server using WebSockets."
     )
-
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose logging to file."
-    )
     parser.add_argument(
         "--log-file",
         type=str,
@@ -44,10 +40,8 @@ def get_arguments() -> argparse.Namespace:
 def main() -> int:
     args = get_arguments()
 
-    if args.verbose or args.log_file:
-        file_handler = logging.FileHandler(
-            "matter_server.log" if args.log_file is None else args.log_file
-        )
+    if args.log_file:
+        file_handler = logging.FileHandler(args.log_file)
 
     logging.basicConfig(handlers=[file_handler], level=args.log_level.upper())
 
