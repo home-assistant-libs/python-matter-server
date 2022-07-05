@@ -17,7 +17,7 @@ def get_arguments() -> argparse.Namespace:
     """Get parsed passed in arguments."""
 
     parser = argparse.ArgumentParser(
-        description=" Matter Controller Server using WebSockets."
+        description="Matter Controller Server using WebSockets."
     )
     parser.add_argument(
         "--log-file",
