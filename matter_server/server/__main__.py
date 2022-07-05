@@ -39,11 +39,12 @@ def get_arguments() -> argparse.Namespace:
 
 def main() -> int:
     args = get_arguments()
+    handlers = None
 
     if args.log_file:
-        file_handler = logging.FileHandler(args.log_file)
+        handlers = [logging.FileHandler(args.log_file)]
 
-    logging.basicConfig(handlers=[file_handler], level=args.log_level.upper())
+    logging.basicConfig(handlers=handlers, level=args.log_level.upper())
 
     host = os.getenv("CHIP_WS_SERVER_HOST", "::,0.0.0.0").split(",")
     port = int(os.getenv("CHIP_WS_SERVER_PORT", "5580"))
