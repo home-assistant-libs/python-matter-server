@@ -44,7 +44,7 @@ def get_arguments() -> argparse.Namespace:
 def main() -> int:
     args = get_arguments()
 
-    if args.verbose:
+    if args.verbose or args.log_file:
         file_handler = logging.FileHandler(
             "matter_server.log" if args.log_file is None else args.log_file
         )
