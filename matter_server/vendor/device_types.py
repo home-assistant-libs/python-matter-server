@@ -524,7 +524,6 @@ class AllClustersAppServerExample(DeviceType, device_type=0x0000):
         all_clusters.ColorControl,
         all_clusters.DoorLock,
         all_clusters.Groups,
-        all_clusters.IasZone,
         all_clusters.LevelControl,
         all_clusters.OnOff,
         all_clusters.Scenes,
