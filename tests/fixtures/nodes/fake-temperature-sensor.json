@@ -1,0 +1,89 @@
+{
+  "attributes": {
+    "0": {
+      "Descriptor": {
+        "deviceList": [
+          {
+            "type": 22,
+            "revision": 1,
+            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceType"
+          }
+        ],
+        "serverList": [29, 37, 40, 48, 49, 50, 51, 60, 62, 64, 65],
+        "clientList": [],
+        "partsList": [9, 10],
+        "generatedCommandList": [],
+        "acceptedCommandList": [],
+        "attributeList": [0, 1, 2, 3, 65528, 65529, 65531, 65532, 65533],
+        "featureMap": 0,
+        "clusterRevision": 1,
+        "_type": "chip.clusters.Objects.Descriptor"
+      },
+      "Basic": {
+        "dataModelRevision": 0,
+        "vendorName": "Mock Vendor",
+        "vendorID": 1234,
+        "productName": "Mock Device",
+        "productID": 2,
+        "nodeLabel": "My Mock Device",
+        "location": "nl",
+        "hardwareVersion": 123,
+        "hardwareVersionString": "TEST_VERSION",
+        "softwareVersion": 12345,
+        "softwareVersionString": "123.4.5",
+        "manufacturingDate": null,
+        "partNumber": null,
+        "productURL": null,
+        "productLabel": null,
+        "serialNumber": null,
+        "localConfigDisabled": null,
+        "reachable": null,
+        "uniqueID": "mock-device-id",
+        "capabilityMinima": null,
+        "generatedCommandList": [],
+        "acceptedCommandList": [],
+        "attributeList": [
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 18, 65528, 65529, 65531, 65532,
+          65533
+        ],
+        "featureMap": 0,
+        "clusterRevision": 3,
+        "_type": "chip.clusters.Objects.Basic"
+      }
+    },
+    "9": {
+      "Descriptor": {
+        "deviceList": [
+          {
+            "type": 770,
+            "revision": 1,
+            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceType"
+          }
+        ],
+        "serverList": [6, 29, 57, 768, 8, 40],
+        "clientList": [],
+        "partsList": [],
+        "generatedCommandList": [],
+        "acceptedCommandList": [],
+        "attributeList": [0, 1, 2, 3, 65528, 65529, 65531, 65533],
+        "featureMap": null,
+        "clusterRevision": 1,
+        "_type": "chip.clusters.Objects.Descriptor"
+      },
+      "TemperatureMeasurement": {
+        "measuredValue": 2100,
+        "minMeasuredValue": null,
+        "maxMeasuredValue": null,
+        "tolerance": 0,
+        "generatedCommandList": [],
+        "acceptedCommandList": [],
+        "attributeList": [0, 1, 2, 3, 65528, 65529, 65531, 65532, 65533],
+        "featureMap": 0,
+        "clusterRevision": 4,
+        "_type": "chip.clusters.Objects.TemperatureMeasurement"
+      }
+    }
+  },
+  "events": [],
+  "node_id": 4338
+}

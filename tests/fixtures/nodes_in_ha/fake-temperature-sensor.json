@@ -1,0 +1,24 @@
+{
+  "is_bridge": false,
+  "node_devices": [
+    {
+      "device_type_instances": [
+        {
+          "type": "TemperatureSensor",
+          "platforms": ["sensor"],
+          "entities": [
+            {
+              "entity_id": "sensor.matter_experimental_1234_mock_device_id_9_770",
+              "state": "21.0",
+              "attributes": {
+                "device_class": "temperature",
+                "state_class": "measurement",
+                "unit_of_measurement": "°C"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
