@@ -22,7 +22,10 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.mark.parametrize("node_fixture", NODE_FIXTURES_ROOT.iterdir())
+@pytest.mark.parametrize(
+    "node_fixture",
+    [fix for fix in NODE_FIXTURES_ROOT.iterdir() if not fix.name.startswith("_")],
+)
 async def test_fixture(hass: HomeAssistant, hass_storage, node_fixture):
     node = await setup_integration_with_node_fixture(
         hass, hass_storage, node_fixture.name.rpartition(".")[0]
