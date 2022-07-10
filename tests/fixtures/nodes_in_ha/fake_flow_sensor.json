@@ -8,7 +8,7 @@
           "platforms": ["sensor"],
           "entities": [
             {
-              "entity_id": "sensor.matter_experimental_1234_mock_device_id_9_774",
+              "entity_id": "sensor.my_mock_device_flow",
               "state": "0.2",
               "attributes": {
                 "state_class": "measurement",

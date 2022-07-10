@@ -8,7 +8,7 @@
           "platforms": ["sensor"],
           "entities": [
             {
-              "entity_id": "sensor.matter_experimental_1234_mock_device_id_9_775",
+              "entity_id": "sensor.my_mock_device_humidity",
               "state": "30.0",
               "attributes": {
                 "device_class": "humidity",

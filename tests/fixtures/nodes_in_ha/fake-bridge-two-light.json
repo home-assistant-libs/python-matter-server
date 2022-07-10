@@ -8,7 +8,7 @@
           "platforms": ["light"],
           "entities": [
             {
-              "entity_id": "light.matter_experimental_1234_mock_hub_id_9_256",
+              "entity_id": "light.kitchen_ceiling",
               "state": "on"
             }
           ]
@@ -22,7 +22,7 @@
           "platforms": ["light"],
           "entities": [
             {
-              "entity_id": "light.matter_experimental_1234_mock_hub_id_10_256",
+              "entity_id": "light.living_room_ceiling",
               "state": "off"
             }
           ]
