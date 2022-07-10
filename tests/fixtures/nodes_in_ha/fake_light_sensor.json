@@ -8,7 +8,7 @@
           "platforms": ["sensor"],
           "entities": [
             {
-              "entity_id": "sensor.matter_experimental_1234_mock_device_id_9_262",
+              "entity_id": "sensor.my_mock_device_light",
               "state": "1.3",
               "attributes": {
                 "device_class": "illuminance",

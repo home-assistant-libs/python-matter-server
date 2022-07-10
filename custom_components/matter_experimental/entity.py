@@ -19,6 +19,7 @@ class MatterEntity(entity.Entity):
 
     entity_description: MatterEntityDescriptionBaseClass
     _attr_should_poll = False
+    _attr_has_entity_name = True
     _unsubscribe: Callable[..., Coroutine[Any, Any, None]] | None = None
 
     def __init__(
@@ -65,27 +66,6 @@ class MatterEntity(entity.Entity):
     async def async_added_to_hass(self) -> None:
         """Handle being added to Home Assistant."""
         await super().async_added_to_hass()
-
-        device_name = (
-            device_registry.async_get(self.hass)
-            .async_get(self.registry_entry.device_id)
-            .name
-        )
-
-        device_type_name = self._device_type_instance.device_type.__doc__[:-1]
-        name = f"{device_name} {device_type_name}"
-
-        # If this device has multiple of this device type, add their endpoint.
-        if (
-            sum(
-                inst.device_type is self._device_type_instance.device_type
-                for inst in self._node_device.device_type_instances()
-            )
-            > 1
-        ):
-            name += f" ({self._device_type_instance.endpoint_id})"
-
-        self._attr_name = name
 
         if not self.entity_description.subscribe_attributes:
             self._update_from_device()

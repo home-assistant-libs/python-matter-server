@@ -8,7 +8,7 @@
           "platforms": ["light"],
           "entities": [
             {
-              "entity_id": "light.matter_experimental_1234_be8f70aa40ddae41_1_257",
+              "entity_id": "light.my_cool_light",
               "state": "off",
               "attributes": {
                 "supported_features": 0,
