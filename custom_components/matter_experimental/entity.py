@@ -5,7 +5,7 @@ from abc import abstractmethod
 from typing import Any, Callable, Coroutine
 
 from homeassistant.core import callback
-from homeassistant.helpers import device_registry, entity
+from homeassistant.helpers import entity
 
 from matter_server.client.exceptions import FailedCommand
 from matter_server.client.model.device_type_instance import MatterDeviceTypeInstance
