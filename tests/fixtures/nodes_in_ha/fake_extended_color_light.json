@@ -1,0 +1,24 @@
+{
+  "is_bridge": false,
+  "node_devices": [
+    {
+      "device_type_instances": [
+        {
+          "type": "ExtendedColorLight",
+          "platforms": ["light"],
+          "entities": [
+            {
+              "entity_id": "light.my_mock_device",
+              "state": "on",
+              "attributes": {
+                "supported_features": 0,
+                "supported_color_modes": ["brightness"],
+                "brightness": 3
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
