@@ -136,4 +136,20 @@ DEVICE_ENTITY: dict[
             clusters.LevelControl.Attributes.CurrentLevel,
         ),
     ),
+    device_types.ColorTemperatureLight: MatterLightEntityDescriptionFactory(
+        key=device_types.ColorTemperatureLight,
+        subscribe_attributes=(
+            clusters.OnOff.Attributes.OnOff,
+            clusters.LevelControl.Attributes.CurrentLevel,
+            clusters.ColorControl,
+        ),
+    ),
+    device_types.ExtendedColorLight: MatterLightEntityDescriptionFactory(
+        key=device_types.ExtendedColorLight,
+        subscribe_attributes=(
+            clusters.OnOff.Attributes.OnOff,
+            clusters.LevelControl.Attributes.CurrentLevel,
+            clusters.ColorControl,
+        ),
+    ),
 }
