@@ -93,7 +93,7 @@ class Bridge(DeviceType, device_type=0x000E):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.BridgedActions,
+        all_clusters.Actions,
     }
 
 
