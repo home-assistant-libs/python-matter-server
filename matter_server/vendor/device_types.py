@@ -371,8 +371,6 @@ class DoorLock(DeviceType, device_type=0x000A):
         all_clusters.Scenes,
         all_clusters.Groups,
         all_clusters.DoorLock,
-        all_clusters.Alarms,
-        all_clusters.PollControl,
         all_clusters.ElectricalMeasurement,
         all_clusters.TimeSynchronization,
     }
@@ -435,7 +433,6 @@ class Thermostat(DeviceType, device_type=0x0301):
         all_clusters.Descriptor,
         all_clusters.Scenes,
         all_clusters.Groups,
-        all_clusters.Alarms,
         all_clusters.Thermostat,
         all_clusters.ThermostatUserInterfaceConfiguration,
         all_clusters.FanControl,
