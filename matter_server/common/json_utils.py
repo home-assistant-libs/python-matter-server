@@ -30,6 +30,12 @@ def strip_vendorized_namespace(namespace):
 def asdict_typed(obj, dict_factory):
     if is_dataclass(obj) and not isinstance(obj, type):
         cls = type(obj)
+
+        # Some (non-compliant) devices (e.g. all-clusters-app) causes TLV decoding errors
+        # Ignore those when serializing...
+        if cls.__module__ == CLUSTER_ATTRIBUTE_NAMESPACE and cls.__qualname__ == "ValueDecodeFailure":
+            return None
+
         result = []
         for f in fields(obj):
             value = asdict_typed(getattr(obj, f.name), dict_factory)
