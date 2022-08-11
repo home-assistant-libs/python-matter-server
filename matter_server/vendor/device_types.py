@@ -128,6 +128,7 @@ class DimmableLight(DeviceType, device_type=0x0101):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
+        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
         all_clusters.OnOff,
@@ -195,6 +196,7 @@ class Pump(DeviceType, device_type=0x0303):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
+        all_clusters.Binding,
         all_clusters.Groups,
         all_clusters.Scenes,
         all_clusters.OnOff,
@@ -212,8 +214,7 @@ class OnOffLightSwitch(DeviceType, device_type=0x0103):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.Binding,
     }
 
 
@@ -223,8 +224,7 @@ class DimmerSwitch(DeviceType, device_type=0x0104):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.Binding,
     }
 
 
@@ -234,8 +234,7 @@ class ColorDimmerSwitch(DeviceType, device_type=0x0105):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.Binding,
     }
 
 
@@ -245,8 +244,7 @@ class ControlBridge(DeviceType, device_type=0x0840):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.Binding,
     }
 
 
@@ -256,8 +254,7 @@ class PumpController(DeviceType, device_type=0x0304):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.Binding,
     }
 
 
@@ -267,8 +264,6 @@ class GenericSwitch(DeviceType, device_type=0x000F):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
-        all_clusters.Scenes,
         all_clusters.Switch,
         all_clusters.FixedLabel,
         all_clusters.UserLabel,
@@ -358,7 +353,6 @@ class OnOffSensor(DeviceType, device_type=0x0850):
         all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.Groups,
-        all_clusters.Scenes,
     }
 
 
@@ -382,7 +376,6 @@ class DoorLockController(DeviceType, device_type=0x000B):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Scenes,
         all_clusters.Groups,
         all_clusters.TimeSynchronization,
     }
@@ -406,7 +399,6 @@ class WindowCoveringController(DeviceType, device_type=0x0203):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Scenes,
         all_clusters.Groups,
     }
 
@@ -452,11 +444,10 @@ class Fan(DeviceType, device_type=0x002B):
     }
 
 
-class VideoPlayer(DeviceType, device_type=0x0023):
-    """Video Player."""
+class CastingVideoPlayer(DeviceType, device_type=0x0023):
+    """Casting Video Player."""
 
     clusters = {
-        all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.MediaPlayback,
         all_clusters.KeypadInput,
@@ -473,6 +464,68 @@ class VideoPlayer(DeviceType, device_type=0x0023):
     }
 
 
+class BasicVideoPlayer(DeviceType, device_type=0x0028):
+    """Basic Video Player."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.MediaPlayback,
+        all_clusters.KeypadInput,
+        all_clusters.MediaInput,
+        all_clusters.OnOff,
+        all_clusters.Channel,
+        all_clusters.AudioOutput,
+        all_clusters.LowPower,
+        all_clusters.WakeOnLan,
+        all_clusters.TargetNavigator,
+    }
+
+
+class CastingVideoClient(DeviceType, device_type=0x0029):
+    """Casting Video Client."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.Binding,
+        all_clusters.MediaPlayback,
+        all_clusters.ContentLauncher,
+        all_clusters.KeypadInput,
+        all_clusters.AccountLogin,
+        all_clusters.OnOff,
+        all_clusters.LevelControl,
+        all_clusters.WakeOnLan,
+        all_clusters.Channel,
+        all_clusters.TargetNavigator,
+        all_clusters.MediaInput,
+        all_clusters.LowPower,
+        all_clusters.AudioOutput,
+        all_clusters.ApplicationLauncher,
+        all_clusters.ApplicationBasic,
+    }
+
+
+class VideoRemoteControl(DeviceType, device_type=0x002A):
+    """Video Remote Control."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.Binding,
+        all_clusters.MediaPlayback,
+        all_clusters.ContentLauncher,
+        all_clusters.KeypadInput,
+        all_clusters.AccountLogin,
+        all_clusters.OnOff,
+        all_clusters.LevelControl,
+        all_clusters.WakeOnLan,
+        all_clusters.Channel,
+        all_clusters.TargetNavigator,
+        all_clusters.MediaInput,
+        all_clusters.LowPower,
+        all_clusters.AudioOutput,
+        all_clusters.ApplicationLauncher,
+    }
+
+
 class Speaker(DeviceType, device_type=0x0022):
     """Speaker."""
 
@@ -484,8 +537,8 @@ class Speaker(DeviceType, device_type=0x0022):
     }
 
 
-class ContentApplication(DeviceType, device_type=0x0024):
-    """Content Application."""
+class ContentApp(DeviceType, device_type=0x0024):
+    """Content App."""
 
     clusters = {
         all_clusters.Identify,
@@ -521,6 +574,7 @@ class AllClustersAppServerExample(DeviceType, device_type=0x0000):
         all_clusters.ColorControl,
         all_clusters.DoorLock,
         all_clusters.Groups,
+        all_clusters.IasZone,
         all_clusters.LevelControl,
         all_clusters.OnOff,
         all_clusters.Scenes,
