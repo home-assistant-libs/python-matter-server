@@ -33,7 +33,10 @@ def asdict_typed(obj, dict_factory):
 
         # Some (non-compliant) devices (e.g. all-clusters-app) causes TLV decoding errors
         # Ignore those when serializing...
-        if cls.__module__ == CLUSTER_ATTRIBUTE_NAMESPACE and cls.__qualname__ == "ValueDecodeFailure":
+        if (
+            cls.__module__ == CLUSTER_ATTRIBUTE_NAMESPACE
+            and cls.__qualname__ == "ValueDecodeFailure"
+        ):
             return None
 
         result = []
