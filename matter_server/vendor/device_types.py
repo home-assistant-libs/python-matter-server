@@ -39,6 +39,7 @@ class RootNode(DeviceType, device_type=0x0016):
         all_clusters.Basic,
         all_clusters.Descriptor,
         all_clusters.GeneralCommissioning,
+        all_clusters.PowerSourceConfiguration,
         all_clusters.TimeSynchronization,
         all_clusters.GroupKeyManagement,
         all_clusters.NetworkCommissioning,
@@ -53,6 +54,16 @@ class RootNode(DeviceType, device_type=0x0016):
         all_clusters.EthernetNetworkDiagnostics,
         all_clusters.WiFiNetworkDiagnostics,
         all_clusters.ThreadNetworkDiagnostics,
+    }
+
+
+class PowerSource(DeviceType, device_type=0x0011):
+    """Power Source."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.Descriptor,
+        all_clusters.PowerSource,
     }
 
 
@@ -93,6 +104,7 @@ class BridgedDevice(DeviceType, device_type=0x0013):
         all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.BridgedDeviceBasic,
+        all_clusters.PowerSourceConfiguration,
         all_clusters.PowerSource,
     }
 
