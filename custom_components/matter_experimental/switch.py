@@ -43,20 +43,20 @@ class MatterSwitch(MatterEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn switch on."""
-        await self._device.send_command(
+        await self._device_type_instance.send_command(
             payload=clusters.OnOff.Commands.On(),
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn switch off."""
-        await self._device.send_command(
+        await self._device_type_instance.send_command(
             payload=clusters.OnOff.Commands.Off(),
         )
 
     @callback
     def _update_from_device(self) -> None:
         """Update from device."""
-        self._attr_is_on = self._device.get_cluster(clusters.OnOff).onOff
+        self._attr_is_on = self._device_type_instance.get_cluster(clusters.OnOff).onOff
 
 
 @dataclass
