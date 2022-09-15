@@ -44,7 +44,9 @@ class MatterBinarySensor(MatterEntity, BinarySensorEntity):
     @callback
     def _update_from_device(self) -> None:
         """Update from device."""
-        self._attr_is_on = self._device.get_cluster(clusters.BooleanState).stateValue
+        self._attr_is_on = self._device_type_instance.get_cluster(
+            clusters.BooleanState
+        ).stateValue
 
 
 class MatterOccupancySensor(MatterBinarySensor):
@@ -55,7 +57,9 @@ class MatterOccupancySensor(MatterBinarySensor):
     @callback
     def _update_from_device(self) -> None:
         """Update from device."""
-        occupancy = self._device.get_cluster(clusters.OccupancySensing).occupancy
+        occupancy = self._device_type_instance.get_cluster(
+            clusters.OccupancySensing
+        ).occupancy
         # The first bit = if occupied
         self._attr_is_on = occupancy & 1 == 1
 
