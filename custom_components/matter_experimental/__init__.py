@@ -61,7 +61,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Config entry is being removed."""
     # Remove storage file.
     storage_path = get_matter_store(hass, entry).path
