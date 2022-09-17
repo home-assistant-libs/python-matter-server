@@ -1,6 +1,6 @@
 from __future__ import annotations
-import enum
 
+import enum
 import logging
 import typing
 from typing import TYPE_CHECKING
