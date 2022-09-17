@@ -12,12 +12,6 @@ OUTPUT_PYTHON = REPO_ROOT / "matter_server/vendor/device_types.py"
 
 
 def gen_cls_name(name: str):
-    # Temp, class definition of ContentApplication: Channel is wrong.
-    if patched := {
-        "TV Channel": "Channel",
-    }.get(name):
-        name = patched
-
     # Convert uppercase words to titlecase
     name = "".join(
         # Don't mess up wifi name
