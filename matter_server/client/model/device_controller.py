@@ -1,4 +1,5 @@
 from __future__ import annotations
+import enum
 
 import logging
 import typing
@@ -47,6 +48,19 @@ ReadEventsType = typing.List[
 ]
 
 
+class DiscoveryFilterType(enum.IntEnum):
+    # These must match chip::Dnssd::DiscoveryFilterType values (barring the naming convention)
+    NONE = 0
+    SHORT_DISCRIMINATOR = 1
+    LONG_DISCRIMINATOR = 2
+    VENDOR_ID = 3
+    DEVICE_TYPE = 4
+    COMMISSIONING_MODE = 5
+    INSTANCE_NAME = 6
+    COMMISSIONER = 7
+    COMPRESSED_FABRIC_ID = 8
+
+
 class DeviceController:
     def __init__(self, client: client.Client):
         self.client = client
@@ -61,12 +75,20 @@ class DeviceController:
             },
         )
 
-    async def commission_on_network(self, nodeId: int, setupPinCode: int):
+    async def commission_on_network(
+        self,
+        nodeId: int,
+        setupPinCode: int,
+        filterType: DiscoveryFilterType = DiscoveryFilterType.NONE,
+        filter: typing.Any = None,
+    ):
         return await self._async_send_command(
             "CommissionOnNetwork",
             {
                 "nodeId": nodeId,
                 "setupPinCode": setupPinCode,
+                "filterType": filterType,
+                "filter": filter,
             },
         )
 
