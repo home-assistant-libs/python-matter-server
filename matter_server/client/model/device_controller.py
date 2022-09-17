@@ -61,6 +61,15 @@ class DeviceController:
             },
         )
 
+    async def commission_on_network(self, nodeId: int, setupPinCode: int):
+        return await self._async_send_command(
+            "CommissionOnNetwork",
+            {
+                "nodeId": nodeId,
+                "setupPinCode": setupPinCode,
+            },
+        )
+
     async def set_wifi_credentials(self, ssid: str, credentials: str):
         return await self._async_send_command(
             "SetWiFiCredentials",
