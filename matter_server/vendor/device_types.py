@@ -61,7 +61,6 @@ class PowerSource(DeviceType, device_type=0x0011):
     """Power Source."""
 
     clusters = {
-        all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.PowerSource,
     }
@@ -71,7 +70,6 @@ class OtaRequestor(DeviceType, device_type=0x0012):
     """OTA Requestor."""
 
     clusters = {
-        all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.OtaSoftwareUpdateRequestor,
     }
@@ -81,17 +79,15 @@ class OtaProvider(DeviceType, device_type=0x0014):
     """OTA Provider."""
 
     clusters = {
-        all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.OtaSoftwareUpdateProvider,
     }
 
 
-class Bridge(DeviceType, device_type=0x000E):
-    """Bridge."""
+class Aggregator(DeviceType, device_type=0x000E):
+    """Aggregator."""
 
     clusters = {
-        all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.Actions,
     }
@@ -101,7 +97,6 @@ class BridgedDevice(DeviceType, device_type=0x0013):
     """Bridged Device."""
 
     clusters = {
-        all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.BridgedDeviceBasic,
         all_clusters.PowerSourceConfiguration,
@@ -276,7 +271,7 @@ class ContactSensor(DeviceType, device_type=0x0015):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
+        all_clusters.BooleanState,
     }
 
 
@@ -286,7 +281,7 @@ class LightSensor(DeviceType, device_type=0x0106):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
+        all_clusters.Binding,
         all_clusters.IlluminanceMeasurement,
     }
 
@@ -297,7 +292,7 @@ class OccupancySensor(DeviceType, device_type=0x0107):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
+        all_clusters.Binding,
         all_clusters.OccupancySensing,
     }
 
@@ -308,7 +303,6 @@ class TemperatureSensor(DeviceType, device_type=0x0302):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
         all_clusters.TemperatureMeasurement,
     }
 
@@ -319,7 +313,6 @@ class PressureSensor(DeviceType, device_type=0x0305):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
         all_clusters.PressureMeasurement,
     }
 
@@ -330,7 +323,6 @@ class FlowSensor(DeviceType, device_type=0x0306):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
         all_clusters.FlowMeasurement,
     }
 
@@ -341,7 +333,6 @@ class HumiditySensor(DeviceType, device_type=0x0307):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
         all_clusters.RelativeHumidityMeasurement,
     }
 
@@ -352,7 +343,7 @@ class OnOffSensor(DeviceType, device_type=0x0850):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
+        all_clusters.Binding,
     }
 
 
@@ -362,11 +353,9 @@ class DoorLock(DeviceType, device_type=0x000A):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Scenes,
-        all_clusters.Groups,
+        all_clusters.Binding,
         all_clusters.DoorLock,
-        all_clusters.ElectricalMeasurement,
-        all_clusters.TimeSynchronization,
+        all_clusters.PollControl,
     }
 
 
@@ -374,9 +363,8 @@ class DoorLockController(DeviceType, device_type=0x000B):
     """Door Lock Controller."""
 
     clusters = {
-        all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
+        all_clusters.Binding,
         all_clusters.TimeSynchronization,
     }
 
@@ -399,7 +387,7 @@ class WindowCoveringController(DeviceType, device_type=0x0203):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Groups,
+        all_clusters.Binding,
     }
 
 
@@ -409,8 +397,9 @@ class HeatingCoolingUnit(DeviceType, device_type=0x0300):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
+        all_clusters.Binding,
         all_clusters.Groups,
-        all_clusters.Thermostat,
+        all_clusters.Scenes,
         all_clusters.FanControl,
         all_clusters.LevelControl,
         all_clusters.OnOff,
@@ -423,14 +412,12 @@ class Thermostat(DeviceType, device_type=0x0301):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
+        all_clusters.Binding,
         all_clusters.Scenes,
         all_clusters.Groups,
         all_clusters.Thermostat,
+        all_clusters.TimeSynchronization,
         all_clusters.ThermostatUserInterfaceConfiguration,
-        all_clusters.FanControl,
-        all_clusters.TemperatureMeasurement,
-        all_clusters.OccupancySensing,
-        all_clusters.RelativeHumidityMeasurement,
     }
 
 
@@ -439,6 +426,17 @@ class Fan(DeviceType, device_type=0x002B):
 
     clusters = {
         all_clusters.Identify,
+        all_clusters.Groups,
+        all_clusters.FanControl,
+    }
+
+
+class Fan(DeviceType, device_type=0x002B):
+    """Fan."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.Descriptor,
         all_clusters.Groups,
         all_clusters.FanControl,
     }
@@ -570,6 +568,7 @@ class AllClustersAppServerExample(DeviceType, device_type=0x0000):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
+        all_clusters.Binding,
         all_clusters.BarrierControl,
         all_clusters.ColorControl,
         all_clusters.DoorLock,
@@ -586,4 +585,5 @@ class SecondaryNetworkCommissioningDeviceType(DeviceType, device_type=0xF002):
 
     clusters = {
         all_clusters.NetworkCommissioning,
+        all_clusters.Descriptor,
     }
