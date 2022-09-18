@@ -64,30 +64,6 @@ class DeviceType:
 """
     ]
 
-    # Temporary: fan is missing from matter_devices.xml. Inject it after thermostat
-    insert_idx = (
-        next(
-            idx
-            for idx, device in enumerate(data["configurator"]["deviceType"])
-            if device["typeName"] == "Matter Thermostat"
-        )
-        + 1
-    )
-    data["configurator"]["deviceType"].insert(
-        insert_idx,
-        {
-            "typeName": "Matter Fan",
-            "deviceId": {"#text": "0x002B"},
-            "clusters": {
-                "include": [
-                    {"@cluster": "Identify", "@server": "true"},
-                    {"@cluster": "Groups", "@server": "true"},
-                    {"@cluster": "Fan Control", "@server": "true"},
-                ]
-            },
-        },
-    )
-
     for device in data["configurator"]["deviceType"]:
         name = device["typeName"]
 

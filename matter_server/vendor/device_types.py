@@ -426,16 +426,6 @@ class Fan(DeviceType, device_type=0x002B):
 
     clusters = {
         all_clusters.Identify,
-        all_clusters.Groups,
-        all_clusters.FanControl,
-    }
-
-
-class Fan(DeviceType, device_type=0x002B):
-    """Fan."""
-
-    clusters = {
-        all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.Groups,
         all_clusters.FanControl,
