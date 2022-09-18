@@ -355,7 +355,6 @@ class DoorLock(DeviceType, device_type=0x000A):
         all_clusters.Descriptor,
         all_clusters.Binding,
         all_clusters.DoorLock,
-        all_clusters.PollControl,
     }
 
 

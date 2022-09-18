@@ -92,10 +92,14 @@ class DeviceType:
                 + ",".join(
                     f"all_clusters.{gen_cls_name(cluster['@cluster'])}"
                     for cluster in clusters
-                    # It's a server cluster
-                    if cluster["@server"] == "true"
-                    # It's optional server cluster
-                    or cluster["@serverLocked"] == "false"
+                    if (
+                        # It's a server cluster
+                        cluster["@server"] == "true"
+                        # It's optional server cluster
+                        or cluster["@serverLocked"] == "false"
+                    )
+                    # Temporary: PollControl is missing in Objects.py
+                    and cluster["@cluster"] != "Poll Control"
                 )
                 + ",}"  # extra comma to force black to do a cluster per line
             )
