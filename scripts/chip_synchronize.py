@@ -1,5 +1,4 @@
 import pathlib
-
 import subprocess
 
 REPO_ROOT = pathlib.Path(__file__).parent.parent
