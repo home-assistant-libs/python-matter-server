@@ -57,9 +57,9 @@
         "dataModelRevision": 1,
         "vendorName": "Nabu Casa",
         "vendorID": 65521,
-        "productName": "M5STAMP Lighting App",
+        "productName": "M5STAMP Contact Sensor App",
         "productID": 32768,
-        "nodeLabel": "My Cool Light",
+        "nodeLabel": "My Contact Sensor",
         "location": "XX",
         "hardwareVersion": 0,
         "hardwareVersionString": "v1.0",
@@ -710,7 +710,7 @@
         "featureMap": 1,
         "clusterRevision": 1,
         "_type": "chip.clusters.Objects.BooleanState"
-      },
+      }
     }
   },
   "events": [
