@@ -135,6 +135,6 @@ _On MacOs you will have to run above command with 'sudo' as it requires to inter
 
 Updating the Matter Server add-on
 
-1. Update the PyPI package version used by the Matter Server add-on by updating `MATTER_SERVER_VERSION` in the [`Dockerfile`](https://github.com/home-assistant/addons-development/blob/master/matter_server/Dockerfile)
+1. Update the PyPI package version and CHIP commit used by the Matter Server add-on by updating [`build.yaml`](https://github.com/home-assistant/addons-development/blob/master/matter_server/build.yaml)
 1. Bump the add-on version in [`config.yaml`](https://github.com/home-assistant/addons-development/blob/master/matter_server/config.yaml)
 1. Add a new entry for the new add-on version in the changelog [`CHANGELOG.md`](https://github.com/home-assistant/addons-development/blob/master/matter_server/CHANGELOG.md)
