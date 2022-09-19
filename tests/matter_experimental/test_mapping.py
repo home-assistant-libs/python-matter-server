@@ -33,7 +33,7 @@ async def test_fixture(hass: HomeAssistant, hass_storage, node_fixture):
 
     checks = json.loads((NODE_IN_HA_FIXTURES_ROOT / node_fixture.name).read_text())
 
-    assert (node.bridge_device_type_instance is not None) == checks["is_bridge"]
+    assert (node.aggregator_device_type_instance is not None) == checks["is_bridge"]
 
     assert len(node.node_devices) == len(checks["node_devices"])
 

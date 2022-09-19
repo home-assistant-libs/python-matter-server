@@ -8,6 +8,17 @@ commission:
       required: true
       selector:
         text:
+accept_shared_device:
+  name: Accept shared device
+  description: >
+    Add a shared device to your Matter network.
+  fields:
+    pin:
+      name: Pin code
+      required: true
+      selector:
+        text:
+
 set_wifi:
   name: Set Wi-Fi credentials
   description: >

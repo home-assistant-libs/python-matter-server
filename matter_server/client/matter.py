@@ -100,6 +100,25 @@ class Matter:
 
         await self._interview_node(node_id)
 
+    async def commission_on_network(self, pin: int) -> bool:
+        """Commission a new device."""
+        if self._commission_lock is None:
+            self._commission_lock = asyncio.Lock()
+
+        async with self._commission_lock:
+            node_id = self.next_node_id
+            if not await self.client.driver.device_controller.commission_on_network(
+                node_id, pin
+            ):
+                return False
+            self._nodes[node_id] = None
+            self.next_node_id += 1
+            # Save right away because we don't want to lose node IDs
+            await self.adapter.save_data(self._data_to_save())
+
+        await self._interview_node(node_id)
+        return True
+
     async def delete_node(self, node_id: int) -> None:
         """Delete a node."""
         # TODO notify anyone using MatterNode

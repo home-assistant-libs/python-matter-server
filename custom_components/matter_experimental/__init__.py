@@ -125,6 +125,22 @@ def _async_init_services(hass: HomeAssistant) -> None:
         vol.Schema({"code": str}),
     )
 
+    async def accept_shared_device(call: ServiceCall) -> None:
+        """Accept a shared device."""
+        matter: Matter = list(hass.data[DOMAIN].values())[0]
+        try:
+            await matter.commission_on_network(call.data["pin"])
+        except FailedCommand as err:
+            raise HomeAssistantError(str(err)) from err
+
+    async_register_admin_service(
+        hass,
+        DOMAIN,
+        "accept_shared_device",
+        accept_shared_device,
+        vol.Schema({"pin": vol.Coerce(int)}),
+    )
+
     async def set_wifi(call: ServiceCall) -> None:
         """Handle set wifi creds."""
         matter: Matter = list(hass.data[DOMAIN].values())[0]

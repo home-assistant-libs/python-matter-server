@@ -12,12 +12,6 @@ OUTPUT_PYTHON = REPO_ROOT / "matter_server/vendor/device_types.py"
 
 
 def gen_cls_name(name: str):
-    # Temp, class definition of ContentApplication: Channel is wrong.
-    if patched := {
-        "TV Channel": "Channel",
-    }.get(name):
-        name = patched
-
     # Convert uppercase words to titlecase
     name = "".join(
         # Don't mess up wifi name
@@ -70,30 +64,6 @@ class DeviceType:
 """
     ]
 
-    # Temporary: fan is missing from matter_devices.xml. Inject it after thermostat
-    insert_idx = (
-        next(
-            idx
-            for idx, device in enumerate(data["configurator"]["deviceType"])
-            if device["typeName"] == "Matter Thermostat"
-        )
-        + 1
-    )
-    data["configurator"]["deviceType"].insert(
-        insert_idx,
-        {
-            "typeName": "Matter Fan",
-            "deviceId": {"#text": "0x002B"},
-            "clusters": {
-                "include": [
-                    {"@cluster": "Identify", "@server": "true"},
-                    {"@cluster": "Groups", "@server": "true"},
-                    {"@cluster": "Fan Control", "@server": "true"},
-                ]
-            },
-        },
-    )
-
     for device in data["configurator"]["deviceType"]:
         name = device["typeName"]
 
@@ -122,10 +92,15 @@ class DeviceType:
                 + ",".join(
                     f"all_clusters.{gen_cls_name(cluster['@cluster'])}"
                     for cluster in clusters
-                    # It's a server cluster
-                    if cluster["@server"] == "true"
-                    # It's optional server cluster
-                    or cluster["@serverLocked"] == "false"
+                    if (
+                        # It's a server cluster
+                        cluster["@server"] == "true"
+                        # It's optional server cluster
+                        or cluster["@serverLocked"] == "false"
+                    )
+                    # Temporary: PollControl will be removed from matter_devices.xml
+                    # https://github.com/project-chip/connectedhomeip/pull/22718
+                    and cluster["@cluster"] != "Poll Control"
                 )
                 + ",}"  # extra comma to force black to do a cluster per line
             )

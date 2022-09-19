@@ -113,6 +113,8 @@ class CHIPJSONDecoder(json.JSONDecoder):
 
     def _get_class_from_module(self, cluster_cls, type: str):
         for cluster_subtype in type.split("."):
+            if not hasattr(cluster_cls, cluster_subtype):
+                raise TypeError(f"Unable to resolve {type}")
             cluster_cls = getattr(cluster_cls, cluster_subtype)
 
         return cluster_cls

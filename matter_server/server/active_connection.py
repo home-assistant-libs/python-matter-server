@@ -114,12 +114,30 @@ class ActiveConnection:
 
     @commands.register("device_controller.CommissionWithCode")
     async def _handle_device_controller_CommissionWithCode(self, msg: CommandMessage):
+        """Commission a device.
+
+        Return boolean if successful.
+        """
         if not self.server.stack.wifi_cred_set:
             self.logger.warning("Received commissioning without Wi-Fi set")
 
         result = await self.loop.run_in_executor(
             None,
             partial(self.server.stack.device_controller.CommissionWithCode, **msg.args),
+        )
+        self._send_message(SuccessResultMessage(msg.messageId, {"raw": result}))
+
+    @commands.register("device_controller.CommissionOnNetwork")
+    async def _handle_device_controller_CommissionOnNetwork(self, msg: CommandMessage):
+        """Commission a device already connected to the network.
+
+        Return boolean if successful.
+        """
+        result = await self.loop.run_in_executor(
+            None,
+            partial(
+                self.server.stack.device_controller.CommissionOnNetwork, **msg.args
+            ),
         )
         self._send_message(SuccessResultMessage(msg.messageId, {"raw": result}))
 

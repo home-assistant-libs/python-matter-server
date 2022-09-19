@@ -302,6 +302,8 @@ class Client:
                 )
             else:
                 obj = json.loads(msg.data, cls=CHIPJSONDecoder)
+        except TypeError as err:
+            raise InvalidMessage(f"Received unsupported JSON: {err}") from err
         except ValueError as err:
             raise InvalidMessage("Received invalid JSON.") from err
 
