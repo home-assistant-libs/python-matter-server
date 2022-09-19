@@ -7,10 +7,10 @@ from matter_server.vendor import device_types
 
 IGNORE_DEVICES = {
     device_types.AllClustersAppServerExample,
-    device_types.Bridge,
+    device_types.Aggregator,
     device_types.BridgedDevice,
     device_types.ColorDimmerSwitch,
-    device_types.ContentApplication,
+    device_types.ContentApp,
     device_types.ControlBridge,
     device_types.DimmerSwitch,
     device_types.DoorLockController,

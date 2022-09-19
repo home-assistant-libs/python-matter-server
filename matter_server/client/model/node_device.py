@@ -56,7 +56,7 @@ class MatterBridgedNodeDevice(AbstractMatterNodeDevice):
     def __init__(
         self,
         bridged_device_type_instance: MatterDeviceTypeInstance[
-            device_types.BridgedDevice
+            device_types.AggregatordDevice
         ],
     ) -> None:
         self.bridged_device_type_instance = bridged_device_type_instance

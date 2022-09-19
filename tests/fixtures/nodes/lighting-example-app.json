@@ -11,11 +11,11 @@
         "_type": "chip.clusters.Objects.Groups"
       },
       "Descriptor": {
-        "deviceList": [
+        "deviceTypeList": [
           {
             "type": 22,
             "revision": 1,
-            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceType"
+            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceTypeStruct"
           }
         ],
         "serverList": [
@@ -723,11 +723,11 @@
         "_type": "chip.clusters.Objects.LevelControl"
       },
       "Descriptor": {
-        "deviceList": [
+        "deviceTypeList": [
           {
             "type": 257,
             "revision": 1,
-            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceType"
+            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceTypeStruct"
           }
         ],
         "serverList": [3, 4, 6, 8, 29, 768, 1030],
@@ -748,7 +748,7 @@
         "currentY": 24701,
         "driftCompensation": null,
         "compensationText": null,
-        "colorTemperature": 0,
+        "colorTemperatureMireds": 0,
         "colorMode": 2,
         "options": 0,
         "numberOfPrimaries": 0,

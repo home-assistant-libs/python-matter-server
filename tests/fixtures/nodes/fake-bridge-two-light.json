@@ -2,16 +2,16 @@
   "attributes": {
     "0": {
       "Descriptor": {
-        "deviceList": [
+        "deviceTypeList": [
           {
             "type": 22,
             "revision": 1,
-            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceType"
+            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceTypeStruct"
           },
           {
             "type": 14,
             "revision": 1,
-            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceType"
+            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceTypeStruct"
           }
         ],
         "serverList": [29, 37, 40, 48, 49, 50, 51, 60, 62, 64, 65],
@@ -73,16 +73,16 @@
         "_type": "chip.clusters.Objects.OnOff"
       },
       "Descriptor": {
-        "deviceList": [
+        "deviceTypeList": [
           {
             "type": 256,
             "revision": 1,
-            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceType"
+            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceTypeStruct"
           },
           {
             "type": 19,
             "revision": 1,
-            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceType"
+            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceTypeStruct"
           }
         ],
         "serverList": [6, 29, 57, 768, 8, 40],
@@ -129,16 +129,16 @@
         "_type": "chip.clusters.Objects.OnOff"
       },
       "Descriptor": {
-        "deviceList": [
+        "deviceTypeList": [
           {
             "type": 256,
             "revision": 1,
-            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceType"
+            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceTypeStruct"
           },
           {
             "type": 19,
             "revision": 1,
-            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceType"
+            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceTypeStruct"
           }
         ],
         "serverList": [6, 29, 57, 768, 40],

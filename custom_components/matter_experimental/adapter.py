@@ -162,7 +162,7 @@ class MatterAdapter(AbstractMatterAdapter):
 
         bridge_unique_id: str | None = None
 
-        if node.bridge_device_type_instance is not None:
+        if node.aggregator_device_type_instance is not None:
             node_info = node.root_device_type_instance.get_cluster(all_clusters.Basic)
             self._create_device_registry(
                 node_info, node_info.nodeLabel or "Hub device", None
