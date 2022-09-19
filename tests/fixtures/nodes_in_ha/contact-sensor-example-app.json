@@ -4,14 +4,14 @@
     {
       "device_type_instances": [
         {
-          "type": "BinarySensor",
+          "type": "ContactSensor",
           "platforms": ["binary_sensor"],
           "entities": [
             {
-              "entity_id": "binary_sensor.my_contact_sensor",
+              "entity_id": "binary_sensor.my_sensor_contact",
               "state": "off",
               "attributes": {
-                "supported_features": 0,
+                "device_class": "door"
               }
             }
           ]

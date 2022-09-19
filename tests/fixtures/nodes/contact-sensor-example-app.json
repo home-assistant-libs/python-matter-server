@@ -11,11 +11,11 @@
         "_type": "chip.clusters.Objects.Groups"
       },
       "Descriptor": {
-        "deviceList": [
+        "deviceTypeList": [
           {
             "type": 22,
             "revision": 1,
-            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceType"
+            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceTypeStruct"
           }
         ],
         "serverList": [
@@ -59,7 +59,7 @@
         "vendorID": 65521,
         "productName": "M5STAMP Contact Sensor App",
         "productID": 32768,
-        "nodeLabel": "My Contact Sensor",
+        "nodeLabel": "My Sensor",
         "location": "XX",
         "hardwareVersion": 0,
         "hardwareVersionString": "v1.0",
@@ -683,11 +683,11 @@
         "_type": "chip.clusters.Objects.Groups"
       },
       "Descriptor": {
-        "deviceList": [
+        "deviceTypeList": [
           {
             "type": 21,
             "revision": 1,
-            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceType"
+            "_type": "chip.clusters.Objects.Descriptor.Structs.DeviceTypeStruct"
           }
         ],
         "serverList": [3, 4, 29, 69],
