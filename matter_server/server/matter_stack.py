@@ -2,7 +2,6 @@ import logging
 
 from chip.ChipDeviceCtrl import ChipDeviceController
 from chip.ChipStack import ChipStack
-from chip.FabricAdmin import FabricAdmin
 import chip.logging
 import chip.native
 
@@ -32,7 +31,7 @@ class MatterStack:
         self.certificate_authority_manager.LoadAuthoritiesFromStorage()
 
         if len(self.certificate_authority_manager.activeCaList) == 0:
-            ca = certificate_authority_manager.NewCertificateAuthority()
+            ca = self.certificate_authority_manager.NewCertificateAuthority()
             ca.NewFabricAdmin(vendorId=0xFFF1, fabricId=1)
         elif len(self.certificate_authority_manager.activeCaList[0].adminList) == 0:
             self.certificate_authority_manager.activeCaList[0].NewFabricAdmin(
