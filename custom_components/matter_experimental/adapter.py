@@ -111,7 +111,6 @@ class MatterAdapter(AbstractMatterAdapter):
         self.config_entry = config_entry
         self.logger = logging.getLogger(__name__)
         self._store = get_matter_store(hass, config_entry)
-        self._fallback_store = get_matter_fallback_store(hass, config_entry)
         self.platform_handlers: dict[Platform, AddEntitiesCallback] = {}
         self._platforms_set_up = asyncio.Event()
         self._node_lock: dict[int, asyncio.Lock] = {}
@@ -129,8 +128,11 @@ class MatterAdapter(AbstractMatterAdapter):
         try:
             return await self._store.async_load()
         except Exception:
-            data = await self._fallback_store.async_load()
-            # Make sure the stack does not attempt to use node data
+            # Exception happens when the stored data is not deserializable with new Matter models
+            data = await get_matter_fallback_store(
+                self.hass, self.config_entry
+            ).async_load()
+            # Remove the serialized matter data. Devices will be re-interviewed.
             del data["node_interview_version"]
             return data
 
