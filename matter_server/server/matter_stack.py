@@ -20,18 +20,30 @@ class MatterStack:
         _LOGGER.info("Setup CHIP Controller Server")
         chip.native.Init()
         chip.logging.RedirectToPythonLogging()
-        self.stack = ChipStack(persistentStoragePath=storage_path, enableServerInteractions=False)
-        self.certificate_authority_manager = chip.CertificateAuthority.CertificateAuthorityManager(self.stack, self.stack.GetStorageManager())
+        self.stack = ChipStack(
+            persistentStoragePath=storage_path, enableServerInteractions=True
+        )
+        self.certificate_authority_manager = (
+            chip.CertificateAuthority.CertificateAuthorityManager(
+                self.stack, self.stack.GetStorageManager()
+            )
+        )
 
         self.certificate_authority_manager.LoadAuthoritiesFromStorage()
 
-        if (len(self.certificate_authority_manager.activeCaList) == 0):
+        if len(self.certificate_authority_manager.activeCaList) == 0:
             ca = certificate_authority_manager.NewCertificateAuthority()
             ca.NewFabricAdmin(vendorId=0xFFF1, fabricId=1)
-        elif (len(self.certificate_authority_manager.activeCaList[0].adminList) == 0):
-            self.certificate_authority_manager.activeCaList[0].NewFabricAdmin(vendorId=0xFFF1, fabricId=1)
+        elif len(self.certificate_authority_manager.activeCaList[0].adminList) == 0:
+            self.certificate_authority_manager.activeCaList[0].NewFabricAdmin(
+                vendorId=0xFFF1, fabricId=1
+            )
 
-        self.device_controller = self.certificate_authority_manager.activeCaList[0].adminList[0].NewController()
+        self.device_controller = (
+            self.certificate_authority_manager.activeCaList[0]
+            .adminList[0]
+            .NewController()
+        )
         _LOGGER.info("CHIP Controller Stack initialized")
         self.fabric_id = self.device_controller.fabricId
         self.compressed_fabric_id = self.device_controller.GetCompressedFabricId()
