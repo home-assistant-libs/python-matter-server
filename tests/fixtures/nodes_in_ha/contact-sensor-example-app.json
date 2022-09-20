@@ -1,0 +1,22 @@
+{
+  "is_bridge": false,
+  "node_devices": [
+    {
+      "device_type_instances": [
+        {
+          "type": "ContactSensor",
+          "platforms": ["binary_sensor"],
+          "entities": [
+            {
+              "entity_id": "binary_sensor.my_sensor_contact",
+              "state": "off",
+              "attributes": {
+                "device_class": "door"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
