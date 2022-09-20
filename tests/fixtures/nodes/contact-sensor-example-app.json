@@ -549,7 +549,7 @@
         "multiPressMax": null,
         "generatedCommandList": [],
         "acceptedCommandList": [],
-        "attributeList": [65528, 65529, 65531, 65532, 65533],
+        "attributeList": [0, 1, 2, 65528, 65529, 65531, 65532, 65533],
         "featureMap": 0,
         "clusterRevision": 1,
         "_type": "chip.clusters.Objects.Switch"
