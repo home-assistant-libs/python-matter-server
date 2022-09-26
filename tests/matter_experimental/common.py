@@ -106,12 +106,12 @@ def load_and_parse_node_fixture(fixture: str):
 
 
 async def setup_integration_with_node_fixture(
-    hass: HomeAssistant, hass_storage, mock_matter, node_fixture: str
+    hass: HomeAssistant, hass_storage, node_fixture: str
 ) -> MatterNode:
     """Set up Matter integration with fixture as node."""
     node_data = load_and_parse_node_fixture(node_fixture)
     node = MatterNode(
-        mock_matter,
+        await get_mock_matter(),
         node_data,
     )
     config_entry = MockConfigEntry(
