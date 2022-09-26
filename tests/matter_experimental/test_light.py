@@ -1,8 +1,8 @@
 """Test Matter lights."""
 
-from matter_server.vendor.chip.clusters import Objects as clusters
-
 import pytest
+
+from matter_server.vendor.chip.clusters import Objects as clusters
 
 from tests.matter_experimental.common import setup_integration_with_node_fixture
 

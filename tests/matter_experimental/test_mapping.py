@@ -10,10 +10,10 @@ import pytest
 
 from custom_components.matter_experimental.const import DOMAIN
 from custom_components.matter_experimental.device_platform import DEVICE_PLATFORM
-from tests.matter_experimental.common import setup_integration_with_node_fixture
 
 from ..fixtures import NODE_FIXTURES_ROOT, NODE_IN_HA_FIXTURES_ROOT
 
+from tests.matter_experimental.common import setup_integration_with_node_fixture
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant

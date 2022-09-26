@@ -1,6 +1,7 @@
 """Show mappings for given JSON."""
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import json
 import os
@@ -125,10 +126,10 @@ def nodes_from_data(data):
 
 
 def get_nodes():
-    mock_matter = get_mock_matter()
+    matter = asyncio.run(get_mock_matter())
 
     return [
-        MatterNode(mock_matter, node_data)
+        MatterNode(matter, node_data)
         for node_data in nodes_from_data(parse_data(resolve_input()))
     ]
 

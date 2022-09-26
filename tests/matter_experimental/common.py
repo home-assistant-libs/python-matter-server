@@ -1,25 +1,29 @@
 from __future__ import annotations
 
+import asyncio
 from functools import cache
 import json
-import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock, patch
 
+import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
 from matter_server.client.client import Client
 from matter_server.client.model.driver import Driver
-from tests.fixtures import NODE_FIXTURES_ROOT
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 from matter_server.client.model.node import MatterNode
-
 from matter_server.common import json_utils
+from matter_server.common.model.message import ServerInformation
 from matter_server.vendor.chip.clusters.ObjectsVersion import CLUSTER_OBJECT_VERSION
+
+from tests.fixtures import NODE_FIXTURES_ROOT
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 
+MOCK_FABRIC_ID = 12341234
 MOCK_COMPR_FABRIC_ID = 1234
 
 
@@ -30,9 +34,12 @@ class MockClient(Client):
     mock_sent_commands = []
 
     def __init__(self) -> None:
+        super().__init__("mock-url", None)
         self.mock_commands: dict[type, Any] = {}
         self.mock_sent_commands = []
-        super().__init__("mock-url", None)
+        self.server_info = ServerInformation(
+            fabricId=MOCK_FABRIC_ID, compressedFabricId=MOCK_COMPR_FABRIC_ID
+        )
 
     async def connect(self):
         self.server_info = Mock(compressedFabricId=MOCK_COMPR_FABRIC_ID)
@@ -75,7 +82,13 @@ class MockClient(Client):
         return await super().async_send_command_no_wait(command, args, require_schema)
 
 
-def get_mock_matter():
+@pytest.fixture
+async def mock_matter():
+    """Mock matter fixture."""
+    return await get_mock_matter()
+
+
+async def get_mock_matter():
     """Get mock Matter."""
     return Mock(
         adapter=Mock(logger=logging.getLogger("mock_matter")), client=MockClient()
@@ -93,12 +106,12 @@ def load_and_parse_node_fixture(fixture: str):
 
 
 async def setup_integration_with_node_fixture(
-    hass: HomeAssistant, hass_storage, node_fixture: str
+    hass: HomeAssistant, hass_storage, mock_matter, node_fixture: str
 ) -> MatterNode:
     """Set up Matter integration with fixture as node."""
     node_data = load_and_parse_node_fixture(node_fixture)
     node = MatterNode(
-        get_mock_matter(),
+        mock_matter,
         node_data,
     )
     config_entry = MockConfigEntry(
