@@ -1,6 +1,7 @@
 """Show mappings for given JSON."""
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import json
 import os
@@ -12,7 +13,7 @@ from custom_components.matter_experimental.device_platform import DEVICE_PLATFOR
 from matter_server.client.model.node import MatterNode
 from matter_server.common import json_utils
 
-from tests.test_utils.mock_matter import get_mock_matter
+from tests.matter_experimental.common import get_mock_matter
 
 if TYPE_CHECKING:
     from matter_server.client.model.device_type_instance import MatterDeviceTypeInstance
@@ -125,10 +126,10 @@ def nodes_from_data(data):
 
 
 def get_nodes():
-    mock_matter = get_mock_matter()
+    matter = asyncio.run(get_mock_matter())
 
     return [
-        MatterNode(mock_matter, node_data)
+        MatterNode(matter, node_data)
         for node_data in nodes_from_data(parse_data(resolve_input()))
     ]
 
