@@ -3,7 +3,8 @@ from __future__ import annotations
 from functools import cache
 import json
 import asyncio
-from typing import TYPE_CHECKING
+import logging
+from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock, patch
 
 from matter_server.client.client import Client
@@ -15,8 +16,6 @@ from matter_server.client.model.node import MatterNode
 from matter_server.common import json_utils
 from matter_server.vendor.chip.clusters.ObjectsVersion import CLUSTER_OBJECT_VERSION
 
-from tests.test_utils.mock_matter import get_mock_matter
-
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
@@ -27,6 +26,13 @@ MOCK_COMPR_FABRIC_ID = 1234
 class MockClient(Client):
 
     mock_client_disconnect: asyncio.Event
+    mock_commands: dict[type, Any] = {}
+    mock_sent_commands = []
+
+    def __init__(self) -> None:
+        self.mock_commands: dict[type, Any] = {}
+        self.mock_sent_commands = []
+        super().__init__("mock-url", None)
 
     async def connect(self):
         self.server_info = Mock(compressedFabricId=MOCK_COMPR_FABRIC_ID)
@@ -36,6 +42,44 @@ class MockClient(Client):
         driver_ready.set()
         self.mock_client_disconnect = asyncio.Event()
         await self.mock_client_disconnect.wait()
+
+    def mock_command(self, command_type: type, response: Any) -> None:
+        """Mock a command."""
+        self.mock_commands[command_type] = response
+
+    async def async_send_command(
+        self,
+        command: str,
+        args: dict[str, Any],
+        require_schema: int | None = None,
+    ) -> dict:
+        """Wrapper to send a command to allow mocking commands."""
+        if command == "device_controller.SendCommand" and (
+            (cmd_type := type(args.get("payload"))) in self.mock_commands
+        ):
+            self.mock_sent_commands.append(args)
+            return self.mock_commands[cmd_type]
+
+        return await super().async_send_command(command, args, require_schema)
+
+    async def async_send_command_no_wait(
+        self, command: str, args: dict[str, Any], require_schema: int | None = None
+    ) -> None:
+        """Send a command without waiting for the response."""
+        if command == "SendCommand" and (
+            (cmd_type := type(args.get("payload"))) in self.mock_commands
+        ):
+            self.mock_sent_commands.append(args)
+            return self.mock_commands[cmd_type]
+
+        return await super().async_send_command_no_wait(command, args, require_schema)
+
+
+def get_mock_matter():
+    """Get mock Matter."""
+    return Mock(
+        adapter=Mock(logger=logging.getLogger("mock_matter")), client=MockClient()
+    )
 
 
 @cache
@@ -78,7 +122,9 @@ async def setup_integration_with_node_fixture(
     async def mock_init_matter_device(self):
         self._update_from_device()
 
-    with patch("matter_server.client.matter.Client", MockClient), patch(
+    with patch(
+        "matter_server.client.matter.Client", return_value=node.matter.client
+    ), patch(
         "custom_components.matter_experimental.entity.MatterEntity.init_matter_device",
         mock_init_matter_device,
     ):

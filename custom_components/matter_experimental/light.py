@@ -64,7 +64,11 @@ class MatterLight(MatterEntity, LightEntity):
         )
 
         await self._device_type_instance.send_command(
-            payload=clusters.LevelControl.Commands.MoveToLevelWithOnOff(level=level)
+            payload=clusters.LevelControl.Commands.MoveToLevelWithOnOff(
+                level=level,
+                # It's required in TLV. We don't implement transition time yet.
+                transitionTime=0,
+            )
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
