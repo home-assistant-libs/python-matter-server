@@ -12,7 +12,7 @@ from custom_components.matter_experimental.device_platform import DEVICE_PLATFOR
 from matter_server.client.model.node import MatterNode
 from matter_server.common import json_utils
 
-from tests.test_utils.mock_matter import get_mock_matter
+from tests.matter_experimental.common import get_mock_matter
 
 if TYPE_CHECKING:
     from matter_server.client.model.device_type_instance import MatterDeviceTypeInstance
