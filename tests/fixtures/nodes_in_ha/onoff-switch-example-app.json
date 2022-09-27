@@ -1,0 +1,22 @@
+{
+  "is_bridge": false,
+  "node_devices": [
+    {
+      "device_type_instances": [
+        {
+          "type": "OnOffPlugInUnit",
+          "platforms": ["switch"],
+          "entities": [
+            {
+              "entity_id": "switch.my_switch",
+              "state": "off",
+              "attributes": {
+                "device_class": "outlet"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
