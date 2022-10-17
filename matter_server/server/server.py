@@ -15,13 +15,13 @@ if TYPE_CHECKING:
 class MatterServer:
     """Serve Matter over WS."""
 
-    def __init__(self, stack: MatterStack):
+    def __init__(self, stack: MatterStack) -> None:
         self.stack = stack
         self.logger = logging.getLogger(__name__)
         self.app = web.Application()
         self.loop = asyncio.get_running_loop()
-        mount_websocket(self, "/chip_ws")
+        mount_websocket(self, "/ws")
 
-    def run(self, host, port):
+    def run(self, host: str, port: int) -> None:
         """Run the server."""
         web.run_app(self.app, host=host, port=port, loop=self.loop)

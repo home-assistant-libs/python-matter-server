@@ -26,7 +26,7 @@ def mount_websocket(server: MatterServer, path: str) -> None:
     """Mount the websocket endpoint."""
     clients = weakref.WeakSet()
 
-    async def _handle_chip_ws(request):
+    async def _handle_ws(request):
         connection = WebSocketHandler(server, request)
         try:
             clients.add(connection)
@@ -39,11 +39,11 @@ def mount_websocket(server: MatterServer, path: str) -> None:
             await client.disconnect()
 
     server.app.on_shutdown.append(_handle_shutdown)
-    server.app.router.add_route("GET", path, _handle_chip_ws)
+    server.app.router.add_route("GET", path, _handle_ws)
 
 
 class WebSocketAdapter(logging.LoggerAdapter):
-    """Add connection id to websocket messages."""
+    """Add connection id to websocket log messages."""
 
     def process(self, msg: str, kwargs: Any) -> tuple[str, Any]:
         """Add connid to websocket log messages."""
