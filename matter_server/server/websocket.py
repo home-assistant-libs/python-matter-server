@@ -103,7 +103,7 @@ class WebSocketHandler:
         if self._writer_task is not None:
             self._writer_task.cancel()
 
-    async def disconnect(self):
+    async def disconnect(self) -> None:
         self._cancel()
         await self._writer_task
 

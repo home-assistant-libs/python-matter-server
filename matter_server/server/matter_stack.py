@@ -9,13 +9,15 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class MatterStack:
+    """Class that holds the connection to the CHIP SDK."""
 
     # To track if wifi credentials set this session.
     wifi_cred_set = False
     device_controller: ChipDeviceController
     certificate_authority_manager = None
 
-    def __init__(self, storage_path):
+    def __init__(self, storage_path: str) -> None:
+        """Initialize Matter Stack."""
         _LOGGER.info("Setup CHIP Controller Server")
         chip.native.Init()
         chip.logging.RedirectToPythonLogging()
@@ -47,7 +49,8 @@ class MatterStack:
         self.fabric_id = self.device_controller.fabricId
         self.compressed_fabric_id = self.device_controller.GetCompressedFabricId()
 
-    def shutdown(self):
+    def shutdown(self) -> None:
+        """ "Shutdown Matter Stack."""
         _LOGGER.info("Shutdown CHIP Controller Server")
         self.device_controller.Shutdown()
         self.stack.Shutdown()
