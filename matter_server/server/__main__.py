@@ -7,7 +7,7 @@ import sys
 
 import coloredlogs
 
-from .matter_stack import MatterStack
+from .stack import MatterStack
 from .server import MatterServer
 
 _LOGGER = logging.getLogger(__package__)
@@ -55,13 +55,16 @@ def main() -> int:
     debug = os.getenv("CHIP_WS_DEBUG") is not None
 
     coloredlogs.install(level=logging.DEBUG if debug else args.log_level.upper())
+
+    # Instantiate the Matter Stack using the SDK using the given storage path
     stack = MatterStack(storage_path)
 
-    loop = asyncio.get_event_loop()
+    # Instantiate the websocket API/server
 
     async def create_server():
         return MatterServer(stack)
 
+    loop = asyncio.get_event_loop()
     server = loop.run_until_complete(create_server())
     server.run(host, port)
     stack.shutdown()

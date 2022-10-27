@@ -62,11 +62,11 @@ class DiscoveryFilterType(enum.IntEnum):
 
 
 class DeviceController:
-    def __init__(self, client: client.Client):
+    def __init__(self, client: client.Client) -> None:
         self.client = client
         self.subscriptions: dict[int, Subscription] = {}
 
-    async def commission_with_code(self, setupPayload: str, nodeid: int):
+    async def commission_with_code(self, setupPayload: str, nodeid: int) -> bool:
         return await self._async_send_command(
             "CommissionWithCode",
             {
@@ -77,22 +77,22 @@ class DeviceController:
 
     async def commission_on_network(
         self,
-        nodeId: int,
+        nodeid: int,
         setupPinCode: int,
         filterType: DiscoveryFilterType = DiscoveryFilterType.NONE,
         filter: typing.Any = None,
-    ):
+    ) -> bool:
         return await self._async_send_command(
             "CommissionOnNetwork",
             {
-                "nodeId": nodeId,
+                "nodeid": nodeid,
                 "setupPinCode": setupPinCode,
                 "filterType": filterType,
                 "filter": filter,
             },
         )
 
-    async def set_wifi_credentials(self, ssid: str, credentials: str):
+    async def set_wifi_credentials(self, ssid: str, credentials: str) -> bool:
         return await self._async_send_command(
             "SetWiFiCredentials",
             {
@@ -101,16 +101,17 @@ class DeviceController:
             },
         )
 
-    async def set_thread_operational_dataset(self, dataset: bytes):
+    async def set_thread_operational_dataset(self, dataset: bytes) -> bool:
         return await self._async_send_command(
             "SetThreadOperationalDataset",
             {
-                "threadOperationalDataset": dataset,
+                "dataset": dataset,
             },
         )
 
-    async def resolve_node(self, nodeid: int):
-        return await self._async_send_command(
+    async def resolve_node(self, nodeid: int) -> None:
+        """Resolve the DNS-SD name for given Node ID and update address."""
+        await self._async_send_command(
             "ResolveNode",
             {
                 "nodeid": nodeid,

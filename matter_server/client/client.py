@@ -16,17 +16,17 @@ import uuid
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
 
+from matter_server.common.model.server_information import ServerInformation
+
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 from ..common.model.message import (
     CommandMessage,
     ErrorResultMessage,
     Message,
     ResultMessage,
-    ServerInformation,
     SubscriptionReportMessage,
     SuccessResultMessage,
 )
-from ..common.model.version import VersionInfo
 from .const import MAX_SERVER_SCHEMA_VERSION, MIN_SERVER_SCHEMA_VERSION
 from .exceptions import (
     CannotConnect,
@@ -70,8 +70,7 @@ class Client:
         self.driver: Driver | None = None
         # The WebSocket client
         self._client: ClientWebSocketResponse | None = None
-        # Version of the connected server
-        self.version: VersionInfo | None = None
+        # (version)Info of the connected server
         self.server_info: ServerInformation | None = None
         self.schema_version: int = schema_version
         self.logger = logging.getLogger(__package__)
@@ -199,9 +198,9 @@ class Client:
         self.server_info = msg.result
 
         self.logger.info(
-            "Connected to Server %s, Driver %s, Using Schema %s",
+            "Connected to Server %s, CHIP SDK %s, Using Schema %s",
             version.server_version,
-            version.driver_version,
+            version.sdk_version,
             self.schema_version,
         )
 

@@ -1,0 +1,1 @@
+"""Implementation of a Websocket-based Matter proxy (using CHIP SDK)."""
