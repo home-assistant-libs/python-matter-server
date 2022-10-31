@@ -1,4 +1,4 @@
 isort==5.10.1
 black==22.10.0
 flake8==5.0.4
-pytest-homeassistant-custom-component==0.12.10
+pytest-homeassistant-custom-component==0.12.14
