@@ -5,40 +5,36 @@ import os
 from pathlib import Path
 import sys
 
+from aiorun import run
 import coloredlogs
 
-from .stack import MatterStack
 from .server import MatterServer
 
 _LOGGER = logging.getLogger(__package__)
 
 
-def get_arguments() -> argparse.Namespace:
-    """Get parsed passed in arguments."""
+# Get parsed passed in arguments.
+parser = argparse.ArgumentParser(
+    description="Matter Controller Server using WebSockets."
+)
+parser.add_argument(
+    "--log-file",
+    type=str,
+    default=None,
+    help="Log file to write to.  If not set, matter_server.log is used",
+)
+parser.add_argument(
+    "--log-level",
+    default="info",
+    help="Provide logging level. Example --log-level debug, default=info, possible=(critical, error, warning, info, debug)",
+)
 
-    parser = argparse.ArgumentParser(
-        description="Matter Controller Server using WebSockets."
-    )
-    parser.add_argument(
-        "--log-file",
-        type=str,
-        default=None,
-        help="Log file to write to.  If not set, matter_server.log is used",
-    )
-    parser.add_argument(
-        "-log",
-        "--log-level",
-        default="info",
-        help="Provide logging level. Example --log-level debug, default=info, possible=(critical, error, warning, info, debug)",
-    )
-
-    arguments = parser.parse_args()
-
-    return arguments
+args = parser.parse_args()
+debug = os.getenv("CHIP_WS_DEBUG") is not None
 
 
-def main() -> int:
-    args = get_arguments()
+if __name__ == "__main__":
+
     handlers = None
 
     if args.log_file:
@@ -52,23 +48,13 @@ def main() -> int:
         "CHIP_WS_STORAGE",
         str(Path.home() / ".chip-storage/python-kv.json"),
     )
-    debug = os.getenv("CHIP_WS_DEBUG") is not None
 
     coloredlogs.install(level=logging.DEBUG if debug else args.log_level.upper())
 
-    # Instantiate the Matter Stack using the SDK using the given storage path
-    stack = MatterStack(storage_path)
+    server = MatterServer(storage_path, host, port)
 
-    # Instantiate the websocket API/server
+    async def handle_stop(loop: asyncio.AbstractEventLoop):
+        await server.stop()
 
-    async def create_server():
-        return MatterServer(stack)
-
-    loop = asyncio.get_event_loop()
-    server = loop.run_until_complete(create_server())
-    server.run(host, port)
-    stack.shutdown()
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    # run the server
+    run(server.start(), shutdown_callback=handle_stop)

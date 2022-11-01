@@ -1,14 +1,12 @@
 """Implementation of a Websocket-based Matter proxy (using CHIP SDK)."""
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING
 
 from chip.ChipStack import ChipStack
 import chip.logging
 import chip.native
-from chip.ChipDeviceCtrl import ChipDeviceController
-
-from matter_server.server.device_controller import MatterDeviceController
 
 if TYPE_CHECKING:
     from chip.CertificateAuthority import CertificateAuthorityManager
@@ -39,7 +37,7 @@ class MatterStack:
         )
 
         # Initialize Certificate Authoritity Manager
-        # yeah the import is a bit weird just to prevent a circular import in the underlying SDK
+        # yeah this is a bit weird just to prevent a circular import in the underlying SDK
         self.certificate_authority_manager: CertificateAuthorityManager = (
             chip.CertificateAuthority.CertificateAuthorityManager(
                 self.stack, self.stack.GetStorageManager()
@@ -62,15 +60,11 @@ class MatterStack:
         else:
             self.fabric_admin = ca.adminList[0]
 
-        # Initialize our (intermediate) device controller which keeps track
-        # of Matter devices and their subscriptions.
-        self.device_controller = MatterDeviceController(self)
         self.logger.info("CHIP Controller Stack initialized.")
-        self.fabric_id = self.device_controller.fabricId
-        self.compressed_fabric_id = self.device_controller.GetCompressedFabricId()
 
     def shutdown(self) -> None:
-        """ "Shutdown Matter Stack."""
-        self.logger.info("Shutdown CHIP Controller Server")
-        self.device_controller.Shutdown()
+        """Stop/Shutdown Matter Stack."""
+        self.logger.info("Shutting down the Matter stack...")
+        # NOTE that this will abruptly end the python process!
         self.stack.Shutdown()
+

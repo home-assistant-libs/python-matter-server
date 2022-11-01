@@ -21,6 +21,7 @@ classifiers = [
 ]
 dependencies = [
   "aiohttp",
+  "aiorun",
   "coloredlogs",
   "dacite",
 ]

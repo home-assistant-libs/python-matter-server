@@ -4,15 +4,14 @@ from __future__ import annotations
 
 import asyncio
 from concurrent import futures
+from enum import IntEnum
 from functools import partial
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Final, cast
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Final, Optional, cast
 
+from chip.ChipDeviceCtrl import ChipDeviceController
 from chip.exceptions import ChipStackError
-
-# NOTE: import the ChipDeviceController here to prevent circular import issues
-from chip.ChipDeviceCtrl import ChipDeviceController, DiscoveryFilterType
-
+from chip.discovery import FilterType as DiscoveryFilterType
 
 from ..common.model.message import (
     CommandMessage,
@@ -21,50 +20,77 @@ from ..common.model.message import (
     SuccessResultMessage,
 )
 from ..common.model.server_information import VersionInfo
-from .client_connection import WS_COMMANDS
+from .client_handler import COMMANDS
 
 if TYPE_CHECKING:
     from chip.clusters import Attribute
 
     from .stack import MatterStack
+    from .server import MatterServer
 
 
 class MatterDeviceController:
     """Class that manages the Matter devices."""
 
-    # To track if wifi credentials set this session.
-    wifi_cred_set = False
+    wifi_creds_set = False
 
     def __init__(
         self,
-        stack: MatterStack,
+        server: MatterServer,
     ):
-        self.stack = stack
-        self.loop = asyncio.get_running_loop()
-        self.logger = stack.logger.getChild("devices")
-        
+        self.server = server
+        self.logger = server.logger.getChild("device_controller")
         # Instantiate the underlying ChipDeviceController instance on the Fabric
-        self.chip_controller: ChipDeviceController = stack.fabric_admin.NewController()
+        self.chip_controller: ChipDeviceController = (
+            server.stack.fabric_admin.NewController()
+        )
+        self.logger.debug("CHIP Device Controller Initialized")
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
-        self.logger.debug("Device controller initialized.")
 
+    @property
+    def fabric_id(self) -> int:
+        """Return Fabric ID."""
+        return self.chip_controller.fabricId
 
-    @WS_COMMANDS.register("device_controller.CommissionWithCode")
-    async def commission_with_code(self, setupPayload: str, nodeId: int) -> bool:
+    @property
+    def compressed_fabric_id(self) -> int:
+        """Return Fabric ID."""
+        return self.chip_controller.GetCompressedFabricId()
+
+    async def start(self) -> None:
+        """Async initialize of controller."""
+        self.logger.debug("Started.")
+
+    async def stop(self) -> None:
+        """ "Handle logic on server stop."""
+        self.logger.debug("Stopped.")
+
+    @COMMANDS.register("device_controller.CommissionWithCode")
+    async def commission_with_code(self, setupPayload: str, nodeid: int) -> bool:
         """
         Commission a device.
 
         Return boolean if successful.
         """
-        assert self.wifi_cred_set, "Received commissioning without Wi-Fi set"
+        assert self.wifi_creds_set, "Received commissioning without Wi-Fi set"
 
-        return await self.loop.run_in_executor(
+        return await self.server.loop.run_in_executor(
             None,
-            partial(self.chip_controller.CommissionWithCode, setupPayload=setupPayload, nodeid=nodeId),
+            partial(
+                self.chip_controller.CommissionWithCode,
+                setupPayload=setupPayload,
+                nodeid=nodeid,
+            ),
         )
 
-    @WS_COMMANDS.register("device_controller.CommissionOnNetwork")
-    async def commission_on_network(self, nodeId: int, setupPinCode: int, filterType: DiscoveryFilterType = DiscoveryFilterType.NONE, filter: Any = None) -> bool:
+    @COMMANDS.register("device_controller.CommissionOnNetwork")
+    async def commission_on_network(
+        self,
+        nodeid: int,
+        setupPinCode: int,
+        filterType: DiscoveryFilterType = DiscoveryFilterType.NONE,
+        filter: Any = None,
+    ) -> bool:
         """
         Commission a device already connected to the network.
 
@@ -72,12 +98,105 @@ class MatterDeviceController:
         The filter can be an integer, a string or None depending on the actual type of selected filter.
         Return boolean if successful.
         """
-        return await self.loop.run_in_executor(
+        return await self.server.loop.run_in_executor(
             None,
-            partial(self.chip_controller.CommissionOnNetwork, nodeId=nodeId, setupPinCode=setupPinCode, filterType=filterType, filter=filter),
+            partial(
+                self.chip_controller.CommissionOnNetwork,
+                nodeId=nodeid,
+                setupPinCode=setupPinCode,
+                filterType=filterType,
+                filter=filter,
+            ),
         )
 
-    @WS_COMMANDS.register("device_controller.Read")
+    @COMMANDS.register("device_controller.SetWiFiCredentials")
+    async def set_wifi_credentials(self, ssid: str, credentials: str) -> bool:
+        """Set WiFi credentials for commissioning to a (new) device."""
+        error_code = await self.server.loop.run_in_executor(
+            None,
+            partial(
+                self.chip_controller.SetWiFiCredentials,
+                ssid=ssid,
+                credentials=credentials,
+            ),
+        )
+
+        if error_code == 0:
+            self.wifi_creds_set = True
+
+        return error_code == 0
+
+    @COMMANDS.register("device_controller.SetThreadOperationalDataset")
+    async def set_thread_operational_dataset(self, dataset: bytes) -> bool:
+        """Set Thread Operational dataset in the stack."""
+        error_code = await self.server.loop.run_in_executor(
+            None,
+            partial(
+                self.chip_controller.SetThreadOperationalDataset,
+                threadOperationalDataset=dataset,
+            ),
+        )
+        return error_code == 0
+
+    @COMMANDS.register("device_controller.ResolveNode")
+    async def resolve_node(self, nodeid: int) -> None:
+        """Resolve the DNS-SD name for given Node ID and update address."""
+        await self.server.loop.run_in_executor(
+            None, partial(self.chip_controller.ResolveNode, nodeid=nodeid)
+        )
+
+    class CommissionOption(IntEnum):
+        """Enum with available comissioning methodes/options."""
+
+        BASIC = 0
+        ENHANCED = 1
+
+    @COMMANDS.register("device_controller.OpenCommissioningWindow")
+    async def open_commissioning_window(
+        self,
+        nodeid: int,
+        timeout: int = 300,
+        iteration: int = 1000,
+        option: CommissionOption = CommissionOption.BASIC,
+        discriminator: Optional[int] = None,
+    ) -> int:
+        """
+        Open a commissioning window to commission a device present on this controller to another.
+
+        Returns code to use as discriminator.
+        """
+        if discriminator is None:
+            discriminator = 3840  # TODO generate random one
+
+        await self.server.loop.run_in_executor(
+            None,
+            partial(
+                self.chip_controller.OpenCommissioningWindow,
+                nodeid=nodeid,
+                timeout=timeout,
+                iteration=iteration,
+                discriminator=discriminator,
+                option=option,
+            ),
+        )
+        return discriminator
+
+    @COMMANDS.register("device_controller.SendCommand")
+    async def _handle_device_controller_SendCommand(self, msg: CommandMessage):
+        result = await self.chip_controller.SendCommand(**msg.args)
+        self._send_message(SuccessResultMessage(msg.messageId, {"raw": result}))
+
+    async def _handle_device_controller_Unsubscribe(self, msg: CommandMessage):
+        """Unsubscribe."""
+        subscription = self._subscriptions.pop(msg.args["subscription_id"], None)
+        if subscription is None:
+            self._send_message(ErrorResultMessage(msg.messageId, "not_found"))
+            return
+
+        await self.server.loop.run_in_executor(None, subscription.Shutdown)
+        self._send_message(SuccessResultMessage(msg.messageId, None))
+
+    @COMMANDS.register("device_controller.Read")
     async def Read(self, msg: CommandMessage):
         if isinstance(msg.args.get("attributes"), list):
             converted_attributes = []
@@ -111,7 +230,7 @@ class MatterDeviceController:
             value = {
                 "subscriptionId": subscription_id,
                 "fabridId": self.server.stack.fabric_id,
-                "nodeId": msg.args["nodeid"],
+                "nodeid": msg.args["nodeid"],
                 "endpoint": path.Path.EndpointId,
                 "cluster": path.ClusterType,
                 "attribute": path.AttributeName,
@@ -120,7 +239,7 @@ class MatterDeviceController:
             self.logger.info("subscription_callback %s", value)
 
             # This callback is running in the CHIP stack thread
-            self.loop.call_soon_threadsafe(
+            self.server.loop.call_soon_threadsafe(
                 self._send_message, SubscriptionReportMessage(subscription_id, value)
             )
 
@@ -131,63 +250,6 @@ class MatterDeviceController:
             SuccessResultMessage(msg.messageId, {"subscription_id": subscription_id})
         )
 
-    @WS_COMMANDS.register("device_controller.ResolveNode")
-    async def _handle_device_controller_ResolveNode(self, msg: CommandMessage):
-        result = await self.loop.run_in_executor(
-            None, partial(self.chip_controller.ResolveNode, **msg.args)
-        )
-        self._send_message(SuccessResultMessage(msg.messageId, {"raw": result}))
-
-    @WS_COMMANDS.register("device_controller.SendCommand")
-    async def _handle_device_controller_SendCommand(self, msg: CommandMessage):
-        result = await self.chip_controller.SendCommand(**msg.args)
-        self._send_message(SuccessResultMessage(msg.messageId, {"raw": result}))
-
-    @WS_COMMANDS.register("device_controller.SetThreadOperationalDataset")
-    async def _handle_device_controller_SetThreadOperationalDataset(
-        self, msg: CommandMessage
-    ):
-        result = await self.loop.run_in_executor(
-            None,
-            partial(
-                self.chip_controller.SetThreadOperationalDataset,
-                **msg.args,
-            ),
-        )
-        self._send_message(SuccessResultMessage(msg.messageId, {"raw": result}))
-
-    @WS_COMMANDS.register("device_controller.OpenCommissioningWindow")
-    async def _handle_device_controller_OpenCommissioningWindow(
-        self, msg: CommandMessage
-    ):
-        result = await self.loop.run_in_executor(
-            None,
-            partial(
-                self.chip_controller.OpenCommissioningWindow,
-                **msg.args,
-            ),
-        )
-        self._send_message(SuccessResultMessage(msg.messageId, {"raw": result}))
-
-    @WS_COMMANDS.register("device_controller.SetWiFiCredentials")
-    async def _handle_device_controller_SetWiFiCredentials(self, msg: CommandMessage):
-        result = await self.loop.run_in_executor(
-            None,
-            partial(self.chip_controller.SetWiFiCredentials, **msg.args),
-        )
-
-        if result == 0:
-            self.server.stack.wifi_cred_set = True
-
-        self._send_message(SuccessResultMessage(msg.messageId, {"raw": result}))
-
-    @WS_COMMANDS.register("device_controller.Unsubscribe")
-    async def _handle_device_controller_Unsubscribe(self, msg: CommandMessage):
-        """Unsubscribe."""
-        subscription = self._subscriptions.pop(msg.args["subscription_id"], None)
-        if subscription is None:
-            self._send_message(ErrorResultMessage(msg.messageId, "not_found"))
-            return
-
-        await self.loop.run_in_executor(None, subscription.Shutdown)
-        self._send_message(SuccessResultMessage(msg.messageId, None))
+    async def _subscribe_node(self, nodeid: int) -> None:
+        """Subscribe to all node state changes (wildcard subscription)."""
+        assert nodeid not in self._subscriptions, "Already subscribed to this node!"

@@ -12,15 +12,15 @@ import weakref
 from aiohttp import WSMsgType, web
 import async_timeout
 
-from matter_server.common.model.server_information import ServerInfo, VersionInfo
-from matter_server.server.client_handler import WebsocketClientHandler
+from ..common.model.server_information import ServerInfo, VersionInfo
+from ..server.client_handler import WebsocketClientHandler
 
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
-from ..common.model.message import CommandMessage, EventType
-
-if TYPE_CHECKING:
-    from .server import MatterServer
-    from .stack import MatterStack
+from ..common.model.message import CommandMessage
+from ..common.model.event import EventType
+from .stack import MatterStack
+from .storage import StorageController
+from .device_controller import MatterDeviceController
 
 
 def mount_websocket(server: MatterServer, path: str) -> None:
@@ -49,26 +49,56 @@ EventCallBackType = Callable[[EventType, Any], None]
 class MatterServer:
     """Serve Matter stack over Websockets."""
 
-    def __init__(self, stack: MatterStack) -> None:
-        self.stack = stack
+    def __init__(self, storage_path: str, host: str, port: int) -> None:
+        """Initialize the Matter Server."""
+        self.host = host
+        self.port = port
         self.logger = logging.getLogger(__name__)
         self.app = web.Application()
-        self.loop = asyncio.get_running_loop()
+        self.loop: asyncio.AbstractEventLoop | None = None
+        # Instantiate the Matter Stack using the SDK using the given storage path
+        self.stack = MatterStack(storage_path)
+        # Initialize our (intermediate) device controller which keeps track
+        # of Matter devices and their subscriptions.
+        self.device_controller = MatterDeviceController(self)
+        self.storage = StorageController(storage_path)
         self._subscribers: Set[EventCallBackType] = set()
-        self.app.router.add_route("GET", "/info", self._handle_info)
-        mount_websocket(self, "/ws")
 
-    def run(self, host: str, port: int) -> None:
-        """Run the websocket server."""
-        web.run_app(self.app, host=host, port=port, loop=self.loop)
+    async def start(self) -> None:
+        """Start running the Matter server."""
+        self.logger.info("Starting the Matter Server...")
+        self.loop = asyncio.get_running_loop()
+        await self.storage.start()
+        await self.device_controller.start()
+        mount_websocket(self, "/ws")
+        self.app.router.add_route("GET", "/", self._handle_info)
+        self._runner = web.AppRunner(self.app, access_log=None)
+        await self._runner.setup()
+        # set host to None to bind to all addresses on both IPv4 and IPv6
+        self._http = web.TCPSite(self._runner, host=None, port=self.port)
+        await self._http.start()
+        self.logger.debug("Webserver initialized.")
+
+    async def stop(self) -> None:
+        """Stop running the server."""
+        self.logger.info("Stopping the Matter Server...")
+        self.signal_event(EventType.SERVER_SHUTDOWN)
+        await self._http.stop()
+        await self._runner.cleanup()
+        await self.app.shutdown()
+        await self.app.cleanup()
+        await self.device_controller.stop()
+        await self.storage.stop()
+        self.stack.shutdown()
+        self.logger.debug("Cleanup complete")
 
     @property
     def info(self) -> ServerInfo:
         """Return (version)info of the Matter Server."""
         return (
             ServerInfo(
-                fabricId=self.stack.fabric_id,
-                compressedFabricId=self.stack.compressed_fabric_id,
+                fabricId=self.device_controller.fabric_id,
+                compressedFabricId=self.device_controller.compressed_fabric_id,
                 version=VersionInfo(
                     # TODO: send correct versions here
                     sdk_version=0,

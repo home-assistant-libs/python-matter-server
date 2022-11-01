@@ -7,7 +7,11 @@ from typing import TYPE_CHECKING, Awaitable, Coroutine
 
 from aiohttp import web
 
-from matter_server.common.model.server_information import ServerInformation, VersionInfo
+from matter_server.common.model.server_information import (
+    FullServerState,
+    ServerInfo,
+    VersionInfo,
+)
 
 if TYPE_CHECKING:
     from .stack import MatterStack
@@ -28,7 +32,6 @@ from ..common.model.message import (
     CommandMessage,
     ErrorCode,
     ErrorResultMessage,
-    EventType,
 )
 
 if TYPE_CHECKING:
@@ -81,7 +84,7 @@ class WebsocketClientHandler:
         self._cancel()
         await self._writer_task
 
-    async def async_handle_client(self) -> web.WebSocketResponse:
+    async def handle_client(self) -> web.WebSocketResponse:
         """Handle a websocket response."""
         request = self.request
         wsock = self.wsock
@@ -128,7 +131,7 @@ class WebsocketClientHandler:
                     break
 
                 self._logger.debug("Received %s", command_msg)
-                connection.async_handle_command(command_msg)
+                self._handle_command(command_msg)
 
         except asyncio.CancelledError:
             self._logger.info("Connection closed by client")
@@ -158,16 +161,8 @@ class WebsocketClientHandler:
 
         return wsock
 
-    @COMMANDS.register("info")
-    async def _handle_info(self) -> ServerInformation:
-        """Send server info to connected client."""
-        return self.server.get_info()
-
-    async def _handle_start_listening(self) -> None:
-        """Dump full state and subscribe client to all events."""
-
-    def async_handle_command(self, msg: CommandMessage) -> None:
-        """Handle a command."""
+    def _handle_command(self, msg: CommandMessage) -> None:
+        """Handle an incoming command from the client."""
         handler = COMMANDS.get(msg.command)
 
         if handler is None:
@@ -178,11 +173,20 @@ class WebsocketClientHandler:
                     f"Invalid command: {msg.command}",
                 )
             )
-            self.logger.warning("Invalid command: %s", msg.command)
+            self._logger.warning("Invalid command: %s", msg.command)
             return
 
         # schedule task to handle the command
         self.server.loop.create_task(self._run_handler(handler, msg))
+
+    @COMMANDS.register("server.state")
+    async def _handle_state(self) -> FullServerState:
+        """Send full server state to connected client."""
+        return self.server.info
+
+    @COMMANDS.register("server.listen")
+    async def _handle_start_listening(self) -> None:
+        """Dump full state and subscribe client to all events."""
 
     async def _run_handler(self, handler, msg: CommandMessage) -> None:
         try:
@@ -193,7 +197,7 @@ class WebsocketClientHandler:
                 ErrorResultMessage(msg.messageId, ErrorCode.STACK_ERROR, str(err))
             )
         except Exception as err:  # pylint: disable=broad-except
-            self.logger.exception("Error handling message: %s", msg)
+            self._logger.exception("Error handling message: %s", msg)
             self._send_message(
                 ErrorResultMessage(msg.messageId, ErrorCode.UNKNOWN_ERROR, str(err))
             )

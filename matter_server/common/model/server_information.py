@@ -22,6 +22,6 @@ class ServerInfo:
 
 
 @dataclass
-class FullServerDump(ServerInfo):
+class FullServerState(ServerInfo):
     """Full dump of the server information and data."""
     
