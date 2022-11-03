@@ -8,9 +8,10 @@ from typing import Any
 class EventType(Enum):
     """Enum with possible events sent from server to client."""
 
-    DEVICE_ADDED = "device_added"
-    DEVICE_UPDATED = "device_updated"
-    DEVICE_DELETED = "device_deleted"
+    NODE_ADD_PROGRESS= "node_add_progress"
+    NODE_ADD_COMPLETE= "node_add_complete"
+    NODE_UPDATED = "node_updated"
+    NODE_DELETED = "node_deleted"
     SERVER_SHUTDOWN = "server_shutdown"
 
 

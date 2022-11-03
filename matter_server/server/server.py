@@ -12,15 +12,14 @@ import weakref
 from aiohttp import WSMsgType, web
 import async_timeout
 
+from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
+from ..common.model.event import EventType
+from ..common.model.message import CommandMessage
 from ..common.model.server_information import ServerInfo, VersionInfo
 from ..server.client_handler import WebsocketClientHandler
-
-from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
-from ..common.model.message import CommandMessage
-from ..common.model.event import EventType
+from .device_controller import MatterDeviceController
 from .stack import MatterStack
 from .storage import StorageController
-from .device_controller import MatterDeviceController
 
 
 def mount_websocket(server: MatterServer, path: str) -> None:
@@ -49,19 +48,27 @@ EventCallBackType = Callable[[EventType, Any], None]
 class MatterServer:
     """Serve Matter stack over Websockets."""
 
-    def __init__(self, storage_path: str, host: str, port: int) -> None:
+    def __init__(
+        self,
+        storage_path: str,
+        vendor_id: int,
+        fabric_id: int,
+        port: int,
+    ) -> None:
         """Initialize the Matter Server."""
-        self.host = host
+        self.storage_path = storage_path
+        self.vendor_id = vendor_id
+        self.fabric_id = fabric_id
         self.port = port
         self.logger = logging.getLogger(__name__)
         self.app = web.Application()
         self.loop: asyncio.AbstractEventLoop | None = None
         # Instantiate the Matter Stack using the SDK using the given storage path
-        self.stack = MatterStack(storage_path)
+        self.stack = MatterStack(self)
         # Initialize our (intermediate) device controller which keeps track
         # of Matter devices and their subscriptions.
         self.device_controller = MatterDeviceController(self)
-        self.storage = StorageController(storage_path)
+        self.storage = StorageController(self)
         self._subscribers: Set[EventCallBackType] = set()
 
     async def start(self) -> None:
@@ -130,5 +137,5 @@ class MatterServer:
                 callback(type, data)
 
     async def _handle_info(self, request: web.Request) -> web.Response:
-        """Handle info endpoiunt to serve basic server (version) info."""
+        """Handle info endpoint to serve basic server (version) info."""
         return web.json_response(self.info)

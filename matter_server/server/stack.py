@@ -11,9 +11,7 @@ import chip.native
 if TYPE_CHECKING:
     from chip.CertificateAuthority import CertificateAuthorityManager
 
-
-DEFAULT_VENDOR_ID = 0xFFF1
-DEFAULT_FABRIC_ID = 1
+    from .server import MatterServer
 
 
 class MatterStack:
@@ -21,19 +19,17 @@ class MatterStack:
 
     def __init__(
         self,
-        storage_path: str,
-        vendor_id: int = DEFAULT_VENDOR_ID,
-        fabric_id: int = DEFAULT_FABRIC_ID,
+        server: MatterServer,
     ) -> None:
         """Initialize Matter Stack."""
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing CHIP/Matter Controller Stack...")
-        self.logger.debug("Using storage path: %s", storage_path)
+        self.logger.debug("Using storage path: %s", server.storage_path)
         chip.native.Init()
         chip.logging.RedirectToPythonLogging()
 
         self.stack = ChipStack(
-            persistentStoragePath=storage_path, enableServerInteractions=True
+            persistentStoragePath=server.storage_path, enableServerInteractions=True
         )
 
         # Initialize Certificate Authoritity Manager
@@ -48,17 +44,21 @@ class MatterStack:
         # Get Certificate Authority (create new if we do not yet have one)
         if len(self.certificate_authority_manager.activeCaList) == 0:
             ca = self.certificate_authority_manager.NewCertificateAuthority()
-            ca.NewFabricAdmin(vendorId=0xFFF1, fabricId=1)
         else:
             ca = self.certificate_authority_manager.activeCaList[0]
 
         # Get Fabric Admin (create new if we do not yet have one)
-        if len(self.certificate_authority_manager.activeCaList[0].adminList) == 0:
-            self.fabric_admin = self.certificate_authority_manager.activeCaList[
-                0
-            ].NewFabricAdmin(vendorId=vendor_id, fabricId=fabric_id)
+        for admin in ca.adminList:
+            if (
+                admin.vendorId == server.vendor_id
+                and admin.fabricId == server.fabric_id
+            ):
+                self.fabric_admin = admin
+                break
         else:
-            self.fabric_admin = ca.adminList[0]
+            self.fabric_admin = ca.NewFabricAdmin(
+                vendorId=server.vendor_id, fabricId=server.fabric_id
+            )
 
         self.logger.info("CHIP Controller Stack initialized.")
 
@@ -67,4 +67,3 @@ class MatterStack:
         self.logger.info("Shutting down the Matter stack...")
         # NOTE that this will abruptly end the python process!
         self.stack.Shutdown()
-
