@@ -34,7 +34,7 @@ def update_dataclass(cur_obj: dataclass, new_vals: dict) -> Set[str]:
                 changed_keys.add(f"{f.name}.{subkey}")
             continue
         # parse value from type annotations
-        new_val = _parse_value(f.name, new_val, f.type, cur_val)
+        new_val = parse_value(f.name, new_val, f.type, cur_val)
         if cur_val == new_val:
             continue
         setattr(cur_obj, f.name, new_val)
@@ -71,7 +71,7 @@ def parse_utc_timestamp(datetimestr: str):
     return datetime.fromisoformat(datetimestr.replace("Z", "+00:00"))
 
 
-def _parse_value(name: str, value: Any, value_type: Type, default: Any = MISSING):
+def parse_value(name: str, value: Any, value_type: Type, default: Any = MISSING):
     """Try to parse a value from raw (json) data and type definitions."""
     if value is None and not isinstance(default, type(MISSING)):
         return default
@@ -82,7 +82,7 @@ def _parse_value(name: str, value: Any, value_type: Type, default: Any = MISSING
     origin = get_origin(value_type)
     if origin is list:
         return [
-            _parse_value(name, subval, get_args(value_type)[0])
+            parse_value(name, subval, get_args(value_type)[0])
             for subval in value
             if subval is not None
         ]
@@ -94,7 +94,7 @@ def _parse_value(name: str, value: Any, value_type: Type, default: Any = MISSING
                 return value
             # try them all until one succeeds
             try:
-                return _parse_value(name, value, sub_arg_type)
+                return parse_value(name, value, sub_arg_type)
             except (KeyError, TypeError, ValueError):
                 pass
         # if we get to this point, all possibilities failed
@@ -144,7 +144,7 @@ def dataclass_from_dict(cls: dataclass, dict_obj: dict, strict=False):
 
     return cls(
         **{
-            field.name: _parse_value(
+            field.name: parse_value(
                 f"{cls.__name__}.{field.name}",
                 dict_obj.get(field.name),
                 field.type,

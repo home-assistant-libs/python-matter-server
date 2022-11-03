@@ -24,7 +24,7 @@ StorageDataType = Union[str, dict, int, list[str], list[int], list[dict], NoneTy
 class StorageController:
     """Controller that handles storage of persistent data."""
 
-    def __init__(self, server: MatterServer) -> None:
+    def __init__(self, server: "MatterServer") -> None:
         """Initialize storage controller."""
         self.server = server
         self.logger = logging.getLogger(__name__)

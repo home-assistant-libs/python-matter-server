@@ -13,7 +13,7 @@ from .server import MatterServer
 DEFAULT_VENDOR_ID = 0xFFF1
 DEFAULT_FABRIC_ID = 1
 DEFAULT_PORT = 5580
-DEFAULT_STORAGE_PATH = os.path.join(Path.home(), ".chip-storage")
+DEFAULT_STORAGE_PATH = os.path.join(Path.home(), ".matter_server")
 
 # Get parsed passed in arguments.
 parser = argparse.ArgumentParser(

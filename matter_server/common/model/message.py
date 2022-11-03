@@ -46,6 +46,6 @@ class SubscriptionReportMessage(Message):
 class CommandMessage(Message):
     messageId: str
     command: str
-    args: dict[str, Any]
+    args: dict[str, Any] | None = None
 
 

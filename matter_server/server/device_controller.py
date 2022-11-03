@@ -24,11 +24,13 @@ from typing import (
 )
 
 from chip.ChipDeviceCtrl import ChipDeviceController
-from chip.exceptions import ChipStackError
 from chip.discovery import FilterType as DiscoveryFilterType
 
-from matter_server.common.util import dataclass_to_dict
+from matter_server.common.helpers.util import dataclass_from_dict, dataclass_to_dict
 
+from ..common.helpers.api import api_command
+from ..common.model.error import InterviewFailed, NodeNotExists
+from ..common.model.event import EventType
 from ..common.model.message import (
     CommandMessage,
     ErrorResultMessage,
@@ -36,9 +38,6 @@ from ..common.model.message import (
     SuccessResultMessage,
 )
 from ..common.model.server_information import VersionInfo
-from ..common.model.event import EventType
-from ..common.model.error import InterviewFailed, NodeNotExists
-from .client_handler import COMMANDS
 
 if TYPE_CHECKING:
     from chip.clusters import (
@@ -46,7 +45,6 @@ if TYPE_CHECKING:
         Cluster,
         ClusterAttributeDescriptor,
         ClusterEvent,
-        
     )
 
     from .stack import MatterStack
@@ -69,6 +67,13 @@ class MatterNode:
     # node_devices: list[AbstractMatterNodeDevice]
 
 
+class CommissionOption(IntEnum):
+    """Enum with available comissioning methodes/options."""
+
+    BASIC = 0
+    ENHANCED = 1
+
+
 class MatterDeviceController:
     """Class that manages the Matter devices."""
 
@@ -84,7 +89,7 @@ class MatterDeviceController:
         )
         self.logger.debug("CHIP Device Controller Initialized")
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
-        self._nodes: dict[int, MatterNode]
+        self._nodes: dict[int, MatterNode] = {}
         self._wifi_creds_set = False
         self._commission_lock: asyncio.Lock | None = None
         self._interview_queue = asyncio.Queue()
@@ -102,7 +107,9 @@ class MatterDeviceController:
     async def start(self) -> None:
         """Async initialize of controller."""
         # load nodes from persistent storage
-        nodes_data = await self.server.storage.get(NODES_DATA_KEY, {})
+        nodes_data = self.server.storage.get(NODES_DATA_KEY, {})
+        for nodeid, node_dict in nodes_data.values():
+            self._nodes[nodeid] = dataclass_from_dict(MatterNode, node_dict)
         self.logger.debug("Started.")
 
     async def stop(self) -> None:
@@ -110,19 +117,19 @@ class MatterDeviceController:
         await self._call_sdk(self.chip_controller.Shutdown)
         self.logger.debug("Stopped.")
 
-    @COMMANDS.register("device_controller.Nodes")
+    @api_command("device_controller.GetNodes")
     async def get_nodes(self) -> list[MatterNode]:
         """Return all Nodes known to the server."""
         return [x for x in self._nodes.values() if x is not None]
 
-    @COMMANDS.register("device_controller.GetNode")
+    @api_command("device_controller.GetNode")
     async def get_node(self, nodeid: int) -> MatterNode:
         """Return info of a single Node."""
         node = self._nodes.get(nodeid)
         assert node is not None, "Node does not exist or is not yet interviewed"
         return node
 
-    @COMMANDS.register("device_controller.CommissionWithCode")
+    @api_command("device_controller.CommissionWithCode")
     async def commission_with_code(
         self, setupPayload: str, wait_for_interview: bool = False
     ) -> bool:
@@ -148,7 +155,7 @@ class MatterDeviceController:
                     self.server.loop.create_task(coro)
             return success
 
-    @COMMANDS.register("device_controller.CommissionOnNetwork")
+    @api_command("device_controller.CommissionOnNetwork")
     async def commission_on_network(
         self,
         setupPinCode: int,
@@ -181,7 +188,7 @@ class MatterDeviceController:
                     self.server.loop.create_task(coro)
             return success
 
-    @COMMANDS.register("device_controller.SetWiFiCredentials")
+    @api_command("device_controller.SetWiFiCredentials")
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> bool:
         """Set WiFi credentials for commissioning to a (new) device."""
         error_code = await self._call_sdk(
@@ -193,7 +200,7 @@ class MatterDeviceController:
         self._wifi_creds_set = error_code == 0
         return error_code == 0
 
-    @COMMANDS.register("device_controller.SetThreadOperationalDataset")
+    @api_command("device_controller.SetThreadOperationalDataset")
     async def set_thread_operational_dataset(self, dataset: bytes) -> bool:
         """Set Thread Operational dataset in the stack."""
         error_code = await self._call_sdk(
@@ -202,13 +209,7 @@ class MatterDeviceController:
         )
         return error_code == 0
 
-    class CommissionOption(IntEnum):
-        """Enum with available comissioning methodes/options."""
-
-        BASIC = 0
-        ENHANCED = 1
-
-    @COMMANDS.register("device_controller.OpenCommissioningWindow")
+    @api_command("device_controller.OpenCommissioningWindow")
     async def open_commissioning_window(
         self,
         nodeid: int,
@@ -235,7 +236,7 @@ class MatterDeviceController:
         )
         return discriminator
 
-    @COMMANDS.register("device_controller.SendCommand")
+    @api_command("device_controller.SendCommand")
     async def _handle_device_controller_SendCommand(self, msg: CommandMessage):
         result = await self.chip_controller.SendCommand(**msg.args)
         self._send_message(SuccessResultMessage(msg.messageId, {"raw": result}))
@@ -290,7 +291,7 @@ class MatterDeviceController:
             nodeid=nodeid, attributes="*", events="*", reportInterval=(0, 120)
         )
         self._subscriptions[nodeid] = sub
-        
+
         def subscription_callback(
             path: Attribute.TypedAttributePath,
             subscription: Attribute.SubscriptionTransaction,

@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 from typing import TYPE_CHECKING
 
 from chip.ChipStack import ChipStack
@@ -19,17 +20,18 @@ class MatterStack:
 
     def __init__(
         self,
-        server: MatterServer,
+        server: "MatterServer",
     ) -> None:
         """Initialize Matter Stack."""
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing CHIP/Matter Controller Stack...")
-        self.logger.debug("Using storage path: %s", server.storage_path)
+        storage_file = os.path.join(server.storage_path, "chip.json")
+        self.logger.debug("Using storage file: %s", storage_file)
         chip.native.Init()
         chip.logging.RedirectToPythonLogging()
 
         self.stack = ChipStack(
-            persistentStoragePath=server.storage_path, enableServerInteractions=True
+            persistentStoragePath=storage_file, enableServerInteractions=True
         )
 
         # Initialize Certificate Authoritity Manager

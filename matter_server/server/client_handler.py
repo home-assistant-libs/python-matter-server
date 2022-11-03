@@ -2,40 +2,31 @@
 from __future__ import annotations
 
 import asyncio
-import logging
-from typing import TYPE_CHECKING, Awaitable, Coroutine
-
-from aiohttp import web
-
-from matter_server.common.model.server_information import (
-    FullServerState,
-    ServerInfo,
-    VersionInfo,
-)
-
-if TYPE_CHECKING:
-    from .stack import MatterStack
-
-import asyncio
 from concurrent import futures
 from contextlib import suppress
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Final
 import weakref
 
 from aiohttp import WSMsgType, web
 import async_timeout
+from chip.exceptions import ChipStackError
 
+from ..common.helpers.api import parse_arguments
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 from ..common.model.message import (
     CommandMessage,
     ErrorCode,
     ErrorResultMessage,
+    SuccessResultMessage,
 )
+from ..common.model.server_information import FullServerState, ServerInfo, VersionInfo
 
 if TYPE_CHECKING:
+    from ..common.helpers.api import APICommandHandler
     from .server import MatterServer
+    from .stack import MatterStack
 
 MAX_PENDING_MSG = 512
 CANCELLATION_ERRORS: Final = (asyncio.CancelledError, futures.CancelledError)
@@ -47,22 +38,6 @@ class WebSocketLogAdapter(logging.LoggerAdapter):
     def process(self, msg: str, kwargs: Any) -> tuple[str, Any]:
         """Add connid to websocket log messages."""
         return f'[{self.extra["connid"]}] {msg}', kwargs
-
-
-class WebsocketCommands(dict):
-    """Small helper to register commands."""
-
-    def register(self, command: str):
-        """Decorate a command handler."""
-
-        def decorator(func: Callable[..., Coroutine[Any, Any, Any]]):
-            self[command] = func
-            return func
-
-        return decorator
-
-
-COMMANDS = WebsocketCommands()
 
 
 class WebsocketClientHandler:
@@ -101,7 +76,7 @@ class WebsocketClientHandler:
         self._writer_task = asyncio.create_task(self._writer())
 
         # send server(version) info when client connects
-        self._send_message(self.server.get_info())
+        self._send_message(await self.server.get_info())
 
         disconnect_warn = None
 
@@ -119,15 +94,9 @@ class WebsocketClientHandler:
                 self._logger.debug("Received: %s", msg.data)
 
                 try:
-                    command_msg = json.loads(msg.data, cls=CHIPJSONDecoder)
+                    command_msg = CommandMessage(**json.loads(msg.data))
                 except ValueError:
-                    disconnect_warn = "Received invalid JSON."
-                    break
-
-                self._logger.info("Deserialized message: %s", command_msg)
-
-                if not isinstance(command_msg, CommandMessage):
-                    disconnect_warn = "Did not receive a CommandMessage."
+                    disconnect_warn = f"Received invalid JSON: {msg.data}"
                     break
 
                 self._logger.debug("Received %s", command_msg)
@@ -163,7 +132,10 @@ class WebsocketClientHandler:
 
     def _handle_command(self, msg: CommandMessage) -> None:
         """Handle an incoming command from the client."""
-        handler = COMMANDS.get(msg.command)
+        self._logger.debug("Handling command %s", msg.command)
+
+        # work out handler for the given path/command
+        handler = self.server.command_handlers.get(msg.command)
 
         if handler is None:
             self._send_message(
@@ -179,19 +151,15 @@ class WebsocketClientHandler:
         # schedule task to handle the command
         self.server.loop.create_task(self._run_handler(handler, msg))
 
-    @COMMANDS.register("server.state")
-    async def _handle_state(self) -> FullServerState:
-        """Send full server state to connected client."""
-        return self.server.info
-
-    @COMMANDS.register("server.listen")
-    async def _handle_start_listening(self) -> None:
-        """Dump full state and subscribe client to all events."""
-
-    async def _run_handler(self, handler, msg: CommandMessage) -> None:
+    async def _run_handler(
+        self, handler: APICommandHandler, msg: CommandMessage
+    ) -> None:
         try:
-            result = await handler(self, **msg.args)
-            self._send_message(SuccessResultMessage(msg.messageId, True))
+            args = parse_arguments(handler.signature, msg.args)
+            result = handler.target(**args)
+            if asyncio.iscoroutine(result):
+                result = await result
+            self._send_message(SuccessResultMessage(msg.messageId, result))
         except ChipStackError as err:
             self._send_message(
                 ErrorResultMessage(msg.messageId, ErrorCode.STACK_ERROR, str(err))
@@ -218,7 +186,8 @@ class WebsocketClientHandler:
                 await self.wsock.send_str(message)
 
     def _send_message(self, message: str | dict[str, Any] | Callable[[], str]) -> None:
-        """Send a message to the client.
+        """
+        Send a message to the client.
 
         Closes connection if the client is not reading the messages.
 

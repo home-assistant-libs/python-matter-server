@@ -4,18 +4,21 @@ from __future__ import annotations
 import asyncio
 from concurrent import futures
 from contextlib import suppress
+import inspect
 import json
 import logging
+from optparse import OptionParser
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Final, Set
 import weakref
 
 from aiohttp import WSMsgType, web
 import async_timeout
 
+from ..common.helpers.api import APICommandHandler, api_command
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 from ..common.model.event import EventType
 from ..common.model.message import CommandMessage
-from ..common.model.server_information import ServerInfo, VersionInfo
+from ..common.model.server_information import FullServerState, ServerInfo, VersionInfo
 from ..server.client_handler import WebsocketClientHandler
 from .device_controller import MatterDeviceController
 from .stack import MatterStack
@@ -69,7 +72,10 @@ class MatterServer:
         # of Matter devices and their subscriptions.
         self.device_controller = MatterDeviceController(self)
         self.storage = StorageController(self)
+        # we dynamically register command handlers
+        self.command_handlers: dict[str, APICommandHandler] = {}
         self._subscribers: Set[EventCallBackType] = set()
+        self._register_api_commands()
 
     async def start(self) -> None:
         """Start running the Matter server."""
@@ -99,8 +105,21 @@ class MatterServer:
         self.stack.shutdown()
         self.logger.debug("Cleanup complete")
 
-    @property
-    def info(self) -> ServerInfo:
+    def subscribe(self, callback: Callable[[EventType, Any], None]) -> None:
+        """
+        Subscribe to events.
+
+        Returns handle to remove subscription.
+        """
+
+        def unsub():
+            self._subscribers.remove(callback)
+
+        self._subscribers.add(callback)
+
+    @api_command("server.info")
+    async def get_info(self) -> ServerInfo:
+        """Return full server state."""
         """Return (version)info of the Matter Server."""
         return (
             ServerInfo(
@@ -116,17 +135,11 @@ class MatterServer:
             ),
         )
 
-    def subscribe(self, callback: Callable[[EventType, Any], None]) -> None:
-        """
-        Subscribe to events.
-
-        Returns handle to remove subscription.
-        """
-
-        def unsub():
-            self._subscribers.remove(callback)
-
-        self._subscribers.add(callback)
+    @api_command("server.state")
+    async def get_state(self) -> FullServerState:
+        """Return full server state."""
+        # TODO !
+        return await self.get_info()
 
     def signal_event(self, evt: EventType, data: Any = None) -> None:
         """Signal event to listeners."""
@@ -136,6 +149,27 @@ class MatterServer:
             else:
                 callback(type, data)
 
+    def register_api_command(
+        self,
+        command: str,
+        handler: Callable,
+    ) -> None:
+        """Dynamically register a command on the API."""
+        assert command not in self.command_handlers, "Command already registered"
+        self.command_handlers[command] = APICommandHandler.parse(command, handler)
+
+    def _register_api_commands(self) -> None:
+        """Register all methods decorated as api_command."""
+        for cls in (self.device_controller, self):
+            for attr_name in dir(cls):
+                if attr_name.startswith("__"):
+                    continue
+                val = getattr(cls, attr_name)
+                if not hasattr(val, "api_cmd"):
+                    continue
+                # method is decorated with our api decorator
+                self.register_api_command(val.api_cmd, val)
+
     async def _handle_info(self, request: web.Request) -> web.Response:
         """Handle info endpoint to serve basic server (version) info."""
-        return web.json_response(self.info)
+        return web.json_response(await self.get_info())
