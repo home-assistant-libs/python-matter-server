@@ -160,7 +160,7 @@ class MatterServer:
 
     def _register_api_commands(self) -> None:
         """Register all methods decorated as api_command."""
-        for cls in (self.device_controller, self):
+        for cls in (self, self.stack, self.device_controller):
             for attr_name in dir(cls):
                 if attr_name.startswith("__"):
                     continue

@@ -28,7 +28,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--fabricid",
-    default=DEFAULT_VENDOR_ID,
+    default=DEFAULT_FABRIC_ID,
     help=f"Fabric ID for the Fabric, defaults to {DEFAULT_FABRIC_ID}",
 )
 parser.add_argument(

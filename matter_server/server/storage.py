@@ -18,7 +18,15 @@ DEFAULT_SAVE_DELAY = 30
 if TYPE_CHECKING:
     from .server import MatterServer
 
-StorageDataType = Union[str, dict, int, list[str], list[int], list[dict], NoneType]
+StorageDataType = Union[
+    str,
+    dict[str, "StorageDataType"],
+    int,
+    list[str],
+    list[int],
+    list[dict[str, "StorageDataType"]],
+    NoneType,
+]
 
 
 class StorageController:
@@ -34,7 +42,10 @@ class StorageController:
     @property
     def filename(self) -> str:
         """Return full path to (fabric-specific) storage file."""
-        return f"{self.server.device_controller.compressed_fabric_id}.json"
+        return os.path.join(
+            self.server.storage_path,
+            f"{self.server.device_controller.compressed_fabric_id}.json",
+        )
 
     async def start(self) -> None:
         """Async initialize of controller."""
@@ -63,14 +74,14 @@ class StorageController:
         key: str,
         value: StorageDataType,
         subkey: str | None = None,
-        immediate: bool = False,
+        force: bool = False,
     ) -> None:
         """
         Set a (sub)value in persistent storage.
 
         NOTE: Json serializable types only!
         """
-        if self.get(key, subkey=subkey) == value:
+        if not force and self.get(key, subkey=subkey) == value:
             # no need to save if value did not change
             return
         if subkey:
@@ -79,7 +90,7 @@ class StorageController:
             self._data[key][subkey] = value
         else:
             self._data[key] = value
-        self._save(immediate)
+        self._save(force)
 
     def __getitem__(self, key: str) -> StorageDataType:
         """Get data from specific key."""
@@ -105,7 +116,7 @@ class StorageController:
                         return data
                 except FileNotFoundError:
                     pass
-                except json.decoder.JSONDecodeError as err:
+                except json.JSONDecodeError as err:
                     self.logger.error(
                         "Error while reading persistent storage file %s", filename
                     )
@@ -126,23 +137,26 @@ class StorageController:
 
         loop = asyncio.get_running_loop()
 
-        def _save():
-            filename_backup = f"{self.filename}.backup"
-            # make backup before we write a new file
-            if os.path.isfile(self.filename):
-                if os.path.isfile(filename_backup):
-                    os.remove(filename_backup)
-                os.rename(self.filename, filename_backup)
+        async def async_do_save():
+            def do_save():
+                filename_backup = f"{self.filename}.backup"
+                # make backup before we write a new file
+                if os.path.isfile(self.filename):
+                    if os.path.isfile(filename_backup):
+                        os.remove(filename_backup)
+                    os.rename(self.filename, filename_backup)
 
-            with open(self.filename, "w") as _file:
-                json_data = json.dumps(self._data)
-            self.logger.debug("Saved data to persistent storage")
+                with open(self.filename, "w") as _file:
+                    json_data = json.dumps(self._data).decode()
+                    _file.write(json_data)
+                self.logger.debug("Saved data to persistent storage")
 
-        fut = loop.run_in_executor(None, _save)
+            await loop.run_in_executor(None, do_save)
+
         if immediate:
-            loop.create_task(fut)
+            loop.create_task(async_do_save())
         else:
             # schedule the save for later
             self._timer_handle = loop.call_later(
-                DEFAULT_SAVE_DELAY, loop.create_task, None, fut
+                DEFAULT_SAVE_DELAY, loop.create_task, None, async_do_save
             )

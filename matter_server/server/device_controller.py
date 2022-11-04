@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from enum import IntEnum
 from functools import partial
 import logging
+import os
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -84,6 +85,7 @@ class MatterDeviceController:
         self.server = server
         self.logger = server.logger.getChild("device_controller")
         # Instantiate the underlying ChipDeviceController instance on the Fabric
+        root_certs_path = os.path.join(server.storage_path, "paa-root-certs")
         self.chip_controller: ChipDeviceController = (
             server.stack.fabric_admin.NewController()
         )
@@ -108,7 +110,8 @@ class MatterDeviceController:
         """Async initialize of controller."""
         # load nodes from persistent storage
         nodes_data = self.server.storage.get(NODES_DATA_KEY, {})
-        for nodeid, node_dict in nodes_data.values():
+        for nodeid_str, node_dict in nodes_data.items():
+            nodeid = int(nodeid_str)
             self._nodes[nodeid] = dataclass_from_dict(MatterNode, node_dict)
         self.logger.debug("Started.")
 
@@ -131,7 +134,7 @@ class MatterDeviceController:
 
     @api_command("device_controller.CommissionWithCode")
     async def commission_with_code(
-        self, setupPayload: str, wait_for_interview: bool = False
+        self, code: str, wait_for_interview: bool = False
     ) -> bool:
         """
         Commission a device.
@@ -141,9 +144,9 @@ class MatterDeviceController:
         """
         assert self._wifi_creds_set, "Received commissioning without Wi-Fi set"
         async with self._add_node() as next_nodeid:
-            success = self._call_sdk(
+            success = await self._call_sdk(
                 self.chip_controller.CommissionWithCode,
-                setupPayload=setupPayload,
+                setupPayload=code,
                 nodeid=next_nodeid,
             )
             if success:
@@ -197,7 +200,7 @@ class MatterDeviceController:
             credentials=credentials,
         )
 
-        self._wifi_creds_set = error_code == 0
+        self._wifi_creds_set = True
         return error_code == 0
 
     @api_command("device_controller.SetThreadOperationalDataset")
@@ -236,6 +239,16 @@ class MatterDeviceController:
         )
         return discriminator
 
+    @api_command("device_controller.DiscoverCommissionableNodes")
+    async def discover_commissionable_nodes(
+        self):
+        """DiscoverCommissionableNodes"""
+
+        result = await self._call_sdk(
+            self.chip_controller.DiscoverCommissionableNodes,
+        )
+        return result
+
     @api_command("device_controller.SendCommand")
     async def _handle_device_controller_SendCommand(self, msg: CommandMessage):
         result = await self.chip_controller.SendCommand(**msg.args)
@@ -259,7 +272,7 @@ class MatterDeviceController:
         is_new_node = self._nodes[nodeid] is None
         self._nodes[nodeid] = node_info
         self.server.storage.set(
-            NODES_DATA_KEY, nodeid, dataclass_to_dict(node_info), immediate=True
+            NODES_DATA_KEY, str(nodeid), dataclass_to_dict(node_info), immediate=True
         )
 
         if is_new_node:
@@ -283,7 +296,7 @@ class MatterDeviceController:
 
         await self._call_sdk(self.chip_controller.ResolveNode, nodeid=nodeid)
         # we follow the pattern of apple and google here and
-        # we just do a wildcard subscription for all clusters and properties
+        # just do a wildcard subscription for all clusters and properties
         # the client will handle filtering of the events.
         # if it turns out in the future that this is too much traffic (I don't think so now)
         # we can revisit this choice and so some selected subscriptions.
@@ -323,8 +336,11 @@ class MatterDeviceController:
 
         async with self._commission_lock:
             # return the next available node id
-            next_nodeid = max(self._nodes.keys()) + 1
-            self.server.storage.set(NODES_DATA_KEY, None, next_nodeid, immediate=True)
+            if self._nodes:
+                next_nodeid = max(x for x in self._nodes) + 1
+            else:
+                next_nodeid = 4335
+            self.server.storage.set(NODES_DATA_KEY, None, str(next_nodeid), force=True)
             self.server.signal_event(EventType.NODE_ADD_PROGRESS, next_nodeid)
             yield next_nodeid
 

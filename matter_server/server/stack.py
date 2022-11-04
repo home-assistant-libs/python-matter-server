@@ -3,7 +3,8 @@
 import asyncio
 import logging
 import os
-from typing import TYPE_CHECKING
+import pathlib
+from typing import TYPE_CHECKING, Optional
 
 from chip.ChipStack import ChipStack
 import chip.logging
@@ -30,7 +31,7 @@ class MatterStack:
         chip.native.Init()
         chip.logging.RedirectToPythonLogging()
 
-        self.stack = ChipStack(
+        self._chip_stack = ChipStack(
             persistentStoragePath=storage_file, enableServerInteractions=True
         )
 
@@ -38,7 +39,7 @@ class MatterStack:
         # yeah this is a bit weird just to prevent a circular import in the underlying SDK
         self.certificate_authority_manager: CertificateAuthorityManager = (
             chip.CertificateAuthority.CertificateAuthorityManager(
-                self.stack, self.stack.GetStorageManager()
+                chipStack=self._chip_stack
             )
         )
         self.certificate_authority_manager.LoadAuthoritiesFromStorage()
@@ -46,6 +47,7 @@ class MatterStack:
         # Get Certificate Authority (create new if we do not yet have one)
         if len(self.certificate_authority_manager.activeCaList) == 0:
             ca = self.certificate_authority_manager.NewCertificateAuthority()
+            ca.maximizeCertChains = False
         else:
             ca = self.certificate_authority_manager.activeCaList[0]
 
@@ -68,4 +70,4 @@ class MatterStack:
         """Stop/Shutdown Matter Stack."""
         self.logger.info("Shutting down the Matter stack...")
         # NOTE that this will abruptly end the python process!
-        self.stack.Shutdown()
+        self._chip_stack.Shutdown()
