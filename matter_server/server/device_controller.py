@@ -85,7 +85,6 @@ class MatterDeviceController:
         self.server = server
         self.logger = server.logger.getChild("device_controller")
         # Instantiate the underlying ChipDeviceController instance on the Fabric
-        root_certs_path = os.path.join(server.storage_path, "paa-root-certs")
         self.chip_controller: ChipDeviceController = (
             server.stack.fabric_admin.NewController()
         )
