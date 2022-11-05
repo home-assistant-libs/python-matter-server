@@ -57,7 +57,7 @@ class StorageController:
         if not self._timer_handle:
             # no point in forcing a save when there are no changes pending
             return
-        await self._save(immediate=True)
+        await self.async_save()
         self.logger.debug("Stopped.")
 
     def get(
@@ -90,7 +90,7 @@ class StorageController:
             self._data[key][subkey] = value
         else:
             self._data[key] = value
-        self._save(force)
+        self.save(force)
 
     def __getitem__(self, key: str) -> StorageDataType:
         """Get data from specific key."""
@@ -128,35 +128,34 @@ class StorageController:
         loop = asyncio.get_running_loop()
         self._data = await loop.run_in_executor(None, _load)
 
-    def _save(self, immediate: bool = False) -> None:
+    def save(self, immediate: bool = False) -> None:
         """Schedule save of data to disk."""
-
         if self._timer_handle is not None:
             self._timer_handle.cancel()
             self._timer_handle = None
 
-        loop = asyncio.get_running_loop()
-
-        async def async_do_save():
-            def do_save():
-                filename_backup = f"{self.filename}.backup"
-                # make backup before we write a new file
-                if os.path.isfile(self.filename):
-                    if os.path.isfile(filename_backup):
-                        os.remove(filename_backup)
-                    os.rename(self.filename, filename_backup)
-
-                with open(self.filename, "w") as _file:
-                    json_data = json.dumps(self._data).decode()
-                    _file.write(json_data)
-                self.logger.debug("Saved data to persistent storage")
-
-            await loop.run_in_executor(None, do_save)
-
         if immediate:
-            loop.create_task(async_do_save())
+            self.server.loop.create_task(self.async_save())
         else:
             # schedule the save for later
-            self._timer_handle = loop.call_later(
-                DEFAULT_SAVE_DELAY, loop.create_task, None, async_do_save
+            self._timer_handle = self.server.loop.call_later(
+                DEFAULT_SAVE_DELAY, self.server.loop.create_task, self.async_save()
             )
+
+    async def async_save(self):
+        """Save persistent data to disk."""
+
+        def do_save():
+            filename_backup = f"{self.filename}.backup"
+            # make backup before we write a new file
+            if os.path.isfile(self.filename):
+                if os.path.isfile(filename_backup):
+                    os.remove(filename_backup)
+                os.rename(self.filename, filename_backup)
+
+            with open(self.filename, "w") as _file:
+                json_data = json.dumps(self._data).decode()
+                _file.write(json_data)
+            self.logger.debug("Saved data to persistent storage")
+
+        await self.server.loop.run_in_executor(None, do_save)

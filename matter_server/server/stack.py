@@ -32,7 +32,7 @@ class MatterStack:
         chip.logging.RedirectToPythonLogging()
 
         self._chip_stack = ChipStack(
-            persistentStoragePath=storage_file, enableServerInteractions=True
+            persistentStoragePath=storage_file, enableServerInteractions=False
         )
 
         # Initialize Certificate Authoritity Manager

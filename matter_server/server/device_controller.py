@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from concurrent import futures
-from contextlib import asynccontextmanager
+from datetime import datetime
 from enum import IntEnum
 from functools import partial
 import logging
@@ -26,11 +26,17 @@ from typing import (
 
 from chip.ChipDeviceCtrl import ChipDeviceController
 from chip.discovery import FilterType as DiscoveryFilterType
+from chip.exceptions import ChipStackError
 
-from matter_server.common.helpers.util import dataclass_from_dict, dataclass_to_dict
+from matter_server.server.const import SCHEMA_VERSION
 
 from ..common.helpers.api import api_command
-from ..common.model.error import InterviewFailed, NodeNotExists
+from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
+from ..common.model.error import (
+    NodeCommissionFailed,
+    NodeInterviewFailed,
+    NodeNotExists,
+)
 from ..common.model.event import EventType
 from ..common.model.message import (
     CommandMessage,
@@ -38,7 +44,6 @@ from ..common.model.message import (
     SubscriptionReportMessage,
     SuccessResultMessage,
 )
-from ..common.model.server_information import VersionInfo
 
 if TYPE_CHECKING:
     from chip.clusters import (
@@ -51,21 +56,21 @@ if TYPE_CHECKING:
     from .stack import MatterStack
     from .server import MatterServer
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-NODES_DATA_KEY = "nodes"
+DATA_KEY_NODES = "nodes"
+DATA_KEY_LAST_NODEID = "last_nodeid"
 
 
 @dataclass
-class MatterNode:
+class MatterNodeData:
     """Representation of a Matter Node."""
 
-    # root_device_type_instance: MatterDeviceTypeInstance[device_types.RootNode]
-    # aggregator_device_type_instance: MatterDeviceTypeInstance[
-    #     device_types.Aggregator
-    # ] | None = None
-    # device_type_instances: list[MatterDeviceTypeInstance]
-    # node_devices: list[AbstractMatterNodeDevice]
+    nodeid: int
+    date_commissioned: datetime
+    last_interview: datetime
+    interview_version: int
+    attributes: dict[int, dict] = field(default_factory=dict)
 
 
 class CommissionOption(IntEnum):
@@ -90,10 +95,8 @@ class MatterDeviceController:
         )
         self.logger.debug("CHIP Device Controller Initialized")
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
-        self._nodes: dict[int, MatterNode] = {}
+        self._nodes: dict[int, MatterNodeData] = {}
         self._wifi_creds_set = False
-        self._commission_lock: asyncio.Lock | None = None
-        self._interview_queue = asyncio.Queue()
 
     @property
     def fabric_id(self) -> int:
@@ -108,54 +111,60 @@ class MatterDeviceController:
     async def start(self) -> None:
         """Async initialize of controller."""
         # load nodes from persistent storage
-        nodes_data = self.server.storage.get(NODES_DATA_KEY, {})
+        nodes_data = self.server.storage.get(DATA_KEY_NODES, {})
         for nodeid_str, node_dict in nodes_data.items():
             nodeid = int(nodeid_str)
-            self._nodes[nodeid] = dataclass_from_dict(MatterNode, node_dict)
+            node = dataclass_from_dict(MatterNodeData, node_dict)
+            self._nodes[nodeid] = node
+            # make sure to start node subscriptions
+            await self._subscribe_node(nodeid)
+        # create task to check for nodes that need any re(interviews)
+        self.server.loop.create_task(self._check_interviews())
         self.logger.debug("Started.")
 
     async def stop(self) -> None:
         """ "Handle logic on server stop."""
+        # unsubscribe all node subscriptions
+        for sub in self._subscriptions.values():
+            await self._call_sdk(sub.Shutdown)
+        self._subscriptions = {}
         await self._call_sdk(self.chip_controller.Shutdown)
         self.logger.debug("Stopped.")
 
     @api_command("device_controller.GetNodes")
-    async def get_nodes(self) -> list[MatterNode]:
+    async def get_nodes(self) -> list[MatterNodeData]:
         """Return all Nodes known to the server."""
         return [x for x in self._nodes.values() if x is not None]
 
     @api_command("device_controller.GetNode")
-    async def get_node(self, nodeid: int) -> MatterNode:
+    async def get_node(self, nodeid: int) -> MatterNodeData:
         """Return info of a single Node."""
         node = self._nodes.get(nodeid)
         assert node is not None, "Node does not exist or is not yet interviewed"
         return node
 
     @api_command("device_controller.CommissionWithCode")
-    async def commission_with_code(
-        self, code: str, wait_for_interview: bool = False
-    ) -> bool:
+    async def commission_with_code(self, code: str) -> MatterNodeData:
         """
-        Commission a device.
+        Commission a device using QRCode or ManualPairingCode.
 
-        Return boolean if successful.
-        If `wait_for_interview` is True, it awaits the full interview, otherwise returns early.
+        Returns full NodeInfo once complete.
         """
         assert self._wifi_creds_set, "Received commissioning without Wi-Fi set"
-        async with self._add_node() as next_nodeid:
-            success = await self._call_sdk(
-                self.chip_controller.CommissionWithCode,
-                setupPayload=code,
-                nodeid=next_nodeid,
-            )
-            if success:
-                # interview the new node right away and wait for the result
-                coro = self._interview_node(next_nodeid)
-                if wait_for_interview:
-                    await coro
-                else:
-                    self.server.loop.create_task(coro)
-            return success
+        nodeid = self._get_next_nodeid()
+        success = await self._call_sdk(
+            self.chip_controller.CommissionWithCode,
+            setupPayload=code,
+            nodeid=nodeid,
+        )
+        if not success:
+            raise NodeCommissionFailed(f"CommissionWithCode failed for node {nodeid}")
+        # full interview of the device
+        await self.interview_node(nodeid)
+        # make sure we start a subscription for this newly added node
+        await self._subscribe_node(nodeid)
+        # return full node object once we're complete
+        return self.get_node(nodeid)
 
     @api_command("device_controller.CommissionOnNetwork")
     async def commission_on_network(
@@ -163,32 +172,30 @@ class MatterDeviceController:
         setupPinCode: int,
         filterType: DiscoveryFilterType = DiscoveryFilterType.NONE,
         filter: Any = None,
-        wait_for_interview: bool = False,
-    ) -> bool:
+    ) -> MatterNodeData:
         """
         Commission a device already connected to the network.
 
         Does the routine for OnNetworkCommissioning, with a filter for mDNS discovery.
         The filter can be an integer, a string or None depending on the actual type of selected filter.
-        Return boolean if successful.
-        If `wait_for_interview` is True, it awaits the full interview, otherwise returns early.
+        Returns full NodeInfo once complete.
         """
-        async with self._add_node() as next_nodeid:
-            success = await self._call_sdk(
-                self.chip_controller.CommissionOnNetwork,
-                nodeId=next_nodeid,
-                setupPinCode=setupPinCode,
-                filterType=filterType,
-                filter=filter,
-            )
-            if success:
-                # interview the new node right away and wait for the result
-                coro = self._interview_node(next_nodeid)
-                if wait_for_interview:
-                    await coro
-                else:
-                    self.server.loop.create_task(coro)
-            return success
+        nodeid = self._get_next_nodeid()
+        success = await self._call_sdk(
+            self.chip_controller.CommissionOnNetwork,
+            nodeId=nodeid,
+            setupPinCode=setupPinCode,
+            filterType=filterType,
+            filter=filter,
+        )
+        if not success:
+            raise NodeCommissionFailed(f"CommissionWithCode failed for node {nodeid}")
+        # full interview of the device
+        await self.interview_node(nodeid)
+        # make sure we start a subscription for this newly added node
+        await self._subscribe_node(nodeid)
+        # return full node object once we're complete
+        return self.get_node(nodeid)
 
     @api_command("device_controller.SetWiFiCredentials")
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> bool:
@@ -239,8 +246,7 @@ class MatterDeviceController:
         return discriminator
 
     @api_command("device_controller.DiscoverCommissionableNodes")
-    async def discover_commissionable_nodes(
-        self):
+    async def discover_commissionable_nodes(self):
         """DiscoverCommissionableNodes"""
 
         result = await self._call_sdk(
@@ -248,46 +254,59 @@ class MatterDeviceController:
         )
         return result
 
+    @api_command("device_controller.InterviewNode")
+    async def interview_node(self, nodeid: int) -> None:
+        """Interview a node."""
+        self.logger.debug("Interviewing node: %s", nodeid)
+        try:
+            await self._call_sdk(self.chip_controller.ResolveNode, nodeid=nodeid)
+            read_response: Attribute.AsyncReadTransaction.ReadResponse = (
+                await self.chip_controller.Read(
+                    nodeid=nodeid, attributes="*", events="*", returnClusterObject=True
+                )
+            )
+        except ChipStackError as err:  # pylint: disable=broad-except
+            raise NodeInterviewFailed(f"Failed to interview node {nodeid}") from err
+
+        if nodeid not in self._nodes:
+            # new node - first interview
+            is_new_node = True
+            node_data = MatterNodeData(
+                nodeid=nodeid,
+                date_commissioned=datetime.utcnow(),
+                last_interview=datetime.utcnow(),
+                interview_version=SCHEMA_VERSION,
+            )
+        else:
+            node_data = self._nodes.get(nodeid)
+            node_data.last_interview = datetime.now()
+            node_data.interview_version = SCHEMA_VERSION
+
+        node_data.attributes = read_response.attributes
+
+        # save updated node data
+        self._nodes[nodeid] = node_data
+        self.server.storage.set(
+            DATA_KEY_NODES, subkey=str(nodeid), value=dataclass_to_dict(node_data)
+        )
+
+        if is_new_node:
+            # new node - first interview
+            self.server.signal_event(EventType.NODE_ADDED, node_data)
+        else:
+            # re interview of existing node
+            # TODO: should we compare values to see if something actually changed?
+            self.server.signal_event(EventType.NODE_UPDATED, node_data)
+
+        self.logger.debug("Interview of node %s completed", nodeid)
+
     @api_command("device_controller.SendCommand")
     async def _handle_device_controller_SendCommand(self, msg: CommandMessage):
         result = await self.chip_controller.SendCommand(**msg.args)
         self._send_message(SuccessResultMessage(msg.messageId, {"raw": result}))
 
-    async def _interview_node(self, nodeid: int) -> None:
-        """Interview a node."""
-        if nodeid not in self._nodes:
-            raise NodeNotExists(f"Node {nodeid} does not exist.")
-
-        self.logger.debug("Interviewing node: %s", nodeid)
-        try:
-            await self._call_sdk(self.chip_controller.ResolveNode, nodeid=nodeid)
-            node_info = await self.chip_controller.Read(
-                nodeid=nodeid, attributes="*", events="*", returnClusterObject=True
-            )
-        except Exception as err:  # pylint: disable=broad-except
-            # TODO: find out what types of exceptions are thrown here
-            raise InterviewFailed(f"Failed to interview node {nodeid}") from err
-
-        is_new_node = self._nodes[nodeid] is None
-        self._nodes[nodeid] = node_info
-        self.server.storage.set(
-            NODES_DATA_KEY, str(nodeid), dataclass_to_dict(node_info), immediate=True
-        )
-
-        if is_new_node:
-            # new node - first interview
-            self.server.signal_event(EventType.NODE_ADD_COMPLETE, node_info)
-            # make sure we start a subscription for this newly added node
-            await self._subscribe_node(nodeid)
-        else:
-            # re interview of existing node
-            # TODO: should we compare values to see if something actually changed?
-            self.server.signal_event(EventType.NODE_UPDATED, node_info)
-
-        self.logger.debug("Interview of node %s completed", nodeid)
-
     async def _subscribe_node(self, nodeid: int) -> None:
-        """Subscribe to all node state changes."""
+        """Subscribe to all node state changes/events."""
         if nodeid not in self._nodes:
             raise NodeNotExists(f"Node {nodeid} does not exist.")
         assert nodeid not in self._subscriptions, "Already subscribed to node"
@@ -302,15 +321,13 @@ class MatterDeviceController:
         sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
             nodeid=nodeid, attributes="*", events="*", reportInterval=(0, 120)
         )
-        self._subscriptions[nodeid] = sub
 
-        def subscription_callback(
+        def attribute_updated_callback(
             path: Attribute.TypedAttributePath,
-            subscription: Attribute.SubscriptionTransaction,
+            transaction: Attribute.SubscriptionTransaction,
         ):
-            data = subscription.GetAttribute(path)
+            data = transaction.GetAttribute(path)
             # value = {
-            #     "subscriptionId": subscription_id,
             #     "fabridId": self.server.stack.fabric_id,
             #     "nodeId": msg.args["nodeid"],
             #     "endpoint": path.Path.EndpointId,
@@ -318,30 +335,49 @@ class MatterDeviceController:
             #     "attribute": path.AttributeName,
             #     "value": data,
             # }
-            self.logger.info("subscription_callback %s", data)
+            self.logger.debug("attribute updated: %s", data)
 
             # This callback is running in the CHIP stack thread
             self.server.loop.call_soon_threadsafe(
                 self.server.signal_event, EventType.NODE_UPDATED
             )
 
-        sub.SetAttributeUpdateCallback(subscription_callback)
+        def event_callback(
+            data: Attribute.EventReadResult,
+            transaction: Attribute.SubscriptionTransaction,
+        ):
+            self.logger.debug("event_callback: %s", data)
 
-    @asynccontextmanager
-    async def _add_node(self) -> Generator[int, None, None]:
-        """Handle a new node being added."""
-        if self._commission_lock is None:
-            self._commission_lock = asyncio.Lock()
+        def error_callback(
+            chipError: int, transaction: Attribute.SubscriptionTransaction
+        ):
+            self.logger.debug("error_callback: %s", chipError)
 
-        async with self._commission_lock:
-            # return the next available node id
-            if self._nodes:
-                next_nodeid = max(x for x in self._nodes) + 1
-            else:
-                next_nodeid = 4335
-            self.server.storage.set(NODES_DATA_KEY, None, str(next_nodeid), force=True)
-            self.server.signal_event(EventType.NODE_ADD_PROGRESS, next_nodeid)
-            yield next_nodeid
+        def resubscription_attempted(
+            transaction: Attribute.SubscriptionTransaction,
+            terminationError: int,
+            nextResubscribeIntervalMsec: int,
+        ):
+            self.logger.debug(
+                f"Previous subscription failed with Error: {terminationError} - re-subscribing in {nextResubscribeIntervalMsec}ms..."
+            )
+
+        def resubscription_succeeded(transaction: Attribute.SubscriptionTransaction):
+            self.logger.debug(f"Subscription succeeded")
+
+        sub.SetAttributeUpdateCallback(attribute_updated_callback)
+        sub.SetEventUpdateCallback(event_callback)
+        sub.SetErrorCallback(error_callback)
+        sub.SetResubscriptionAttemptedCallback(resubscription_attempted)
+        sub.SetResubscriptionSucceededCallback()
+        self._subscriptions[nodeid] = sub
+
+    def _get_next_nodeid(self) -> int:
+        """Return next nodeid."""
+        next_nodeid = self.server.storage.get(DATA_KEY_LAST_NODEID, 0) + 1
+        self.server.storage.set(DATA_KEY_LAST_NODEID, next_nodeid, force=True)
+        self._last_nodeid = next_nodeid
+        return next_nodeid
 
     async def _call_sdk(self, func: Callable, *args, **kwargs) -> Any:
         """Call function on the SDK in executor and return result."""
@@ -349,3 +385,15 @@ class MatterDeviceController:
             None,
             partial(func, *args, **kwargs),
         )
+
+    async def _check_interviews(self) -> None:
+        """Check if any nodes need to be (re)interviewed."""
+        # Reinterview all nodes that have an outdated schema
+        # and/or have been interviewed more than 30 days ago.
+        for node in self._nodes.values():
+            if SCHEMA_VERSION > node.interview_version or (datetime.utcnow() - node.last_interview).days > 30:
+                await self.interview_node(node.nodeid)
+        # reschedule self to run every hour
+        self.server.loop.call_later(
+                3600, self.server.loop.create_task, self._check_interviews()
+            )

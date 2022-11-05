@@ -21,7 +21,7 @@ from ..common.model.message import (
     ErrorResultMessage,
     SuccessResultMessage,
 )
-from ..common.model.server_information import FullServerState, ServerInfo, VersionInfo
+from ..common.model.server_information import FullServerState, ServerInfo
 
 if TYPE_CHECKING:
     from ..common.helpers.api import APICommandHandler
@@ -185,7 +185,7 @@ class WebsocketClientHandler:
                 self._logger.debug("Sending %s", message)
                 await self.wsock.send_str(message)
 
-    def _send_message(self, message: str | dict[str, Any] | Callable[[], str]) -> None:
+    def _send_message(self, message: Message) -> None:
         """
         Send a message to the client.
 

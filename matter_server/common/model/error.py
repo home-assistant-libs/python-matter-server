@@ -4,7 +4,10 @@ class MatterError(Exception):
     """Generic Matter exception."""
     pass
 
-class InterviewFailed(MatterError):
+class NodeCommissionFailed(MatterError):
+    """Error raised when interview of a device failed."""
+
+class NodeInterviewFailed(MatterError):
     """Error raised when interview of a device failed."""
 
 class NodeNotReady(MatterError):

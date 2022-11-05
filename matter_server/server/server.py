@@ -14,11 +14,13 @@ import weakref
 from aiohttp import WSMsgType, web
 import async_timeout
 
+from matter_server.server.const import SCHEMA_VERSION
+
 from ..common.helpers.api import APICommandHandler, api_command
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 from ..common.model.event import EventType
 from ..common.model.message import CommandMessage
-from ..common.model.server_information import FullServerState, ServerInfo, VersionInfo
+from ..common.model.server_information import FullServerState, ServerInfo
 from ..server.client_handler import WebsocketClientHandler
 from .device_controller import MatterDeviceController
 from .stack import MatterStack
@@ -125,13 +127,7 @@ class MatterServer:
             ServerInfo(
                 fabricId=self.device_controller.fabric_id,
                 compressedFabricId=self.device_controller.compressed_fabric_id,
-                version=VersionInfo(
-                    # TODO: send correct versions here
-                    sdk_version=0,
-                    server_version=0,
-                    min_schema_version=1,
-                    max_schema_version=1,
-                ),
+                schema_version=SCHEMA_VERSION
             ),
         )
 

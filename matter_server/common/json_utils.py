@@ -6,13 +6,9 @@ import json
 
 import matter_server.common.model
 
-# Compatible both with vendorized and not-vendorized
-try:
-    from chip.clusters import Objects as Clusters
-    from chip.clusters.Types import Nullable
-except ImportError:
-    from ..vendor.chip.clusters import Objects as Clusters
-    from ..vendor.chip.clusters.Types import Nullable
+from chip.clusters import Objects as Clusters
+from chip.clusters.Types import Nullable
+
 
 MATTER_SERVER_NAMESPACE = "matter_server.common.model"
 CLUSTER_TYPE_NAMESPACE = "chip.clusters.Objects"

@@ -42,7 +42,7 @@ def update_dataclass(cur_obj: dataclass, new_vals: dict) -> Set[str]:
     return changed_keys
 
 
-def dataclass_to_dict(obj_in: dataclass, skip_none: bool = True) -> dict:
+def dataclass_to_dict(obj_in: dataclass, skip_none: bool = False) -> dict:
     """Convert dataclass instance to dict, optionally skip None values."""
     if skip_none:
         dict_obj = asdict(
@@ -54,6 +54,8 @@ def dataclass_to_dict(obj_in: dataclass, skip_none: bool = True) -> dict:
     def _clean_dict(_dict_obj: dict):
         final = {}
         for key, value in _dict_obj.items():
+            if isinstance(key, int):
+                key = str(int)
             if value is None and skip_none:
                 continue
             if isinstance(value, dict):
