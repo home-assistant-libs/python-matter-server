@@ -142,11 +142,13 @@ class MatterDeviceController:
         """
         assert self._wifi_creds_set, "Received commissioning without Wi-Fi set"
         nodeid = self._get_next_nodeid()
-        def _do_commission():
-            return self.chip_controller.CommissionWithCode(setupPayload=code,
-            nodeid=nodeid)
+        success = await self._call_sdk(
+            self.chip_controller.CommissionWithCode,
+            setupPayload=code,
+            nodeid=nodeid,
+        )
 
-        success = await self.server.loop.run_in_executor(None, _do_commission)
+        # TODO TEMP !!!
         # if not success:
         #     raise NodeCommissionFailed(f"CommissionWithCode failed for node {nodeid}")
         await asyncio.sleep(20)
