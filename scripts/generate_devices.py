@@ -5,10 +5,10 @@ import xmltodict
 
 REPO_ROOT = pathlib.Path(__file__).parent.parent
 
-CHIP_ROOT = REPO_ROOT / "../connectedhomeip"
+CHIP_ROOT = REPO_ROOT / "../../project-chip/connectedhomeip"
 DEVICE_XML = CHIP_ROOT / "src/app/zap-templates/zcl/data-model/chip/matter-devices.xml"
 
-OUTPUT_PYTHON = REPO_ROOT / "matter_server/vendor/device_types.py"
+OUTPUT_PYTHON = REPO_ROOT / "matter_server/common/models/device_types.py"
 
 
 def gen_cls_name(name: str):
@@ -43,7 +43,7 @@ from __future__ import annotations
 
 import typing
 
-from .chip.clusters import Objects as all_clusters
+from chip.clusters import Objects as all_clusters
 
 ALL_TYPES: dict[int, type["DeviceType"]] = {}
 

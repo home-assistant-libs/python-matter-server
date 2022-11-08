@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import pprint
 from types import NoneType
 from typing import TYPE_CHECKING, Dict, Union
 
@@ -88,6 +89,9 @@ class StorageController:
             # we provide support for (1-level) nested dict
             self._data.setdefault(key, {})
             self._data[key][subkey] = value
+            with open(os.path.join(self.server.storage_path, "dumptest.txt"), "w") as _file:
+                _file.write(pprint.pformat(value))
+            
         else:
             self._data[key] = value
         self.save(force)

@@ -7,8 +7,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from matter_server.vendor import device_types
-from matter_server.vendor.chip.clusters import Objects as all_clusters
+from .device_types import Aggregator
+from chip.clusters import Objects as Clusters
 
 if TYPE_CHECKING:
     from .device_type_instance import MatterDeviceTypeInstance
@@ -23,7 +23,7 @@ class AbstractMatterNodeDevice(ABC):
         """Return the node of this device."""
 
     @abstractmethod
-    def device_info(self) -> all_clusters.Basic | all_clusters.BridgedDeviceBasic:
+    def device_info(self) -> Clusters.Basic | Clusters.BridgedDeviceBasic:
         """Return device info."""
 
     @abstractmethod
@@ -40,8 +40,8 @@ class MatterNodeDevice(AbstractMatterNodeDevice):
     def node(self) -> MatterNode:
         return self._node
 
-    def device_info(self) -> all_clusters.Basic:
-        return self._node.root_device_type_instance.get_cluster(all_clusters.Basic)
+    def device_info(self) -> Clusters.Basic:
+        return self._node.root_device_type_instance.get_cluster(Clusters.Basic)
 
     def device_type_instances(self) -> list[MatterDeviceTypeInstance]:
         return self._node.device_type_instances
@@ -55,18 +55,16 @@ class MatterBridgedNodeDevice(AbstractMatterNodeDevice):
 
     def __init__(
         self,
-        bridged_device_type_instance: MatterDeviceTypeInstance[
-            device_types.AggregatordDevice
-        ],
+        bridged_device_type_instance: MatterDeviceTypeInstance[Aggregator],
     ) -> None:
         self.bridged_device_type_instance = bridged_device_type_instance
 
     def node(self) -> MatterNode:
         return self.bridged_device_type_instance.node
 
-    def device_info(self) -> all_clusters.BridgedDeviceBasic:
+    def device_info(self) -> Clusters.BridgedDeviceBasic:
         return self.bridged_device_type_instance.get_cluster(
-            all_clusters.BridgedDeviceBasic
+            Clusters.BridgedDeviceBasic
         )
 
     def device_type_instances(self) -> list[MatterDeviceTypeInstance]:

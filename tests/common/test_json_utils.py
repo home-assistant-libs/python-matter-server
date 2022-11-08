@@ -5,7 +5,7 @@ import json
 import pytest
 
 from matter_server.common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
-from matter_server.common.model.message import CommandMessage
+from matter_server.common.models.message import CommandMessage
 from matter_server.vendor.chip.clusters import Objects as clusters
 
 

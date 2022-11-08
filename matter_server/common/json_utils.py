@@ -4,7 +4,7 @@ from dataclasses import fields, is_dataclass
 from enum import Enum
 import json
 
-import matter_server.common.model
+import matter_server.common.models
 
 from chip.clusters import Objects as Clusters
 from chip.clusters.Types import Nullable
@@ -122,7 +122,7 @@ class CHIPJSONDecoder(json.JSONDecoder):
         elif type.startswith(MATTER_SERVER_NAMESPACE):
             matter_server_type = type.removeprefix(f"{MATTER_SERVER_NAMESPACE}.")
             return self._get_class_from_module(
-                matter_server.common.model, matter_server_type
+                matter_server.common.models, matter_server_type
             )
         elif type.startswith(CLUSTER_ATTRIBUTE_NAMESPACE):
             # TODO: How do we deal with that?

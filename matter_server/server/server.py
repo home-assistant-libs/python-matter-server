@@ -18,9 +18,9 @@ from matter_server.server.const import SCHEMA_VERSION
 
 from ..common.helpers.api import APICommandHandler, api_command
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
-from ..common.model.event import EventType
-from ..common.model.message import CommandMessage
-from ..common.model.server_information import FullServerState, ServerInfo
+from ..common.models.event import EventType
+from ..common.models.message import CommandMessage
+from ..common.models.server_information import ServerDiagnostics, ServerInfo
 from ..server.client_handler import WebsocketClientHandler
 from .device_controller import MatterDeviceController
 from .stack import MatterStack
@@ -120,7 +120,7 @@ class MatterServer:
         self._subscribers.add(callback)
 
     @api_command("server.info")
-    async def get_info(self) -> ServerInfo:
+    def get_info(self) -> ServerInfo:
         """Return full server state."""
         """Return (version)info of the Matter Server."""
         return (
@@ -131,12 +131,18 @@ class MatterServer:
             ),
         )
 
-    @api_command("server.state")
-    async def get_state(self) -> FullServerState:
-        """Return full server state."""
+    @api_command("server.diagnostics")
+    def get_diagnostics(self) -> ServerDiagnostics:
+        """Return a full dump of the server (for diagnostics)."""
         # TODO !
-        return await self.get_info()
+        return ServerDiagnostics(
+            info=self.get_info(),
+            nodes=self.device_controller.get_nodes(),
+            events=self.device_controller
+        )
 
+    
+    
     def signal_event(self, evt: EventType, data: Any = None) -> None:
         """Signal event to listeners."""
         for callback in self._subscribers:
@@ -168,4 +174,4 @@ class MatterServer:
 
     async def _handle_info(self, request: web.Request) -> web.Response:
         """Handle info endpoint to serve basic server (version) info."""
-        return web.json_response(await self.get_info())
+        return web.json_response(self.get_info())

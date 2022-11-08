@@ -14,7 +14,7 @@ from matter_server.client.client import Client
 from matter_server.client.model.driver import Driver
 from matter_server.client.model.node import MatterNode
 from matter_server.common import json_utils
-from matter_server.common.model.message import ServerInformation
+from matter_server.common.models.message import ServerInformation
 from matter_server.vendor.chip.clusters.ObjectsVersion import CLUSTER_OBJECT_VERSION
 
 from tests.fixtures import NODE_FIXTURES_ROOT

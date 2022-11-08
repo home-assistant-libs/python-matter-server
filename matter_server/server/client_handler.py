@@ -13,15 +13,19 @@ from aiohttp import WSMsgType, web
 import async_timeout
 from chip.exceptions import ChipStackError
 
+from matter_server.common.json_utils import CHIPJSONEncoder
+
 from ..common.helpers.api import parse_arguments
-from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
-from ..common.model.message import (
+from ..common.helpers.util import dataclass_to_dict
+
+from ..common.models.message import (
     CommandMessage,
     ErrorCode,
     ErrorResultMessage,
     SuccessResultMessage,
 )
-from ..common.model.server_information import FullServerState, ServerInfo
+from ..common.models.server_information import ServerInfo
+from ..common.models.message import Message
 
 if TYPE_CHECKING:
     from ..common.helpers.api import APICommandHandler
@@ -76,7 +80,7 @@ class WebsocketClientHandler:
         self._writer_task = asyncio.create_task(self._writer())
 
         # send server(version) info when client connects
-        self._send_message(await self.server.get_info())
+        self._send_message(self.server.get_info())
 
         disconnect_warn = None
 

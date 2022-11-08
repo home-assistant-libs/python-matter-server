@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Coroutine, Generic, TypeVar
 
-from matter_server.vendor import device_types
-from matter_server.vendor.chip.clusters import Objects as all_clusters
+from .device_types import DeviceType
+from chip.clusters import Objects as all_clusters
 
 if TYPE_CHECKING:
     from .node import MatterNode
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 SubscriberType = Callable[[], None]
 
 
-_DEVICE_TYPE_T = TypeVar("_DEVICE_TYPE_T", bound=device_types.DeviceType)
+_DEVICE_TYPE_T = TypeVar("_DEVICE_TYPE_T", bound=DeviceType)
 _CLUSTER_T = TypeVar("_CLUSTER_T", bound=all_clusters.Cluster)
 
 

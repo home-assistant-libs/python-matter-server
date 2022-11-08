@@ -16,10 +16,10 @@ import uuid
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
 
-from matter_server.common.model.server_information import ServerInformation
+from matter_server.common.models.server_information import ServerInformation
 
 from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
-from ..common.model.message import (
+from ..common.models.message import (
     CommandMessage,
     ErrorResultMessage,
     Message,

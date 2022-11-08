@@ -1,10 +1,14 @@
 """Utils for Matter server (and client)."""
+from base64 import b64encode
 import logging
 from dataclasses import MISSING, asdict, dataclass, fields, is_dataclass
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
-from typing import Any, Optional, Set, Type, Union, get_args, get_origin
+from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
 
+from chip.tlv import uint, float32
+from chip.clusters.Types import Nullable, NullValue
+from chip.clusters import Cluster, ClusterObject
 
 try:
     # python 3.10
@@ -16,6 +20,7 @@ except:  # noqa
 # TODO: The below dataclass utils are shamelessly copied from aiohue
 # we should abstract these into a seperate helper library some day
 # https://github.com/home-assistant-libs/aiohue/blob/master/aiohue/util.py
+
 
 def update_dataclass(cur_obj: dataclass, new_vals: dict) -> Set[str]:
     """
@@ -51,21 +56,33 @@ def dataclass_to_dict(obj_in: dataclass, skip_none: bool = False) -> dict:
     else:
         dict_obj = asdict(obj_in)
 
+    def _convert_value(value: Any) -> Any:
+        """Do some common conversions."""
+        if isinstance(value, list):
+            return [_convert_value(x) for x in value]
+        if isinstance(value, Nullable) or value == NullValue:
+            return None
+        if isinstance(value, dict):
+            return _clean_dict(value)
+        if isinstance(value, Enum):
+            return value.value
+        if isinstance(value, bytes):
+            return b64encode(value).decode()
+        if isinstance(value, float32):
+            return float(value)
+        return value
+
     def _clean_dict(_dict_obj: dict):
         final = {}
         for key, value in _dict_obj.items():
             if isinstance(key, int):
-                key = str(int)
-            if value is None and skip_none:
-                continue
-            if isinstance(value, dict):
-                value = _clean_dict(value)
-            if isinstance(value, Enum):
-                value = value.value
-            final[key] = value
+                key = str(key)
+            final[key] = _convert_value(value)
         return final
 
-    return _clean_dict(dict_obj)
+    result = _clean_dict(dict_obj)
+    errors = find_paths_unserializable_data(result)
+    return result
 
 
 def parse_utc_timestamp(datetimestr: str):
@@ -75,6 +92,13 @@ def parse_utc_timestamp(datetimestr: str):
 
 def parse_value(name: str, value: Any, value_type: Type, default: Any = MISSING):
     """Try to parse a value from raw (json) data and type definitions."""
+    
+    if isinstance(value_type, str):
+        value_type = eval(value_type)
+
+    # if issubclass(value_type, Cluster):
+    #     return Cluster.FromDict(value)
+
     if value is None and not isinstance(default, type(MISSING)):
         return default
     if value is None and value_type is NoneType:
@@ -88,6 +112,16 @@ def parse_value(name: str, value: Any, value_type: Type, default: Any = MISSING)
             for subval in value
             if subval is not None
         ]
+    if origin is dict:
+        subkey_type = get_args(value_type)[0]
+        subvalue_type = get_args(value_type)[1]
+        return {
+            parse_value(subkey, subkey, subkey_type): parse_value(
+                f"{subkey}.value", subvalue, subvalue_type
+            )
+            for subkey, subvalue in value.items()
+        }
+
     if origin is Union:
         # try all possible types
         sub_value_types = get_args(value_type)
@@ -115,12 +149,15 @@ def parse_value(name: str, value: Any, value_type: Type, default: Any = MISSING)
         return value
     if value is None and value_type is not NoneType:
         raise KeyError(f"`{name}` of type `{value_type}` is required.")
+
     if issubclass(value_type, Enum):
         return value_type(value)
-    if value_type is type(datetime):
+    if issubclass(value_type, datetime):
         return parse_utc_timestamp(value)
     if value_type is float and isinstance(value, int):
-        value = float(value)
+        return float(value)
+    if value_type is int and isinstance(value, str) and value.isnumeric():
+        return int(value)
     if not isinstance(value, value_type):
         raise TypeError(
             f"Value {value} of type {type(value)} is invalid for {name}, "
@@ -156,3 +193,48 @@ def dataclass_from_dict(cls: dataclass, dict_obj: dict, strict=False):
         }
     )
 
+
+import json
+from collections import deque
+
+
+def find_paths_unserializable_data(bad_data: Any, *, dump=json.dumps) -> dict[str, Any]:
+    """Find the paths to unserializable data.
+    This method is slow! Only use for error handling.
+    """
+    to_process = deque([(bad_data, "$")])
+    invalid = {}
+
+    while to_process:
+        obj, obj_path = to_process.popleft()
+
+        try:
+            dump(obj)
+            continue
+        except (ValueError, TypeError):
+            pass
+
+        # We convert objects with as_dict to their dict values so we can find bad data inside it
+        if hasattr(obj, "as_dict"):
+            desc = obj.__class__.__name__
+
+            obj_path += f"({desc})"
+            obj = obj.as_dict()
+
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                try:
+                    # Is key valid?
+                    dump({key: None})
+                except TypeError:
+                    invalid[f"{obj_path}<key: {key}>"] = key
+                else:
+                    # Process value
+                    to_process.append((value, f"{obj_path}.{key}"))
+        elif isinstance(obj, list):
+            for idx, value in enumerate(obj):
+                to_process.append((value, f"{obj_path}[{idx}]"))
+        else:
+            invalid[obj_path] = obj
+
+    return invalid

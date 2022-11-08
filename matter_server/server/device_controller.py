@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from concurrent import futures
 from datetime import datetime
 from enum import IntEnum
@@ -14,6 +15,7 @@ from typing import (
     Any,
     Callable,
     Coroutine,
+    Deque,
     Final,
     Generator,
     List,
@@ -32,13 +34,15 @@ from matter_server.server.const import SCHEMA_VERSION
 
 from ..common.helpers.api import api_command
 from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
-from ..common.model.error import (
+from ..common.models.device import CommissionOption
+from ..common.models.node import MatterNode
+from ..common.models.error import (
     NodeCommissionFailed,
     NodeInterviewFailed,
     NodeNotExists,
 )
-from ..common.model.event import EventType
-from ..common.model.message import (
+from ..common.models.event import EventType
+from ..common.models.message import (
     CommandMessage,
     ErrorResultMessage,
     SubscriptionReportMessage,
@@ -53,31 +57,12 @@ if TYPE_CHECKING:
         ClusterEvent,
     )
 
-    from .stack import MatterStack
     from .server import MatterServer
+    from .stack import MatterStack
 
-from dataclasses import dataclass, field
 
 DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODEID = "last_nodeid"
-
-
-@dataclass
-class MatterNodeData:
-    """Representation of a Matter Node."""
-
-    nodeid: int
-    date_commissioned: datetime
-    last_interview: datetime
-    interview_version: int
-    attributes: dict[int, dict] = field(default_factory=dict)
-
-
-class CommissionOption(IntEnum):
-    """Enum with available comissioning methodes/options."""
-
-    BASIC = 0
-    ENHANCED = 1
 
 
 class MatterDeviceController:
@@ -93,10 +78,13 @@ class MatterDeviceController:
         self.chip_controller: ChipDeviceController = (
             server.stack.fabric_admin.NewController()
         )
-        self.logger.debug("CHIP Device Controller Initialized")
+        # we keep the last received events in memory so we can include them
+        # in the diagnostics dump
+        self.event_history: Deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
-        self._nodes: dict[int, MatterNodeData] = {}
+        self._nodes: dict[int, MatterNode] = {}
         self._wifi_creds_set = False
+        self.logger.debug("CHIP Device Controller Initialized")
 
     @property
     def fabric_id(self) -> int:
@@ -114,12 +102,14 @@ class MatterDeviceController:
         nodes_data = self.server.storage.get(DATA_KEY_NODES, {})
         for nodeid_str, node_dict in nodes_data.items():
             nodeid = int(nodeid_str)
-            node = dataclass_from_dict(MatterNodeData, node_dict)
+            # TEMP !!!! TODO
+            node_dict["attributes"] = {}
+            node = dataclass_from_dict(MatterNode, node_dict)
             self._nodes[nodeid] = node
             # make sure to start node subscriptions
             await self._subscribe_node(nodeid)
         # create task to check for nodes that need any re(interviews)
-        self.server.loop.create_task(self._check_interviews())
+        # self.server.loop.create_task(self._check_interviews())
         self.logger.debug("Started.")
 
     async def stop(self) -> None:
@@ -132,19 +122,19 @@ class MatterDeviceController:
         self.logger.debug("Stopped.")
 
     @api_command("device_controller.GetNodes")
-    async def get_nodes(self) -> list[MatterNodeData]:
+    def get_nodes(self) -> list[MatterNode]:
         """Return all Nodes known to the server."""
         return [x for x in self._nodes.values() if x is not None]
 
     @api_command("device_controller.GetNode")
-    async def get_node(self, nodeid: int) -> MatterNodeData:
+    async def get_node(self, nodeid: int) -> MatterNode:
         """Return info of a single Node."""
         node = self._nodes.get(nodeid)
         assert node is not None, "Node does not exist or is not yet interviewed"
         return node
 
     @api_command("device_controller.CommissionWithCode")
-    async def commission_with_code(self, code: str) -> MatterNodeData:
+    async def commission_with_code(self, code: str) -> MatterNode:
         """
         Commission a device using QRCode or ManualPairingCode.
 
@@ -152,13 +142,14 @@ class MatterDeviceController:
         """
         assert self._wifi_creds_set, "Received commissioning without Wi-Fi set"
         nodeid = self._get_next_nodeid()
-        success = await self._call_sdk(
-            self.chip_controller.CommissionWithCode,
-            setupPayload=code,
-            nodeid=nodeid,
-        )
-        if not success:
-            raise NodeCommissionFailed(f"CommissionWithCode failed for node {nodeid}")
+        def _do_commission():
+            return self.chip_controller.CommissionWithCode(setupPayload=code,
+            nodeid=nodeid)
+
+        success = await self.server.loop.run_in_executor(None, _do_commission)
+        # if not success:
+        #     raise NodeCommissionFailed(f"CommissionWithCode failed for node {nodeid}")
+        await asyncio.sleep(20)
         # full interview of the device
         await self.interview_node(nodeid)
         # make sure we start a subscription for this newly added node
@@ -172,7 +163,7 @@ class MatterDeviceController:
         setupPinCode: int,
         filterType: DiscoveryFilterType = DiscoveryFilterType.NONE,
         filter: Any = None,
-    ) -> MatterNodeData:
+    ) -> MatterNode:
         """
         Commission a device already connected to the network.
 
@@ -210,11 +201,11 @@ class MatterDeviceController:
         return error_code == 0
 
     @api_command("device_controller.SetThreadOperationalDataset")
-    async def set_thread_operational_dataset(self, dataset: bytes) -> bool:
+    async def set_thread_operational_dataset(self, dataset: str) -> bool:
         """Set Thread Operational dataset in the stack."""
         error_code = await self._call_sdk(
             self.chip_controller.SetThreadOperationalDataset,
-            threadOperationalDataset=dataset,
+            threadOperationalDataset=dataset.encode(),
         )
         return error_code == 0
 
@@ -268,35 +259,27 @@ class MatterDeviceController:
         except ChipStackError as err:  # pylint: disable=broad-except
             raise NodeInterviewFailed(f"Failed to interview node {nodeid}") from err
 
-        if nodeid not in self._nodes:
-            # new node - first interview
-            is_new_node = True
-            node_data = MatterNodeData(
-                nodeid=nodeid,
-                date_commissioned=datetime.utcnow(),
-                last_interview=datetime.utcnow(),
-                interview_version=SCHEMA_VERSION,
-            )
-        else:
-            node_data = self._nodes.get(nodeid)
-            node_data.last_interview = datetime.now()
-            node_data.interview_version = SCHEMA_VERSION
-
-        node_data.attributes = read_response.attributes
+        existing_info = self._nodes.get(nodeid)
+        node = MatterNode(
+            nodeid=nodeid,
+            date_commissioned=existing_info.date_commissioned if existing_info else datetime.utcnow(),
+            last_interview=datetime.utcnow(),
+            interview_version=SCHEMA_VERSION,
+        )
+        node.parse_attributes(read_response.attributes)
 
         # save updated node data
-        self._nodes[nodeid] = node_data
+        self._nodes[nodeid] = node
+        node_dict = dataclass_to_dict(node)
         self.server.storage.set(
-            DATA_KEY_NODES, subkey=str(nodeid), value=dataclass_to_dict(node_data)
+            DATA_KEY_NODES, subkey=str(nodeid), value=node_dict, force=not existing_info
         )
-
-        if is_new_node:
+        if existing_info is None:
             # new node - first interview
-            self.server.signal_event(EventType.NODE_ADDED, node_data)
+            self.server.signal_event(EventType.NODE_ADDED, node)
         else:
             # re interview of existing node
-            # TODO: should we compare values to see if something actually changed?
-            self.server.signal_event(EventType.NODE_UPDATED, node_data)
+            self.server.signal_event(EventType.NODE_UPDATED, node)
 
         self.logger.debug("Interview of node %s completed", nodeid)
 
@@ -319,7 +302,7 @@ class MatterDeviceController:
         # if it turns out in the future that this is too much traffic (I don't think so now)
         # we can revisit this choice and so some selected subscriptions.
         sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
-            nodeid=nodeid, attributes="*", events="*", reportInterval=(0, 120)
+            nodeid=nodeid, attributes="*", events="*", reportInterval=(0, 60)
         )
 
         def attribute_updated_callback(
@@ -347,6 +330,7 @@ class MatterDeviceController:
             transaction: Attribute.SubscriptionTransaction,
         ):
             self.logger.debug("event_callback: %s", data)
+            self.event_history.append(data)
 
         def error_callback(
             chipError: int, transaction: Attribute.SubscriptionTransaction
@@ -359,7 +343,8 @@ class MatterDeviceController:
             nextResubscribeIntervalMsec: int,
         ):
             self.logger.debug(
-                f"Previous subscription failed with Error: {terminationError} - re-subscribing in {nextResubscribeIntervalMsec}ms..."
+                f"Previous subscription failed with Error: {terminationError} - ",
+                f"re-subscribing in {nextResubscribeIntervalMsec}ms..."
             )
 
         def resubscription_succeeded(transaction: Attribute.SubscriptionTransaction):
@@ -369,7 +354,7 @@ class MatterDeviceController:
         sub.SetEventUpdateCallback(event_callback)
         sub.SetErrorCallback(error_callback)
         sub.SetResubscriptionAttemptedCallback(resubscription_attempted)
-        sub.SetResubscriptionSucceededCallback()
+        sub.SetResubscriptionSucceededCallback(resubscription_succeeded)
         self._subscriptions[nodeid] = sub
 
     def _get_next_nodeid(self) -> int:
@@ -391,9 +376,12 @@ class MatterDeviceController:
         # Reinterview all nodes that have an outdated schema
         # and/or have been interviewed more than 30 days ago.
         for node in self._nodes.values():
-            if SCHEMA_VERSION > node.interview_version or (datetime.utcnow() - node.last_interview).days > 30:
+            if (
+                SCHEMA_VERSION > node.interview_version
+                or (datetime.utcnow() - node.last_interview).days > 30
+            ):
                 await self.interview_node(node.nodeid)
         # reschedule self to run every hour
         self.server.loop.call_later(
-                3600, self.server.loop.create_task, self._check_interviews()
-            )
+            3600, self.server.loop.create_task, self._check_interviews()
+        )
