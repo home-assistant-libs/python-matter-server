@@ -17,7 +17,6 @@ import async_timeout
 from matter_server.server.const import SCHEMA_VERSION
 
 from ..common.helpers.api import APICommandHandler, api_command
-from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
 from ..common.models.event import EventType
 from ..common.models.message import CommandMessage
 from ..common.models.server_information import ServerDiagnostics, ServerInfo
@@ -127,7 +126,7 @@ class MatterServer:
             ServerInfo(
                 fabricId=self.device_controller.fabric_id,
                 compressedFabricId=self.device_controller.compressed_fabric_id,
-                schema_version=SCHEMA_VERSION
+                schema_version=SCHEMA_VERSION,
             ),
         )
 
@@ -138,11 +137,9 @@ class MatterServer:
         return ServerDiagnostics(
             info=self.get_info(),
             nodes=self.device_controller.get_nodes(),
-            events=self.device_controller
+            events=self.device_controller,
         )
 
-    
-    
     def signal_event(self, evt: EventType, data: Any = None) -> None:
         """Signal event to listeners."""
         for callback in self._subscribers:

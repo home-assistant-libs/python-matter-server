@@ -149,9 +149,11 @@ class MatterDeviceController:
         )
 
         # TODO TEMP !!!
+        # The call to CommissionWithCode returns early without waiting ?
         # if not success:
         #     raise NodeCommissionFailed(f"CommissionWithCode failed for node {nodeid}")
-        await asyncio.sleep(20)
+        await asyncio.sleep(120)
+        
         # full interview of the device
         await self.interview_node(nodeid)
         # make sure we start a subscription for this newly added node
@@ -207,7 +209,7 @@ class MatterDeviceController:
         """Set Thread Operational dataset in the stack."""
         error_code = await self._call_sdk(
             self.chip_controller.SetThreadOperationalDataset,
-            threadOperationalDataset=dataset.encode(),
+            threadOperationalDataset=bytes.fromhex(dataset),
         )
         return error_code == 0
 

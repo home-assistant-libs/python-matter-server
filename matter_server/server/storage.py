@@ -5,29 +5,16 @@ import logging
 import os
 import pprint
 from types import NoneType
-from typing import TYPE_CHECKING, Dict, Union
+from typing import TYPE_CHECKING, Any, Dict, Union
 
 from genericpath import isfile
 
-try:
-    import orjson as json
-except ImportError:
-    import json
+from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_dumps, json_loads
 
 DEFAULT_SAVE_DELAY = 30
 
 if TYPE_CHECKING:
     from .server import MatterServer
-
-StorageDataType = Union[
-    str,
-    dict[str, "StorageDataType"],
-    int,
-    list[str],
-    list[int],
-    list[dict[str, "StorageDataType"]],
-    NoneType,
-]
 
 
 class StorageController:
@@ -37,7 +24,7 @@ class StorageController:
         """Initialize storage controller."""
         self.server = server
         self.logger = logging.getLogger(__name__)
-        self._data: Dict[str, StorageDataType] = {}
+        self._data: Dict[str, Any] = {}
         self._timer_handle: asyncio.TimerHandle = None
 
     @property
@@ -61,9 +48,7 @@ class StorageController:
         await self.async_save()
         self.logger.debug("Stopped.")
 
-    def get(
-        self, key: str, default: StorageDataType = None, subkey: str | None = None
-    ) -> StorageDataType:
+    def get(self, key: str, default: Any = None, subkey: str | None = None) -> Any:
         """Get data from specific (sub)key."""
         if subkey:
             # we provide support for (1-level) nested dict
@@ -73,15 +58,11 @@ class StorageController:
     def set(
         self,
         key: str,
-        value: StorageDataType,
+        value: Any,
         subkey: str | None = None,
         force: bool = False,
     ) -> None:
-        """
-        Set a (sub)value in persistent storage.
-
-        NOTE: Json serializable types only!
-        """
+        """Set a (sub)value in persistent storage."""
         if not force and self.get(key, subkey=subkey) == value:
             # no need to save if value did not change
             return
@@ -89,18 +70,15 @@ class StorageController:
             # we provide support for (1-level) nested dict
             self._data.setdefault(key, {})
             self._data[key][subkey] = value
-            with open(os.path.join(self.server.storage_path, "dumptest.txt"), "w") as _file:
-                _file.write(pprint.pformat(value))
-            
         else:
             self._data[key] = value
         self.save(force)
 
-    def __getitem__(self, key: str) -> StorageDataType:
+    def __getitem__(self, key: str) -> Any:
         """Get data from specific key."""
         return self._data[key]
 
-    def __setitem__(self, key: str, value: StorageDataType) -> None:
+    def __setitem__(self, key: str, value: Any) -> None:
         """Set a value in persistent storage."""
         self.set(key, value)
 
@@ -113,14 +91,14 @@ class StorageController:
                 try:
                     _filename = os.path.join(self.server.storage_path, filename)
                     with open(filename, "r") as _file:
-                        data = json.loads(_file.read())
+                        data = json_loads(_file.read())
                         self.logger.debug(
                             "Loaded persistent settings from %s", filename
                         )
                         return data
                 except FileNotFoundError:
                     pass
-                except json.JSONDecodeError as err:
+                except JSON_DECODE_EXCEPTIONS as err:
                     self.logger.error(
                         "Error while reading persistent storage file %s", filename
                     )
@@ -158,8 +136,7 @@ class StorageController:
                 os.rename(self.filename, filename_backup)
 
             with open(self.filename, "w") as _file:
-                json_data = json.dumps(self._data).decode()
-                _file.write(json_data)
+                _file.write(json_dumps(self._data))
             self.logger.debug("Saved data to persistent storage")
 
         await self.server.loop.run_in_executor(None, do_save)

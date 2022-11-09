@@ -1,14 +1,14 @@
 """Utils for Matter server (and client)."""
 from base64 import b64encode
-import logging
 from dataclasses import MISSING, asdict, dataclass, fields, is_dataclass
 from datetime import date, datetime
 from enum import Enum
+import logging
 from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
 
-from chip.tlv import uint, float32
-from chip.clusters.Types import Nullable, NullValue
 from chip.clusters import Cluster, ClusterObject
+from chip.clusters.Types import Nullable, NullValue
+from chip.tlv import float32, uint
 
 try:
     # python 3.10
@@ -80,9 +80,7 @@ def dataclass_to_dict(obj_in: dataclass, skip_none: bool = False) -> dict:
             final[key] = _convert_value(value)
         return final
 
-    result = _clean_dict(dict_obj)
-    errors = find_paths_unserializable_data(result)
-    return result
+    return _clean_dict(dict_obj)
 
 
 def parse_utc_timestamp(datetimestr: str):
@@ -92,7 +90,7 @@ def parse_utc_timestamp(datetimestr: str):
 
 def parse_value(name: str, value: Any, value_type: Type, default: Any = MISSING):
     """Try to parse a value from raw (json) data and type definitions."""
-    
+
     if isinstance(value_type, str):
         value_type = eval(value_type)
 
@@ -192,49 +190,3 @@ def dataclass_from_dict(cls: dataclass, dict_obj: dict, strict=False):
             for field in fields(cls)
         }
     )
-
-
-import json
-from collections import deque
-
-
-def find_paths_unserializable_data(bad_data: Any, *, dump=json.dumps) -> dict[str, Any]:
-    """Find the paths to unserializable data.
-    This method is slow! Only use for error handling.
-    """
-    to_process = deque([(bad_data, "$")])
-    invalid = {}
-
-    while to_process:
-        obj, obj_path = to_process.popleft()
-
-        try:
-            dump(obj)
-            continue
-        except (ValueError, TypeError):
-            pass
-
-        # We convert objects with as_dict to their dict values so we can find bad data inside it
-        if hasattr(obj, "as_dict"):
-            desc = obj.__class__.__name__
-
-            obj_path += f"({desc})"
-            obj = obj.as_dict()
-
-        if isinstance(obj, dict):
-            for key, value in obj.items():
-                try:
-                    # Is key valid?
-                    dump({key: None})
-                except TypeError:
-                    invalid[f"{obj_path}<key: {key}>"] = key
-                else:
-                    # Process value
-                    to_process.append((value, f"{obj_path}.{key}"))
-        elif isinstance(obj, list):
-            for idx, value in enumerate(obj):
-                to_process.append((value, f"{obj_path}[{idx}]"))
-        else:
-            invalid[obj_path] = obj
-
-    return invalid
