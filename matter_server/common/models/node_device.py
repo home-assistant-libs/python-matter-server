@@ -1,14 +1,12 @@
-"""Node Device represent the actual devices available on a node.
-
-
-"""
+"""Node Device represent the actual devices available on a node."""
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from .device_types import Aggregator
 from chip.clusters import Objects as Clusters
+
+from .device_types import Aggregator
 
 if TYPE_CHECKING:
     from .device_type_instance import MatterDeviceTypeInstance

@@ -1,3 +1,4 @@
+"""Script entry point to run the Matter Server."""
 import argparse
 import asyncio
 import logging

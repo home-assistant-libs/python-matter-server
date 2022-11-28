@@ -13,7 +13,7 @@ from .events import EventType
 class CommandMessage:
     """Model for a Message holding a command from server to client or client to server."""
 
-    messageId: str
+    message_id: str
     command: str
     args: dict[str, Any] | None = None
 
@@ -22,7 +22,7 @@ class CommandMessage:
 class ResultMessageBase:
     """Base class for a result/response of a Command Message."""
 
-    messageId: str
+    message_id: str
 
 
 @dataclass
@@ -45,7 +45,7 @@ class ErrorCode(IntEnum):
 class ErrorResultMessage(ResultMessageBase):
     """Message sent when a command did not execute succesfully"""
 
-    errorCode: ErrorCode
+    error_code: ErrorCode
     details: str | None = None
 
 
@@ -66,7 +66,7 @@ def parse_message(self, raw: dict) -> MessageType:
     """Parse Message from raw dict object."""
     if "event" in raw:
         return dataclass_from_dict(EventMessage, raw)
-    if "errorCode" in raw:
+    if "error_code" in raw:
         return dataclass_from_dict(ErrorResultMessage, raw)
     if "result" in raw:
         return dataclass_from_dict(SuccessResultMessage, raw)

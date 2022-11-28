@@ -106,7 +106,7 @@ class MatterDeviceController:
             node = dataclass_from_dict(MatterNode, node_dict)
             self._nodes[nodeid] = node
             # make sure to start node subscriptions
-            await self._subscribe_node(nodeid)
+            await self.subscribe_node(nodeid)
         # create task to check for nodes that need any re(interviews)
         self.server.loop.create_task(self._check_interviews())
         self.logger.debug("Started.")
@@ -120,19 +120,19 @@ class MatterDeviceController:
         await self._call_sdk(self.chip_controller.Shutdown)
         self.logger.debug("Stopped.")
 
-    @api_command("device_controller.GetNodes")
+    @api_command("device_controller.get_nodes")
     def get_nodes(self) -> list[MatterNode]:
         """Return all Nodes known to the server."""
         return [x for x in self._nodes.values() if x is not None]
 
-    @api_command("device_controller.GetNode")
+    @api_command("device_controller.get_node")
     def get_node(self, nodeid: int) -> MatterNode:
         """Return info of a single Node."""
         node = self._nodes.get(nodeid)
         assert node is not None, "Node does not exist or is not yet interviewed"
         return node
 
-    @api_command("device_controller.CommissionWithCode")
+    @api_command("device_controller.commission_with_code")
     async def commission_with_code(self, code: str) -> MatterNode:
         """
         Commission a device using QRCode or ManualPairingCode.
@@ -156,11 +156,11 @@ class MatterDeviceController:
         # full interview of the device
         await self.interview_node(nodeid)
         # make sure we start a subscription for this newly added node
-        await self._subscribe_node(nodeid)
+        await self.subscribe_node(nodeid)
         # return full node object once we're complete
         return self.get_node(nodeid)
 
-    @api_command("device_controller.CommissionOnNetwork")
+    @api_command("device_controller.commission_on_network")
     async def commission_on_network(
         self,
         setupPinCode: int,
@@ -187,11 +187,11 @@ class MatterDeviceController:
         # full interview of the device
         await self.interview_node(nodeid)
         # make sure we start a subscription for this newly added node
-        await self._subscribe_node(nodeid)
+        await self.subscribe_node(nodeid)
         # return full node object once we're complete
         return self.get_node(nodeid)
 
-    @api_command("device_controller.SetWiFiCredentials")
+    @api_command("device_controller.set_wifi_credentials")
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> bool:
         """Set WiFi credentials for commissioning to a (new) device."""
         error_code = await self._call_sdk(
@@ -203,7 +203,7 @@ class MatterDeviceController:
         self._wifi_creds_set = True
         return error_code == 0
 
-    @api_command("device_controller.SetThreadOperationalDataset")
+    @api_command("device_controller.set_thread_operational_dataset")
     async def set_thread_operational_dataset(self, dataset: str) -> bool:
         """Set Thread Operational dataset in the stack."""
         error_code = await self._call_sdk(
@@ -212,7 +212,7 @@ class MatterDeviceController:
         )
         return error_code == 0
 
-    @api_command("device_controller.OpenCommissioningWindow")
+    @api_command("device_controller.open_commissioning_window")
     async def open_commissioning_window(
         self,
         nodeid: int,
@@ -239,7 +239,7 @@ class MatterDeviceController:
         )
         return discriminator
 
-    @api_command("device_controller.DiscoverCommissionableNodes")
+    @api_command("device_controller.discover_commissionable_nodes")
     async def discover_commissionable_nodes(self):
         """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
 
@@ -248,7 +248,7 @@ class MatterDeviceController:
         )
         return result
 
-    @api_command("device_controller.InterviewNode")
+    @api_command("device_controller.interview_node")
     async def interview_node(self, nodeid: int) -> None:
         """Interview a node."""
         self.logger.debug("Interviewing node: %s", nodeid)
@@ -286,14 +286,18 @@ class MatterDeviceController:
 
         self.logger.debug("Interview of node %s completed", nodeid)
 
-    @api_command("device_controller.SendCommand")
+    @api_command("device_controller.send_command")
     async def send_command(self, nodeid: int, endpoint: int, payload: ClusterCommand) -> Any:
         """Send a command to a Matter node/device."""
         return await self.chip_controller.SendCommand(nodeid=nodeid, endpoint=endpoint, payload=payload)
 
-    @api_command("device_controller.Subscribe")
-    async def _subscribe_node(self, nodeid: int) -> None:
-        """Subscribe to all node state changes/events."""
+    @api_command("device_controller.subscribe_node")
+    async def subscribe_node(self, nodeid: int) -> None:
+        """
+        Subscribe to all node state changes/events for an individual node.
+        
+        Note that by using the listen command at server level, you will receive all node events.
+        """
         if nodeid not in self._nodes:
             raise NodeNotExists(f"Node {nodeid} does not exist.")
         assert nodeid not in self._subscriptions, "Already subscribed to node"
@@ -335,6 +339,7 @@ class MatterDeviceController:
         ):
             self.logger.debug("event_callback: %s", data)
             self.event_history.append(data)
+            # TODO: forward event
 
         def error_callback(
             chipError: int, transaction: Attribute.SubscriptionTransaction
