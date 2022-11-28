@@ -35,19 +35,18 @@ from matter_server.server.const import SCHEMA_VERSION
 from ..common.helpers.api import api_command
 from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
 from ..common.models.device import CommissionOption
-from ..common.models.node import MatterNode
 from ..common.models.error import (
     NodeCommissionFailed,
     NodeInterviewFailed,
     NodeNotExists,
 )
-from ..common.models.event import EventType
+from ..common.models.events import EventType
 from ..common.models.message import (
     CommandMessage,
     ErrorResultMessage,
-    SubscriptionReportMessage,
     SuccessResultMessage,
 )
+from ..common.models.node import MatterNode
 
 if TYPE_CHECKING:
     from chip.clusters import (
@@ -55,6 +54,7 @@ if TYPE_CHECKING:
         Cluster,
         ClusterAttributeDescriptor,
         ClusterEvent,
+        ClusterCommand
     )
 
     from .server import MatterServer
@@ -78,8 +78,7 @@ class MatterDeviceController:
         self.chip_controller: ChipDeviceController = (
             server.stack.fabric_admin.NewController()
         )
-        # we keep the last received events in memory so we can include them
-        # in the diagnostics dump
+        # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: Deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
         self._nodes: dict[int, MatterNode] = {}
@@ -103,13 +102,13 @@ class MatterDeviceController:
         for nodeid_str, node_dict in nodes_data.items():
             nodeid = int(nodeid_str)
             # TEMP !!!! TODO
-            node_dict["attributes"] = {}
+            # node_dict["attributes"] = {}
             node = dataclass_from_dict(MatterNode, node_dict)
             self._nodes[nodeid] = node
             # make sure to start node subscriptions
             await self._subscribe_node(nodeid)
         # create task to check for nodes that need any re(interviews)
-        # self.server.loop.create_task(self._check_interviews())
+        self.server.loop.create_task(self._check_interviews())
         self.logger.debug("Started.")
 
     async def stop(self) -> None:
@@ -127,7 +126,7 @@ class MatterDeviceController:
         return [x for x in self._nodes.values() if x is not None]
 
     @api_command("device_controller.GetNode")
-    async def get_node(self, nodeid: int) -> MatterNode:
+    def get_node(self, nodeid: int) -> MatterNode:
         """Return info of a single Node."""
         node = self._nodes.get(nodeid)
         assert node is not None, "Node does not exist or is not yet interviewed"
@@ -149,10 +148,10 @@ class MatterDeviceController:
         )
 
         # TODO TEMP !!!
-        # The call to CommissionWithCode returns early without waiting ?
+        # The call to CommissionWithCode returns early without waiting ?!
         # if not success:
         #     raise NodeCommissionFailed(f"CommissionWithCode failed for node {nodeid}")
-        await asyncio.sleep(120)
+        await asyncio.sleep(20)
         
         # full interview of the device
         await self.interview_node(nodeid)
@@ -242,7 +241,7 @@ class MatterDeviceController:
 
     @api_command("device_controller.DiscoverCommissionableNodes")
     async def discover_commissionable_nodes(self):
-        """DiscoverCommissionableNodes"""
+        """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
 
         result = await self._call_sdk(
             self.chip_controller.DiscoverCommissionableNodes,
@@ -260,7 +259,7 @@ class MatterDeviceController:
                     nodeid=nodeid, attributes="*", events="*", returnClusterObject=True
                 )
             )
-        except ChipStackError as err:  # pylint: disable=broad-except
+        except ChipStackError as err:
             raise NodeInterviewFailed(f"Failed to interview node {nodeid}") from err
 
         existing_info = self._nodes.get(nodeid)
@@ -288,10 +287,11 @@ class MatterDeviceController:
         self.logger.debug("Interview of node %s completed", nodeid)
 
     @api_command("device_controller.SendCommand")
-    async def _handle_device_controller_SendCommand(self, msg: CommandMessage):
-        result = await self.chip_controller.SendCommand(**msg.args)
-        self._send_message(SuccessResultMessage(msg.messageId, {"raw": result}))
+    async def send_command(self, nodeid: int, endpoint: int, payload: ClusterCommand) -> Any:
+        """Send a command to a Matter node/device."""
+        return await self.chip_controller.SendCommand(nodeid=nodeid, endpoint=endpoint, payload=payload)
 
+    @api_command("device_controller.Subscribe")
     async def _subscribe_node(self, nodeid: int) -> None:
         """Subscribe to all node state changes/events."""
         if nodeid not in self._nodes:
@@ -304,9 +304,9 @@ class MatterDeviceController:
         # just do a wildcard subscription for all clusters and properties
         # the client will handle filtering of the events.
         # if it turns out in the future that this is too much traffic (I don't think so now)
-        # we can revisit this choice and so some selected subscriptions.
+        # we can revisit this choice and do some selected subscriptions.
         sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
-            nodeid=nodeid, attributes="*", events="*", reportInterval=(0, 60)
+            nodeid=nodeid, attributes="*", events="*", reportInterval=(0, 10)
         )
 
         def attribute_updated_callback(
@@ -322,7 +322,7 @@ class MatterDeviceController:
             #     "attribute": path.AttributeName,
             #     "value": data,
             # }
-            self.logger.debug("attribute updated: %s", data)
+            self.logger.debug("attribute updated - path: %s - transaction: %s - data: %s", path, transaction, data)
 
             # This callback is running in the CHIP stack thread
             self.server.loop.call_soon_threadsafe(
@@ -347,8 +347,8 @@ class MatterDeviceController:
             nextResubscribeIntervalMsec: int,
         ):
             self.logger.debug(
-                f"Previous subscription failed with Error: {terminationError} - ",
-                f"re-subscribing in {nextResubscribeIntervalMsec}ms..."
+                "Previous subscription failed with Error: %s - re-subscribing in %s ms...",
+                terminationError, nextResubscribeIntervalMsec
             )
 
         def resubscription_succeeded(transaction: Attribute.SubscriptionTransaction):

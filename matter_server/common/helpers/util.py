@@ -3,12 +3,16 @@ from base64 import b64encode
 from dataclasses import MISSING, asdict, dataclass, fields, is_dataclass
 from datetime import date, datetime
 from enum import Enum
+from functools import cache
+from importlib.metadata import PackageNotFoundError, version as pkg_version
 import logging
+import platform
 from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
 
 from chip.clusters import Cluster, ClusterObject
 from chip.clusters.Types import Nullable, NullValue
 from chip.tlv import float32, uint
+import pkg_resources
 
 try:
     # python 3.10
@@ -16,6 +20,9 @@ try:
 except:  # noqa
     # older python version
     NoneType = type(None)
+
+CHIP_CLUSTERS_PKG_NAME = "home-assistant-chip-clusters"
+CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
 
 # TODO: The below dataclass utils are shamelessly copied from aiohue
 # we should abstract these into a seperate helper library some day
@@ -190,3 +197,32 @@ def dataclass_from_dict(cls: dataclass, dict_obj: dict, strict=False):
             for field in fields(cls)
         }
     )
+
+
+def package_version(pkg_name: str) -> str:
+    """
+    Return the version of an installed package.
+
+    Will return `0.0.0` if the package is not found.
+    """
+    try:
+        installed_version = pkg_version(pkg_name)
+        if installed_version is None:
+            return "0.0.0"
+        return installed_version
+    except PackageNotFoundError:
+        return "0.0.0"
+
+
+@cache
+def chip_clusters_version() -> str:
+    """Return the version of the CHIP SDK (clusters package) that is installed."""
+    return package_version(CHIP_CLUSTERS_PKG_NAME)
+
+@cache
+def chip_core_version() -> str:
+    """Return the version of the CHIP SDK (core package) that is installed."""
+    if platform.system() == "Darwin":
+        # TODO: Fix this once we can install our own wheels on macos.
+        return chip_clusters_version()
+    return package_version(CHIP_CORE_PKG_NAME)

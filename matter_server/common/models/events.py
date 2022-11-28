@@ -1,8 +1,7 @@
-"""Models for events sent by the server."""
+"""Models for events sent by the server and/or client."""
 
-from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import Any, Callable
 
 
 class EventType(Enum):
@@ -14,9 +13,4 @@ class EventType(Enum):
     SERVER_SHUTDOWN = "server_shutdown"
 
 
-@dataclass
-class ServerEvent:
-    """Event sent from server to the client."""
-
-    type: EventType
-    data: Any
+EventCallBackType = Callable[[EventType, Any], None]

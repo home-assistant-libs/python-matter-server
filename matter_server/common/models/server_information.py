@@ -15,6 +15,7 @@ class ServerInfo:
     fabricId: int
     compressedFabricId: int
     schema_version: int
+    sdk_version: str
 
 
 @dataclass

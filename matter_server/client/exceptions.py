@@ -3,7 +3,7 @@ from __future__ import annotations
 
 
 class BaseMatterServerError(Exception):
-    """Base Zwave JS Server exception."""
+    """Base Matter exception."""
 
 
 class TransportError(BaseMatterServerError):

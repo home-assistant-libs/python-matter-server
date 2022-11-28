@@ -24,7 +24,19 @@ dependencies = [
   "aiorun",
   "coloredlogs",
   "dacite",
-  "orjson"
+  "orjson",
+  "home-assistant-chip-clusters==2022.11.1"
+]
+
+[project.optional-dependencies]
+server = [
+  "home-assistant-chip-core==2022.11.1"
+]
+test = [
+  isort==5.10.1
+  black==22.10.0
+  flake8==5.0.4
+  pytest-homeassistant-custom-component==0.12.9
 ]
 
 [project.scripts]

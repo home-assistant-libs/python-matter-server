@@ -14,10 +14,12 @@ import weakref
 from aiohttp import WSMsgType, web
 import async_timeout
 
+from matter_server.common.models.error import VersionMismatch
 from matter_server.server.const import SCHEMA_VERSION
 
 from ..common.helpers.api import APICommandHandler, api_command
-from ..common.models.event import EventType
+from ..common.helpers.util import chip_clusters_version, chip_core_version
+from ..common.models.events import EventCallBackType, EventType
 from ..common.models.message import CommandMessage
 from ..common.models.server_information import ServerDiagnostics, ServerInfo
 from ..server.client_handler import WebsocketClientHandler
@@ -44,9 +46,6 @@ def mount_websocket(server: MatterServer, path: str) -> None:
 
     server.app.on_shutdown.append(_handle_shutdown)
     server.app.router.add_route("GET", path, _handle_ws)
-
-
-EventCallBackType = Callable[[EventType, Any], None]
 
 
 class MatterServer:
@@ -81,6 +80,9 @@ class MatterServer:
     async def start(self) -> None:
         """Start running the Matter server."""
         self.logger.info("Starting the Matter Server...")
+        # safety shield: make sure we use same clusters and core packages!
+        if chip_clusters_version() != chip_core_version():
+            raise VersionMismatch("CHIP Core version does not match CHIP Clusters version.")
         self.loop = asyncio.get_running_loop()
         await self.storage.start()
         await self.device_controller.start()
@@ -120,24 +122,23 @@ class MatterServer:
 
     @api_command("server.info")
     def get_info(self) -> ServerInfo:
-        """Return full server state."""
         """Return (version)info of the Matter Server."""
         return (
             ServerInfo(
                 fabricId=self.device_controller.fabric_id,
                 compressedFabricId=self.device_controller.compressed_fabric_id,
                 schema_version=SCHEMA_VERSION,
+                sdk_version=chip_clusters_version()
             ),
         )
 
     @api_command("server.diagnostics")
     def get_diagnostics(self) -> ServerDiagnostics:
         """Return a full dump of the server (for diagnostics)."""
-        # TODO !
         return ServerDiagnostics(
             info=self.get_info(),
             nodes=self.device_controller.get_nodes(),
-            events=self.device_controller,
+            events=self.device_controller.event_history,
         )
 
     def signal_event(self, evt: EventType, data: Any = None) -> None:

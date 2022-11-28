@@ -16,3 +16,5 @@ class NodeNotReady(MatterError):
 class NodeNotExists(MatterError):
     """Error raised when performing action on node that does not exist."""
 
+class VersionMismatch(MatterError):
+    """Issue raised when SDK version mismatches."""

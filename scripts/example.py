@@ -1,37 +1,31 @@
+"""Example script to test the Matter server and client."""
+
 import argparse
 import asyncio
 import logging
 import os
 from pathlib import Path
 import sys
-
 from aiorun import run
 import coloredlogs
+import aiohttp
 
-from .server import MatterServer
+from matter_server.client.client import MatterClient
+from matter_server.server.server import MatterServer
+
+logging.basicConfig(level=logging.DEBUG)
+_LOGGER = logging.getLogger(__name__)
 
 DEFAULT_VENDOR_ID = 0xFFF1
 DEFAULT_FABRIC_ID = 1
 DEFAULT_PORT = 5580
+DEFAULT_URL = f"http://127.0.0.1:{DEFAULT_PORT}/ws"
 DEFAULT_STORAGE_PATH = os.path.join(Path.home(), ".matter_server")
+
 
 # Get parsed passed in arguments.
 parser = argparse.ArgumentParser(
-    description="Matter Controller Server using WebSockets."
-)
-
-
-parser.add_argument(
-    "--vendorid",
-    type=int,
-    default=DEFAULT_VENDOR_ID,
-    help=f"Vendor ID for the Fabric, defaults to {DEFAULT_VENDOR_ID}",
-)
-parser.add_argument(
-    "--fabricid",
-    type=int,
-    default=DEFAULT_FABRIC_ID,
-    help=f"Fabric ID for the Fabric, defaults to {DEFAULT_FABRIC_ID}",
+    description="Matter Server Example."
 )
 parser.add_argument(
     "--storage-path",
@@ -43,19 +37,13 @@ parser.add_argument(
     "--port",
     type=int,
     default=DEFAULT_PORT,
-    help=f"TCP Port to run the websocket server, defaults to {DEFAULT_PORT}",
+    help=f"TCP Port on which to run the Matter Websockets Server, defaults to {DEFAULT_PORT}",
 )
 parser.add_argument(
     "--log-level",
     type=str,
     default="info",
     help="Provide logging level. Example --log-level debug, default=info, possible=(critical, error, warning, info, debug)",
-)
-parser.add_argument(
-    "--log-file",
-    type=str,
-    default=None,
-    help="Log file to write to (optional).",
 )
 
 args = parser.parse_args()
@@ -64,10 +52,7 @@ args = parser.parse_args()
 if __name__ == "__main__":
 
     # configure logging
-    handlers = None
-    if args.log_file:
-        handlers = [logging.FileHandler(args.log_file)]
-    logging.basicConfig(handlers=handlers, level=args.log_level.upper())
+    logging.basicConfig(level=args.log_level.upper())
     coloredlogs.install(level=args.log_level.upper())
 
     # make sure storage path exists
@@ -76,11 +61,24 @@ if __name__ == "__main__":
 
     # Init server
     server = MatterServer(
-        args.storage_path, int(args.vendorid), int(args.fabricid), int(args.port)
+        args.storage_path, DEFAULT_VENDOR_ID, DEFAULT_FABRIC_ID, int(args.port)
     )
+    client = MatterClient()
+
+    async def run():
+        # start Matter Server
+        server.start()
+        
+        # run the client
+        url = f"http://127.0.0.1:{args.port}/ws"
+        async with aiohttp.ClientSession() as session:
+            async with MatterClient(url, session):
+                # start listening
+                client.listen
+        
 
     async def handle_stop(loop: asyncio.AbstractEventLoop):
         await server.stop()
 
     # run the server
-    run(server.start(), shutdown_callback=handle_stop)
+    run(run(), shutdown_callback=handle_stop)
