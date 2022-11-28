@@ -34,7 +34,7 @@ from matter_server.server.const import SCHEMA_VERSION
 
 from ..common.helpers.api import api_command
 from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
-from ..common.models.device import CommissionOption
+
 from ..common.models.error import (
     NodeCommissionFailed,
     NodeInterviewFailed,
@@ -62,7 +62,7 @@ if TYPE_CHECKING:
 
 
 DATA_KEY_NODES = "nodes"
-DATA_KEY_LAST_NODEID = "last_nodeid"
+DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 
 class MatterDeviceController:
@@ -99,14 +99,14 @@ class MatterDeviceController:
         """Async initialize of controller."""
         # load nodes from persistent storage
         nodes_data = self.server.storage.get(DATA_KEY_NODES, {})
-        for nodeid_str, node_dict in nodes_data.items():
-            nodeid = int(nodeid_str)
+        for node_id_str, node_dict in nodes_data.items():
+            node_id = int(node_id_str)
             # TEMP !!!! TODO
             # node_dict["attributes"] = {}
             node = dataclass_from_dict(MatterNode, node_dict)
-            self._nodes[nodeid] = node
+            self._nodes[node_id] = node
             # make sure to start node subscriptions
-            await self.subscribe_node(nodeid)
+            await self.subscribe_node(node_id)
         # create task to check for nodes that need any re(interviews)
         self.server.loop.create_task(self._check_interviews())
         self.logger.debug("Started.")
@@ -126,9 +126,9 @@ class MatterDeviceController:
         return [x for x in self._nodes.values() if x is not None]
 
     @api_command("device_controller.get_node")
-    def get_node(self, nodeid: int) -> MatterNode:
+    def get_node(self, node_id: int) -> MatterNode:
         """Return info of a single Node."""
-        node = self._nodes.get(nodeid)
+        node = self._nodes.get(node_id)
         assert node is not None, "Node does not exist or is not yet interviewed"
         return node
 
@@ -140,31 +140,31 @@ class MatterDeviceController:
         Returns full NodeInfo once complete.
         """
         assert self._wifi_creds_set, "Received commissioning without Wi-Fi set"
-        nodeid = self._get_next_nodeid()
+        node_id = self._get_next_node_id()
         success = await self._call_sdk(
             self.chip_controller.CommissionWithCode,
             setupPayload=code,
-            nodeid=nodeid,
+            nodeid=node_id,
         )
 
         # TODO TEMP !!!
         # The call to CommissionWithCode returns early without waiting ?!
         # if not success:
-        #     raise NodeCommissionFailed(f"CommissionWithCode failed for node {nodeid}")
+        #     raise NodeCommissionFailed(f"CommissionWithCode failed for node {node_id}")
         await asyncio.sleep(20)
         
         # full interview of the device
-        await self.interview_node(nodeid)
+        await self.interview_node(node_id)
         # make sure we start a subscription for this newly added node
-        await self.subscribe_node(nodeid)
+        await self.subscribe_node(node_id)
         # return full node object once we're complete
-        return self.get_node(nodeid)
+        return self.get_node(node_id)
 
     @api_command("device_controller.commission_on_network")
     async def commission_on_network(
         self,
-        setupPinCode: int,
-        filterType: DiscoveryFilterType = DiscoveryFilterType.NONE,
+        setup_pin_code: int,
+        filter_type: DiscoveryFilterType = DiscoveryFilterType.NONE,
         filter: Any = None,
     ) -> MatterNode:
         """
@@ -174,22 +174,22 @@ class MatterDeviceController:
         The filter can be an integer, a string or None depending on the actual type of selected filter.
         Returns full NodeInfo once complete.
         """
-        nodeid = self._get_next_nodeid()
+        node_id = self._get_next_node_id()
         success = await self._call_sdk(
             self.chip_controller.CommissionOnNetwork,
-            nodeId=nodeid,
-            setupPinCode=setupPinCode,
-            filterType=filterType,
+            nodeId=node_id,
+            setupPinCode=setup_pin_code,
+            filterType=filter_type,
             filter=filter,
         )
         if not success:
-            raise NodeCommissionFailed(f"CommissionWithCode failed for node {nodeid}")
+            raise NodeCommissionFailed(f"CommissionWithCode failed for node {node_id}")
         # full interview of the device
-        await self.interview_node(nodeid)
+        await self.interview_node(node_id)
         # make sure we start a subscription for this newly added node
-        await self.subscribe_node(nodeid)
+        await self.subscribe_node(node_id)
         # return full node object once we're complete
-        return self.get_node(nodeid)
+        return self.get_node(node_id)
 
     @api_command("device_controller.set_wifi_credentials")
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> bool:
@@ -215,10 +215,10 @@ class MatterDeviceController:
     @api_command("device_controller.open_commissioning_window")
     async def open_commissioning_window(
         self,
-        nodeid: int,
+        node_id: int,
         timeout: int = 300,
         iteration: int = 1000,
-        option: CommissionOption = CommissionOption.BASIC,
+        option: int = 0,
         discriminator: Optional[int] = None,
     ) -> int:
         """
@@ -231,7 +231,7 @@ class MatterDeviceController:
 
         await self._call_sdk(
             self.chip_controller.OpenCommissioningWindow,
-            nodeid=nodeid,
+            nodeid=node_id,
             timeout=timeout,
             iteration=iteration,
             discriminator=discriminator,
@@ -249,22 +249,22 @@ class MatterDeviceController:
         return result
 
     @api_command("device_controller.interview_node")
-    async def interview_node(self, nodeid: int) -> None:
+    async def interview_node(self, node_id: int) -> None:
         """Interview a node."""
-        self.logger.debug("Interviewing node: %s", nodeid)
+        self.logger.debug("Interviewing node: %s", node_id)
         try:
-            await self._call_sdk(self.chip_controller.ResolveNode, nodeid=nodeid)
+            await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
             read_response: Attribute.AsyncReadTransaction.ReadResponse = (
                 await self.chip_controller.Read(
-                    nodeid=nodeid, attributes="*", events="*", returnClusterObject=True
+                    nodeid=node_id, attributes="*", events="*", returnClusterObject=True
                 )
             )
         except ChipStackError as err:
-            raise NodeInterviewFailed(f"Failed to interview node {nodeid}") from err
+            raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
 
-        existing_info = self._nodes.get(nodeid)
+        existing_info = self._nodes.get(node_id)
         node = MatterNode(
-            nodeid=nodeid,
+            nodeid=node_id,
             date_commissioned=existing_info.date_commissioned if existing_info else datetime.utcnow(),
             last_interview=datetime.utcnow(),
             interview_version=SCHEMA_VERSION,
@@ -272,10 +272,10 @@ class MatterDeviceController:
         node.parse_attributes(read_response.attributes)
 
         # save updated node data
-        self._nodes[nodeid] = node
+        self._nodes[node_id] = node
         node_dict = dataclass_to_dict(node)
         self.server.storage.set(
-            DATA_KEY_NODES, subkey=str(nodeid), value=node_dict, force=not existing_info
+            DATA_KEY_NODES, subkey=str(node_id), value=node_dict, force=not existing_info
         )
         if existing_info is None:
             # new node - first interview
@@ -284,33 +284,33 @@ class MatterDeviceController:
             # re interview of existing node
             self.server.signal_event(EventType.NODE_UPDATED, node)
 
-        self.logger.debug("Interview of node %s completed", nodeid)
+        self.logger.debug("Interview of node %s completed", node_id)
 
     @api_command("device_controller.send_command")
-    async def send_command(self, nodeid: int, endpoint: int, payload: ClusterCommand) -> Any:
+    async def send_command(self, node_id: int, endpoint: int, payload: ClusterCommand) -> Any:
         """Send a command to a Matter node/device."""
-        return await self.chip_controller.SendCommand(nodeid=nodeid, endpoint=endpoint, payload=payload)
+        return await self.chip_controller.SendCommand(nodeid=node_id, endpoint=endpoint, payload=payload)
 
     @api_command("device_controller.subscribe_node")
-    async def subscribe_node(self, nodeid: int) -> None:
+    async def subscribe_node(self, node_id: int) -> None:
         """
         Subscribe to all node state changes/events for an individual node.
         
         Note that by using the listen command at server level, you will receive all node events.
         """
-        if nodeid not in self._nodes:
-            raise NodeNotExists(f"Node {nodeid} does not exist.")
-        assert nodeid not in self._subscriptions, "Already subscribed to node"
-        self.logger.debug("Setup subscription for node %s", nodeid)
+        if node_id not in self._nodes:
+            raise NodeNotExists(f"Node {node_id} does not exist.")
+        assert node_id not in self._subscriptions, "Already subscribed to node"
+        self.logger.debug("Setup subscription for node %s", node_id)
 
-        await self._call_sdk(self.chip_controller.ResolveNode, nodeid=nodeid)
+        await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
         # we follow the pattern of apple and google here and
         # just do a wildcard subscription for all clusters and properties
         # the client will handle filtering of the events.
         # if it turns out in the future that this is too much traffic (I don't think so now)
         # we can revisit this choice and do some selected subscriptions.
         sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
-            nodeid=nodeid, attributes="*", events="*", reportInterval=(0, 10)
+            nodeid=node_id, attributes="*", events="*", reportInterval=(0, 10)
         )
 
         def attribute_updated_callback(
@@ -320,7 +320,7 @@ class MatterDeviceController:
             data = transaction.GetAttribute(path)
             # value = {
             #     "fabridId": self.server.stack.fabric_id,
-            #     "nodeId": msg.args["nodeid"],
+            #     "nodeId": msg.args["node_id"],
             #     "endpoint": path.Path.EndpointId,
             #     "cluster": path.ClusterType,
             #     "attribute": path.AttributeName,
@@ -364,14 +364,14 @@ class MatterDeviceController:
         sub.SetErrorCallback(error_callback)
         sub.SetResubscriptionAttemptedCallback(resubscription_attempted)
         sub.SetResubscriptionSucceededCallback(resubscription_succeeded)
-        self._subscriptions[nodeid] = sub
+        self._subscriptions[node_id] = sub
 
-    def _get_next_nodeid(self) -> int:
-        """Return next nodeid."""
-        next_nodeid = self.server.storage.get(DATA_KEY_LAST_NODEID, 0) + 1
-        self.server.storage.set(DATA_KEY_LAST_NODEID, next_nodeid, force=True)
-        self._last_nodeid = next_nodeid
-        return next_nodeid
+    def _get_next_node_id(self) -> int:
+        """Return next node_id."""
+        next_node_id = self.server.storage.get(DATA_KEY_LAST_NODE_ID, 0) + 1
+        self.server.storage.set(DATA_KEY_LAST_NODE_ID, next_node_id, force=True)
+        self._last_nodeid = next_node_id
+        return next_node_id
 
     async def _call_sdk(self, func: Callable, *args, **kwargs) -> Any:
         """Call function on the SDK in executor and return result."""
@@ -389,7 +389,7 @@ class MatterDeviceController:
                 SCHEMA_VERSION > node.interview_version
                 or (datetime.utcnow() - node.last_interview).days > 30
             ):
-                await self.interview_node(node.nodeid)
+                await self.interview_node(node.node_id)
         # reschedule self to run every hour
         self.server.loop.call_later(
             3600, self.server.loop.create_task, self._check_interviews()

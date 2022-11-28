@@ -1,29 +1,28 @@
 """Matter node."""
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from datetime import datetime
-
-from typing import TYPE_CHECKING, Dict
 import logging
-
-from .device_types import RootNode, Aggregator, ALL_TYPES, BridgedDevice
-from chip.clusters import Objects as Clusters, Attribute
-
-from ..helpers.util import dataclass_to_dict
-from .device_type_instance import MatterDeviceTypeInstance
-from .node_device import (
-    AbstractMatterNodeDevice,
-    MatterBridgedNodeDevice,
-    MatterNodeDevice,
-)
+from typing import TYPE_CHECKING, Dict
 
 from chip.clusters import (
     Attribute,
     Cluster,
-    ClusterObject,
     ClusterAttributeDescriptor,
     ClusterEvent,
+    ClusterObject,
     ClusterObjects,
+    Objects as Clusters,
+)
+
+from ..helpers.util import dataclass_to_dict
+from .device_type_instance import MatterDeviceTypeInstance
+from .device_types import ALL_TYPES, Aggregator, BridgedDevice, RootNode
+from .node_device import (
+    AbstractMatterNodeDevice,
+    MatterBridgedNodeDevice,
+    MatterNodeDevice,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -33,7 +32,7 @@ LOGGER = logging.getLogger(__name__)
 class MatterNode:
     """Matter node."""
 
-    nodeid: int
+    node_id: int
     date_commissioned: datetime
     last_interview: datetime
     interview_version: int
