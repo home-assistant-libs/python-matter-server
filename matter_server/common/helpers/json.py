@@ -1,4 +1,4 @@
-"""Helpers to work with (se)serializing of json."""
+"""Helpers to work with (de)serializing of json."""
 
 from typing import Any
 
