@@ -10,6 +10,10 @@ from aiorun import run
 import coloredlogs
 import aiohttp
 
+from os.path import abspath, dirname
+from sys import path
+
+path.insert(1, dirname(dirname(abspath(__file__))))
 from matter_server.client.client import MatterClient
 from matter_server.server.server import MatterServer
 
@@ -61,21 +65,20 @@ if __name__ == "__main__":
     server = MatterServer(
         args.storage_path, DEFAULT_VENDOR_ID, DEFAULT_FABRIC_ID, int(args.port)
     )
-    client = MatterClient()
 
-    async def run():
+    async def run_matter():
         # start Matter Server
-        server.start()
+        await server.start()
 
         # run the client
         url = f"http://127.0.0.1:{args.port}/ws"
         async with aiohttp.ClientSession() as session:
-            async with MatterClient(url, session):
+            async with MatterClient(url, session) as client:
                 # start listening
-                client.listen
+                await client.start_listening()
 
     async def handle_stop(loop: asyncio.AbstractEventLoop):
         await server.stop()
 
     # run the server
-    run(run(), shutdown_callback=handle_stop)
+    run(run_matter(), shutdown_callback=handle_stop)

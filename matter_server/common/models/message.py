@@ -7,6 +7,7 @@ from typing import Any, Type, Union
 
 from ..helpers.util import dataclass_from_dict
 from .events import EventType
+from .server_information import ServerInfo
 
 
 @dataclass
@@ -57,12 +58,21 @@ class EventMessage:
     data: Any
 
 
+@dataclass
+class ServerInfoMessage(ServerInfo):
+    """Message sent by the server with it's info when a client connects."""
+
+
 MessageType = Union[
-    CommandMessage, EventMessage, SuccessResultMessage, ErrorResultMessage
+    CommandMessage,
+    EventMessage,
+    SuccessResultMessage,
+    ErrorResultMessage,
+    ServerInfoMessage,
 ]
 
 
-def parse_message(self, raw: dict) -> MessageType:
+def parse_message(raw: dict) -> MessageType:
     """Parse Message from raw dict object."""
     if "event" in raw:
         return dataclass_from_dict(EventMessage, raw)
@@ -70,4 +80,6 @@ def parse_message(self, raw: dict) -> MessageType:
         return dataclass_from_dict(ErrorResultMessage, raw)
     if "result" in raw:
         return dataclass_from_dict(SuccessResultMessage, raw)
+    if "sdk_version" in raw:
+        return dataclass_from_dict(ServerInfoMessage, raw)
     return dataclass_from_dict(CommandMessage, raw)

@@ -1,3 +1,3 @@
 """Constants for the Matter server."""
 
-SCHEMA_VERSION = 0
+SCHEMA_VERSION = 1

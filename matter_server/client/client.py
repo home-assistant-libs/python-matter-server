@@ -12,7 +12,17 @@ import logging
 from operator import itemgetter
 import pprint
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Callable, DefaultDict, Dict, List, Optional, Type
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    DefaultDict,
+    Dict,
+    List,
+    NoReturn,
+    Optional,
+    Type,
+)
 import uuid
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
@@ -23,18 +33,19 @@ from ..common.helpers.util import (
     dataclass_from_dict,
     parse_value,
 )
-from ..common.models.events import EventType
 from ..common.models.api_command import APICommand
+from ..common.models.events import EventType
 from ..common.models.message import (
     CommandMessage,
     ErrorResultMessage,
     EventMessage,
     MessageType,
     ResultMessageBase,
+    ServerInfoMessage,
     SuccessResultMessage,
     parse_message,
 )
-from ..common.models.node import MatterNode, MatterAttribute
+from ..common.models.node import MatterAttribute, MatterNode
 from ..common.models.server_information import ServerInfo
 from .const import MIN_SCHEMA_VERSION
 from .exceptions import (
@@ -227,8 +238,8 @@ class MatterClient:
             raise CannotConnect(err) from err
 
         # at connect, the server sends a single message with the server info
-        msg = await self._receive_message_or_raise()
-        self.server_info = info = dataclass_from_dict(ServerInfo, msg.result)
+        info: ServerInfoMessage = await self._receive_message_or_raise()
+        self.server_info = info = info
 
         # sdk version must match exactly
         if info.sdk_version != chip_clusters_version():
@@ -257,13 +268,15 @@ class MatterClient:
 
         self.logger.info(
             "Connected to Matter Fabric %s (%s), Schema version %s, CHIP SDK Version %s",
-            info.fabricId,
-            info.compressedFabricId,
+            info.fabric_id,
+            info.compressed_fabric_id,
             info.schema_version,
             info.sdk_version,
         )
 
-    async def start_listening(self, init_ready: asyncio.Event | None = None) -> None:
+    async def start_listening(
+        self, init_ready: asyncio.Event | None = None
+    ) -> NoReturn:
         """Start listening to the websocket (and receive initial state)."""
         if not self.connected:
             raise InvalidState("Not connected when start listening")

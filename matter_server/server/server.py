@@ -126,13 +126,11 @@ class MatterServer:
     @api_command(APICommand.SERVER_INFO)
     def get_info(self) -> ServerInfo:
         """Return (version)info of the Matter Server."""
-        return (
-            ServerInfo(
-                fabric_id=self.device_controller.fabric_id,
-                compressed_fabric_id=self.device_controller.compressed_fabric_id,
-                schema_version=SCHEMA_VERSION,
-                sdk_version=chip_clusters_version(),
-            ),
+        return ServerInfo(
+            fabric_id=self.device_controller.fabric_id,
+            compressed_fabric_id=self.device_controller.compressed_fabric_id,
+            schema_version=SCHEMA_VERSION,
+            sdk_version=chip_clusters_version(),
         )
 
     @api_command(APICommand.SERVER_DIAGNOSTICS)
