@@ -40,7 +40,7 @@ def create_attribute_path(endpoint: int, cluster_id: int, attribute_id: int) -> 
 
 @dataclass
 class MatterAttribute:
-    """Representation of a (simplified) Matter Attribute."""
+    """Matter Attribute."""
 
     node_id: int
     endpoint: int

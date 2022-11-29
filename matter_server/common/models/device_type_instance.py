@@ -7,7 +7,7 @@ from chip.clusters import Objects as all_clusters
 
 if TYPE_CHECKING:
     from .node import MatterNode, MatterAttribute
-    
+
 
 SubscriberType = Callable[[], None]
 
@@ -44,13 +44,16 @@ class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
         if not self.has_cluster(cluster):
             return None
 
-        return self.data[cluster.__name__]
+        # instantiate a Cluster object from the properties
+        return cluster(
+            **{
+                x.attribute_name: x.value
+                for x in self.node.get_cluster_attributes(cluster, self.endpoint_id)
+            }
+        )
 
     def as_dict(self) -> dict:
-        return {
-            "device_type": self.device_type,
-            "clusters": self.clusters
-        }
+        return {"device_type": self.device_type, "clusters": self.clusters}
 
     def __repr__(self):
         return f"<MatterDeviceTypeInstance {self.device_type.__name__} (N:{self.node.node_id}, E:{self.endpoint_id})>"
