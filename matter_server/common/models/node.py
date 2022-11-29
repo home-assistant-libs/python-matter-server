@@ -16,7 +16,6 @@ from chip.clusters import (
     ClusterObjects,
     Objects as Clusters,
 )
-
 from .device_type_instance import MatterDeviceTypeInstance
 from .device_types import ALL_TYPES as DEVICE_TYPES, Aggregator, BridgedDevice, RootNode
 from .node_device import (
@@ -77,7 +76,7 @@ class MatterNode:
     # attributes are stored in form of AttributeKey: MatterAttribute
     attributes: Dict[str, MatterAttribute]
     # below attributes are derrived from the attributes in post init.
-    endpoints: list[int] = field(default=list, init=False)
+    endpoints: list[int] = field(default_factory=list, init=False)
     root_device_type_instance: MatterDeviceTypeInstance[RootNode] | None = field(
         default=None, init=False
     )
@@ -85,9 +84,11 @@ class MatterNode:
         Aggregator
     ] | None = field(default=None, init=False)
     device_type_instances: list[MatterDeviceTypeInstance] = field(
-        default=list, init=False
+        default_factory=list, init=False
     )
-    node_devices: list[AbstractMatterNodeDevice] = field(default=list, init=False)
+    node_devices: list[AbstractMatterNodeDevice] = field(
+        default_factory=list, init=False
+    )
 
     def __post_init__(self):
         """Initialize optional values after init."""

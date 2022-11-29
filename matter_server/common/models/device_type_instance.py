@@ -18,6 +18,7 @@ _CLUSTER_T = TypeVar("_CLUSTER_T", bound=all_clusters.Cluster)
 
 class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
     """Base class for Matter device types on endpoints."""
+    do_not_serialize = True
 
     def __init__(
         self,
@@ -51,9 +52,6 @@ class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
                 for x in self.node.get_cluster_attributes(cluster, self.endpoint_id)
             }
         )
-
-    def as_dict(self) -> dict:
-        return {"device_type": self.device_type, "clusters": self.clusters}
 
     def __repr__(self):
         return f"<MatterDeviceTypeInstance {self.device_type.__name__} (N:{self.node.node_id}, E:{self.endpoint_id})>"

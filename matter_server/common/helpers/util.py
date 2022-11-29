@@ -30,35 +30,6 @@ except:  # noqa
 CHIP_CLUSTERS_PKG_NAME = "home-assistant-chip-clusters"
 CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
 
-# TODO: The below dataclass utils are shamelessly copied from aiohue
-# we should abstract these into a seperate helper library some day
-# https://github.com/home-assistant-libs/aiohue/blob/master/aiohue/util.py
-
-
-def update_dataclass(cur_obj: dataclass, new_vals: dict) -> Set[str]:
-    """
-    Update instance of dataclass from (partial) dict.
-
-    Returns: Set with changed keys.
-    """
-    changed_keys = set()
-    for f in fields(cur_obj):
-        cur_val = getattr(cur_obj, f.name, None)
-        new_val = new_vals.get(f.name)
-
-        # handle case where value is sub dataclass/model
-        if is_dataclass(cur_val) and isinstance(new_val, dict):
-            for subkey in update_dataclass(cur_val, new_val):
-                changed_keys.add(f"{f.name}.{subkey}")
-            continue
-        # parse value from type annotations
-        new_val = parse_value(f.name, new_val, f.type, cur_val)
-        if cur_val == new_val:
-            continue
-        setattr(cur_obj, f.name, new_val)
-        changed_keys.add(f.name)
-    return changed_keys
-
 
 def dataclass_to_dict(obj_in: dataclass, skip_none: bool = False) -> dict:
     """Convert dataclass instance to dict, optionally skip None values."""
