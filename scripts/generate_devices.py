@@ -38,7 +38,13 @@ def gen_cls_name(name: str):
 def main():
     data = xmltodict.parse(DEVICE_XML.read_text())
     output = [
-        """
+        '''
+"""
+Definitions for all known Device types.
+
+This file is auto generated from `zcl/data-model/chip/matter-devices.xml`
+Do not override!
+"""
 from __future__ import annotations
 
 import typing
@@ -61,7 +67,7 @@ class DeviceType:
         cls.device_type = device_type
         ALL_TYPES[device_type] = cls
 
-"""
+'''
     ]
 
     for device in data["configurator"]["deviceType"]:

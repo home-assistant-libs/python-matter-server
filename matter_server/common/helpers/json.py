@@ -24,6 +24,10 @@ def json_encoder_default(obj: Any) -> Any:
         return obj.as_dict()
     if isinstance(obj, Nullable):
         return None
+    if isinstance(obj, bytes):
+        return str(obj)
+    if isinstance(obj, Exception):
+        return str(obj)
     if type(obj) == type:
         return f"{obj.__module__}.{obj.__qualname__}"
 

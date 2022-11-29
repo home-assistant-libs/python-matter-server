@@ -10,6 +10,8 @@ import logging
 import platform
 from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
 
+# the below imports are here to satisfy our dataclass from dict helper
+# it needs to be able to instantiate common class instances from type hints
 from chip.clusters import Cluster, ClusterObject, Objects
 import chip
 from ..models.node import MatterNode, MatterAttribute
@@ -209,6 +211,7 @@ def dataclass_from_dict(cls: dataclass, dict_obj: dict, strict=False):
                 field.default,
             )
             for field in fields(cls)
+            if field.init
         }
     )
 

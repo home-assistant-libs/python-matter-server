@@ -1,4 +1,9 @@
-"""Models to group multiple Cluster Attributes into a device type."""
+"""
+Definitions for all known Device types.
+
+This file is auto generated from `zcl/data-model/chip/matter-devices.xml`
+Do not override!
+"""
 from __future__ import annotations
 
 import typing
@@ -19,6 +24,12 @@ class DeviceType:
         super().__init_subclass__(**kwargs)
         cls.device_type = device_type
         ALL_TYPES[device_type] = cls
+
+    def as_dict(self) -> dict:
+        return {
+            "device_type": self.device_type,
+            "clusters": self.clusters
+        }
 
 
 class OrphanClusters(DeviceType, device_type=0xF001):

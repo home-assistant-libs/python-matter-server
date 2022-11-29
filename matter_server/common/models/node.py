@@ -18,7 +18,7 @@ from chip.clusters import (
 )
 
 from .device_type_instance import MatterDeviceTypeInstance
-from .device_types import ALL_TYPES, Aggregator, BridgedDevice, RootNode
+from .device_types import ALL_TYPES as DEVICE_TYPES, Aggregator, BridgedDevice, RootNode
 from .node_device import (
     AbstractMatterNodeDevice,
     MatterBridgedNodeDevice,
@@ -62,6 +62,9 @@ class MatterAttribute:
         """Return path/key for this attribute."""
         return create_attribute_path(self.endpoint, self.cluster_id, self.attribute_id)
 
+    def __post_init__(self):
+        """Initialize optional values after init."""
+
 
 @dataclass
 class MatterNode:
@@ -73,38 +76,38 @@ class MatterNode:
     interview_version: int
     # attributes are stored in form of AttributeKey: MatterAttribute
     attributes: Dict[str, MatterAttribute]
+    # below attributes are derrived from the attributes in post init.
+    endpoints: set[int] = field(default=set, init=False)
+    root_device_type_instance: MatterDeviceTypeInstance[RootNode] | None = field(
+        default=None, init=False
+    )
+    aggregator_device_type_instance: MatterDeviceTypeInstance[
+        Aggregator
+    ] | None = field(default=None, init=False)
+    device_type_instances: list[MatterDeviceTypeInstance] = field(
+        default=list, init=False
+    )
+    node_devices: list[AbstractMatterNodeDevice] = field(default=list, init=False)
 
-    # TODO
-    # root_device_type_instance: MatterDeviceTypeInstance[RootNode] | None = None
-    # aggregator_device_type_instance: MatterDeviceTypeInstance[Aggregator] | None = None
-    # device_type_instances: list[MatterDeviceTypeInstance] = field(default_factory=list)
-    # node_devices: list[AbstractMatterNodeDevice] = field(default_factory=list)
-
-    def parse_attributes_org(self, attributes: dict) -> None:
-        """Try to parse a MatterNode from AttributeCache (retrieved from Read)."""
-
+    def __post_init__(self):
+        """Initialize optional values after init."""
         device_type_instances: list[MatterDeviceTypeInstance] = []
-
-        for endpoint_id, clusters in attributes.items():
-            for cluster_cls, cluster in clusters.items():
-
-                if isinstance(cluster, Attribute.ValueDecodeFailure):
-                    # yes, this may happen
-                    continue
-
-                # the python wrapped SDK has a funky way to index the Clusters by
-                # having the class itself as dict key. We change that here to just the Cluster ID.
-                self.attributes[cluster.id] = cluster
-
-                # lookup device type for this cluster
-                device_type = ALL_TYPES.get(cluster.id)
-
+        for attr_path, attr in self.attributes.items():
+            self.endpoints.add(attr.endpoint)
+            if attr.attribute_type != Clusters.Descriptor.Attributes.DeviceTypeList:
+                continue
+            for dev_info in attr.value:
+                if not isinstance(
+                    dev_info, Clusters.Descriptor.Structs.DeviceTypeStruct
+                ):
+                    dev_info = Clusters.Descriptor.Structs.DeviceTypeStruct(**dev_info)
+                device_type = DEVICE_TYPES.get(dev_info.type)
                 if device_type is None:
-                    LOGGER.warning("Found unknown device type for Cluster %s", cluster)
+                    LOGGER("Found unknown device type %s", dev_info)
                     continue
 
                 instance = MatterDeviceTypeInstance(
-                    self, device_type, int(endpoint_id), cluster.clusterRevision
+                    self, device_type, attr.endpoint, dev_info.revision
                 )
                 if device_type is RootNode:
                     self.root_device_type_instance = instance
@@ -113,20 +116,46 @@ class MatterNode:
                 else:
                     device_type_instances.append(instance)
 
-            self.device_type_instances = device_type_instances
+        self.device_type_instances = device_type_instances
 
-            if not hasattr(self, "root_device_type_instance"):
-                raise ValueError("No root device found")
+        if not hasattr(self, "root_device_type_instance"):
+            raise ValueError("No root device found")
 
-            self.node_devices = []
+        self.node_devices = []
 
-            if self.aggregator_device_type_instance:
-                for instance in device_type_instances:
-                    if instance.device_type == BridgedDevice:
-                        self.node_devices.append(MatterBridgedNodeDevice(instance))
+        if self.aggregator_device_type_instance:
+            for instance in device_type_instances:
+                if instance.device_type == BridgedDevice:
+                    self.node_devices.append(MatterBridgedNodeDevice(instance))
 
-            else:
-                self.node_devices.append(MatterNodeDevice(self))
+        else:
+            self.node_devices.append(MatterNodeDevice(self))
+
+    def has_cluster(
+        self, cluster: type[Cluster] | int, endpoint: int | None = None
+    ) -> bool:
+        """Check if node has a specific cluster."""
+        return any(
+            x
+            for x in self.attributes.values()
+            if cluster in (x.cluster_type, x.cluster_id)
+            and (endpoint is None or x.endpoint == endpoint)
+        )
+
+    def get_endpoint_attributes(self, endpoint: int) -> list[MatterAttribute]:
+        """Return Matter Attributes for given endpoint."""
+        return [x for x in self.attributes.values() if x.endpoint == endpoint]
+
+    def get_cluster_attributes(
+        self, cluster: type[Clusters.Cluster], endpoint: int | None = None
+    ) -> list[MatterAttribute]:
+        """Return Matter Attributes for given cluster."""
+        return [
+            x
+            for x in self.attributes.values()
+            if x.cluster_type == cluster
+            and (endpoint is None or x.endpoint == endpoint)
+        ]
 
     @property
     def name(self) -> str:

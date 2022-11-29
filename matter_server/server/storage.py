@@ -114,11 +114,11 @@ class StorageController:
             self._timer_handle = None
 
         if immediate:
-            asyncio.create_task(self.async_save())
+            self.server.loop.create_task(self.async_save())
         else:
             # schedule the save for later
             self._timer_handle = self.server.loop.call_later(
-                DEFAULT_SAVE_DELAY, asyncio.create_task, self.async_save()
+                DEFAULT_SAVE_DELAY, self.server.loop.create_task, self.async_save()
             )
 
     async def async_save(self):
