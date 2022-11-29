@@ -280,11 +280,10 @@ class MatterDeviceController:
 
         # save updated node data
         self._nodes[node_id] = node
-        node_dict = dataclass_to_dict(node)
         self.server.storage.set(
             DATA_KEY_NODES,
             subkey=str(node_id),
-            value=node_dict,
+            value=node,
             force=not existing_info,
         )
         if existing_info is None:
@@ -336,6 +335,13 @@ class MatterDeviceController:
             node = self._nodes[node_id]
             attr = node.attributes[str(path.Path)]
             attr.value = new_value
+
+            # schedule save to persistent storage
+            self.server.storage.set(
+                DATA_KEY_NODES,
+                subkey=str(node_id),
+                value=node,
+            )
 
             # This callback is running in the CHIP stack thread
             self.server.loop.call_soon_threadsafe(
