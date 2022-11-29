@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Dict, Union
 
 from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_dumps, json_loads
 
-DEFAULT_SAVE_DELAY = 30
+DEFAULT_SAVE_DELAY = 120
 
 if TYPE_CHECKING:
     from .server import MatterServer

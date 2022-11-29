@@ -34,7 +34,7 @@ from ..common.models.message import (
     SuccessResultMessage,
     parse_message,
 )
-from ..common.models.node import MatterNode
+from ..common.models.node import MatterNode, MatterAttribute
 from ..common.models.server_information import ServerInfo
 from .const import MIN_SCHEMA_VERSION
 from .exceptions import (
@@ -75,8 +75,7 @@ class MatterClient:
         callback: Callable[[EventType, Optional[Any]], None],
         event_filter: Optional[EventType] = None,
         node_filter: Optional[int] = None,
-        endpoint_filter: Optional[int] = None,
-        attribute_filter: Optional[int] = None,
+        attr_path_filter: Optional[str] = None,
     ) -> Callable:
         """
         Subscribe to node and server events.
@@ -93,12 +92,10 @@ class MatterClient:
             event_filter = event_filter.value
         if node_filter is None:
             node_filter = SUB_WILDCARD
-        if endpoint_filter is None:
-            attribute_filter = SUB_WILDCARD
-        if attribute_filter is None:
-            attribute_filter = SUB_WILDCARD
+        if attr_path_filter is None:
+            attr_path_filter = SUB_WILDCARD
 
-        key = f"{event_filter}{node_filter}{endpoint_filter}{attribute_filter}"
+        key = f"{event_filter}/{node_filter}/{attr_path_filter}"
         self._subscribers.setdefault(key, [])
         self._subscribers[key].append(callback)
 
@@ -148,10 +145,10 @@ class MatterClient:
         )
         return MatterNode.from_dict(data)
 
-    async def set_wifi_credentials(self, setup_pin_code: int) -> None:
+    async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
         """Set WiFi credentials for commissioning to a (new) device."""
         await self.send_command(
-            APICommand.SET_WIFI_CREDENTIALS, setup_pin_code=setup_pin_code
+            APICommand.SET_WIFI_CREDENTIALS, ssid=ssid, credentials=credentials
         )
 
     async def send_device_command(
@@ -361,40 +358,38 @@ class MatterClient:
     def _handle_event_message(self, msg: EventMessage) -> None:
         """Handle incoming event from the server."""
         if msg.event == EventType.NODE_ADDED:
-            node = MatterNode.from_dict(msg.data)
+            node = dataclass_from_dict(MatterNode, msg.data)
             self._nodes[node.node_id] = node
             self._signal_event(EventType.NODE_ADDED, node)
             return
-        if msg.event == EventType.NODE_UPDATED:
-            node = MatterNode.from_dict(msg.data)
-            self._nodes[node.node_id] = node
-            self._signal_event(EventType.NODE_ADDED, node)
+        if msg.event == EventType.ATTRIBUTE_UPDATED:
+            attr = dataclass_from_dict(MatterAttribute, msg.data)
+            self._nodes[attr.node_id].attributes[attr.path] = attr
+            self._signal_event(EventType.ATTRIBUTE_UPDATED, attr, attr.node_id, attr.path)
             return
+        # TODO: handle any other events ?
+        self._signal_event(msg.event, msg.data)
 
     def _signal_event(
         self,
         event: EventType,
         data: Any = None,
         node_id: Optional[int] = None,
-        endpoint: Optional[int] = None,
-        attribute: Optional[int] = None,
+        attribute_path: Optional[str] = None,
     ) -> None:
         """Signal event to all subscribers."""
+        # instead of iterating all subscribers we iterate over subscription keys
+        # each callback is stored under a specific key based on the filters
         for evt_key in (event.value, SUB_WILDCARD):
             for node_key in (node_id, SUB_WILDCARD):
                 if node_key is None:
                     continue
-                for endpoint_key in (endpoint, SUB_WILDCARD):
-                    if endpoint_key is None:
+                for attribute_path_key in (attribute_path, SUB_WILDCARD):
+                    if attribute_path_key is None:
                         continue
-                    for attr_key in (attribute, SUB_WILDCARD):
-                        if attr_key is None:
-                            continue
-                        # instead of iterating all subscribers we iterate over subscription keys
-                        # each callback is stored under a specific key based on the filters
-                        key = f"{evt_key}{node_key}{endpoint_key}{attr_key}"
-                        for callback in self._subscribers.get(key, []):
-                            callback(event, data)
+                    key = f"{evt_key}{node_key}{attribute_path_key}"
+                    for callback in self._subscribers.get(key, []):
+                        callback(event, data)
 
     async def _send_message(self, message: CommandMessage) -> None:
         """

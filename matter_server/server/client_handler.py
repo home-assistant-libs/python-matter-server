@@ -38,6 +38,7 @@ CANCELLATION_ERRORS: Final = (asyncio.CancelledError, futures.CancelledError)
 
 LOGGER = logging.getLogger(__name__)
 
+
 class WebSocketLogAdapter(logging.LoggerAdapter):
     """Add connection id to websocket log messages."""
 
