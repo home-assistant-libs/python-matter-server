@@ -1,4 +1,5 @@
 """Logic to handle storage of persistent data."""
+from __future__ import annotations
 
 import asyncio
 import logging
@@ -9,10 +10,11 @@ from typing import TYPE_CHECKING, Any, Dict, Union
 
 from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_dumps, json_loads
 
-DEFAULT_SAVE_DELAY = 120
-
 if TYPE_CHECKING:
     from .server import MatterServer
+
+LOGGER = logging.getLogger(__name__)
+DEFAULT_SAVE_DELAY = 120
 
 
 class StorageController:
@@ -21,9 +23,8 @@ class StorageController:
     def __init__(self, server: "MatterServer") -> None:
         """Initialize storage controller."""
         self.server = server
-        self.logger = logging.getLogger(__name__)
         self._data: Dict[str, Any] = {}
-        self._timer_handle: asyncio.TimerHandle = None
+        self._timer_handle: asyncio.TimerHandle | None = None
 
     @property
     def filename(self) -> str:
@@ -36,7 +37,7 @@ class StorageController:
     async def start(self) -> None:
         """Async initialize of controller."""
         await self._load()
-        self.logger.debug("Started.")
+        LOGGER.debug("Started.")
 
     async def stop(self) -> None:
         """ "Handle logic on server stop."""
@@ -44,7 +45,7 @@ class StorageController:
             # no point in forcing a save when there are no changes pending
             return
         await self.async_save()
-        self.logger.debug("Stopped.")
+        LOGGER.debug("Stopped.")
 
     def get(self, key: str, default: Any = None, subkey: str | None = None) -> Any:
         """Get data from specific (sub)key."""
@@ -89,18 +90,16 @@ class StorageController:
                 try:
                     _filename = os.path.join(self.server.storage_path, filename)
                     with open(filename, "r") as _file:
-                        data = json_loads(_file.read())
-                        self.logger.debug(
-                            "Loaded persistent settings from %s", filename
-                        )
-                        return data
+                        return json_loads(_file.read())
                 except FileNotFoundError:
                     pass
                 except JSON_DECODE_EXCEPTIONS as err:
-                    self.logger.error(
+                    LOGGER.error(
                         "Error while reading persistent storage file %s", filename
                     )
-            self.logger.debug(
+                else:
+                    LOGGER.debug("Loaded persistent settings from %s", filename)
+            LOGGER.debug(
                 "Started with empty storage: No persistent storage file found."
             )
             return {}
@@ -115,11 +114,11 @@ class StorageController:
             self._timer_handle = None
 
         if immediate:
-            self.server.loop.create_task(self.async_save())
+            asyncio.create_task(self.async_save())
         else:
             # schedule the save for later
             self._timer_handle = self.server.loop.call_later(
-                DEFAULT_SAVE_DELAY, self.server.loop.create_task, self.async_save()
+                DEFAULT_SAVE_DELAY, asyncio.create_task, self.async_save()
             )
 
     async def async_save(self):
@@ -135,6 +134,6 @@ class StorageController:
 
             with open(self.filename, "w") as _file:
                 _file.write(json_dumps(self._data))
-            self.logger.debug("Saved data to persistent storage")
+            LOGGER.debug("Saved data to persistent storage")
 
         await self.server.loop.run_in_executor(None, do_save)

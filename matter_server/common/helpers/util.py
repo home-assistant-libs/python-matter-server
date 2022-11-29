@@ -233,6 +233,7 @@ def chip_clusters_version() -> str:
     """Return the version of the CHIP SDK (clusters package) that is installed."""
     return package_version(CHIP_CLUSTERS_PKG_NAME)
 
+
 @cache
 def chip_core_version() -> str:
     """Return the version of the CHIP SDK (core package) that is installed."""

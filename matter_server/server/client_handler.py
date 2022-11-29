@@ -160,7 +160,7 @@ class WebsocketClientHandler:
             return
 
         # schedule task to handle the command
-        self.server.loop.create_task(self._run_handler(handler, msg))
+        asyncio.create_task(self._run_handler(handler, msg))
 
     def _handle_start_listening_command(self, msg: CommandMessage) -> None:
         """Send a full dump of all nodes once and start receiving events."""

@@ -263,7 +263,7 @@ class MatterClient:
             info.sdk_version,
         )
 
-    async def start_listening(self, driver_ready: asyncio.Event) -> None:
+    async def start_listening(self, init_ready: asyncio.Event | None = None) -> None:
         """Start listening to the websocket (and receive initial state)."""
         if not self.connected:
             raise InvalidState("Not connected when start listening")
@@ -273,8 +273,10 @@ class MatterClient:
             self._nodes = nodes
 
             self.logger.info("Matter client initialized.")
-            driver_ready.set()
+            if init_ready is not None:
+                init_ready.set()
 
+            # keep reading incoming messages
             while not self._ws_client.closed:
                 msg = await self._receive_message_or_raise()
                 self._handle_incoming_message(msg)
@@ -365,7 +367,9 @@ class MatterClient:
         if msg.event == EventType.ATTRIBUTE_UPDATED:
             attr = dataclass_from_dict(MatterAttribute, msg.data)
             self._nodes[attr.node_id].attributes[attr.path] = attr
-            self._signal_event(EventType.ATTRIBUTE_UPDATED, attr, attr.node_id, attr.path)
+            self._signal_event(
+                EventType.ATTRIBUTE_UPDATED, attr, attr.node_id, attr.path
+            )
             return
         # TODO: handle any other events ?
         self._signal_event(msg.event, msg.data)

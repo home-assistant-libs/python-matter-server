@@ -24,9 +24,7 @@ DEFAULT_STORAGE_PATH = os.path.join(Path.home(), ".matter_server")
 
 
 # Get parsed passed in arguments.
-parser = argparse.ArgumentParser(
-    description="Matter Server Example."
-)
+parser = argparse.ArgumentParser(description="Matter Server Example.")
 parser.add_argument(
     "--storage-path",
     type=str,
@@ -68,14 +66,13 @@ if __name__ == "__main__":
     async def run():
         # start Matter Server
         server.start()
-        
+
         # run the client
         url = f"http://127.0.0.1:{args.port}/ws"
         async with aiohttp.ClientSession() as session:
             async with MatterClient(url, session):
                 # start listening
                 client.listen
-        
 
     async def handle_stop(loop: asyncio.AbstractEventLoop):
         await server.stop()
