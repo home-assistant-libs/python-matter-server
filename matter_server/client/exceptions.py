@@ -5,6 +5,7 @@ from ..common.models.error import MatterError
 
 # TODO: merge these exceptions with the common ones
 
+
 class TransportError(MatterError):
     """Exception raised to represent transport errors."""
 

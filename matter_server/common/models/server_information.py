@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from chip.clusters import Attribute
 
-from .device import MatterNode
+from .node import MatterNode
 
 
 @dataclass

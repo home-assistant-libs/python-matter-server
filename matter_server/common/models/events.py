@@ -8,8 +8,9 @@ class EventType(Enum):
     """Enum with possible events sent from server to client."""
 
     NODE_ADDED = "node_added"
-    NODE_UPDATED = "node_updated"
     NODE_DELETED = "node_deleted"
+    NODE_EVENT = "node_event"
+    ATTRIBUTE_UPDATED = "attribute_updated"
     SERVER_SHUTDOWN = "server_shutdown"
 
 

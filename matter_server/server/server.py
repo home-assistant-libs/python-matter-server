@@ -83,7 +83,9 @@ class MatterServer:
         self.logger.info("Starting the Matter Server...")
         # safety shield: make sure we use same clusters and core packages!
         if chip_clusters_version() != chip_core_version():
-            raise VersionMismatch("CHIP Core version does not match CHIP Clusters version.")
+            raise VersionMismatch(
+                "CHIP Core version does not match CHIP Clusters version."
+            )
         self.loop = asyncio.get_running_loop()
         await self.storage.start()
         await self.device_controller.start()
@@ -129,7 +131,7 @@ class MatterServer:
                 fabricId=self.device_controller.fabric_id,
                 compressedFabricId=self.device_controller.compressed_fabric_id,
                 schema_version=SCHEMA_VERSION,
-                sdk_version=chip_clusters_version()
+                sdk_version=chip_clusters_version(),
             ),
         )
 

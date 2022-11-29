@@ -12,7 +12,7 @@ import logging
 from operator import itemgetter
 import pprint
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, DefaultDict, Dict, List, Type
+from typing import TYPE_CHECKING, Any, Callable, DefaultDict, Dict, List, Optional, Type
 import uuid
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
@@ -23,6 +23,7 @@ from ..common.helpers.util import (
     dataclass_from_dict,
     parse_value,
 )
+from ..common.models.events import EventType
 from ..common.models.api_command import APICommand
 from ..common.models.message import (
     CommandMessage,
@@ -50,6 +51,8 @@ from .exceptions import (
 if TYPE_CHECKING:
     from chip.clusters import ClusterCommand
 
+SUB_WILDCARD = "*"
+
 
 class MatterClient:
     """Manage a Matter server over Websockets."""
@@ -65,6 +68,44 @@ class MatterClient:
         self._loop = asyncio.get_running_loop()
         self._nodes: Dict[int, MatterNode] = {}
         self._result_futures: Dict[str, asyncio.Future] = {}
+        self._subscribers: dict[str, list[Callable]] = {}
+
+    def subscribe(
+        self,
+        callback: Callable[[EventType, Optional[Any]], None],
+        event_filter: Optional[EventType] = None,
+        node_filter: Optional[int] = None,
+        endpoint_filter: Optional[int] = None,
+        attribute_filter: Optional[int] = None,
+    ) -> Callable:
+        """
+        Subscribe to node and server events.
+
+        Optionally filter by specific events or node attributes.
+        Returns:
+            function to unsubscribe.
+        """
+        # for fast lookups we create a key based on the filters, allowing
+        # a "catch all" with a wildcard (*).
+        if event_filter is None:
+            event_filter = SUB_WILDCARD
+        else:
+            event_filter = event_filter.value
+        if node_filter is None:
+            node_filter = SUB_WILDCARD
+        if endpoint_filter is None:
+            attribute_filter = SUB_WILDCARD
+        if attribute_filter is None:
+            attribute_filter = SUB_WILDCARD
+
+        key = f"{event_filter}{node_filter}{endpoint_filter}{attribute_filter}"
+        self._subscribers.setdefault(key, [])
+        self._subscribers[key].append(callback)
+
+        def unsubscribe():
+            self._subscribers[key].remove(callback)
+
+        return unsubscribe
 
     @property
     def connected(self) -> bool:
@@ -102,25 +143,36 @@ class MatterClient:
 
         Returns full NodeInfo once complete.
         """
-        data = await self.send_command(APICommand.COMMISSION_ON_NETWORK, setup_pin_code=setup_pin_code)
+        data = await self.send_command(
+            APICommand.COMMISSION_ON_NETWORK, setup_pin_code=setup_pin_code
+        )
         return MatterNode.from_dict(data)
 
     async def set_wifi_credentials(self, setup_pin_code: int) -> None:
         """Set WiFi credentials for commissioning to a (new) device."""
-        await self.send_command(APICommand.SET_WIFI_CREDENTIALS, setup_pin_code=setup_pin_code)
+        await self.send_command(
+            APICommand.SET_WIFI_CREDENTIALS, setup_pin_code=setup_pin_code
+        )
 
-    async def send_device_command(self, node_id: int, endpoint: int, payload: ClusterCommand) -> Any:
+    async def send_device_command(
+        self, node_id: int, endpoint: int, payload: ClusterCommand
+    ) -> Any:
         """Send a command to a Matter node/device."""
-        return await self.send_command(APICommand.DEVICE_COMMAND, node_id=node_id, endpoint=endpoint, payload=payload)
+        return await self.send_command(
+            APICommand.DEVICE_COMMAND,
+            node_id=node_id,
+            endpoint=endpoint,
+            payload=payload,
+        )
 
     async def send_command(
-        self,
-        command: str,
-        require_schema: int | None = None,
-        **kwargs
+        self, command: str, require_schema: int | None = None, **kwargs
     ) -> Any:
         """Send a command and get a response."""
-        if require_schema is not None and require_schema > self.server_info.schema_version:
+        if (
+            require_schema is not None
+            and require_schema > self.server_info.schema_version
+        ):
             raise InvalidServerVersion(
                 "Command not available due to incompatible server version. Update the Matter "
                 f"Server to a version that supports at least api schema {require_schema}."
@@ -143,7 +195,10 @@ class MatterClient:
         self, command: str, require_schema: int | None = None, **kwargs
     ) -> None:
         """Send a command without waiting for the response."""
-        if require_schema is not None and require_schema > self.server_info.schema_version:
+        if (
+            require_schema is not None
+            and require_schema > self.server_info.schema_version
+        ):
             raise InvalidServerVersion(
                 "Command not available due to incompatible server version. Update the Matter "
                 f"Server to a version that supports at least api schema {require_schema}."
@@ -208,7 +263,7 @@ class MatterClient:
             info.fabricId,
             info.compressedFabricId,
             info.schema_version,
-            info.sdk_version
+            info.sdk_version,
         )
 
     async def start_listening(self, driver_ready: asyncio.Event) -> None:
@@ -302,6 +357,44 @@ class MatterClient:
             type(msg),
             msg,
         )
+
+    def _handle_event_message(self, msg: EventMessage) -> None:
+        """Handle incoming event from the server."""
+        if msg.event == EventType.NODE_ADDED:
+            node = MatterNode.from_dict(msg.data)
+            self._nodes[node.node_id] = node
+            self._signal_event(EventType.NODE_ADDED, node)
+            return
+        if msg.event == EventType.NODE_UPDATED:
+            node = MatterNode.from_dict(msg.data)
+            self._nodes[node.node_id] = node
+            self._signal_event(EventType.NODE_ADDED, node)
+            return
+
+    def _signal_event(
+        self,
+        event: EventType,
+        data: Any = None,
+        node_id: Optional[int] = None,
+        endpoint: Optional[int] = None,
+        attribute: Optional[int] = None,
+    ) -> None:
+        """Signal event to all subscribers."""
+        for evt_key in (event.value, SUB_WILDCARD):
+            for node_key in (node_id, SUB_WILDCARD):
+                if node_key is None:
+                    continue
+                for endpoint_key in (endpoint, SUB_WILDCARD):
+                    if endpoint_key is None:
+                        continue
+                    for attr_key in (attribute, SUB_WILDCARD):
+                        if attr_key is None:
+                            continue
+                        # instead of iterating all subscribers we iterate over subscription keys
+                        # each callback is stored under a specific key based on the filters
+                        key = f"{evt_key}{node_key}{endpoint_key}{attr_key}"
+                        for callback in self._subscribers.get(key, []):
+                            callback(event, data)
 
     async def _send_message(self, message: CommandMessage) -> None:
         """

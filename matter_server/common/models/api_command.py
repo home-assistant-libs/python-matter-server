@@ -1,9 +1,8 @@
 """Constants and models related to API Commands."""
 
-from enum import StrEnum
+from enum import Enum
 
-
-class APICommand(StrEnum):
+class APICommand(str, Enum):
     """Enum with all known API commands."""
 
     START_LISTENING = "start_listening"

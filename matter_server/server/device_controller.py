@@ -37,8 +37,7 @@ from ..common.models.error import (
     NodeCommissionFailed,
     NodeInterviewFailed,
     NodeNotExists,
-    SDKCommandFailed
-
+    SDKCommandFailed,
 )
 from ..common.models.events import EventType
 from ..common.models.message import (
@@ -153,7 +152,7 @@ class MatterDeviceController:
         # if not success:
         #     raise NodeCommissionFailed(f"CommissionWithCode failed for node {node_id}")
         await asyncio.sleep(120)
-        
+
         # full interview of the device
         await self.interview_node(node_id)
         # make sure we start a subscription for this newly added node
@@ -204,7 +203,7 @@ class MatterDeviceController:
         self._wifi_creds_set = True
         if error_code != 0:
             raise SDKCommandFailed("Set WiFi credentials failed.")
-        
+
     @api_command(APICommand.SET_THREAD_DATASET)
     async def set_thread_operational_dataset(self, dataset: str) -> None:
         """Set Thread Operational dataset in the stack."""
@@ -268,7 +267,9 @@ class MatterDeviceController:
         existing_info = self._nodes.get(node_id)
         node = MatterNode(
             nodeid=node_id,
-            date_commissioned=existing_info.date_commissioned if existing_info else datetime.utcnow(),
+            date_commissioned=existing_info.date_commissioned
+            if existing_info
+            else datetime.utcnow(),
             last_interview=datetime.utcnow(),
             interview_version=SCHEMA_VERSION,
         )
@@ -278,7 +279,10 @@ class MatterDeviceController:
         self._nodes[node_id] = node
         node_dict = dataclass_to_dict(node)
         self.server.storage.set(
-            DATA_KEY_NODES, subkey=str(node_id), value=node_dict, force=not existing_info
+            DATA_KEY_NODES,
+            subkey=str(node_id),
+            value=node_dict,
+            force=not existing_info,
         )
         if existing_info is None:
             # new node - first interview
@@ -290,14 +294,18 @@ class MatterDeviceController:
         self.logger.debug("Interview of node %s completed", node_id)
 
     @api_command(APICommand.DEVICE_COMMAND)
-    async def send_device_command(self, node_id: int, endpoint: int, payload: ClusterCommand) -> Any:
+    async def send_device_command(
+        self, node_id: int, endpoint: int, payload: ClusterCommand
+    ) -> Any:
         """Send a command to a Matter node/device."""
-        return await self.chip_controller.SendCommand(nodeid=node_id, endpoint=endpoint, payload=payload)
+        return await self.chip_controller.SendCommand(
+            nodeid=node_id, endpoint=endpoint, payload=payload
+        )
 
     async def subscribe_node(self, node_id: int) -> None:
         """
         Subscribe to all node state changes/events for an individual node.
-        
+
         Note that by using the listen command at server level, you will receive all node events.
         """
         if node_id not in self._nodes:
@@ -328,7 +336,12 @@ class MatterDeviceController:
             #     "attribute": path.AttributeName,
             #     "value": data,
             # }
-            self.logger.debug("attribute updated - path: %s - transaction: %s - data: %s", path, transaction, data)
+            self.logger.debug(
+                "attribute updated - path: %s - transaction: %s - data: %s",
+                path,
+                transaction,
+                data,
+            )
 
             # This callback is running in the CHIP stack thread
             self.server.loop.call_soon_threadsafe(
@@ -355,7 +368,8 @@ class MatterDeviceController:
         ):
             self.logger.debug(
                 "Previous subscription failed with Error: %s - re-subscribing in %s ms...",
-                terminationError, nextResubscribeIntervalMsec
+                terminationError,
+                nextResubscribeIntervalMsec,
             )
 
         def resubscription_succeeded(transaction: Attribute.SubscriptionTransaction):
