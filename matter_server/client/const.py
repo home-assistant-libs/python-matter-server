@@ -1,5 +1,3 @@
-import sys
+"""Constants for the Matter Client."""
 
-TYPING_EXTENSION_FOR_TYPEDDICT_REQUIRED = sys.version_info < (3, 9, 2)
-MAX_SERVER_SCHEMA_VERSION = 1
-MIN_SERVER_SCHEMA_VERSION = 1
+MIN_SCHEMA_VERSION = 1

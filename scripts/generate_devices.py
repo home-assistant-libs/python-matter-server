@@ -5,10 +5,10 @@ import xmltodict
 
 REPO_ROOT = pathlib.Path(__file__).parent.parent
 
-CHIP_ROOT = REPO_ROOT / "../connectedhomeip"
+CHIP_ROOT = REPO_ROOT / "../../project-chip/connectedhomeip"
 DEVICE_XML = CHIP_ROOT / "src/app/zap-templates/zcl/data-model/chip/matter-devices.xml"
 
-OUTPUT_PYTHON = REPO_ROOT / "matter_server/vendor/device_types.py"
+OUTPUT_PYTHON = REPO_ROOT / "matter_server/common/models/device_types.py"
 
 
 def gen_cls_name(name: str):
@@ -38,30 +38,36 @@ def gen_cls_name(name: str):
 def main():
     data = xmltodict.parse(DEVICE_XML.read_text())
     output = [
-        """
+        '''
+"""
+Definitions for all known Device types.
+
+This file is auto generated from `zcl/data-model/chip/matter-devices.xml`
+Do not override!
+"""
 from __future__ import annotations
 
 import typing
 
-from .chip.clusters import Objects as all_clusters
+from chip.clusters import Objects as all_clusters
 
 ALL_TYPES: dict[int, type["DeviceType"]] = {}
 
 
 
 class DeviceType:
-    \"""Base class for Matter device types.\"""
+    """Base class for Matter device types."""
 
     device_type: int
     clusters: set[type[all_clusters.Cluster]]
 
     def __init_subclass__(cls, *, device_type: int, **kwargs: typing.Any) -> None:
-        \"""Register a subclass.\"""
+        """Register a subclass."""
         super().__init_subclass__(**kwargs)
         cls.device_type = device_type
         ALL_TYPES[device_type] = cls
 
-"""
+'''
     ]
 
     for device in data["configurator"]["deviceType"]:

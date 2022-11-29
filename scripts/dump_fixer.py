@@ -9,7 +9,7 @@ import json
 from pprint import pprint
 
 from matter_server.common import json_utils
-from matter_server.vendor.chip.clusters import Objects as all_clusters
+from chip.clusters import Objects as all_clusters
 
 from .show_stored_node import PrintButFirst, get_nodes
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "python-matter-server"
-version = "0.3.0"
+version = "1.0.0"
 license     = {text = "Apache-2.0"}
 description = "Python Matter WebSocket Server"
 readme = "README.md"
@@ -21,8 +21,22 @@ classifiers = [
 ]
 dependencies = [
   "aiohttp",
+  "aiorun",
   "coloredlogs",
   "dacite",
+  "orjson",
+  "home-assistant-chip-clusters==2022.11.1"
+]
+
+[project.optional-dependencies]
+server = [
+  "home-assistant-chip-core==2022.11.1"
+]
+test = [
+  "isort==5.10.1",
+  "black==22.10.0",
+  "flake8==5.0.4",
+  "pytest-homeassistant-custom-component==0.12.9"
 ]
 
 [project.scripts]

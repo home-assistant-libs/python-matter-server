@@ -5,29 +5,49 @@ import asyncio
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime
+from enum import Enum
 from functools import partial
 import json
 import logging
 from operator import itemgetter
 import pprint
 from types import TracebackType
-from typing import Any, DefaultDict, Dict, List
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    DefaultDict,
+    Dict,
+    List,
+    NoReturn,
+    Optional,
+    Type,
+)
 import uuid
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
 
-from ..common.json_utils import CHIPJSONDecoder, CHIPJSONEncoder
-from ..common.model.message import (
+from ..common.helpers.json import json_dumps, json_loads
+from ..common.helpers.util import (
+    chip_clusters_version,
+    dataclass_from_dict,
+    parse_value,
+)
+from ..common.models.api_command import APICommand
+from ..common.models.events import EventType
+from ..common.models.message import (
     CommandMessage,
     ErrorResultMessage,
-    Message,
-    ResultMessage,
-    ServerInformation,
-    SubscriptionReportMessage,
+    EventMessage,
+    MessageType,
+    ResultMessageBase,
+    ServerInfoMessage,
     SuccessResultMessage,
+    parse_message,
 )
-from ..common.model.version import VersionInfo
-from .const import MAX_SERVER_SCHEMA_VERSION, MIN_SERVER_SCHEMA_VERSION
+from ..common.models.node import MatterAttribute, MatterNode
+from ..common.models.server_information import ServerInfo
+from .const import MIN_SCHEMA_VERSION
 from .exceptions import (
     CannotConnect,
     ConnectionClosed,
@@ -38,115 +58,174 @@ from .exceptions import (
     InvalidState,
     NotConnected,
 )
-from .model.driver import Driver
 
-SIZE_PARSE_JSON_EXECUTOR = 8192
+if TYPE_CHECKING:
+    from chip.clusters import ClusterCommand
 
-# Message IDs
-SET_API_SCHEMA_MESSAGE_ID = "api-schema-id"
-GET_INITIAL_LOG_CONFIG_MESSAGE_ID = "get-initial-log-config"
-START_LISTENING_MESSAGE_ID = "listen-id"
-
-LISTEN_MESSAGE_IDS = (
-    GET_INITIAL_LOG_CONFIG_MESSAGE_ID,
-    SET_API_SCHEMA_MESSAGE_ID,
-    START_LISTENING_MESSAGE_ID,
-)
+SUB_WILDCARD = "*"
 
 
-class Client:
-    """Class to manage the connection to the Matter server."""
+class MatterClient:
+    """Manage a Matter server over Websockets."""
 
-    def __init__(
-        self,
-        ws_server_url: str,
-        aiohttp_session: ClientSession,
-        schema_version: int = MAX_SERVER_SCHEMA_VERSION,
-        record_messages: bool = False,
-    ):
+    def __init__(self, ws_server_url: str, aiohttp_session: ClientSession):
         """Initialize the Client class."""
         self.ws_server_url = ws_server_url
-        self.aiohttp_session = aiohttp_session
-        self.driver: Driver | None = None
-        # The WebSocket client
-        self._client: ClientWebSocketResponse | None = None
-        # Version of the connected server
-        self.version: VersionInfo | None = None
-        self.server_info: ServerInformation | None = None
-        self.schema_version: int = schema_version
         self.logger = logging.getLogger(__package__)
+        self.aiohttp_session = aiohttp_session
+        # server info is retrieved on connect
+        self.server_info: ServerInfo | None = None
+        self._ws_client: ClientWebSocketResponse | None = None
         self._loop = asyncio.get_running_loop()
+        self._nodes: Dict[int, MatterNode] = {}
         self._result_futures: Dict[str, asyncio.Future] = {}
-        self._shutdown_complete_event: asyncio.Event | None = None
-        self._record_messages = record_messages
-        self._recorded_commands: DefaultDict[str, dict] = defaultdict(dict)
-        self._recorded_events: List[dict] = []
+        self._subscribers: dict[str, list[Callable]] = {}
 
-    def __repr__(self) -> str:
-        """Return the representation."""
-        prefix = "" if self.connected else "not "
-        return f"{type(self).__name__}(ws_server_url={self.ws_server_url!r}, {prefix}connected)"
+    def subscribe(
+        self,
+        callback: Callable[[EventType, Optional[Any]], None],
+        event_filter: Optional[EventType] = None,
+        node_filter: Optional[int] = None,
+        attr_path_filter: Optional[str] = None,
+    ) -> Callable:
+        """
+        Subscribe to node and server events.
+
+        Optionally filter by specific events or node attributes.
+        Returns:
+            function to unsubscribe.
+        """
+        # for fast lookups we create a key based on the filters, allowing
+        # a "catch all" with a wildcard (*).
+        if event_filter is None:
+            event_filter = SUB_WILDCARD
+        else:
+            event_filter = event_filter.value
+        if node_filter is None:
+            node_filter = SUB_WILDCARD
+        if attr_path_filter is None:
+            attr_path_filter = SUB_WILDCARD
+
+        key = f"{event_filter}/{node_filter}/{attr_path_filter}"
+        self._subscribers.setdefault(key, [])
+        self._subscribers[key].append(callback)
+
+        def unsubscribe():
+            self._subscribers[key].remove(callback)
+
+        return unsubscribe
 
     @property
     def connected(self) -> bool:
         """Return if we're currently connected."""
-        return self._client is not None and not self._client.closed
+        return self._ws_client is not None and not self._ws_client.closed
 
-    @property
-    def recording_messages(self) -> bool:
-        """Return True if messages are being recorded."""
-        return self._record_messages
+    async def get_nodes(self) -> list[MatterNode]:
+        """Return all Matter nodes."""
+        if self._nodes:
+            # if start_listening is called this dict will be kept up to date
+            return list(self._nodes.values())
+        data = await self.send_command(APICommand.GET_NODES)
+        return [MatterNode.from_dict(x) for x in data]
 
-    async def async_send_command(
-        self,
-        command: str,
-        args: dict[str, Any],
-        require_schema: int | None = None,
-    ) -> dict:
+    async def get_node(self, node_id: int) -> MatterNode:
+        """Return Matter node by id."""
+        if node_id in self._nodes:
+            # if start_listening is called this dict will be kept up to date
+            return self._nodes[node_id]
+        data = await self.send_command(APICommand.GET_NODE, node_id=node_id)
+        return MatterNode.from_dict(data)
+
+    async def commission_with_code(self, code: str) -> MatterNode:
+        """
+        Commission a device using QRCode or ManualPairingCode.
+
+        Returns full NodeInfo once complete.
+        """
+        data = await self.send_command(APICommand.COMMISSION_WITH_CODE, code=code)
+        return MatterNode.from_dict(data)
+
+    async def commission_on_network(self, setup_pin_code: int) -> MatterNode:
+        """
+        Commission a device already connected to the network.
+
+        Returns full NodeInfo once complete.
+        """
+        data = await self.send_command(
+            APICommand.COMMISSION_ON_NETWORK, setup_pin_code=setup_pin_code
+        )
+        return MatterNode.from_dict(data)
+
+    async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
+        """Set WiFi credentials for commissioning to a (new) device."""
+        await self.send_command(
+            APICommand.SET_WIFI_CREDENTIALS, ssid=ssid, credentials=credentials
+        )
+
+    async def send_device_command(
+        self, node_id: int, endpoint: int, payload: ClusterCommand
+    ) -> Any:
+        """Send a command to a Matter node/device."""
+        return await self.send_command(
+            APICommand.DEVICE_COMMAND,
+            node_id=node_id,
+            endpoint=endpoint,
+            payload=payload,
+        )
+
+    async def send_command(
+        self, command: str, require_schema: int | None = None, **kwargs
+    ) -> Any:
         """Send a command and get a response."""
-        if require_schema is not None and require_schema > self.schema_version:
+        if (
+            require_schema is not None
+            and require_schema > self.server_info.schema_version
+        ):
             raise InvalidServerVersion(
-                "Command not available due to incompatible server version. Update the Z-Wave "
-                f"JS Server to a version that supports at least api schema {require_schema}."
+                "Command not available due to incompatible server version. Update the Matter "
+                f"Server to a version that supports at least api schema {require_schema}."
             )
 
         message = CommandMessage(
-            messageId=uuid.uuid4().hex,
+            message_id=uuid.uuid4().hex,
             command=command,
-            args=args,
+            args=kwargs,
         )
         future: asyncio.Future[dict] = self._loop.create_future()
-        self._result_futures[message.messageId] = future
+        self._result_futures[message.message_id] = future
         await self._send_message(message)
         try:
             return await future
         finally:
-            self._result_futures.pop(message.messageId)
+            self._result_futures.pop(message.message_id)
 
-    async def async_send_command_no_wait(
-        self, command: str, args: dict[str, Any], require_schema: int | None = None
+    async def send_command_no_wait(
+        self, command: str, require_schema: int | None = None, **kwargs
     ) -> None:
         """Send a command without waiting for the response."""
-        if require_schema is not None and require_schema > self.schema_version:
+        if (
+            require_schema is not None
+            and require_schema > self.server_info.schema_version
+        ):
             raise InvalidServerVersion(
                 "Command not available due to incompatible server version. Update the Matter "
                 f"Server to a version that supports at least api schema {require_schema}."
             )
         message = CommandMessage(
-            messageId=uuid.uuid4().hex,
+            message_id=uuid.uuid4().hex,
             command=command,
-            args=args,
+            args=kwargs,
         )
         await self._send_message(message)
 
     async def connect(self) -> None:
         """Connect to the websocket server."""
-        if self.driver is not None:
-            raise InvalidState("Re-connected with existing driver")
+        if self._ws_client is not None:
+            raise InvalidState("Already connected")
 
         self.logger.debug("Trying to connect")
         try:
-            self._client = await self.aiohttp_session.ws_connect(
+            self._ws_client = await self.aiohttp_session.ws_connect(
                 self.ws_server_url,
                 heartbeat=55,
                 compress=15,
@@ -158,219 +237,180 @@ class Client:
         ) as err:
             raise CannotConnect(err) from err
 
-        self.version = version = await self._receive_message_or_raise()
+        # at connect, the server sends a single message with the server info
+        info: ServerInfoMessage = await self._receive_message_or_raise()
+        self.server_info = info = info
+
+        # sdk version must match exactly
+        if info.sdk_version != chip_clusters_version():
+            await self._ws_client.close()
+            raise InvalidServerVersion(
+                f"Matter Server SDK version is incompatible: {info.sdk_version} "
+                f"version on the client is {chip_clusters_version()} "
+            )
 
         # basic check for server schema version compatibility
-        if (
-            self.version.min_schema_version > MIN_SERVER_SCHEMA_VERSION
-            or self.version.max_schema_version < MIN_SERVER_SCHEMA_VERSION
-        ):
-            await self._client.close()
+        if info.schema_version < MIN_SCHEMA_VERSION:
+            # server version is too low, raise exception
+            await self._ws_client.close()
             raise InvalidServerVersion(
-                f"Matter Server version is incompatible: {self.version.server_version} "
-                "a version is required that supports at least "
-                f"api schema {MIN_SERVER_SCHEMA_VERSION}"
+                f"Matter Server schema version is incompatible: {info.schema_version} "
+                f"a version is required that supports at least api schema {MIN_SCHEMA_VERSION} "
+                " - update the Matter Server to a more recent version."
             )
-        # store the (highest possible) schema version we're going to use/request
-        # this is a bit future proof as we might decide to use a pinned version at some point
-        # for now we just negotiate the highest available schema version and
-        # guard incompatibility with the MIN_SERVER_SCHEMA_VERSION
-        if self.version.max_schema_version < MAX_SERVER_SCHEMA_VERSION:
-            self.schema_version = self.version.max_schema_version
-
-        await self._send_message(
-            CommandMessage(
-                messageId="server-get-info",
-                command="server.GetInfo",
-                args={},
+        if self.server_info.schema_version > MIN_SCHEMA_VERSION:
+            # server version is higher than expected, log only
+            self.logger.warning(
+                f"Matter Server detedted with schema version {info.schema_version} "
+                f"which is higher than the preferred api schema {MIN_SCHEMA_VERSION} of this client"
+                " - you may run into compatibility issues."
             )
-        )
-        msg = await self._receive_message_or_raise()
-
-        if (
-            not isinstance(msg, SuccessResultMessage)
-            or not isinstance(msg.result, ServerInformation)
-            or msg.messageId != "server-get-info"
-        ):
-            raise InvalidMessage(
-                "Expected a SuccessResultMessage with messageId 'server-get-info'"
-            )
-
-        self.server_info = msg.result
 
         self.logger.info(
-            "Connected to Server %s, Driver %s, Using Schema %s",
-            version.server_version,
-            version.driver_version,
-            self.schema_version,
+            "Connected to Matter Fabric %s (%s), Schema version %s, CHIP SDK Version %s",
+            info.fabric_id,
+            info.compressed_fabric_id,
+            info.schema_version,
+            info.sdk_version,
         )
 
-    async def listen(self, driver_ready: asyncio.Event) -> None:
-        """Start listening to the websocket."""
+    async def start_listening(
+        self, init_ready: asyncio.Event | None = None
+    ) -> NoReturn:
+        """Start listening to the websocket (and receive initial state)."""
         if not self.connected:
             raise InvalidState("Not connected when start listening")
 
-        assert self._client
-
         try:
-            self.driver = Driver(self)
+            nodes = await self.send_command(APICommand.START_LISTENING)
+            self._nodes = nodes
 
-            self.logger.info("Matter initialized.")
-            driver_ready.set()
+            self.logger.info("Matter client initialized.")
+            if init_ready is not None:
+                init_ready.set()
 
-            while not self._client.closed:
-                data = await self._receive_message_or_raise()
-
-                self._handle_incoming_message(data)
+            # keep reading incoming messages
+            while not self._ws_client.closed:
+                msg = await self._receive_message_or_raise()
+                self._handle_incoming_message(msg)
         except ConnectionClosed:
             pass
-
         finally:
-            self.logger.debug("Listen completed. Cleaning up")
-
-            for future in self._result_futures.values():
-                future.cancel()
-
-            if not self._client.closed:
-                await self._client.close()
-
-            if self._shutdown_complete_event:
-                self._shutdown_complete_event.set()
+            await self.disconnect()
 
     async def disconnect(self) -> None:
         """Disconnect the client."""
         self.logger.debug("Closing client connection")
+        # cancel all command-tasks awaiting a result
+        for future in self._result_futures.values():
+            future.cancel()
+        # close the client if is still connected
+        if self._ws_client is not None and not self._ws_client.closed:
+            await self._ws_client.close()
 
-        if not self.connected:
-            return
+    async def _receive_message_or_raise(self) -> MessageType:
+        """Receive (raw) message or raise."""
+        assert self._ws_client
+        ws_msg = await self._ws_client.receive()
 
-        assert self._client
-
-        # 'listen' was never called
-        if self.driver is None:
-            await self._client.close()
-            return
-
-        self._shutdown_complete_event = asyncio.Event()
-        await self._client.close()
-        await self._shutdown_complete_event.wait()
-
-        self._shutdown_complete_event = None
-        self.driver = None
-
-    def begin_recording_messages(self) -> None:
-        """Begin recording messages for replay later."""
-        if self._record_messages:
-            raise InvalidState("Already recording messages")
-
-        self._record_messages = True
-
-    def end_recording_messages(self) -> List[dict]:
-        """End recording messages and return messages that were recorded."""
-        if not self._record_messages:
-            raise InvalidState("Not recording messages")
-
-        self._record_messages = False
-
-        data = sorted(
-            (*self._recorded_commands.values(), *self._recorded_events),
-            key=itemgetter("ts"),
-        )
-        self._recorded_commands.clear()
-        self._recorded_events.clear()
-
-        return list(data)
-
-    async def _receive_message_or_raise(self) -> Message:
-        """Receive message or raise."""
-        assert self._client
-        msg = await self._client.receive()
-
-        if msg.type in (WSMsgType.CLOSE, WSMsgType.CLOSED, WSMsgType.CLOSING):
+        if ws_msg.type in (WSMsgType.CLOSE, WSMsgType.CLOSED, WSMsgType.CLOSING):
             raise ConnectionClosed("Connection was closed.")
 
-        if msg.type == WSMsgType.ERROR:
+        if ws_msg.type == WSMsgType.ERROR:
             raise ConnectionFailed()
 
-        if msg.type != WSMsgType.TEXT:
-            raise InvalidMessage(f"Received non-Text message: {msg.type}")
+        if ws_msg.type != WSMsgType.TEXT:
+            raise InvalidMessage(f"Received non-Text message: {ws_msg.type}")
 
         try:
-            if len(msg.data) > SIZE_PARSE_JSON_EXECUTOR:
-                obj: dict = await self._loop.run_in_executor(
-                    None, lambda: json.loads(msg.data, cls=CHIPJSONDecoder)
-                )
-            else:
-                obj = json.loads(msg.data, cls=CHIPJSONDecoder)
+            msg: MessageType = parse_message(json_loads(ws_msg.data))
         except TypeError as err:
             raise InvalidMessage(f"Received unsupported JSON: {err}") from err
         except ValueError as err:
             raise InvalidMessage("Received invalid JSON.") from err
 
         if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug("Received message:\n%s\n", pprint.pformat(msg))
+            self.logger.debug("Received message:\n%s\n", pprint.pformat(ws_msg))
 
-        return obj
+        return msg
 
-    def _handle_incoming_message(self, msg: Any) -> None:
-        """Handle incoming message.
+    def _handle_incoming_message(self, msg: MessageType) -> None:
+        """
+        Handle incoming message.
 
         Run all async tasks in a wrapper to log appropriately.
         """
-        if isinstance(msg, ResultMessage):
-            msg: ResultMessage = msg
-            future = self._result_futures.get(msg.messageId)
+        # handle result message
+        if isinstance(msg, ResultMessageBase):
+
+            future = self._result_futures.get(msg.message_id)
 
             if future is None:
                 # no listener for this result
                 return
 
-            if self._record_messages and msg.messageId not in LISTEN_MESSAGE_IDS:
-                self._recorded_commands[msg.messageId].update(
-                    {
-                        "result_ts": datetime.utcnow().isoformat(),
-                        "result_msg": deepcopy(msg),
-                    }
-                )
-
             if isinstance(msg, SuccessResultMessage):
                 msg: SuccessResultMessage = msg
                 future.set_result(msg.result)
                 return
-            elif isinstance(msg, ErrorResultMessage):
+            if isinstance(msg, ErrorResultMessage):
                 msg: ErrorResultMessage = msg
-                future.set_exception(FailedCommand(msg.messageId, msg.errorCode))
-            else:
-                raise InvalidMessage("Invalid ResultMessage.")
+                future.set_exception(FailedCommand(msg.message_id, msg.errorCode))
+                return
 
+        # handle EventMessage
+        if isinstance(msg, EventMessage):
+            self.logger.debug("Received event: %s", msg)
             return
-        elif isinstance(msg, SubscriptionReportMessage):
-            self.logger.debug(
-                "Received subscription report: %s",
-                msg,
-            )
 
-            if self._record_messages:
-                self._recorded_events.append(
-                    {
-                        "record_type": "subscription_report",
-                        "ts": datetime.utcnow().isoformat(),
-                        "payload": deepcopy(msg),
-                    }
-                )
+        # Log anything we can't handle here
+        self.logger.debug(
+            "Received message with unknown type '%s': %s",
+            type(msg),
+            msg,
+        )
 
-            self.driver.read_subscriptions.receive_event(msg.payload)
-        else:
-            # Can't handle
-            self.logger.debug(
-                "Received message with unknown type '%s': %s",
-                type(msg),
-                msg,
+    def _handle_event_message(self, msg: EventMessage) -> None:
+        """Handle incoming event from the server."""
+        if msg.event == EventType.NODE_ADDED:
+            node = dataclass_from_dict(MatterNode, msg.data)
+            self._nodes[node.node_id] = node
+            self._signal_event(EventType.NODE_ADDED, node)
+            return
+        if msg.event == EventType.ATTRIBUTE_UPDATED:
+            attr = dataclass_from_dict(MatterAttribute, msg.data)
+            self._nodes[attr.node_id].attributes[attr.path] = attr
+            self._signal_event(
+                EventType.ATTRIBUTE_UPDATED, attr, attr.node_id, attr.path
             )
             return
+        # TODO: handle any other events ?
+        self._signal_event(msg.event, msg.data)
+
+    def _signal_event(
+        self,
+        event: EventType,
+        data: Any = None,
+        node_id: Optional[int] = None,
+        attribute_path: Optional[str] = None,
+    ) -> None:
+        """Signal event to all subscribers."""
+        # instead of iterating all subscribers we iterate over subscription keys
+        # each callback is stored under a specific key based on the filters
+        for evt_key in (event.value, SUB_WILDCARD):
+            for node_key in (node_id, SUB_WILDCARD):
+                if node_key is None:
+                    continue
+                for attribute_path_key in (attribute_path, SUB_WILDCARD):
+                    if attribute_path_key is None:
+                        continue
+                    key = f"{evt_key}{node_key}{attribute_path_key}"
+                    for callback in self._subscribers.get(key, []):
+                        callback(event, data)
 
     async def _send_message(self, message: CommandMessage) -> None:
-        """Send a message.
+        """
+        Send a CommandMessage to the server.
 
         Raises NotConnected if client not connected.
         """
@@ -380,27 +420,13 @@ class Client:
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug("Publishing message:\n%s\n", pprint.pformat(message))
 
-        assert self._client
+        assert self._ws_client
         assert isinstance(message, CommandMessage)
 
-        if self._record_messages and message.messageId not in LISTEN_MESSAGE_IDS:
-            # We don't need to deepcopy command_msg because it is always released by
-            # the caller after the command is sent.
-            self._recorded_commands[message.messageId].update(
-                {
-                    "record_type": "command",
-                    "ts": datetime.utcnow().isoformat(),
-                    "command": message["command"],
-                    "command_msg": message,
-                }
-            )
+        await self._ws_client.send_json(message, dumps=json_dumps)
 
-        await self._client.send_json(
-            message, dumps=partial(json.dumps, cls=CHIPJSONEncoder)
-        )
-
-    async def __aenter__(self) -> "Client":
-        """Connect to the websocket."""
+    async def __aenter__(self) -> "MatterClient":
+        """Initialize and connect the Matter Websocket client."""
         await self.connect()
         return self
 
@@ -409,3 +435,8 @@ class Client:
     ) -> None:
         """Disconnect from the websocket."""
         await self.disconnect()
+
+    def __repr__(self) -> str:
+        """Return the representation."""
+        prefix = "" if self.connected else "not "
+        return f"{type(self).__name__}(ws_server_url={self.ws_server_url!r}, {prefix}connected)"

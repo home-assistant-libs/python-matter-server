@@ -1,9 +1,0 @@
-{
-  "domain": "matter_experimental",
-  "name": "Matter (Experimental)",
-  "config_flow": true,
-  "documentation": "https://github.com/home-assistant-libs/python-matter-server",
-  "requirements": ["python-matter-server==0.3.0"],
-  "iot_class": "local_push",
-  "version": "0.3.0"
-}

@@ -1,12 +1,12 @@
 """Exceptions for matter-server."""
 from __future__ import annotations
 
+from ..common.models.error import MatterError
 
-class BaseMatterServerError(Exception):
-    """Base Zwave JS Server exception."""
+# TODO: merge these exceptions with the common ones
 
 
-class TransportError(BaseMatterServerError):
+class TransportError(MatterError):
     """Exception raised to represent transport errors."""
 
     def __init__(self, message: str, error: Exception | None = None) -> None:
@@ -38,23 +38,23 @@ class ConnectionFailed(TransportError):
         super().__init__(f"{error}", error)
 
 
-class NotConnected(BaseMatterServerError):
+class NotConnected(MatterError):
     """Exception raised when not connected to client."""
 
 
-class InvalidState(BaseMatterServerError):
+class InvalidState(MatterError):
     """Exception raised when data gets in invalid state."""
 
 
-class InvalidMessage(BaseMatterServerError):
+class InvalidMessage(MatterError):
     """Exception raised when an invalid message is received."""
 
 
-class InvalidServerVersion(BaseMatterServerError):
+class InvalidServerVersion(MatterError):
     """Exception raised when connected to server with incompatible version."""
 
 
-class FailedCommand(BaseMatterServerError):
+class FailedCommand(MatterError):
     """When a command has failed."""
 
     def __init__(self, message_id: str, error_code: str, msg: str | None = None):
