@@ -77,7 +77,7 @@ class MatterNode:
     # attributes are stored in form of AttributeKey: MatterAttribute
     attributes: Dict[str, MatterAttribute]
     # below attributes are derrived from the attributes in post init.
-    endpoints: set[int] = field(default=set, init=False)
+    endpoints: list[int] = field(default=list, init=False)
     root_device_type_instance: MatterDeviceTypeInstance[RootNode] | None = field(
         default=None, init=False
     )
@@ -93,7 +93,8 @@ class MatterNode:
         """Initialize optional values after init."""
         device_type_instances: list[MatterDeviceTypeInstance] = []
         for attr_path, attr in self.attributes.items():
-            self.endpoints.add(attr.endpoint)
+            if attr.endpoint not in self.endpoints:
+                self.endpoints.append(attr.endpoint)
             if attr.attribute_type != Clusters.Descriptor.Attributes.DeviceTypeList:
                 continue
             for dev_info in attr.value:
