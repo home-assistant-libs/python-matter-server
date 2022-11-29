@@ -5,30 +5,36 @@ import asyncio
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime
+from enum import Enum
 from functools import partial
 import json
 import logging
 from operator import itemgetter
 import pprint
 from types import TracebackType
-from typing import Any, DefaultDict, Dict, List
+from typing import TYPE_CHECKING, Any, DefaultDict, Dict, List, Type
 import uuid
-from enum import Enum
+
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
 
-from ..common.helpers.json import json_loads, json_dumps
-from ..common.helpers.util import dataclass_from_dict, chip_clusters_version
-
-from ..common.models.server_information import ServerInfo
+from ..common.helpers.json import json_dumps, json_loads
+from ..common.helpers.util import (
+    chip_clusters_version,
+    dataclass_from_dict,
+    parse_value,
+)
+from ..common.models.api_command import APICommand
 from ..common.models.message import (
     CommandMessage,
     ErrorResultMessage,
+    EventMessage,
     MessageType,
     ResultMessageBase,
-    EventMessage,
     SuccessResultMessage,
     parse_message,
 )
+from ..common.models.node import MatterNode
+from ..common.models.server_information import ServerInfo
 from .const import MIN_SCHEMA_VERSION
 from .exceptions import (
     CannotConnect,
@@ -41,17 +47,8 @@ from .exceptions import (
     NotConnected,
 )
 
-
-# Message IDs
-SET_API_SCHEMA_MESSAGE_ID = "api-schema-id"
-GET_INITIAL_LOG_CONFIG_MESSAGE_ID = "get-initial-log-config"
-START_LISTENING_MESSAGE_ID = "listen-id"
-
-LISTEN_MESSAGE_IDS = (
-    GET_INITIAL_LOG_CONFIG_MESSAGE_ID,
-    SET_API_SCHEMA_MESSAGE_ID,
-    START_LISTENING_MESSAGE_ID,
-)
+if TYPE_CHECKING:
+    from chip.clusters import ClusterCommand
 
 
 class MatterClient:
@@ -66,6 +63,7 @@ class MatterClient:
         self.server_info: ServerInfo | None = None
         self._ws_client: ClientWebSocketResponse | None = None
         self._loop = asyncio.get_running_loop()
+        self._nodes: Dict[int, MatterNode] = {}
         self._result_futures: Dict[str, asyncio.Future] = {}
 
     @property
@@ -73,12 +71,54 @@ class MatterClient:
         """Return if we're currently connected."""
         return self._ws_client is not None and not self._ws_client.closed
 
-    async def async_send_command(
+    async def get_nodes(self) -> list[MatterNode]:
+        """Return all Matter nodes."""
+        if self._nodes:
+            # if start_listening is called this dict will be kept up to date
+            return list(self._nodes.values())
+        data = await self.send_command(APICommand.GET_NODES)
+        return [MatterNode.from_dict(x) for x in data]
+
+    async def get_node(self, node_id: int) -> MatterNode:
+        """Return Matter node by id."""
+        if node_id in self._nodes:
+            # if start_listening is called this dict will be kept up to date
+            return self._nodes[node_id]
+        data = await self.send_command(APICommand.GET_NODE, node_id=node_id)
+        return MatterNode.from_dict(data)
+
+    async def commission_with_code(self, code: str) -> MatterNode:
+        """
+        Commission a device using QRCode or ManualPairingCode.
+
+        Returns full NodeInfo once complete.
+        """
+        data = await self.send_command(APICommand.COMMISSION_WITH_CODE, code=code)
+        return MatterNode.from_dict(data)
+
+    async def commission_on_network(self, setup_pin_code: int) -> MatterNode:
+        """
+        Commission a device already connected to the network.
+
+        Returns full NodeInfo once complete.
+        """
+        data = await self.send_command(APICommand.COMMISSION_ON_NETWORK, setup_pin_code=setup_pin_code)
+        return MatterNode.from_dict(data)
+
+    async def set_wifi_credentials(self, setup_pin_code: int) -> None:
+        """Set WiFi credentials for commissioning to a (new) device."""
+        await self.send_command(APICommand.SET_WIFI_CREDENTIALS, setup_pin_code=setup_pin_code)
+
+    async def send_device_command(self, node_id: int, endpoint: int, payload: ClusterCommand) -> Any:
+        """Send a command to a Matter node/device."""
+        return await self.send_command(APICommand.DEVICE_COMMAND, node_id=node_id, endpoint=endpoint, payload=payload)
+
+    async def send_command(
         self,
         command: str,
-        args: dict[str, Any],
         require_schema: int | None = None,
-    ) -> dict:
+        **kwargs
+    ) -> Any:
         """Send a command and get a response."""
         if require_schema is not None and require_schema > self.server_info.schema_version:
             raise InvalidServerVersion(
@@ -87,20 +127,20 @@ class MatterClient:
             )
 
         message = CommandMessage(
-            messageId=uuid.uuid4().hex,
+            message_id=uuid.uuid4().hex,
             command=command,
-            args=args,
+            args=kwargs,
         )
         future: asyncio.Future[dict] = self._loop.create_future()
-        self._result_futures[message.messageId] = future
+        self._result_futures[message.message_id] = future
         await self._send_message(message)
         try:
             return await future
         finally:
-            self._result_futures.pop(message.messageId)
+            self._result_futures.pop(message.message_id)
 
-    async def async_send_command_no_wait(
-        self, command: str, args: dict[str, Any], require_schema: int | None = None
+    async def send_command_no_wait(
+        self, command: str, require_schema: int | None = None, **kwargs
     ) -> None:
         """Send a command without waiting for the response."""
         if require_schema is not None and require_schema > self.server_info.schema_version:
@@ -109,9 +149,9 @@ class MatterClient:
                 f"Server to a version that supports at least api schema {require_schema}."
             )
         message = CommandMessage(
-            messageId=uuid.uuid4().hex,
+            message_id=uuid.uuid4().hex,
             command=command,
-            args=args,
+            args=kwargs,
         )
         await self._send_message(message)
 
@@ -171,12 +211,15 @@ class MatterClient:
             info.sdk_version
         )
 
-    async def listen(self, driver_ready: asyncio.Event) -> None:
+    async def start_listening(self, driver_ready: asyncio.Event) -> None:
         """Start listening to the websocket (and receive initial state)."""
         if not self.connected:
             raise InvalidState("Not connected when start listening")
 
         try:
+            nodes = await self.send_command(APICommand.START_LISTENING)
+            self._nodes = nodes
+
             self.logger.info("Matter client initialized.")
             driver_ready.set()
 
@@ -233,7 +276,7 @@ class MatterClient:
         # handle result message
         if isinstance(msg, ResultMessageBase):
 
-            future = self._result_futures.get(msg.messageId)
+            future = self._result_futures.get(msg.message_id)
 
             if future is None:
                 # no listener for this result
@@ -245,7 +288,7 @@ class MatterClient:
                 return
             if isinstance(msg, ErrorResultMessage):
                 msg: ErrorResultMessage = msg
-                future.set_exception(FailedCommand(msg.messageId, msg.errorCode))
+                future.set_exception(FailedCommand(msg.message_id, msg.errorCode))
                 return
 
         # handle EventMessage

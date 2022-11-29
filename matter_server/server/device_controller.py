@@ -30,15 +30,15 @@ from chip.ChipDeviceCtrl import ChipDeviceController
 from chip.discovery import FilterType as DiscoveryFilterType
 from chip.exceptions import ChipStackError
 
-from matter_server.server.const import SCHEMA_VERSION
-
 from ..common.helpers.api import api_command
 from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
-
+from ..common.models.api_command import APICommand
 from ..common.models.error import (
     NodeCommissionFailed,
     NodeInterviewFailed,
     NodeNotExists,
+    SDKCommandFailed
+
 )
 from ..common.models.events import EventType
 from ..common.models.message import (
@@ -47,14 +47,15 @@ from ..common.models.message import (
     SuccessResultMessage,
 )
 from ..common.models.node import MatterNode
+from .const import SCHEMA_VERSION
 
 if TYPE_CHECKING:
     from chip.clusters import (
         Attribute,
         Cluster,
         ClusterAttributeDescriptor,
+        ClusterCommand,
         ClusterEvent,
-        ClusterCommand
     )
 
     from .server import MatterServer
@@ -120,19 +121,19 @@ class MatterDeviceController:
         await self._call_sdk(self.chip_controller.Shutdown)
         self.logger.debug("Stopped.")
 
-    @api_command("device_controller.get_nodes")
+    @api_command(APICommand.GET_NODES)
     def get_nodes(self) -> list[MatterNode]:
         """Return all Nodes known to the server."""
         return [x for x in self._nodes.values() if x is not None]
 
-    @api_command("device_controller.get_node")
+    @api_command(APICommand.GET_NODE)
     def get_node(self, node_id: int) -> MatterNode:
         """Return info of a single Node."""
         node = self._nodes.get(node_id)
         assert node is not None, "Node does not exist or is not yet interviewed"
         return node
 
-    @api_command("device_controller.commission_with_code")
+    @api_command(APICommand.COMMISSION_WITH_CODE)
     async def commission_with_code(self, code: str) -> MatterNode:
         """
         Commission a device using QRCode or ManualPairingCode.
@@ -151,7 +152,7 @@ class MatterDeviceController:
         # The call to CommissionWithCode returns early without waiting ?!
         # if not success:
         #     raise NodeCommissionFailed(f"CommissionWithCode failed for node {node_id}")
-        await asyncio.sleep(20)
+        await asyncio.sleep(120)
         
         # full interview of the device
         await self.interview_node(node_id)
@@ -160,7 +161,7 @@ class MatterDeviceController:
         # return full node object once we're complete
         return self.get_node(node_id)
 
-    @api_command("device_controller.commission_on_network")
+    @api_command(APICommand.COMMISSION_ON_NETWORK)
     async def commission_on_network(
         self,
         setup_pin_code: int,
@@ -191,8 +192,8 @@ class MatterDeviceController:
         # return full node object once we're complete
         return self.get_node(node_id)
 
-    @api_command("device_controller.set_wifi_credentials")
-    async def set_wifi_credentials(self, ssid: str, credentials: str) -> bool:
+    @api_command(APICommand.SET_WIFI_CREDENTIALS)
+    async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
         """Set WiFi credentials for commissioning to a (new) device."""
         error_code = await self._call_sdk(
             self.chip_controller.SetWiFiCredentials,
@@ -201,18 +202,20 @@ class MatterDeviceController:
         )
 
         self._wifi_creds_set = True
-        return error_code == 0
-
-    @api_command("device_controller.set_thread_operational_dataset")
-    async def set_thread_operational_dataset(self, dataset: str) -> bool:
+        if error_code != 0:
+            raise SDKCommandFailed("Set WiFi credentials failed.")
+        
+    @api_command(APICommand.SET_THREAD_DATASET)
+    async def set_thread_operational_dataset(self, dataset: str) -> None:
         """Set Thread Operational dataset in the stack."""
         error_code = await self._call_sdk(
             self.chip_controller.SetThreadOperationalDataset,
             threadOperationalDataset=bytes.fromhex(dataset),
         )
-        return error_code == 0
+        if error_code != 0:
+            raise SDKCommandFailed("Set Thread credentials failed.")
 
-    @api_command("device_controller.open_commissioning_window")
+    @api_command(APICommand.OPEN_COMMISSIONING_WINDOW)
     async def open_commissioning_window(
         self,
         node_id: int,
@@ -239,7 +242,7 @@ class MatterDeviceController:
         )
         return discriminator
 
-    @api_command("device_controller.discover_commissionable_nodes")
+    @api_command(APICommand.DISCOVER)
     async def discover_commissionable_nodes(self):
         """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
 
@@ -248,7 +251,7 @@ class MatterDeviceController:
         )
         return result
 
-    @api_command("device_controller.interview_node")
+    @api_command(APICommand.INTERVIEW_NODE)
     async def interview_node(self, node_id: int) -> None:
         """Interview a node."""
         self.logger.debug("Interviewing node: %s", node_id)
@@ -286,12 +289,11 @@ class MatterDeviceController:
 
         self.logger.debug("Interview of node %s completed", node_id)
 
-    @api_command("device_controller.send_command")
-    async def send_command(self, node_id: int, endpoint: int, payload: ClusterCommand) -> Any:
+    @api_command(APICommand.DEVICE_COMMAND)
+    async def send_device_command(self, node_id: int, endpoint: int, payload: ClusterCommand) -> Any:
         """Send a command to a Matter node/device."""
         return await self.chip_controller.SendCommand(nodeid=node_id, endpoint=endpoint, payload=payload)
 
-    @api_command("device_controller.subscribe_node")
     async def subscribe_node(self, node_id: int) -> None:
         """
         Subscribe to all node state changes/events for an individual node.

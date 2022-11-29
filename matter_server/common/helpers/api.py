@@ -1,10 +1,9 @@
 """Several helpers for the websockets API."""
 
 
-from ast import Tuple
 from dataclasses import MISSING, dataclass, is_dataclass
 import inspect
-from typing import Any, Callable, Coroutine, Dict, Optional, Union, get_args, get_origin
+from typing import Any, Callable, Coroutine, Dict, Optional, Union, Tuple, get_args, get_origin
 
 from matter_server.common.helpers.util import parse_value
 
@@ -29,7 +28,7 @@ class APICommandHandler:
         )
 
 
-def api_command(command: str) -> Callable[..., Coroutine[Any, Any, Any]]:
+def api_command(command: str) -> Callable:
     """Decorate a function as API route/command."""
 
     def decorate(func: Callable) -> Callable[..., Coroutine[Any, Any, Any]]:

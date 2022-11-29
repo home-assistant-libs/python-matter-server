@@ -7,8 +7,6 @@ import pprint
 from types import NoneType
 from typing import TYPE_CHECKING, Any, Dict, Union
 
-from genericpath import isfile
-
 from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_dumps, json_loads
 
 DEFAULT_SAVE_DELAY = 30

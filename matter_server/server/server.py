@@ -19,6 +19,7 @@ from matter_server.server.const import SCHEMA_VERSION
 
 from ..common.helpers.api import APICommandHandler, api_command
 from ..common.helpers.util import chip_clusters_version, chip_core_version
+from ..common.models.api_command import APICommand
 from ..common.models.events import EventCallBackType, EventType
 from ..common.models.message import CommandMessage
 from ..common.models.server_information import ServerDiagnostics, ServerInfo
@@ -120,7 +121,7 @@ class MatterServer:
 
         self._subscribers.add(callback)
 
-    @api_command("server.info")
+    @api_command(APICommand.SERVER_INFO)
     def get_info(self) -> ServerInfo:
         """Return (version)info of the Matter Server."""
         return (
@@ -132,7 +133,7 @@ class MatterServer:
             ),
         )
 
-    @api_command("server.diagnostics")
+    @api_command(APICommand.SERVER_DIAGNOSTICS)
     def get_diagnostics(self) -> ServerDiagnostics:
         """Return a full dump of the server (for diagnostics)."""
         return ServerDiagnostics(
@@ -145,9 +146,9 @@ class MatterServer:
         """Signal event to listeners."""
         for callback in self._subscribers:
             if asyncio.iscoroutinefunction(callback):
-                asyncio.create_task(callback(type, data))
+                asyncio.create_task(callback(evt, data))
             else:
-                callback(type, data)
+                callback(evt, data)
 
     def register_api_command(
         self,

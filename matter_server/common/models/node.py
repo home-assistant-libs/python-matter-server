@@ -16,7 +16,7 @@ from chip.clusters import (
     Objects as Clusters,
 )
 
-from ..helpers.util import dataclass_to_dict
+from ..helpers.util import dataclass_to_dict, dataclass_from_dict
 from .device_type_instance import MatterDeviceTypeInstance
 from .device_types import ALL_TYPES, Aggregator, BridgedDevice, RootNode
 from .node_device import (
@@ -43,6 +43,11 @@ class MatterNode:
     # aggregator_device_type_instance: MatterDeviceTypeInstance[Aggregator] | None = None
     # device_type_instances: list[MatterDeviceTypeInstance] = field(default_factory=list)
     # node_devices: list[AbstractMatterNodeDevice] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls: "MatterNode", obj: dict) -> MatterNode:
+        """Instantiate from plain dict."""
+        return dataclass_from_dict(MatterNode, obj)
 
     def parse_attributes(self, attributes: dict) -> None:
         """Try to parse a MatterNode from AttributeCache (retrieved from Read)."""
@@ -129,4 +134,4 @@ class MatterNode:
         return self.root_device_type_instance.get_cluster(Clusters.Basic).uniqueID
 
     def __repr__(self):
-        return f"<MatterNode {self.nodeid}>"
+        return f"<MatterNode {self.node_id}>"

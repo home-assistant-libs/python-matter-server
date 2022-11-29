@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 from concurrent import futures
 from contextlib import suppress
-
 import logging
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Final
 import weakref
@@ -13,19 +12,21 @@ from aiohttp import WSMsgType, web
 import async_timeout
 from chip.exceptions import ChipStackError
 
-from matter_server.common.helpers.json import json_loads, json_dumps
+from matter_server.common.helpers.json import json_dumps, json_loads
+from matter_server.common.models.events import EventType
 
 from ..common.helpers.api import parse_arguments
 from ..common.helpers.util import dataclass_to_dict
-
 from ..common.models.message import (
     CommandMessage,
     ErrorCode,
     ErrorResultMessage,
+    EventMessage,
+    MessageType,
     SuccessResultMessage,
 )
+from ..common.models.api_command import APICommand
 from ..common.models.server_information import ServerInfo
-from ..common.models.message import MessageType
 
 if TYPE_CHECKING:
     from ..common.helpers.api import APICommandHandler
@@ -139,12 +140,16 @@ class WebsocketClientHandler:
         self._logger.debug("Handling command %s", msg.command)
 
         # work out handler for the given path/command
+        if msg.command == APICommand.START_LISTENING:
+            self._handle_start_listening_command()
+            return
+
         handler = self.server.command_handlers.get(msg.command)
 
         if handler is None:
             self._send_message(
                 ErrorResultMessage(
-                    msg.messageId,
+                    msg.message_id,
                     ErrorCode.INVALID_COMMAND,
                     f"Invalid command: {msg.command}",
                 )
@@ -155,6 +160,17 @@ class WebsocketClientHandler:
         # schedule task to handle the command
         self.server.loop.create_task(self._run_handler(handler, msg))
 
+    def _handle_start_listening_command(self, msg: CommandMessage) -> None:
+        """Send a full dump of all nodes once and start receiving events."""
+        assert self._unsub_callback is None, "Listen command already called!"
+        all_nodes = self.server.device_controller.get_nodes()
+        self._send_message(SuccessResultMessage(msg.message_id, all_nodes))
+
+        def handle_event(evt: EventType, data: Any):
+            self._send_message(EventMessage(event=evt, data=data))
+
+        self._unsub_callback = self.server.subscribe(handle_event)
+
     async def _run_handler(
         self, handler: APICommandHandler, msg: CommandMessage
     ) -> None:
@@ -163,15 +179,15 @@ class WebsocketClientHandler:
             result = handler.target(**args)
             if asyncio.iscoroutine(result):
                 result = await result
-            self._send_message(SuccessResultMessage(msg.messageId, result))
+            self._send_message(SuccessResultMessage(msg.message_id, result))
         except ChipStackError as err:
             self._send_message(
-                ErrorResultMessage(msg.messageId, ErrorCode.STACK_ERROR, str(err))
+                ErrorResultMessage(msg.message_id, ErrorCode.STACK_ERROR, str(err))
             )
         except Exception as err:  # pylint: disable=broad-except
             self._logger.exception("Error handling message: %s", msg)
             self._send_message(
-                ErrorResultMessage(msg.messageId, ErrorCode.UNKNOWN_ERROR, str(err))
+                ErrorResultMessage(msg.message_id, ErrorCode.UNKNOWN_ERROR, str(err))
             )
 
     async def _writer(self) -> None:

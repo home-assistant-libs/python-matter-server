@@ -9,10 +9,12 @@ import logging
 import platform
 from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
 
+from dacite.core import from_dict
 from chip.clusters import Cluster, ClusterObject
 from chip.clusters.Types import Nullable, NullValue
 from chip.tlv import float32, uint
 import pkg_resources
+
 
 try:
     # python 3.10
@@ -101,6 +103,12 @@ def parse_value(name: str, value: Any, value_type: Type, default: Any = MISSING)
     if isinstance(value_type, str):
         value_type = eval(value_type)
 
+    if isinstance(value, dict):
+        if hasattr(value_type, "from_dict"):
+            return value_type.from_dict(value)
+        if hasattr(value_type, "FromDict"):
+            return value_type.from_dict(value)
+
     # if issubclass(value_type, Cluster):
     #     return Cluster.FromDict(value)
 
@@ -185,6 +193,9 @@ def dataclass_from_dict(cls: dataclass, dict_obj: dict, strict=False):
                 "Extra key(s) %s not allowed for %s"
                 % (",".join(extra_keys), (str(cls)))
             )
+
+    # TODO: TEMP
+    return from_dict(cls, dict_obj)
 
     return cls(
         **{
