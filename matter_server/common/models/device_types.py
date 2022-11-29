@@ -26,10 +26,7 @@ class DeviceType:
         ALL_TYPES[device_type] = cls
 
     def as_dict(self) -> dict:
-        return {
-            "device_type": self.device_type,
-            "clusters": self.clusters
-        }
+        return {"device_type": self.device_type, "clusters": self.clusters}
 
 
 class OrphanClusters(DeviceType, device_type=0xF001):

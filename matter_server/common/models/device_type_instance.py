@@ -18,6 +18,7 @@ _CLUSTER_T = TypeVar("_CLUSTER_T", bound=all_clusters.Cluster)
 
 class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
     """Base class for Matter device types on endpoints."""
+
     do_not_serialize = True
 
     def __init__(

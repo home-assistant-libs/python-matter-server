@@ -56,13 +56,13 @@ ALL_TYPES: dict[int, type["DeviceType"]] = {}
 
 
 class DeviceType:
-    \"""Base class for Matter device types.\"""
+    """Base class for Matter device types."""
 
     device_type: int
     clusters: set[type[all_clusters.Cluster]]
 
     def __init_subclass__(cls, *, device_type: int, **kwargs: typing.Any) -> None:
-        \"""Register a subclass.\"""
+        """Register a subclass."""
         super().__init_subclass__(**kwargs)
         cls.device_type = device_type
         ALL_TYPES[device_type] = cls

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 class AbstractMatterNodeDevice(ABC):
     """Device that can be mapped."""
+
     do_not_serialize = True
 
     @abstractmethod
