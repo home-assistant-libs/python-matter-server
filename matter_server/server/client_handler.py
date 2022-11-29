@@ -36,6 +36,7 @@ if TYPE_CHECKING:
 MAX_PENDING_MSG = 512
 CANCELLATION_ERRORS: Final = (asyncio.CancelledError, futures.CancelledError)
 
+LOGGER = logging.getLogger(__name__)
 
 class WebSocketLogAdapter(logging.LoggerAdapter):
     """Add connection id to websocket log messages."""
@@ -56,7 +57,7 @@ class WebsocketClientHandler:
         self._to_write: asyncio.Queue = asyncio.Queue(maxsize=MAX_PENDING_MSG)
         self._handle_task: asyncio.Task | None = None
         self._writer_task: asyncio.Task | None = None
-        self._logger = WebSocketLogAdapter(server.logger, {"connid": id(self)})
+        self._logger = WebSocketLogAdapter(LOGGER, {"connid": id(self)})
         self._unsub_callback: Callable | None = None
 
     async def disconnect(self) -> None:
@@ -202,7 +203,6 @@ class WebsocketClientHandler:
                     message: str = process()
                 else:
                     message = process
-                self._logger.debug("Sending %s", message)
                 await self.wsock.send_str(message)
 
     def _send_message(self, message: MessageType) -> None:

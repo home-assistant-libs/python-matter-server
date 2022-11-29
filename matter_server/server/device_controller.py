@@ -64,6 +64,8 @@ if TYPE_CHECKING:
 DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
+LOGGER = logging.getLogger(__name__)
+
 
 class MatterDeviceController:
     """Class that manages the Matter devices."""
@@ -73,7 +75,6 @@ class MatterDeviceController:
         server: MatterServer,
     ):
         self.server = server
-        self.logger = server.logger.getChild("device_controller")
         # Instantiate the underlying ChipDeviceController instance on the Fabric
         self.chip_controller: ChipDeviceController = (
             server.stack.fabric_admin.NewController()
@@ -83,7 +84,6 @@ class MatterDeviceController:
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
         self._nodes: dict[int, MatterNode] = {}
         self._wifi_creds_set = False
-        self.logger.debug("CHIP Device Controller Initialized")
 
     @property
     def fabric_id(self) -> int:
@@ -101,15 +101,13 @@ class MatterDeviceController:
         nodes_data = self.server.storage.get(DATA_KEY_NODES, {})
         for node_id_str, node_dict in nodes_data.items():
             node_id = int(node_id_str)
-            # TEMP !!!! TODO
-            # node_dict["attributes"] = {}
             node = dataclass_from_dict(MatterNode, node_dict)
             self._nodes[node_id] = node
             # make sure to start node subscriptions
             await self.subscribe_node(node_id)
         # create task to check for nodes that need any re(interviews)
         self.server.loop.create_task(self._check_interviews())
-        self.logger.debug("Started.")
+        LOGGER.debug("CHIP Device Controller Initialized")
 
     async def stop(self) -> None:
         """ "Handle logic on server stop."""
@@ -118,7 +116,7 @@ class MatterDeviceController:
             await self._call_sdk(sub.Shutdown)
         self._subscriptions = {}
         await self._call_sdk(self.chip_controller.Shutdown)
-        self.logger.debug("Stopped.")
+        LOGGER.debug("Stopped.")
 
     @api_command(APICommand.GET_NODES)
     def get_nodes(self) -> list[MatterNode]:
@@ -254,7 +252,7 @@ class MatterDeviceController:
     @api_command(APICommand.INTERVIEW_NODE)
     async def interview_node(self, node_id: int) -> None:
         """Interview a node."""
-        self.logger.debug("Interviewing node: %s", node_id)
+        LOGGER.debug("Interviewing node: %s", node_id)
         try:
             await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
             read_response: Attribute.AsyncReadTransaction.ReadResponse = (
@@ -290,7 +288,7 @@ class MatterDeviceController:
             # new node - first interview
             self.server.signal_event(EventType.NODE_ADDED, node)
 
-        self.logger.debug("Interview of node %s completed", node_id)
+        LOGGER.debug("Interview of node %s completed", node_id)
 
     @api_command(APICommand.DEVICE_COMMAND)
     async def send_device_command(
@@ -312,7 +310,7 @@ class MatterDeviceController:
                 f"Node {node_id} does not exist or has not been interviewed."
             )
         assert node_id not in self._subscriptions, "Already subscribed to node"
-        self.logger.debug("Setup subscription for node %s", node_id)
+        LOGGER.debug("Setup subscription for node %s", node_id)
 
         await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
         # we follow the pattern of apple and google here and
@@ -329,9 +327,7 @@ class MatterDeviceController:
             transaction: Attribute.SubscriptionTransaction,
         ):
             new_value = transaction.GetAttribute(path)
-            self.logger.debug(
-                "attribute updated -- %s - new value: %s", path, new_value
-            )
+            LOGGER.debug("attribute updated -- %s - new value: %s", path, new_value)
             node = self._nodes[node_id]
             attr = node.attributes[str(path.Path)]
             attr.value = new_value
@@ -352,7 +348,7 @@ class MatterDeviceController:
             data: Attribute.EventReadResult,
             transaction: Attribute.SubscriptionTransaction,
         ):
-            self.logger.debug("received node event: %s", data)
+            LOGGER.debug("received node event: %s", data)
             self.event_history.append(data)
             # TODO: This callback does not seem to fire ever or my test devices do not have events
             self.server.loop.call_soon_threadsafe(
@@ -362,14 +358,14 @@ class MatterDeviceController:
         def error_callback(
             chipError: int, transaction: Attribute.SubscriptionTransaction
         ):
-            self.logger.error("Got error fron node: %s", chipError)
+            LOGGER.error("Got error fron node: %s", chipError)
 
         def resubscription_attempted(
             transaction: Attribute.SubscriptionTransaction,
             terminationError: int,
             nextResubscribeIntervalMsec: int,
         ):
-            self.logger.debug(
+            LOGGER.debug(
                 "Previous subscription failed with Error: %s - re-subscribing in %s ms...",
                 terminationError,
                 nextResubscribeIntervalMsec,
@@ -377,7 +373,7 @@ class MatterDeviceController:
             # TODO: update node status to unavailable
 
         def resubscription_succeeded(transaction: Attribute.SubscriptionTransaction):
-            self.logger.debug(f"Subscription succeeded")
+            LOGGER.debug(f"Subscription succeeded")
             # TODO: update node status to available
 
         sub.SetAttributeUpdateCallback(attribute_updated_callback)
