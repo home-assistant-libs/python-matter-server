@@ -27,6 +27,13 @@ from typing import (
 )
 
 from chip.ChipDeviceCtrl import ChipDeviceController
+from chip.clusters import (
+    Attribute,
+    Cluster,
+    ClusterAttributeDescriptor,
+    ClusterCommand,
+    ClusterEvent,
+)
 from chip.discovery import FilterType as DiscoveryFilterType
 from chip.exceptions import ChipStackError
 
@@ -45,17 +52,10 @@ from ..common.models.message import (
     ErrorResultMessage,
     SuccessResultMessage,
 )
-from ..common.models.node import MatterNode
+from ..common.models.node import MatterAttribute, MatterNode
 from .const import SCHEMA_VERSION
 
 if TYPE_CHECKING:
-    from chip.clusters import (
-        Attribute,
-        Cluster,
-        ClusterAttributeDescriptor,
-        ClusterCommand,
-        ClusterEvent,
-    )
 
     from .server import MatterServer
     from .stack import MatterStack
@@ -149,9 +149,10 @@ class MatterDeviceController:
 
         # TODO TEMP !!!
         # The call to CommissionWithCode returns early without waiting ?!
+        # This is most likely a bug in the SDK or its python wrapper
         # if not success:
         #     raise NodeCommissionFailed(f"CommissionWithCode failed for node {node_id}")
-        await asyncio.sleep(120)
+        await asyncio.sleep(60)
 
         # full interview of the device
         await self.interview_node(node_id)
@@ -258,7 +259,7 @@ class MatterDeviceController:
             await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
             read_response: Attribute.AsyncReadTransaction.ReadResponse = (
                 await self.chip_controller.Read(
-                    nodeid=node_id, attributes="*", events="*", returnClusterObject=True
+                    nodeid=node_id, attributes="*", events="*"
                 )
             )
         except ChipStackError as err:
@@ -266,14 +267,16 @@ class MatterDeviceController:
 
         existing_info = self._nodes.get(node_id)
         node = MatterNode(
-            nodeid=node_id,
+            node_id=node_id,
             date_commissioned=existing_info.date_commissioned
             if existing_info
             else datetime.utcnow(),
             last_interview=datetime.utcnow(),
             interview_version=SCHEMA_VERSION,
+            attributes=self._parse_attributes_from_read_result(
+                node_id, read_response.attributes
+            ),
         )
-        node.parse_attributes(read_response.attributes)
 
         # save updated node data
         self._nodes[node_id] = node
@@ -287,9 +290,6 @@ class MatterDeviceController:
         if existing_info is None:
             # new node - first interview
             self.server.signal_event(EventType.NODE_ADDED, node)
-        else:
-            # re interview of existing node
-            self.server.signal_event(EventType.NODE_UPDATED, node)
 
         self.logger.debug("Interview of node %s completed", node_id)
 
@@ -309,7 +309,9 @@ class MatterDeviceController:
         Note that by using the listen command at server level, you will receive all node events.
         """
         if node_id not in self._nodes:
-            raise NodeNotExists(f"Node {node_id} does not exist.")
+            raise NodeNotExists(
+                f"Node {node_id} does not exist or has not been interviewed."
+            )
         assert node_id not in self._subscriptions, "Already subscribed to node"
         self.logger.debug("Setup subscription for node %s", node_id)
 
@@ -327,39 +329,33 @@ class MatterDeviceController:
             path: Attribute.TypedAttributePath,
             transaction: Attribute.SubscriptionTransaction,
         ):
-            data = transaction.GetAttribute(path)
-            # value = {
-            #     "fabridId": self.server.stack.fabric_id,
-            #     "nodeId": msg.args["node_id"],
-            #     "endpoint": path.Path.EndpointId,
-            #     "cluster": path.ClusterType,
-            #     "attribute": path.AttributeName,
-            #     "value": data,
-            # }
-            self.logger.debug(
-                "attribute updated - path: %s - transaction: %s - data: %s",
-                path,
-                transaction,
-                data,
-            )
+            new_value = transaction.GetAttribute(path)
+            node = self._nodes[node_id]
+            attr = node.attributes[path.Path]
+            attr.value = new_value
+            self.logger.debug("attribute updated -- %s -- %s", attr.name, path)
+            self.logger.debug(path)
 
             # This callback is running in the CHIP stack thread
             self.server.loop.call_soon_threadsafe(
-                self.server.signal_event, EventType.NODE_UPDATED
+                self.server.signal_event, EventType.ATTRIBUTE_UPDATED, attr
             )
 
         def event_callback(
             data: Attribute.EventReadResult,
             transaction: Attribute.SubscriptionTransaction,
         ):
-            self.logger.debug("event_callback: %s", data)
+            self.logger.debug("received node event: %s", data)
             self.event_history.append(data)
-            # TODO: forward event
+            # TODO: This callback does not seem to fire ever or my test devices do not have events
+            self.server.loop.call_soon_threadsafe(
+                self.server.signal_event, EventType.NODE_EVENT, data
+            )
 
         def error_callback(
             chipError: int, transaction: Attribute.SubscriptionTransaction
         ):
-            self.logger.debug("error_callback: %s", chipError)
+            self.logger.error("Got error fron node: %s", chipError)
 
         def resubscription_attempted(
             transaction: Attribute.SubscriptionTransaction,
@@ -371,9 +367,11 @@ class MatterDeviceController:
                 terminationError,
                 nextResubscribeIntervalMsec,
             )
+            # TODO: update node status to unavailable
 
         def resubscription_succeeded(transaction: Attribute.SubscriptionTransaction):
             self.logger.debug(f"Subscription succeeded")
+            # TODO: update node status to available
 
         sub.SetAttributeUpdateCallback(attribute_updated_callback)
         sub.SetEventUpdateCallback(event_callback)
@@ -410,3 +408,30 @@ class MatterDeviceController:
         self.server.loop.call_later(
             3600, self.server.loop.create_task, self._check_interviews()
         )
+
+    @staticmethod
+    def _parse_attributes_from_read_result(
+        node_id: int, attributes: dict[int, dict[Type, dict[Type, Any]]]
+    ) -> dict[int, MatterAttribute]:
+        """Parse attributes from ReadResult."""
+        result = {}
+        for endpoint, cluster_dict in attributes.items():
+            # read result output is in format {endpoint: {ClusterClass: {AttributeClass: value}}}
+            # we parse this to our own much more useable format
+            for cluster_cls, attr_dict in cluster_dict.items():
+                for attr_cls, attr_value in attr_dict.items():
+                    if attr_cls == Attribute.DataVersion:
+                        continue
+                    attr = MatterAttribute(
+                        node_id=node_id,
+                        endpoint=endpoint,
+                        cluster_id=cluster_cls.id,
+                        cluster_type=cluster_cls,
+                        cluster_name=cluster_cls.__name__,
+                        attribute_id=attr_cls.attribute_id,
+                        attribute_type=attr_cls,
+                        attribute_name=attr_cls.__name__,
+                        value=attr_value,
+                    )
+                    result[attr.path] = attr
+        return result

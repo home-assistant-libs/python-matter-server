@@ -2,6 +2,8 @@
 
 from typing import Any
 
+from dataclasses import is_dataclass
+from .util import dataclass_to_dict
 from chip.clusters.Types import Nullable, NullValue
 import orjson
 
@@ -22,6 +24,8 @@ def json_encoder_default(obj: Any) -> Any:
         return obj.as_dict()
     if isinstance(obj, Nullable):
         return None
+    if type(obj) == type:
+        return f"{obj.__module__}.{obj.__qualname__}"
 
     raise TypeError
 
@@ -29,7 +33,9 @@ def json_encoder_default(obj: Any) -> Any:
 def json_dumps(data: Any) -> str:
     """Dump json string."""
     return orjson.dumps(
-        data, option=orjson.OPT_NON_STR_KEYS, default=json_encoder_default
+        data,
+        option=orjson.OPT_NON_STR_KEYS | orjson.OPT_INDENT_2,
+        default=json_encoder_default,
     ).decode("utf-8")
 
 

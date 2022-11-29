@@ -1,4 +1,5 @@
 """Utils for Matter server (and client)."""
+from __future__ import annotations
 from base64 import b64encode
 from dataclasses import MISSING, asdict, dataclass, fields, is_dataclass
 from datetime import date, datetime
@@ -9,8 +10,9 @@ import logging
 import platform
 from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
 
-from dacite.core import from_dict
-from chip.clusters import Cluster, ClusterObject
+from chip.clusters import Cluster, ClusterObject, Objects
+import chip
+from ..models.node import MatterNode, MatterAttribute
 from chip.clusters.Types import Nullable, NullValue
 from chip.tlv import float32, uint
 import pkg_resources
@@ -79,6 +81,10 @@ def dataclass_to_dict(obj_in: dataclass, skip_none: bool = False) -> dict:
             return b64encode(value).decode()
         if isinstance(value, float32):
             return float(value)
+        if type(value) == type:
+            return f"{value.__module__}.{value.__qualname__}"
+        if isinstance(value, Exception):
+            return None
         return value
 
     def _clean_dict(_dict_obj: dict):
@@ -97,20 +103,20 @@ def parse_utc_timestamp(datetimestr: str):
     return datetime.fromisoformat(datetimestr.replace("Z", "+00:00"))
 
 
-def parse_value(name: str, value: Any, value_type: Type, default: Any = MISSING):
+def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MISSING):
     """Try to parse a value from raw (json) data and type definitions."""
 
     if isinstance(value_type, str):
+        # type is provided as string
+        if value_type == "type":
+            return eval(value)
         value_type = eval(value_type)
 
-    if isinstance(value, dict):
+    elif isinstance(value, dict):
         if hasattr(value_type, "from_dict"):
             return value_type.from_dict(value)
         if hasattr(value_type, "FromDict"):
-            return value_type.from_dict(value)
-
-    # if issubclass(value_type, Cluster):
-    #     return Cluster.FromDict(value)
+            return value_type.FromDict(value)
 
     if value is None and not isinstance(default, type(MISSING)):
         return default
@@ -193,9 +199,6 @@ def dataclass_from_dict(cls: dataclass, dict_obj: dict, strict=False):
                 "Extra key(s) %s not allowed for %s"
                 % (",".join(extra_keys), (str(cls)))
             )
-
-    # TODO: TEMP
-    return from_dict(cls, dict_obj)
 
     return cls(
         **{

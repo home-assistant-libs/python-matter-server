@@ -12,8 +12,8 @@ from .node import MatterNode
 class ServerInfo:
     """Base server information including versions."""
 
-    fabricId: int
-    compressedFabricId: int
+    fabric_id: int
+    compressed_fabric_id: int
     schema_version: int
     sdk_version: str
 

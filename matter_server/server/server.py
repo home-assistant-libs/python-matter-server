@@ -128,8 +128,8 @@ class MatterServer:
         """Return (version)info of the Matter Server."""
         return (
             ServerInfo(
-                fabricId=self.device_controller.fabric_id,
-                compressedFabricId=self.device_controller.compressed_fabric_id,
+                fabric_id=self.device_controller.fabric_id,
+                compressed_fabric_id=self.device_controller.compressed_fabric_id,
                 schema_version=SCHEMA_VERSION,
                 sdk_version=chip_clusters_version(),
             ),

@@ -141,7 +141,7 @@ class WebsocketClientHandler:
 
         # work out handler for the given path/command
         if msg.command == APICommand.START_LISTENING:
-            self._handle_start_listening_command()
+            self._handle_start_listening_command(msg)
             return
 
         handler = self.server.command_handlers.get(msg.command)

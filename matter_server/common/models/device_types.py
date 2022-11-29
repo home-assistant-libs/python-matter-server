@@ -1,3 +1,4 @@
+"""Models to group multiple Cluster Attributes into a device type."""
 from __future__ import annotations
 
 import typing

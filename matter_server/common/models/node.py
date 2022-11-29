@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+import inspect
 import logging
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Any, Dict, Type, TypeVar
 
 from chip.clusters import (
     Attribute,
@@ -16,7 +17,6 @@ from chip.clusters import (
     Objects as Clusters,
 )
 
-from ..helpers.util import dataclass_to_dict, dataclass_from_dict
 from .device_type_instance import MatterDeviceTypeInstance
 from .device_types import ALL_TYPES, Aggregator, BridgedDevice, RootNode
 from .node_device import (
@@ -28,6 +28,45 @@ from .node_device import (
 LOGGER = logging.getLogger(__name__)
 
 
+def create_attribute_path(endpoint: int, cluster_id: int, attribute_id: int) -> str:
+    """
+    Create path/identifier for an Attribute.
+    
+    Returns same output as `Attribute.AttributePath`
+    endpoint_id/cluster_id/attribute_id
+    """
+    return f"{endpoint}/{cluster_id}/{attribute_id}"
+
+
+@dataclass
+class MatterAttribute:
+    """Representation of a (simplified) Matter Attribute."""
+
+    node_id: int
+    endpoint: int
+    cluster_id: int
+    cluster_type: type
+    cluster_name: str
+    attribute_id: int
+    attribute_type: type
+    attribute_name: str
+    value: Any
+
+    @property
+    def name(self) -> str:
+        """Return full name for this Attribute."""
+        return f"{self.cluster_name}.{self.attribute_name}"
+
+    @property
+    def path(self) -> str:
+        """
+        Return path/key for this attribute.
+
+        Has same output as `Attribute.AttributePath`
+        """
+        return f"{self.endpoint}/{self.cluster_id}/{self.attribute_id}"
+
+
 @dataclass
 class MatterNode:
     """Matter node."""
@@ -36,46 +75,14 @@ class MatterNode:
     date_commissioned: datetime
     last_interview: datetime
     interview_version: int
-    # attributes are stored in form of endpoint: {ClusterID: Cluster}
-    attributes: Dict[int, Dict[int, Cluster]] = field(default_factory=dict)
-    # attributes below will be auto derrived from the attributes
+    # attributes are stored in form of AttributeKey: MatterAttribute
+    attributes: Dict[str, MatterAttribute]
+
+    # TODO
     # root_device_type_instance: MatterDeviceTypeInstance[RootNode] | None = None
     # aggregator_device_type_instance: MatterDeviceTypeInstance[Aggregator] | None = None
     # device_type_instances: list[MatterDeviceTypeInstance] = field(default_factory=list)
     # node_devices: list[AbstractMatterNodeDevice] = field(default_factory=list)
-
-    @classmethod
-    def from_dict(cls: "MatterNode", obj: dict) -> MatterNode:
-        """Instantiate from plain dict."""
-        return dataclass_from_dict(MatterNode, obj)
-
-    def parse_attributes(self, attributes: dict) -> None:
-        """Try to parse a MatterNode from AttributeCache (retrieved from Read)."""
-
-        device_type_instances: list[MatterDeviceTypeInstance] = []
-
-        for endpoint_id, clusters in attributes.items():
-            for cluster_cls, cluster in clusters.items():
-
-                if isinstance(cluster, Attribute.ValueDecodeFailure):
-                    # yes, this may happen
-                    continue
-
-                # the python wrapped SDK has a funky way to index the Clusters by
-                # having the class itself as dict key. We change that here to just the Cluster ID.
-                self.attributes[cluster.id] = cluster
-
-                # lookup device type for this cluster
-                device_type = ALL_TYPES.get(cluster.id)
-
-                if device_type is None:
-                    LOGGER.warning("Found unknown device type for Cluster %s", cluster)
-                    continue
-
-                instance = MatterDeviceTypeInstance(
-                    self, device_type, int(endpoint_id), cluster.clusterRevision
-                )
-                
 
     def parse_attributes_org(self, attributes: dict) -> None:
         """Try to parse a MatterNode from AttributeCache (retrieved from Read)."""
