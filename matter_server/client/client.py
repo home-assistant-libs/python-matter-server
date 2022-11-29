@@ -162,6 +162,32 @@ class MatterClient:
             APICommand.SET_WIFI_CREDENTIALS, ssid=ssid, credentials=credentials
         )
 
+    async def set_thread_operational_dataset(self, dataset: str) -> None:
+        """Set Thread Operational dataset in the stack."""
+        await self.send_command(APICommand.SET_THREAD_DATASET, dataset=dataset)
+
+    async def open_commissioning_window(
+        self,
+        node_id: int,
+        timeout: int = 300,
+        iteration: int = 1000,
+        option: int = 0,
+        discriminator: Optional[int] = None,
+    ) -> int:
+        """
+        Open a commissioning window to commission a device present on this controller to another.
+
+        Returns code to use as discriminator.
+        """
+        await self.send_command(
+            APICommand.OPEN_COMMISSIONING_WINDOW,
+            node_id=node_id,
+            timeout=timeout,
+            iteration=iteration,
+            option=option,
+            discriminator=discriminator,
+        )
+
     async def send_device_command(
         self, node_id: int, endpoint: int, payload: ClusterCommand
     ) -> Any:
