@@ -199,6 +199,10 @@ class MatterClient:
             payload=payload,
         )
 
+    async def remove_node(self, node_id: int) -> None:
+        """Remove a Matter node/device from the fabric."""
+        await self.send_command(APICommand.REMOVE_NODE, node_id=node_id)
+
     async def send_command(
         self, command: str, require_schema: int | None = None, **kwargs
     ) -> Any:

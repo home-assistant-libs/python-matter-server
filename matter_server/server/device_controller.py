@@ -299,6 +299,21 @@ class MatterDeviceController:
             nodeid=node_id, endpoint=endpoint, payload=payload
         )
 
+    @api_command(APICommand.REMOVE_NODE)
+    async def remove_node(self, node_id: int) -> None:
+        """Remove a Matter node/device from the fabric."""
+        if node_id not in self._nodes:
+            raise NodeNotExists(
+                f"Node {node_id} does not exist or has not been interviewed."
+            )
+        self._nodes.pop(node_id)
+        self.server.storage.remove(
+            DATA_KEY_NODES,
+            subkey=str(node_id),
+        )
+        # TODO: Is there functionality to actually reset the device ?
+        self.server.signal_event(EventType.NODE_DELETED, node_id)
+
     async def subscribe_node(self, node_id: int) -> None:
         """
         Subscribe to all node state changes/events for an individual node.
