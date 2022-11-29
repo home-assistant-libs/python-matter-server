@@ -31,7 +31,7 @@ LOGGER = logging.getLogger(__name__)
 def create_attribute_path(endpoint: int, cluster_id: int, attribute_id: int) -> str:
     """
     Create path/identifier for an Attribute.
-    
+
     Returns same output as `Attribute.AttributePath`
     endpoint_id/cluster_id/attribute_id
     """
@@ -59,12 +59,8 @@ class MatterAttribute:
 
     @property
     def path(self) -> str:
-        """
-        Return path/key for this attribute.
-
-        Has same output as `Attribute.AttributePath`
-        """
-        return f"{self.endpoint}/{self.cluster_id}/{self.attribute_id}"
+        """Return path/key for this attribute."""
+        return create_attribute_path(self.endpoint, self.cluster_id, self.attribute_id)
 
 
 @dataclass

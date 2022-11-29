@@ -330,11 +330,12 @@ class MatterDeviceController:
             transaction: Attribute.SubscriptionTransaction,
         ):
             new_value = transaction.GetAttribute(path)
+            self.logger.debug(
+                "attribute updated -- %s - new value: %s", path, new_value
+            )
             node = self._nodes[node_id]
-            attr = node.attributes[path.Path]
+            attr = node.attributes[str(path.Path)]
             attr.value = new_value
-            self.logger.debug("attribute updated -- %s -- %s", attr.name, path)
-            self.logger.debug(path)
 
             # This callback is running in the CHIP stack thread
             self.server.loop.call_soon_threadsafe(
