@@ -9,15 +9,15 @@ from functools import cache
 from importlib.metadata import PackageNotFoundError, version as pkg_version
 import logging
 import platform
-from types import UnionType
-from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
 from pydoc import locate
+from types import UnionType
+import typing
+from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
 
 # the below imports are here to satisfy our dataclass from dict helper
 # it needs to be able to instantiate common class instances from type hints
 # TODO: find out how we can simplify/drop this all. especially all the eval stuff
 import chip
-import typing
 import chip.clusters
 from chip.clusters import Objects
 from chip.clusters.Objects import *
@@ -26,8 +26,8 @@ from chip.tlv import float32, uint
 import pkg_resources
 
 from ..models.events import *
-from ..models.node import *
 from ..models.message import *
+from ..models.node import *
 
 try:
     # python 3.10
@@ -77,7 +77,7 @@ def dataclass_to_dict(obj_in: dataclass, skip_none: bool = False) -> dict:
             final[key] = _convert_value(value)
         return final
 
-    dict_obj["_type"] = f"{obj_in.__module__}.{obj_in.__class__.__name__}"
+    dict_obj["_type"] = f"{obj_in.__module__}.{obj_in.__class__.__qualname__}"
     return _clean_dict(dict_obj)
 
 
@@ -192,6 +192,7 @@ def dataclass_from_dict(cls: dataclass | None, dict_obj: dict, strict=False):
     """
     if "_type" in dict_obj:
         # we support providing the (actual/final) class/type name as `_type` attribute within the dict.
+        # TODO: make this more robust
         cls_type_str = dict_obj.pop("_type")
         cls = locate(cls_type_str) or eval(cls_type_str)
     if strict:
