@@ -4,9 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import pprint
-from types import NoneType
-from typing import TYPE_CHECKING, Any, Dict, Union
+from typing import TYPE_CHECKING, Any, Dict
 
 from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_dumps, json_loads
 
@@ -40,7 +38,7 @@ class StorageController:
         LOGGER.debug("Started.")
 
     async def stop(self) -> None:
-        """ "Handle logic on server stop."""
+        """Handle logic on server stop."""
         if not self._timer_handle:
             # no point in forcing a save when there are no changes pending
             return

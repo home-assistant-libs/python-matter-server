@@ -11,7 +11,7 @@ from optparse import OptionParser
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Final, Set
 import weakref
 
-from aiohttp import WSMsgType, web
+from aiohttp import web
 import async_timeout
 
 from matter_server.common.models.error import VersionMismatch

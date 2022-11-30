@@ -4,7 +4,7 @@ from typing import Any
 
 from dataclasses import is_dataclass
 from .util import dataclass_to_dict
-from chip.clusters.Types import Nullable, NullValue
+from chip.clusters.Types import Nullable
 import orjson
 
 JSON_ENCODE_EXCEPTIONS = (TypeError, ValueError)
