@@ -11,6 +11,7 @@ import logging
 import platform
 from types import UnionType
 from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
+from pydoc import locate
 
 # the below imports are here to satisfy our dataclass from dict helper
 # it needs to be able to instantiate common class instances from type hints
@@ -75,6 +76,7 @@ def dataclass_to_dict(obj_in: dataclass, skip_none: bool = False) -> dict:
                 key = str(key)
             final[key] = _convert_value(value)
         return final
+
     dict_obj["_type"] = f"{obj_in.__module__}.{obj_in.__class__.__name__}"
     return _clean_dict(dict_obj)
 
@@ -91,7 +93,7 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
     if isinstance(value_type, str):
         # type is provided as string
         if value_type == "type":
-            return eval(value)
+            return locate(value) or eval(value)
         value_type = eval(value_type)
 
     elif isinstance(value, dict):
@@ -160,21 +162,17 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
     except TypeError:
         # happens if value_type is not a class
         pass
-    
+
     if value_type is float and isinstance(value, int):
         return float(value)
     if value_type is int and isinstance(value, str) and value.isnumeric():
         return int(value)
-    if (
-        value_type is uint
-        and isinstance(value, int)
-        or (isinstance(value, str) and value.isnumeric())
+    if value_type is uint and (
+        isinstance(value, int) or (isinstance(value, str) and value.isnumeric())
     ):
         return uint(value)
-    if (
-        value_type is float32
-        and isinstance(value, float)
-        or (isinstance(value, str) and value.isnumeric())
+    if value_type is float32 and (
+        isinstance(value, float) or (isinstance(value, str) and value.isnumeric())
     ):
         return float32(value)
     if not isinstance(value, value_type):
@@ -192,11 +190,10 @@ def dataclass_from_dict(cls: dataclass | None, dict_obj: dict, strict=False):
     Including support for nested structures and common type conversions.
     If strict mode enabled, any additional keys in the provided dict will result in a KeyError.
     """
-    if cls is None:
-        # we support providing the class/type name as `_type` attribute within the dict.
-        assert "_type" in dict_obj, "_type missing"
+    if "_type" in dict_obj:
+        # we support providing the (actual/final) class/type name as `_type` attribute within the dict.
         cls_type_str = dict_obj.pop("_type")
-        cls = eval(cls_type_str)
+        cls = locate(cls_type_str) or eval(cls_type_str)
     if strict:
         extra_keys = dict_obj.keys() - set([f.name for f in fields(cls)])
         if extra_keys:
