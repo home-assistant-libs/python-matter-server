@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import inspect
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, TypeVar
 
 from chip.clusters import (
     Attribute,
