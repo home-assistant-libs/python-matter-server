@@ -26,13 +26,15 @@ from .node_device import (
 
 LOGGER = logging.getLogger(__name__)
 
+_CLUSTER_T = TypeVar("_CLUSTER_T", bound=Clusters.Cluster)
+
 
 def create_attribute_path(endpoint: int, cluster_id: int, attribute_id: int) -> str:
     """
     Create path/identifier for an Attribute.
 
     Returns same output as `Attribute.AttributePath`
-    endpoint_id/cluster_id/attribute_id
+    endpoint/cluster_id/attribute_id
     """
     return f"{endpoint}/{cluster_id}/{attribute_id}"
 
@@ -133,30 +135,18 @@ class MatterNode:
         else:
             self.node_devices.append(MatterNodeDevice(self))
 
-    def has_cluster(
-        self, cluster: type[Cluster] | int, endpoint: int | None = None
-    ) -> bool:
-        """Check if node has a specific cluster."""
-        return any(
-            x
-            for x in self.attributes.values()
-            if cluster in (x.cluster_type, x.cluster_id)
-            and (endpoint is None or x.endpoint == endpoint)
-        )
-
     def get_endpoint_attributes(self, endpoint: int) -> list[MatterAttribute]:
         """Return Matter Attributes for given endpoint."""
         return [x for x in self.attributes.values() if x.endpoint == endpoint]
 
     def get_cluster_attributes(
-        self, cluster: type[Clusters.Cluster], endpoint: int | None = None
+        self, endpoint: int, cluster: type[Clusters.Cluster] | int
     ) -> list[MatterAttribute]:
-        """Return Matter Attributes for given cluster."""
+        """Return all Attributes for given cluster."""
         return [
             x
             for x in self.attributes.values()
-            if x.cluster_type == cluster
-            and (endpoint is None or x.endpoint == endpoint)
+            if cluster in (x.cluster_type, x.cluster_id) and x.endpoint == endpoint
         ]
 
     def get_attribute(
@@ -174,18 +164,42 @@ class MatterNode:
             and attribute in (x.attribute_id, x.attribute_name, x.attribute_type)
         )
 
+    def has_cluster(self, endpoint: int, cluster: type[Cluster] | int) -> bool:
+        """Check if node has a specific cluster."""
+        return any(
+            x
+            for x in self.attributes.values()
+            if cluster in (x.cluster_type, x.cluster_id)
+            and (endpoint is None or x.endpoint == endpoint)
+        )
+
+    def get_cluster(
+        self, endpoint: int, cluster: type[_CLUSTER_T]
+    ) -> _CLUSTER_T | None:
+        """
+        Get a full Cluster object containing all attributes.
+
+        Returns None is the Cluster is not present on the node.
+        """
+        atrributes = self.get_cluster_attributes(endpoint, cluster)
+        if len(atrributes) == 0:
+            return None
+
+        # instantiate a Cluster object from the properties
+        return cluster(**{x.attribute_name: x.value for x in atrributes})
+
     @property
     def name(self) -> str:
         """Return friendly name for this node."""
         return self.get_attribute(
-            self.root_device_type_instance.endpoint_id, Clusters.Basic, "nodeLabel"
+            self.root_device_type_instance.endpoint, Clusters.Basic, "nodeLabel"
         )
 
     @property
     def unique_id(self) -> str:
         """Return uniqueID for this node."""
         return self.get_attribute(
-            self.root_device_type_instance.endpoint_id, Clusters.Basic, "uniqueID"
+            self.root_device_type_instance.endpoint, Clusters.Basic, "uniqueID"
         )
 
     def __repr__(self):

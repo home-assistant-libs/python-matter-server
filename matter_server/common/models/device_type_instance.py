@@ -25,34 +25,37 @@ class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
         self,
         node: MatterNode,
         device_type: _DEVICE_TYPE_T,
-        endpoint_id: int,
+        endpoint: int,
         device_revision: int,
     ) -> None:
         self.node = node
         self.device_type = device_type
         self.device_revision = device_revision
-        self.endpoint_id = endpoint_id
+        self.endpoint = endpoint
 
     @property
     def attributes(self) -> list[MatterAttribute]:
-        return self.node.get_endpoint_attributes(self.endpoint_id)
+        """Return all Attributes belonging to this DeviceTypeInstance."""
+        return [
+            self.node.get_cluster_attributes(self.endpoint, cluster)
+            for cluster in self.device_type.clusters
+        ]
 
     def has_cluster(self, cluster: type[all_clusters.Cluster]) -> bool:
         """Check if device has a specific cluster."""
-        return any(x for x in self.attributes if x.cluster_type == cluster)
+        # only return True if the cluster belongs to this device type
+        # and is actually present in the atributes.
+        return cluster in self.device_type.clusters and any(
+            x for x in self.attributes if x.cluster_type == cluster
+        )
 
     def get_cluster(self, cluster: type[_CLUSTER_T]) -> _CLUSTER_T | None:
         """Get the cluster object."""
-        if not self.has_cluster(cluster):
+        # only return Cluster if the cluster belongs to this device type
+        # and is actually present in the atributes.
+        if cluster not in self.device_type.clusters:
             return None
-
-        # instantiate a Cluster object from the properties
-        return cluster(
-            **{
-                x.attribute_name: x.value
-                for x in self.node.get_cluster_attributes(cluster, self.endpoint_id)
-            }
-        )
+        return self.node.get_cluster(self.endpoint, cluster)
 
     def __repr__(self):
-        return f"<MatterDeviceTypeInstance {self.device_type.__name__} (N:{self.node.node_id}, E:{self.endpoint_id})>"
+        return f"<MatterDeviceTypeInstance {self.device_type.__name__} (N:{self.node.node_id}, E:{self.endpoint})>"
