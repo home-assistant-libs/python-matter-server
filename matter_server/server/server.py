@@ -132,6 +132,8 @@ class MatterServer:
             compressed_fabric_id=self.device_controller.compressed_fabric_id,
             schema_version=SCHEMA_VERSION,
             sdk_version=chip_clusters_version(),
+            wifi_credentials_set=self.device_controller.wifi_credentials_set,
+            thread_credentials_set=self.device_controller.thread_credentials_set,
         )
 
     @api_command(APICommand.SERVER_DIAGNOSTICS)
