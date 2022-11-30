@@ -30,6 +30,7 @@ from ..common.helpers.json import json_dumps, json_loads
 from ..common.helpers.util import (
     chip_clusters_version,
     dataclass_from_dict,
+    dataclass_to_dict,
     parse_value,
     parse_message
 )
@@ -191,12 +192,12 @@ class MatterClient:
         self, node_id: int, endpoint: int, command: ClusterCommand
     ) -> Any:
         """Send a command to a Matter node/device."""
+        payload = dataclass_to_dict(command)
         return await self.send_command(
             APICommand.DEVICE_COMMAND,
             node_id=node_id,
             endpoint=endpoint,
-            cmd=type(command),
-            args=command
+            payload=payload
         )
 
     async def remove_node(self, node_id: int) -> None:

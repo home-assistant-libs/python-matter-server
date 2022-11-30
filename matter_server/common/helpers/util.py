@@ -74,7 +74,7 @@ def dataclass_to_dict(obj_in: dataclass, skip_none: bool = False) -> dict:
                 key = str(key)
             final[key] = _convert_value(value)
         return final
-
+    dict_obj["_type"] = str(type(obj_in))
     return _clean_dict(dict_obj)
 
 
@@ -85,7 +85,8 @@ def parse_utc_timestamp(datetimestr: str):
 
 def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MISSING):
     """Try to parse a value from raw (json) data and type definitions."""
-
+    if isinstance(value, dict) and "_type" in value:
+        return dataclass_from_dict(None, value)
     if isinstance(value_type, str):
         # type is provided as string
         if value_type == "type":
@@ -178,13 +179,18 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
     return value
 
 
-def dataclass_from_dict(cls: dataclass, dict_obj: dict, strict=False):
+def dataclass_from_dict(cls: dataclass | None, dict_obj: dict, strict=False):
     """
     Create (instance of) a dataclass by providing a dict with values.
 
     Including support for nested structures and common type conversions.
     If strict mode enabled, any additional keys in the provided dict will result in a KeyError.
     """
+    if cls is None:
+        # we support providing the class/type name as `_type` attribute within the dict.
+        assert "_type" in dict_obj, "_type missing"
+        cls_type_str = dict_obj.pop("_type")
+        cls = eval(cls_type_str)
     if strict:
         extra_keys = dict_obj.keys() - set([f.name for f in fields(cls)])
         if extra_keys:
