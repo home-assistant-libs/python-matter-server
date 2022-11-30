@@ -22,6 +22,8 @@ def json_encoder_default(obj: Any) -> Any:
         return list(obj)
     if isinstance(obj, float):
         return float(obj)
+    if is_dataclass(obj):
+        return dataclass_to_dict(obj)
     if hasattr(obj, "as_dict"):
         return obj.as_dict()
     if isinstance(obj, Nullable):
@@ -40,7 +42,7 @@ def json_dumps(data: Any) -> str:
     """Dump json string."""
     return orjson.dumps(
         data,
-        option=orjson.OPT_NON_STR_KEYS | orjson.OPT_INDENT_2,
+        option=orjson.OPT_NON_STR_KEYS | orjson.OPT_INDENT_2 | orjson.OPT_PASSTHROUGH_DATACLASS,
         default=json_encoder_default,
     ).decode("utf-8")
 

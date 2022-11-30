@@ -9,13 +9,15 @@ from functools import cache
 from importlib.metadata import PackageNotFoundError, version as pkg_version
 import logging
 import platform
+from pydoc import locate
+from types import UnionType
+import typing
 from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
 
 # the below imports are here to satisfy our dataclass from dict helper
 # it needs to be able to instantiate common class instances from type hints
 # TODO: find out how we can simplify/drop this all. especially all the eval stuff
 import chip
-import typing
 import chip.clusters
 from chip.clusters import Objects
 from chip.clusters.Objects import *
@@ -24,8 +26,8 @@ from chip.tlv import float32, uint
 import pkg_resources
 
 from ..models.events import *
-from ..models.node import *
 from ..models.message import *
+from ..models.node import *
 
 try:
     # python 3.10
@@ -75,6 +77,7 @@ def dataclass_to_dict(obj_in: dataclass, skip_none: bool = False) -> dict:
             final[key] = _convert_value(value)
         return final
 
+    dict_obj["_type"] = f"{obj_in.__module__}.{obj_in.__class__.__qualname__}"
     return _clean_dict(dict_obj)
 
 
@@ -85,11 +88,12 @@ def parse_utc_timestamp(datetimestr: str):
 
 def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MISSING):
     """Try to parse a value from raw (json) data and type definitions."""
-
+    if isinstance(value, dict) and "_type" in value:
+        return dataclass_from_dict(None, value)
     if isinstance(value_type, str):
         # type is provided as string
         if value_type == "type":
-            return eval(value)
+            return locate(value) or eval(value)
         value_type = eval(value_type)
 
     elif isinstance(value, dict):
@@ -120,7 +124,7 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
             )
             for subkey, subvalue in value.items()
         }
-    elif origin is Union:
+    elif origin is Union or origin is UnionType:
         # try all possible types
         sub_value_types = get_args(value_type)
         for sub_arg_type in sub_value_types:
@@ -150,24 +154,25 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
     if value is None and value_type is not NoneType:
         raise KeyError(f"`{name}` of type `{value_type}` is required.")
 
-    if issubclass(value_type, Enum):
-        return value_type(value)
-    if issubclass(value_type, datetime):
-        return parse_utc_timestamp(value)
+    try:
+        if issubclass(value_type, Enum):
+            return value_type(value)
+        if issubclass(value_type, datetime):
+            return parse_utc_timestamp(value)
+    except TypeError:
+        # happens if value_type is not a class
+        pass
+
     if value_type is float and isinstance(value, int):
         return float(value)
     if value_type is int and isinstance(value, str) and value.isnumeric():
         return int(value)
-    if (
-        value_type is uint
-        and isinstance(value, int)
-        or (isinstance(value, str) and value.isnumeric())
+    if value_type is uint and (
+        isinstance(value, int) or (isinstance(value, str) and value.isnumeric())
     ):
         return uint(value)
-    if (
-        value_type is float32
-        and isinstance(value, float)
-        or (isinstance(value, str) and value.isnumeric())
+    if value_type is float32 and (
+        isinstance(value, float) or (isinstance(value, str) and value.isnumeric())
     ):
         return float32(value)
     if not isinstance(value, value_type):
@@ -178,13 +183,18 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
     return value
 
 
-def dataclass_from_dict(cls: dataclass, dict_obj: dict, strict=False):
+def dataclass_from_dict(cls: dataclass | None, dict_obj: dict, strict=False):
     """
     Create (instance of) a dataclass by providing a dict with values.
 
     Including support for nested structures and common type conversions.
     If strict mode enabled, any additional keys in the provided dict will result in a KeyError.
     """
+    if "_type" in dict_obj:
+        # we support providing the (actual/final) class/type name as `_type` attribute within the dict.
+        # TODO: make this more robust
+        cls_type_str = dict_obj.pop("_type")
+        cls = locate(cls_type_str) or eval(cls_type_str)
     if strict:
         extra_keys = dict_obj.keys() - set([f.name for f in fields(cls)])
         if extra_keys:

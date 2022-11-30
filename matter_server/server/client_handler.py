@@ -16,7 +16,7 @@ from matter_server.common.helpers.json import json_dumps, json_loads
 from matter_server.common.models.events import EventType
 
 from ..common.helpers.api import parse_arguments
-from ..common.helpers.util import dataclass_to_dict
+from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
 from ..common.models.message import (
     CommandMessage,
     ErrorCode,
@@ -101,7 +101,7 @@ class WebsocketClientHandler:
                 self._logger.debug("Received: %s", msg.data)
 
                 try:
-                    command_msg = CommandMessage(**json_loads(msg.data))
+                    command_msg = dataclass_from_dict(CommandMessage, json_loads(msg.data))
                 except ValueError:
                     disconnect_warn = f"Received invalid JSON: {msg.data}"
                     break
