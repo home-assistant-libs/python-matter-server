@@ -195,7 +195,7 @@ class MatterClient:
             APICommand.DEVICE_COMMAND,
             node_id=node_id,
             endpoint=endpoint,
-            command=type(ClusterCommand),
+            cmd=type(command),
             args=command
         )
 
