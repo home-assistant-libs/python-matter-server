@@ -400,6 +400,7 @@ class MatterClient:
         # handle EventMessage
         if isinstance(msg, EventMessage):
             self.logger.debug("Received event: %s", msg)
+            self._handle_event_message(msg)
             return
 
         # Log anything we can't handle here
