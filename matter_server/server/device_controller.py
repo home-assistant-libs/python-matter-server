@@ -83,7 +83,8 @@ class MatterDeviceController:
         self.event_history: Deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
         self._nodes: dict[int, MatterNode] = {}
-        self._wifi_creds_set = False
+        self.wifi_credentials_set: bool = False
+        self.thread_credentials_set: bool = False
 
     @property
     def fabric_id(self) -> int:
@@ -137,7 +138,6 @@ class MatterDeviceController:
 
         Returns full NodeInfo once complete.
         """
-        assert self._wifi_creds_set, "Received commissioning without Wi-Fi set"
         node_id = self._get_next_node_id()
         success = await self._call_sdk(
             self.chip_controller.CommissionWithCode,
@@ -199,9 +199,10 @@ class MatterDeviceController:
             credentials=credentials,
         )
 
-        self._wifi_creds_set = True
         if error_code != 0:
             raise SDKCommandFailed("Set WiFi credentials failed.")
+        else:
+            self.wifi_credentials_set = True
 
     @api_command(APICommand.SET_THREAD_DATASET)
     async def set_thread_operational_dataset(self, dataset: str) -> None:
@@ -210,8 +211,11 @@ class MatterDeviceController:
             self.chip_controller.SetThreadOperationalDataset,
             threadOperationalDataset=bytes.fromhex(dataset),
         )
+
         if error_code != 0:
             raise SDKCommandFailed("Set Thread credentials failed.")
+        else:
+            self.thread_credentials_set = True
 
     @api_command(APICommand.OPEN_COMMISSIONING_WINDOW)
     async def open_commissioning_window(
