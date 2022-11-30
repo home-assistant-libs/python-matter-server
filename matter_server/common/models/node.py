@@ -8,12 +8,6 @@ import logging
 from typing import TYPE_CHECKING, Any, Dict, TypeVar
 
 from chip.clusters import (
-    Attribute,
-    Cluster,
-    ClusterAttributeDescriptor,
-    ClusterEvent,
-    ClusterObject,
-    ClusterObjects,
     Objects as Clusters,
 )
 from .device_type_instance import MatterDeviceTypeInstance
@@ -164,7 +158,7 @@ class MatterNode:
             and attribute in (x.attribute_id, x.attribute_name, x.attribute_type)
         )
 
-    def has_cluster(self, endpoint: int, cluster: type[Cluster] | int) -> bool:
+    def has_cluster(self, endpoint: int, cluster: type[Clusters.Cluster] | int) -> bool:
         """Check if node has a specific cluster."""
         return any(
             x
@@ -185,21 +179,35 @@ class MatterNode:
         if len(atrributes) == 0:
             return None
 
+        def _get_attr_key(attr_name: str) -> str:
+            """Return attribute key within cluster object."""
+            return attr_name[:1].lower() + attr_name[1:]
+
+        def _get_attr_value(attr_name: str) -> str:
+            """Return attribute key within cluster object."""
+            return attr_name[:1].lower() + attr_name[1:]
+
         # instantiate a Cluster object from the properties
-        return cluster(**{x.attribute_name: x.value for x in atrributes})
+        # TODO: find another way to do this without loosing the individual cluster attributes
+
+        from ..helpers.util import dataclass_from_dict
+
+        return dataclass_from_dict(
+            cluster, {_get_attr_key(x.attribute_name): x.value for x in atrributes}
+        )
 
     @property
     def name(self) -> str:
         """Return friendly name for this node."""
         return self.get_attribute(
-            self.root_device_type_instance.endpoint, Clusters.Basic, "nodeLabel"
+            self.root_device_type_instance.endpoint, Clusters.Basic, "NodeLabel"
         )
 
     @property
     def unique_id(self) -> str:
         """Return uniqueID for this node."""
         return self.get_attribute(
-            self.root_device_type_instance.endpoint, Clusters.Basic, "uniqueID"
+            self.root_device_type_instance.endpoint, Clusters.Basic, "UniqueID"
         )
 
     def __repr__(self):

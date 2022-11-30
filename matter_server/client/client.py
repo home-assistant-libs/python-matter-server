@@ -31,6 +31,7 @@ from ..common.helpers.util import (
     chip_clusters_version,
     dataclass_from_dict,
     parse_value,
+    parse_message
 )
 from ..common.models.api_command import APICommand
 from ..common.models.events import EventType
@@ -42,7 +43,6 @@ from ..common.models.message import (
     ResultMessageBase,
     ServerInfoMessage,
     SuccessResultMessage,
-    parse_message,
 )
 from ..common.models.node import MatterAttribute, MatterNode
 from ..common.models.server_information import ServerInfo
@@ -59,7 +59,7 @@ from .exceptions import (
 )
 
 if TYPE_CHECKING:
-    from chip.clusters import ClusterCommand
+    from chip.clusters.Objects import ClusterCommand
 
 SUB_WILDCARD = "*"
 
@@ -188,14 +188,15 @@ class MatterClient:
         )
 
     async def send_device_command(
-        self, node_id: int, endpoint: int, payload: ClusterCommand
+        self, node_id: int, endpoint: int, command: ClusterCommand
     ) -> Any:
         """Send a command to a Matter node/device."""
         return await self.send_command(
             APICommand.DEVICE_COMMAND,
             node_id=node_id,
             endpoint=endpoint,
-            payload=payload,
+            cmd=type(command),
+            args=command
         )
 
     async def remove_node(self, node_id: int) -> None:
@@ -311,9 +312,17 @@ class MatterClient:
             raise InvalidState("Not connected when start listening")
 
         try:
-            nodes = await self.send_command(APICommand.START_LISTENING)
+            message = CommandMessage(
+                message_id=uuid.uuid4().hex, command=APICommand.START_LISTENING
+            )
+            await self._send_message(message)
+            msg = await self._receive_message_or_raise()
+            # a full dump of all nodes will be the result of the start_listening command
+            nodes = {
+                x["node_id"]: dataclass_from_dict(MatterNode, x) for x in msg.result
+            }
             self._nodes = nodes
-
+            # once we've hit this point we're all set
             self.logger.info("Matter client initialized.")
             if init_ready is not None:
                 init_ready.set()

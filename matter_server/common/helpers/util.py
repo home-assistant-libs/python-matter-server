@@ -1,5 +1,6 @@
 """Utils for Matter server (and client)."""
 from __future__ import annotations
+
 from base64 import b64encode
 from dataclasses import MISSING, asdict, dataclass, fields, is_dataclass
 from datetime import date, datetime
@@ -12,13 +13,19 @@ from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
 
 # the below imports are here to satisfy our dataclass from dict helper
 # it needs to be able to instantiate common class instances from type hints
-from chip.clusters import Cluster, ClusterObject, Objects
+# TODO: find out how we can simplify/drop this all. especially all the eval stuff
 import chip
-from ..models.node import MatterNode, MatterAttribute
+import typing
+import chip.clusters
+from chip.clusters import Objects
+from chip.clusters.Objects import *
 from chip.clusters.Types import Nullable, NullValue
 from chip.tlv import float32, uint
 import pkg_resources
 
+from ..models.events import *
+from ..models.node import *
+from ..models.message import *
 
 try:
     # python 3.10
@@ -104,7 +111,7 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
             for subval in value
             if subval is not None
         ]
-    if origin is dict:
+    elif origin is dict:
         subkey_type = get_args(value_type)[0]
         subvalue_type = get_args(value_type)[1]
         return {
@@ -113,8 +120,7 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
             )
             for subkey, subvalue in value.items()
         }
-
-    if origin is Union:
+    elif origin is Union:
         # try all possible types
         sub_value_types = get_args(value_type)
         for sub_arg_type in sub_value_types:
@@ -137,6 +143,8 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
         # failed to parse the (sub) value but None allowed, log only
         logging.getLogger(__name__).warn(err)
         return None
+    elif origin is type:
+        return eval(value)
     if value_type is Any:
         return value
     if value is None and value_type is not NoneType:
@@ -150,6 +158,18 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
         return float(value)
     if value_type is int and isinstance(value, str) and value.isnumeric():
         return int(value)
+    if (
+        value_type is uint
+        and isinstance(value, int)
+        or (isinstance(value, str) and value.isnumeric())
+    ):
+        return uint(value)
+    if (
+        value_type is float32
+        and isinstance(value, float)
+        or (isinstance(value, str) and value.isnumeric())
+    ):
+        return float32(value)
     if not isinstance(value, value_type):
         raise TypeError(
             f"Value {value} of type {type(value)} is invalid for {name}, "
@@ -215,3 +235,16 @@ def chip_core_version() -> str:
         # TODO: Fix this once we can install our own wheels on macos.
         return chip_clusters_version()
     return package_version(CHIP_CORE_PKG_NAME)
+
+
+def parse_message(raw: dict) -> MessageType:
+    """Parse Message from raw dict object."""
+    if "event" in raw:
+        return dataclass_from_dict(EventMessage, raw)
+    if "error_code" in raw:
+        return dataclass_from_dict(ErrorResultMessage, raw)
+    if "result" in raw:
+        return dataclass_from_dict(SuccessResultMessage, raw)
+    if "sdk_version" in raw:
+        return dataclass_from_dict(ServerInfoMessage, raw)
+    return dataclass_from_dict(CommandMessage, raw)

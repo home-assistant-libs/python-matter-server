@@ -296,9 +296,10 @@ class MatterDeviceController:
 
     @api_command(APICommand.DEVICE_COMMAND)
     async def send_device_command(
-        self, node_id: int, endpoint: int, payload: ClusterCommand
+        self, node_id: int, endpoint: int, cmd: Type[ClusterCommand], args: dict
     ) -> Any:
         """Send a command to a Matter node/device."""
+        payload = cmd.FromDict(args)
         return await self.chip_controller.SendCommand(
             nodeid=node_id, endpoint=endpoint, payload=payload
         )
