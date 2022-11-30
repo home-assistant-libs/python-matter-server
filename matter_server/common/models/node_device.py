@@ -68,14 +68,14 @@ class MatterBridgedNodeDevice(AbstractMatterNodeDevice):
         )
 
     def device_type_instances(self) -> list[MatterDeviceTypeInstance]:
-        endpoint_id = self.bridged_device_type_instance.endpoint_id
+        endpoint = self.bridged_device_type_instance.endpoint
         return [
             inst
             for inst in self.bridged_device_type_instance.node.device_type_instances
-            if inst.endpoint_id == endpoint_id
+            if inst.endpoint == endpoint
             and inst != self.bridged_device_type_instance
         ]
 
     def __repr__(self) -> str:
         bridged = self.bridged_device_type_instance
-        return f"<MatterBridgedNodeDevice (N:{bridged.node.node_id}, E:{bridged.endpoint_id})>"
+        return f"<MatterBridgedNodeDevice (N:{bridged.node.node_id}, E:{bridged.endpoint})>"
