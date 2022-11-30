@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from enum import Enum, IntEnum
 from typing import Any, Union
 
-from ..helpers.util import dataclass_from_dict
 from .events import EventType
 from .server_information import ServerInfo
 
@@ -72,14 +71,3 @@ MessageType = Union[
 ]
 
 
-def parse_message(raw: dict) -> MessageType:
-    """Parse Message from raw dict object."""
-    if "event" in raw:
-        return dataclass_from_dict(EventMessage, raw)
-    if "error_code" in raw:
-        return dataclass_from_dict(ErrorResultMessage, raw)
-    if "result" in raw:
-        return dataclass_from_dict(SuccessResultMessage, raw)
-    if "sdk_version" in raw:
-        return dataclass_from_dict(ServerInfoMessage, raw)
-    return dataclass_from_dict(CommandMessage, raw)

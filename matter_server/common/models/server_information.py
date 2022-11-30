@@ -3,8 +3,6 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from chip.clusters import Attribute
-
 from .node import MatterNode
 
 
@@ -26,4 +24,4 @@ class ServerDiagnostics:
 
     info: ServerInfo
     nodes: list[MatterNode]
-    events: list[Attribute.EventReadResult]
+    events: list[dict]  # TODO !
