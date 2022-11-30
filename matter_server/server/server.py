@@ -18,6 +18,7 @@ from matter_server.common.models.error import VersionMismatch
 from matter_server.server.const import SCHEMA_VERSION
 
 from ..common.helpers.api import APICommandHandler, api_command
+from ..common.helpers.json import json_dumps
 from ..common.helpers.util import chip_clusters_version, chip_core_version
 from ..common.models.api_command import APICommand
 from ..common.models.events import EventCallBackType, EventType
@@ -173,4 +174,4 @@ class MatterServer:
 
     async def _handle_info(self, request: web.Request) -> web.Response:
         """Handle info endpoint to serve basic server (version) info."""
-        return web.json_response(self.get_info())
+        return web.json_response(self.get_info(), dumps=json_dumps)
