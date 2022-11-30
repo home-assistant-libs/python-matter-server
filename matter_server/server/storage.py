@@ -73,6 +73,20 @@ class StorageController:
             self._data[key] = value
         self.save(force)
 
+    def remove(
+        self,
+        key: str,
+        subkey: str | None = None,
+    ) -> None:
+        """Remove a (sub)value in persistent storage."""
+        if subkey:
+            # we provide support for (1-level) nested dict
+            self._data.setdefault(key, {})
+            self._data[key].pop(subkey)
+        else:
+            self._data.pop(key)
+        self.save(True)
+
     def __getitem__(self, key: str) -> Any:
         """Get data from specific key."""
         return self._data[key]

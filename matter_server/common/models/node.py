@@ -159,13 +159,34 @@ class MatterNode:
             and (endpoint is None or x.endpoint == endpoint)
         ]
 
+    def get_attribute(
+        self,
+        endpoint: int,
+        cluster: type[Clusters.Cluster],
+        attribute: str | int | type,
+    ) -> MatterAttribute:
+        """Return Matter Attribute for given parameters."""
+        return next(
+            x
+            for x in self.attributes.values()
+            if x.cluster_type == cluster
+            and x.endpoint == endpoint
+            and attribute in (x.attribute_id, x.attribute_name, x.attribute_type)
+        )
+
     @property
     def name(self) -> str:
-        return self.root_device_type_instance.get_cluster(Clusters.Basic).nodeLabel
+        """Return friendly name for this node."""
+        return self.get_attribute(
+            self.root_device_type_instance.endpoint_id, Clusters.Basic, "nodeLabel"
+        )
 
     @property
     def unique_id(self) -> str:
-        return self.root_device_type_instance.get_cluster(Clusters.Basic).uniqueID
+        """Return uniqueID for this node."""
+        return self.get_attribute(
+            self.root_device_type_instance.endpoint_id, Clusters.Basic, "uniqueID"
+        )
 
     def __repr__(self):
         return f"<MatterNode {self.node_id}>"

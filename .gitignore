@@ -6,3 +6,4 @@ venv
 dist
 .DS_Store
 credentials/
+build/

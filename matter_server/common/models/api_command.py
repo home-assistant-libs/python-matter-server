@@ -19,3 +19,4 @@ class APICommand(str, Enum):
     DISCOVER = "discover"
     INTERVIEW_NODE = "interview_node"
     DEVICE_COMMAND = "device_command"
+    REMOVE_NODE = "remove_node"
