@@ -103,7 +103,7 @@ class StorageController:
             for filename in self.filename, f"{self.filename}.backup":
                 try:
                     _filename = os.path.join(self.server.storage_path, filename)
-                    with open(filename, "r") as _file:
+                    with open(_filename, "r") as _file:
                         return json_loads(_file.read())
                 except FileNotFoundError:
                     pass
