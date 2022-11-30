@@ -9,6 +9,7 @@ from functools import cache
 from importlib.metadata import PackageNotFoundError, version as pkg_version
 import logging
 import platform
+from types import UnionType
 from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
 
 # the below imports are here to satisfy our dataclass from dict helper
@@ -74,7 +75,7 @@ def dataclass_to_dict(obj_in: dataclass, skip_none: bool = False) -> dict:
                 key = str(key)
             final[key] = _convert_value(value)
         return final
-    dict_obj["_type"] = str(type(obj_in))
+    dict_obj["_type"] = f"{obj_in.__module__}.{obj_in.__class__.__name__}"
     return _clean_dict(dict_obj)
 
 
@@ -121,7 +122,7 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
             )
             for subkey, subvalue in value.items()
         }
-    elif origin is Union:
+    elif origin is Union or origin is UnionType:
         # try all possible types
         sub_value_types = get_args(value_type)
         for sub_arg_type in sub_value_types:
@@ -151,10 +152,15 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
     if value is None and value_type is not NoneType:
         raise KeyError(f"`{name}` of type `{value_type}` is required.")
 
-    if issubclass(value_type, Enum):
-        return value_type(value)
-    if issubclass(value_type, datetime):
-        return parse_utc_timestamp(value)
+    try:
+        if issubclass(value_type, Enum):
+            return value_type(value)
+        if issubclass(value_type, datetime):
+            return parse_utc_timestamp(value)
+    except TypeError:
+        # happens if value_type is not a class
+        pass
+    
     if value_type is float and isinstance(value, int):
         return float(value)
     if value_type is int and isinstance(value, str) and value.isnumeric():
