@@ -10,7 +10,6 @@ from importlib.metadata import PackageNotFoundError, version as pkg_version
 import logging
 import platform
 from pydoc import locate
-from types import UnionType
 import typing
 from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
 
@@ -32,9 +31,11 @@ from ..models.node import *
 try:
     # python 3.10
     from types import NoneType
+    from types import UnionType
 except:  # noqa
     # older python version
     NoneType = type(None)
+    UnionType = type(int | str)
 
 CHIP_CLUSTERS_PKG_NAME = "home-assistant-chip-clusters"
 CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
