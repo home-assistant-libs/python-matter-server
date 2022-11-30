@@ -37,8 +37,9 @@ class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
     def attributes(self) -> list[MatterAttribute]:
         """Return all Attributes belonging to this DeviceTypeInstance."""
         return [
-            self.node.get_cluster_attributes(self.endpoint, cluster)
-            for cluster in self.device_type.clusters
+            attr
+            for attr in self.node.get_endpoint_attributes(self.endpoint)
+            if attr.cluster_type in self.device_type.clusters
         ]
 
     def has_cluster(self, cluster: type[all_clusters.Cluster]) -> bool:
