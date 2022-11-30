@@ -443,7 +443,7 @@ class MatterClient:
                 for attribute_path_key in (attribute_path, SUB_WILDCARD):
                     if attribute_path_key is None:
                         continue
-                    key = f"{evt_key}{node_key}{attribute_path_key}"
+                    key = f"{evt_key}/{node_key}/{attribute_path_key}"
                     for callback in self._subscribers.get(key, []):
                         callback(event, data)
 
