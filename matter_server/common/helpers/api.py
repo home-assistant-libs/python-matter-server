@@ -50,7 +50,7 @@ def api_command(command: str) -> Callable:
 
 def get_typed_signature(call: Callable) -> inspect.Signature:
     """Parse signature of function to do type validation and/or api spec generation."""
-    signature = inspect.signature(call, eval_str=True)
+    signature = inspect.signature(call)
     return signature
 
 

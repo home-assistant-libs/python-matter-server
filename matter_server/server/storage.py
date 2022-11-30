@@ -5,7 +5,6 @@ import asyncio
 import logging
 import os
 import pprint
-from types import NoneType
 from typing import TYPE_CHECKING, Any, Dict, Union
 
 from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_dumps, json_loads
