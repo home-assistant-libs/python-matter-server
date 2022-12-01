@@ -19,6 +19,10 @@ class NodeNotReady(MatterError):
     """Error raised when performing action on node that has not been fully added."""
 
 
+class NodeNotResolving(MatterError):
+    """Error raised when resolving the node fails."""
+
+
 class NodeNotExists(MatterError):
     """Error raised when performing action on node that does not exist."""
 
