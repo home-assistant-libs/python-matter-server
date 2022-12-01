@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Coroutine, Generic, Optional, TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, Optional, TypeVar
 
 from .device_types import DeviceType
 from chip.clusters import Objects as all_clusters

@@ -1,7 +1,6 @@
 """Represents the version from the server."""
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 from .node import MatterNode
 

@@ -1,10 +1,8 @@
 """Implementation of a Websocket-based Matter proxy (using CHIP SDK)."""
 
-import asyncio
 import logging
 import os
-import pathlib
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from chip.ChipStack import ChipStack
 import chip.logging

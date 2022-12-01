@@ -3,9 +3,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-import inspect
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Optional, TypeVar, Union
+from typing import Any, Dict, Optional, TypeVar, Union
 
 from chip.clusters import (
     Objects as Clusters,

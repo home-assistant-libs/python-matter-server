@@ -4,41 +4,18 @@ from __future__ import annotations
 
 import asyncio
 from collections import deque
-from concurrent import futures
 from datetime import datetime
-from enum import IntEnum
 from functools import partial
 import logging
-import os
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Coroutine,
-    Deque,
-    Final,
-    Generator,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Deque, Optional, Type
 
 from chip.ChipDeviceCtrl import ChipDeviceController
-from chip.clusters import (
-    Attribute,
-    Cluster,
-    ClusterAttributeDescriptor,
-    ClusterCommand,
-    ClusterEvent,
-)
+from chip.clusters import Attribute, ClusterCommand
 from chip.discovery import FilterType as DiscoveryFilterType
 from chip.exceptions import ChipStackError
 
 from ..common.helpers.api import api_command
-from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
+from ..common.helpers.util import dataclass_from_dict
 from ..common.models.api_command import APICommand
 from ..common.models.error import (
     NodeCommissionFailed,
@@ -48,19 +25,12 @@ from ..common.models.error import (
     SDKCommandFailed,
 )
 from ..common.models.events import EventType
-from ..common.models.message import (
-    CommandMessage,
-    ErrorResultMessage,
-    SuccessResultMessage,
-)
 from ..common.models.node import MatterAttribute, MatterNode
 from .const import SCHEMA_VERSION
 
 if TYPE_CHECKING:
 
     from .server import MatterServer
-    from .stack import MatterStack
-
 
 DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
@@ -143,17 +113,22 @@ class MatterDeviceController:
         Returns full NodeInfo once complete.
         """
         node_id = self._get_next_node_id()
-        success = await self._call_sdk(
-            self.chip_controller.CommissionWithCode,
-            setupPayload=code,
-            nodeid=node_id,
-        )
 
         # TODO TEMP !!!
         # The call to CommissionWithCode returns early without waiting ?!
         # This is most likely a bug in the SDK or its python wrapper
+        # success = await self._call_sdk(
+        #     self.chip_controller.CommissionWithCode,
+        #     setupPayload=code,
+        #     nodeid=node_id,
+        # )
         # if not success:
         #     raise NodeCommissionFailed(f"CommissionWithCode failed for node {node_id}")
+        await self._call_sdk(
+            self.chip_controller.CommissionWithCode,
+            setupPayload=code,
+            nodeid=node_id,
+        )
         await asyncio.sleep(60)
 
         # full interview of the device
@@ -399,7 +374,7 @@ class MatterDeviceController:
             # TODO: update node status to unavailable
 
         def resubscription_succeeded(transaction: Attribute.SubscriptionTransaction):
-            LOGGER.debug(f"Subscription succeeded")
+            LOGGER.debug("Subscription succeeded")
             # TODO: update node status to available
 
         sub.SetAttributeUpdateCallback(attribute_updated_callback)

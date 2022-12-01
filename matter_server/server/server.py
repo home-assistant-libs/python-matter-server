@@ -2,17 +2,11 @@
 from __future__ import annotations
 
 import asyncio
-from concurrent import futures
-from contextlib import suppress
-import inspect
-import json
 import logging
-from optparse import OptionParser
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Final, Set
+from typing import Any, Callable, Set
 import weakref
 
 from aiohttp import web
-import async_timeout
 
 from matter_server.common.models.error import VersionMismatch
 from matter_server.server.const import SCHEMA_VERSION
@@ -22,7 +16,6 @@ from ..common.helpers.json import json_dumps
 from ..common.helpers.util import chip_clusters_version, chip_core_version
 from ..common.models.api_command import APICommand
 from ..common.models.events import EventCallBackType, EventType
-from ..common.models.message import CommandMessage
 from ..common.models.server_information import ServerDiagnostics, ServerInfo
 from ..server.client_handler import WebsocketClientHandler
 from .device_controller import MatterDeviceController
