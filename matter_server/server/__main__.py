@@ -62,8 +62,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-if __name__ == "__main__":
-
+def main():
     # configure logging
     handlers = None
     if args.log_file:
@@ -85,3 +84,6 @@ if __name__ == "__main__":
 
     # run the server
     run(server.start(), shutdown_callback=handle_stop)
+
+if __name__ == "__main__":
+    sys.exit(main())
