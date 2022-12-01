@@ -5,7 +5,7 @@ import asyncio
 import logging
 import os
 from pathlib import Path
-import sys
+
 from aiorun import run
 import coloredlogs
 import aiohttp
@@ -14,8 +14,8 @@ from os.path import abspath, dirname
 from sys import path
 
 path.insert(1, dirname(dirname(abspath(__file__))))
-from matter_server.client.client import MatterClient
-from matter_server.server.server import MatterServer
+from matter_server.client.client import MatterClient  # noqa: F402
+from matter_server.server.server import MatterServer  # noqa: F402
 
 logging.basicConfig(level=logging.DEBUG)
 _LOGGER = logging.getLogger(__name__)
