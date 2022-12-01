@@ -101,7 +101,9 @@ class WebsocketClientHandler:
                 self._logger.debug("Received: %s", msg.data)
 
                 try:
-                    command_msg = dataclass_from_dict(CommandMessage, json_loads(msg.data))
+                    command_msg = dataclass_from_dict(
+                        CommandMessage, json_loads(msg.data)
+                    )
                 except ValueError:
                     disconnect_warn = f"Received invalid JSON: {msg.data}"
                     break

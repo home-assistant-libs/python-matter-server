@@ -72,8 +72,7 @@ class MatterBridgedNodeDevice(AbstractMatterNodeDevice):
         return [
             inst
             for inst in self.bridged_device_type_instance.node.device_type_instances
-            if inst.endpoint == endpoint
-            and inst != self.bridged_device_type_instance
+            if inst.endpoint == endpoint and inst != self.bridged_device_type_instance
         ]
 
     def __repr__(self) -> str:

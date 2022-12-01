@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, IntEnum
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 from .events import EventType
 from .server_information import ServerInfo
@@ -15,7 +15,7 @@ class CommandMessage:
 
     message_id: str
     command: str
-    args: dict[str, Any] | None = None
+    args: Union[dict[str, Any], None] = None
 
 
 @dataclass
@@ -46,7 +46,7 @@ class ErrorResultMessage(ResultMessageBase):
     """Message sent when a command did not execute succesfully"""
 
     error_code: ErrorCode
-    details: str | None = None
+    details: Optional[str] = None
 
 
 @dataclass
@@ -69,5 +69,3 @@ MessageType = Union[
     ErrorResultMessage,
     ServerInfoMessage,
 ]
-
-

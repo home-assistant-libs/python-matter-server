@@ -35,7 +35,7 @@ try:
 except:  # noqa
     # older python version
     NoneType = type(None)
-    UnionType = type(int | str)
+    UnionType = type(Union)
 
 CHIP_CLUSTERS_PKG_NAME = "home-assistant-chip-clusters"
 CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
@@ -87,7 +87,9 @@ def parse_utc_timestamp(datetimestr: str):
     return datetime.fromisoformat(datetimestr.replace("Z", "+00:00"))
 
 
-def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MISSING):
+def parse_value(
+    name: str, value: Any, value_type: Union[Type, str], default: Any = MISSING
+):
     """Try to parse a value from raw (json) data and type definitions."""
     if isinstance(value, dict) and "_type" in value:
         return dataclass_from_dict(None, value)
@@ -95,7 +97,10 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
         # type is provided as string
         if value_type == "type":
             return locate(value) or eval(value)
-        value_type = eval(value_type)
+        try:
+            value_type = eval(value_type)
+        except TypeError:
+            pass
 
     elif isinstance(value, dict):
         if hasattr(value_type, "from_dict"):
@@ -184,7 +189,7 @@ def parse_value(name: str, value: Any, value_type: Type | str, default: Any = MI
     return value
 
 
-def dataclass_from_dict(cls: dataclass | None, dict_obj: dict, strict=False):
+def dataclass_from_dict(cls: Optional[dataclass], dict_obj: dict, strict=False):
     """
     Create (instance of) a dataclass by providing a dict with values.
 

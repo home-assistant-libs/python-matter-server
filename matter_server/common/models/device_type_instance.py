@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Coroutine, Generic, TypeVar
+from typing import TYPE_CHECKING, Callable, Coroutine, Generic, Optional, TypeVar
 
 from .device_types import DeviceType
 from chip.clusters import Objects as all_clusters
@@ -50,7 +50,7 @@ class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
             x for x in self.attributes if x.cluster_type == cluster
         )
 
-    def get_cluster(self, cluster: type[_CLUSTER_T]) -> _CLUSTER_T | None:
+    def get_cluster(self, cluster: type[_CLUSTER_T]) -> Optional[_CLUSTER_T]:
         """Get the cluster object."""
         # only return Cluster if the cluster belongs to this device type
         # and is actually present in the atributes.

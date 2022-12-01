@@ -32,7 +32,7 @@ from ..common.helpers.util import (
     dataclass_from_dict,
     dataclass_to_dict,
     parse_value,
-    parse_message
+    parse_message,
 )
 from ..common.models.api_command import APICommand
 from ..common.models.events import EventType
@@ -197,7 +197,7 @@ class MatterClient:
             APICommand.DEVICE_COMMAND,
             node_id=node_id,
             endpoint=endpoint,
-            payload=payload
+            payload=payload,
         )
 
     async def remove_node(self, node_id: int) -> None:
