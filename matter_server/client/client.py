@@ -2,23 +2,14 @@
 from __future__ import annotations
 
 import asyncio
-from collections import defaultdict
-from copy import deepcopy
-from datetime import datetime
-from enum import Enum
-from functools import partial
-import json
 import logging
-from operator import itemgetter
 import pprint
 from types import TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    DefaultDict,
     Dict,
-    List,
     NoReturn,
     Optional,
 )
@@ -31,7 +22,6 @@ from ..common.helpers.util import (
     chip_clusters_version,
     dataclass_from_dict,
     dataclass_to_dict,
-    parse_value,
     parse_message,
 )
 from ..common.models.api_command import APICommand

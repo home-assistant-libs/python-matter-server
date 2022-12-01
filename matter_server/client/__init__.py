@@ -1,1 +1,1 @@
-from .client import MatterClient
+from .client import MatterClient  # noqa
