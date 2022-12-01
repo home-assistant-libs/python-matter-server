@@ -7,7 +7,6 @@ from contextlib import suppress
 import logging
 from typing import TYPE_CHECKING, Any, Callable, Final
 
-
 from aiohttp import WSMsgType, web
 import async_timeout
 from chip.exceptions import ChipStackError
@@ -17,6 +16,7 @@ from matter_server.common.models.events import EventType
 
 from ..common.helpers.api import parse_arguments
 from ..common.helpers.util import dataclass_from_dict
+from ..common.models.api_command import APICommand
 from ..common.models.message import (
     CommandMessage,
     ErrorCode,
@@ -25,7 +25,6 @@ from ..common.models.message import (
     MessageType,
     SuccessResultMessage,
 )
-from ..common.models.api_command import APICommand
 
 if TYPE_CHECKING:
     from ..common.helpers.api import APICommandHandler

@@ -4,14 +4,13 @@ import argparse
 import asyncio
 import logging
 import os
+from os.path import abspath, dirname
 from pathlib import Path
+from sys import path
 
+import aiohttp
 from aiorun import run
 import coloredlogs
-import aiohttp
-
-from os.path import abspath, dirname
-from sys import path
 
 path.insert(1, dirname(dirname(abspath(__file__))))
 from matter_server.client.client import MatterClient  # noqa: E402

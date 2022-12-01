@@ -6,9 +6,8 @@ from datetime import datetime
 import logging
 from typing import Any, Dict, Optional, TypeVar, Union
 
-from chip.clusters import (
-    Objects as Clusters,
-)
+from chip.clusters import Objects as Clusters
+
 from .device_type_instance import MatterDeviceTypeInstance
 from .device_types import ALL_TYPES as DEVICE_TYPES, Aggregator, BridgedDevice, RootNode
 from .node_device import (

@@ -10,18 +10,8 @@ from importlib.metadata import PackageNotFoundError, version as pkg_version
 import logging
 import platform
 from pydoc import locate
-
+from typing import *  # noqa: F401 F403
 from typing import Any, Optional, Type, Union, get_args, get_origin
-from chip.tlv import float32, uint
-
-from ..models.message import (
-    MessageType,
-    EventMessage,
-    ErrorResultMessage,
-    SuccessResultMessage,
-    ServerInfoMessage,
-    CommandMessage,
-)
 
 # the below imports are here to satisfy our dataclass from dict helper
 # it needs to be able to instantiate common class instances from type hints
@@ -32,9 +22,18 @@ import chip  # noqa: F401
 import chip.clusters  # noqa: F401
 from chip.clusters import Objects  # noqa: F401
 from chip.clusters.Objects import *  # noqa: F401 F403
-from typing import *  # noqa: F401 F403
 from chip.clusters.Types import Nullable, NullValue  # noqa: F401
+from chip.tlv import float32, uint
+
 from ..models.events import *  # noqa: F401 F403
+from ..models.message import (
+    CommandMessage,
+    ErrorResultMessage,
+    EventMessage,
+    MessageType,
+    ServerInfoMessage,
+    SuccessResultMessage,
+)
 from ..models.message import *  # noqa: F401 F403
 from ..models.node import *  # noqa: F401 F403
 
@@ -42,8 +41,7 @@ from ..models.node import *  # noqa: F401 F403
 
 try:
     # python 3.10
-    from types import NoneType
-    from types import UnionType
+    from types import NoneType, UnionType
 except:  # noqa
     # older python version
     NoneType = type(None)

@@ -1,11 +1,12 @@
 """Helpers to work with (de)serializing of json."""
 
+from dataclasses import is_dataclass
 from typing import Any
 
-from dataclasses import is_dataclass
-from .util import dataclass_to_dict
 from chip.clusters.Types import Nullable
 import orjson
+
+from .util import dataclass_to_dict
 
 JSON_ENCODE_EXCEPTIONS = (TypeError, ValueError)
 JSON_DECODE_EXCEPTIONS = (orjson.JSONDecodeError,)
