@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import inspect
 import logging
-from typing import TYPE_CHECKING, Any, Dict, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, Optional, TypeVar, Union
 
 from chip.clusters import (
     Objects as Clusters,
@@ -73,12 +73,12 @@ class MatterNode:
     attributes: Dict[str, MatterAttribute]
     # below attributes are derrived from the attributes in post init.
     endpoints: list[int] = field(default_factory=list, init=False)
-    root_device_type_instance: MatterDeviceTypeInstance[RootNode] | None = field(
+    root_device_type_instance: Optional[MatterDeviceTypeInstance[RootNode]] = field(
         default=None, init=False
     )
-    aggregator_device_type_instance: MatterDeviceTypeInstance[
-        Aggregator
-    ] | None = field(default=None, init=False)
+    aggregator_device_type_instance: Optional[
+        MatterDeviceTypeInstance[Aggregator]
+    ] = field(default=None, init=False)
     device_type_instances: list[MatterDeviceTypeInstance] = field(
         default_factory=list, init=False
     )
@@ -134,7 +134,7 @@ class MatterNode:
         return [x for x in self.attributes.values() if x.endpoint == endpoint]
 
     def get_cluster_attributes(
-        self, endpoint: int, cluster: type[Clusters.Cluster] | int
+        self, endpoint: int, cluster: Union[type[Clusters.Cluster], int]
     ) -> list[MatterAttribute]:
         """Return all Attributes for given cluster."""
         return [
@@ -147,7 +147,7 @@ class MatterNode:
         self,
         endpoint: int,
         cluster: type[Clusters.Cluster],
-        attribute: str | int | type,
+        attribute: Union[str, int, type],
     ) -> MatterAttribute:
         """Return Matter Attribute for given parameters."""
         return next(
@@ -158,7 +158,9 @@ class MatterNode:
             and attribute in (x.attribute_id, x.attribute_name, x.attribute_type)
         )
 
-    def has_cluster(self, endpoint: int, cluster: type[Clusters.Cluster] | int) -> bool:
+    def has_cluster(
+        self, endpoint: int, cluster: Union[type[Clusters.Cluster], int]
+    ) -> bool:
         """Check if node has a specific cluster."""
         return any(
             x
@@ -169,7 +171,7 @@ class MatterNode:
 
     def get_cluster(
         self, endpoint: int, cluster: type[_CLUSTER_T]
-    ) -> _CLUSTER_T | None:
+    ) -> Optional[_CLUSTER_T]:
         """
         Get a full Cluster object containing all attributes.
 

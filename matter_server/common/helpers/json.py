@@ -42,7 +42,9 @@ def json_dumps(data: Any) -> str:
     """Dump json string."""
     return orjson.dumps(
         data,
-        option=orjson.OPT_NON_STR_KEYS | orjson.OPT_INDENT_2 | orjson.OPT_PASSTHROUGH_DATACLASS,
+        option=orjson.OPT_NON_STR_KEYS
+        | orjson.OPT_INDENT_2
+        | orjson.OPT_PASSTHROUGH_DATACLASS,
         default=json_encoder_default,
     ).decode("utf-8")
 
