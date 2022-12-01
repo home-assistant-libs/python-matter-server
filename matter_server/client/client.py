@@ -116,7 +116,7 @@ class MatterClient:
             # if start_listening is called this dict will be kept up to date
             return list(self._nodes.values())
         data = await self.send_command(APICommand.GET_NODES)
-        return [dataclass_from_dict(MatterNode,x) for x in data]
+        return [dataclass_from_dict(MatterNode, x) for x in data]
 
     async def get_node(self, node_id: int) -> MatterNode:
         """Return Matter node by id."""
@@ -285,7 +285,8 @@ class MatterClient:
                 "Matter Server detected with schema version %s "
                 "which is higher than the preferred api schema %s of this client"
                 " - you may run into compatibility issues.",
-                info.schema_version, MIN_SCHEMA_VERSION
+                info.schema_version,
+                MIN_SCHEMA_VERSION,
             )
 
         self.logger.info(

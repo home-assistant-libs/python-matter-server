@@ -18,6 +18,7 @@ _DEVICE_TYPE_T = TypeVar("_DEVICE_TYPE_T", bound=DeviceType)
 _CLUSTER_T = TypeVar("_CLUSTER_T", bound=all_clusters.Cluster)
 # pylint: enable=invalid-name
 
+
 class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
     """Base class for Matter device types on endpoints."""
 

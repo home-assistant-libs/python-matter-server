@@ -23,6 +23,7 @@ LOGGER = logging.getLogger(__name__)
 _CLUSTER_T = TypeVar("_CLUSTER_T", bound=Clusters.Cluster)
 # pylint: enable=invalid-name
 
+
 def create_attribute_path(endpoint: int, cluster_id: int, attribute_id: int) -> str:
     """
     Create path/identifier for an Attribute.

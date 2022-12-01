@@ -105,7 +105,7 @@ class StorageController:
                         return json_loads(_file.read())
                 except FileNotFoundError:
                     pass
-                except JSON_DECODE_EXCEPTIONS: # pylint: disable=catching-non-exception
+                except JSON_DECODE_EXCEPTIONS:  # pylint: disable=catching-non-exception
                     LOGGER.error(
                         "Error while reading persistent storage file %s", filename
                     )

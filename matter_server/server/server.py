@@ -46,6 +46,7 @@ def mount_websocket(server: MatterServer, path: str) -> None:
 
 class MatterServer:
     """Serve Matter stack over Websockets."""
+
     _runner: web.AppRunner | None = None
     _http: web.TCPSite | None = None
 
