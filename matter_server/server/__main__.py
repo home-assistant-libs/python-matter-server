@@ -50,6 +50,7 @@ parser.add_argument(
     "--log-level",
     type=str,
     default="info",
+    # pylint: disable=line-too-long
     help="Provide logging level. Example --log-level debug, default=info, possible=(critical, error, warning, info, debug)",
 )
 parser.add_argument(
@@ -63,6 +64,7 @@ args = parser.parse_args()
 
 
 def main():
+    """Run main execution."""
     # configure logging
     handlers = None
     if args.log_file:
@@ -80,10 +82,12 @@ def main():
     )
 
     async def handle_stop(loop: asyncio.AbstractEventLoop):
+        # pylint: disable=unused-argument
         await server.stop()
 
     # run the server
     run(server.start(), shutdown_callback=handle_stop)
+
 
 if __name__ == "__main__":
     sys.exit(main())

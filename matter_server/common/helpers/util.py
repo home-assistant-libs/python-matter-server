@@ -3,35 +3,45 @@ from __future__ import annotations
 
 from base64 import b64encode
 from dataclasses import MISSING, asdict, dataclass, fields, is_dataclass
-from datetime import date, datetime
+from datetime import datetime
 from enum import Enum
 from functools import cache
 from importlib.metadata import PackageNotFoundError, version as pkg_version
 import logging
 import platform
 from pydoc import locate
-import typing
-from typing import Any, Dict, Optional, Set, Type, Union, get_args, get_origin
+from typing import *  # noqa: F401 F403
+from typing import Any, Optional, Type, Union, get_args, get_origin
 
 # the below imports are here to satisfy our dataclass from dict helper
 # it needs to be able to instantiate common class instances from type hints
 # TODO: find out how we can simplify/drop this all. especially all the eval stuff
-import chip
-import chip.clusters
-from chip.clusters import Objects
-from chip.clusters.Objects import *
-from chip.clusters.Types import Nullable, NullValue
+# this would all be a lot less complicated if we can drop python 3.9 support!
+# pylint: disable=unused-import
+import chip  # noqa: F401
+import chip.clusters  # noqa: F401
+from chip.clusters import Objects  # noqa: F401
+from chip.clusters.Objects import *  # noqa: F401 F403
+from chip.clusters.Types import Nullable, NullValue  # noqa: F401
 from chip.tlv import float32, uint
-import pkg_resources
 
-from ..models.events import *
-from ..models.message import *
-from ..models.node import *
+from ..models.events import *  # noqa: F401 F403
+from ..models.message import (
+    CommandMessage,
+    ErrorResultMessage,
+    EventMessage,
+    MessageType,
+    ServerInfoMessage,
+    SuccessResultMessage,
+)
+from ..models.message import *  # noqa: F401 F403
+from ..models.node import *  # noqa: F401 F403
+
+# pylint: enable=unused-import
 
 try:
     # python 3.10
-    from types import NoneType
-    from types import UnionType
+    from types import NoneType, UnionType
 except:  # noqa
     # older python version
     NoneType = type(None)

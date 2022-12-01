@@ -33,14 +33,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e . -r requirements-test.txt homeassistant
       - name: Flake8
-        run: flake8 scripts custom_components matter_server/client matter_server/common matter_server/server
+        run: flake8 scripts matter_server/client matter_server/common matter_server/server
       - name: Black
-        run: black --check scripts custom_components matter_server/client matter_server/common matter_server/server
+        run: black --check scripts matter_server/client matter_server/common matter_server/server
       - name: isort
-        run: isort --check scripts custom_components matter_server/client matter_server/common matter_server/server
-      - name: test show stored node script
-        run: python3 -m scripts.show_stored_node tests/fixtures/nodes/lighting-example-app.json
-      - name: test dump fixer script
-        run: python3 -m scripts.dump_fixer tests/fixtures/nodes/lighting-example-app.json
-      - name: Pytest
-        run: pytest tests
+        run: isort --check scripts matter_server/client matter_server/common matter_server/server
+      # - name: test show stored node script
+      #   run: python3 -m scripts.show_stored_node tests/fixtures/nodes/lighting-example-app.json
+      # - name: test dump fixer script
+      #   run: python3 -m scripts.dump_fixer tests/fixtures/nodes/lighting-example-app.json
+      # - name: Pytest
+      #   run: pytest tests

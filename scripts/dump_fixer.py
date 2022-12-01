@@ -8,8 +8,9 @@ This script will look up that data and try to re-construct the data.
 import json
 from pprint import pprint
 
-from matter_server.common import json_utils
 from chip.clusters import Objects as all_clusters
+
+from matter_server.common import json_utils
 
 from .show_stored_node import PrintButFirst, get_nodes
 

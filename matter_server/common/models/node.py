@@ -3,13 +3,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-import inspect
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Optional, TypeVar, Union
+from typing import Any, Dict, Optional, TypeVar, Union
 
-from chip.clusters import (
-    Objects as Clusters,
-)
+from chip.clusters import Objects as Clusters
+
 from .device_type_instance import MatterDeviceTypeInstance
 from .device_types import ALL_TYPES as DEVICE_TYPES, Aggregator, BridgedDevice, RootNode
 from .node_device import (
@@ -20,7 +18,9 @@ from .node_device import (
 
 LOGGER = logging.getLogger(__name__)
 
+# pylint: disable=invalid-name
 _CLUSTER_T = TypeVar("_CLUSTER_T", bound=Clusters.Cluster)
+# pylint: enable=invalid-name
 
 
 def create_attribute_path(endpoint: int, cluster_id: int, attribute_id: int) -> str:
@@ -88,8 +88,9 @@ class MatterNode:
 
     def __post_init__(self):
         """Initialize optional values after init."""
+        # pylint: disable=too-many-branches
         device_type_instances: list[MatterDeviceTypeInstance] = []
-        for attr_path, attr in self.attributes.items():
+        for attr in self.attributes.values():
             if attr.endpoint not in self.endpoints:
                 self.endpoints.append(attr.endpoint)
             if attr.attribute_type != Clusters.Descriptor.Attributes.DeviceTypeList:
@@ -191,7 +192,7 @@ class MatterNode:
 
         # instantiate a Cluster object from the properties
         # TODO: find another way to do this without loosing the individual cluster attributes
-
+        # pylint: disable=import-outside-toplevel
         from ..helpers.util import dataclass_from_dict
 
         return dataclass_from_dict(

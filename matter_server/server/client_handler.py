@@ -5,8 +5,7 @@ import asyncio
 from concurrent import futures
 from contextlib import suppress
 import logging
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Final
-import weakref
+from typing import TYPE_CHECKING, Any, Callable, Final
 
 from aiohttp import WSMsgType, web
 import async_timeout
@@ -16,7 +15,8 @@ from matter_server.common.helpers.json import json_dumps, json_loads
 from matter_server.common.models.events import EventType
 
 from ..common.helpers.api import parse_arguments
-from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
+from ..common.helpers.util import dataclass_from_dict
+from ..common.models.api_command import APICommand
 from ..common.models.message import (
     CommandMessage,
     ErrorCode,
@@ -25,13 +25,10 @@ from ..common.models.message import (
     MessageType,
     SuccessResultMessage,
 )
-from ..common.models.api_command import APICommand
-from ..common.models.server_information import ServerInfo
 
 if TYPE_CHECKING:
     from ..common.helpers.api import APICommandHandler
     from .server import MatterServer
-    from .stack import MatterStack
 
 MAX_PENDING_MSG = 512
 CANCELLATION_ERRORS: Final = (asyncio.CancelledError, futures.CancelledError)
@@ -68,6 +65,7 @@ class WebsocketClientHandler:
 
     async def handle_client(self) -> web.WebSocketResponse:
         """Handle a websocket response."""
+        # pylint: disable=too-many-branches
         request = self.request
         wsock = self.wsock
         try:

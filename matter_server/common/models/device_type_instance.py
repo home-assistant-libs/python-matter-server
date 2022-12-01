@@ -1,19 +1,22 @@
+"""Models for a DeviceType instance (per endpoint)."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Coroutine, Generic, Optional, TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, Optional, TypeVar
 
-from .device_types import DeviceType
 from chip.clusters import Objects as all_clusters
 
+from .device_types import DeviceType
+
 if TYPE_CHECKING:
-    from .node import MatterNode, MatterAttribute
+    from .node import MatterAttribute, MatterNode
 
 
 SubscriberType = Callable[[], None]
 
-
+# pylint: disable=invalid-name
 _DEVICE_TYPE_T = TypeVar("_DEVICE_TYPE_T", bound=DeviceType)
 _CLUSTER_T = TypeVar("_CLUSTER_T", bound=all_clusters.Cluster)
+# pylint: enable=invalid-name
 
 
 class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
@@ -59,4 +62,5 @@ class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
         return self.node.get_cluster(self.endpoint, cluster)
 
     def __repr__(self):
+        # pylint: disable=line-too-long
         return f"<MatterDeviceTypeInstance {self.device_type.__name__} (N:{self.node.node_id}, E:{self.endpoint})>"

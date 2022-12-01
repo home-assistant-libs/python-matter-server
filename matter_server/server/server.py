@@ -2,17 +2,11 @@
 from __future__ import annotations
 
 import asyncio
-from concurrent import futures
-from contextlib import suppress
-import inspect
-import json
 import logging
-from optparse import OptionParser
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Final, Set
+from typing import Any, Callable, Set
 import weakref
 
 from aiohttp import web
-import async_timeout
 
 from matter_server.common.models.error import VersionMismatch
 from matter_server.server.const import SCHEMA_VERSION
@@ -22,7 +16,6 @@ from ..common.helpers.json import json_dumps
 from ..common.helpers.util import chip_clusters_version, chip_core_version
 from ..common.models.api_command import APICommand
 from ..common.models.events import EventCallBackType, EventType
-from ..common.models.message import CommandMessage
 from ..common.models.server_information import ServerDiagnostics, ServerInfo
 from ..server.client_handler import WebsocketClientHandler
 from .device_controller import MatterDeviceController
@@ -43,6 +36,7 @@ def mount_websocket(server: MatterServer, path: str) -> None:
             clients.remove(connection)
 
     async def _handle_shutdown(app: web.Application):
+        # pylint: disable=unused-argument
         for client in set(clients):
             await client.disconnect()
 
@@ -52,6 +46,9 @@ def mount_websocket(server: MatterServer, path: str) -> None:
 
 class MatterServer:
     """Serve Matter stack over Websockets."""
+
+    _runner: web.AppRunner | None = None
+    _http: web.TCPSite | None = None
 
     def __init__(
         self,
@@ -123,6 +120,7 @@ class MatterServer:
             self._subscribers.remove(callback)
 
         self._subscribers.add(callback)
+        return unsub
 
     @api_command(APICommand.SERVER_INFO)
     def get_info(self) -> ServerInfo:
@@ -176,4 +174,5 @@ class MatterServer:
 
     async def _handle_info(self, request: web.Request) -> web.Response:
         """Handle info endpoint to serve basic server (version) info."""
+        # pylint: disable=unused-argument
         return web.json_response(self.get_info(), dumps=json_dumps)
