@@ -36,6 +36,7 @@ def mount_websocket(server: MatterServer, path: str) -> None:
             clients.remove(connection)
 
     async def _handle_shutdown(app: web.Application):
+        # pylint: disable=unused-argument
         for client in set(clients):
             await client.disconnect()
 
@@ -45,6 +46,8 @@ def mount_websocket(server: MatterServer, path: str) -> None:
 
 class MatterServer:
     """Serve Matter stack over Websockets."""
+    _runner: web.AppRunner | None = None
+    _http: web.TCPSite | None = None
 
     def __init__(
         self,
@@ -116,6 +119,7 @@ class MatterServer:
             self._subscribers.remove(callback)
 
         self._subscribers.add(callback)
+        return unsub
 
     @api_command(APICommand.SERVER_INFO)
     def get_info(self) -> ServerInfo:
@@ -169,4 +173,5 @@ class MatterServer:
 
     async def _handle_info(self, request: web.Request) -> web.Response:
         """Handle info endpoint to serve basic server (version) info."""
+        # pylint: disable=unused-argument
         return web.json_response(self.get_info(), dumps=json_dumps)

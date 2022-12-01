@@ -66,6 +66,7 @@ class WebsocketClientHandler:
 
     async def handle_client(self) -> web.WebSocketResponse:
         """Handle a websocket response."""
+        # pylint: disable=too-many-branches
         request = self.request
         wsock = self.wsock
         try:

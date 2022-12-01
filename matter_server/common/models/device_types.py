@@ -15,6 +15,7 @@ ALL_TYPES: dict[int, type["DeviceType"]] = {}
 
 class DeviceType:
     """Base class for Matter device types."""
+    do_not_serialize = True
 
     device_type: int
     clusters: set[type[all_clusters.Cluster]]
@@ -24,10 +25,6 @@ class DeviceType:
         super().__init_subclass__(**kwargs)
         cls.device_type = device_type
         ALL_TYPES[device_type] = cls
-
-    def as_dict(self) -> dict:
-        return {"device_type": self.device_type, "clusters": self.clusters}
-
 
 class OrphanClusters(DeviceType, device_type=0xF001):
     """Orphan Clusters."""

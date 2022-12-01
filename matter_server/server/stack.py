@@ -44,13 +44,13 @@ class MatterStack:
 
         # Get Certificate Authority (create new if we do not yet have one)
         if len(self.certificate_authority_manager.activeCaList) == 0:
-            ca = self.certificate_authority_manager.NewCertificateAuthority()
-            ca.maximizeCertChains = False
+            cert_auth = self.certificate_authority_manager.NewCertificateAuthority()
+            cert_auth.maximizeCertChains = False
         else:
-            ca = self.certificate_authority_manager.activeCaList[0]
+            cert_auth = self.certificate_authority_manager.activeCaList[0]
 
         # Get Fabric Admin (create new if we do not yet have one)
-        for admin in ca.adminList:
+        for admin in cert_auth.adminList:
             if (
                 admin.vendorId == server.vendor_id
                 and admin.fabricId == server.fabric_id
@@ -58,7 +58,7 @@ class MatterStack:
                 self.fabric_admin = admin
                 break
         else:
-            self.fabric_admin = ca.NewFabricAdmin(
+            self.fabric_admin = cert_auth.NewFabricAdmin(
                 vendorId=server.vendor_id, fabricId=server.fabric_id
             )
 

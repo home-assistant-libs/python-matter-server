@@ -116,7 +116,7 @@ class MatterClient:
             # if start_listening is called this dict will be kept up to date
             return list(self._nodes.values())
         data = await self.send_command(APICommand.GET_NODES)
-        return [MatterNode.from_dict(x) for x in data]
+        return [dataclass_from_dict(MatterNode,x) for x in data]
 
     async def get_node(self, node_id: int) -> MatterNode:
         """Return Matter node by id."""
@@ -124,7 +124,7 @@ class MatterClient:
             # if start_listening is called this dict will be kept up to date
             return self._nodes[node_id]
         data = await self.send_command(APICommand.GET_NODE, node_id=node_id)
-        return MatterNode.from_dict(data)
+        return dataclass_from_dict(MatterNode, data)
 
     async def commission_with_code(self, code: str) -> MatterNode:
         """
@@ -133,7 +133,7 @@ class MatterClient:
         Returns full NodeInfo once complete.
         """
         data = await self.send_command(APICommand.COMMISSION_WITH_CODE, code=code)
-        return MatterNode.from_dict(data)
+        return dataclass_from_dict(MatterNode, data)
 
     async def commission_on_network(self, setup_pin_code: int) -> MatterNode:
         """
@@ -144,7 +144,7 @@ class MatterClient:
         data = await self.send_command(
             APICommand.COMMISSION_ON_NETWORK, setup_pin_code=setup_pin_code
         )
-        return MatterNode.from_dict(data)
+        return dataclass_from_dict(MatterNode, data)
 
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
         """Set WiFi credentials for commissioning to a (new) device."""
@@ -282,9 +282,10 @@ class MatterClient:
         if self.server_info.schema_version > MIN_SCHEMA_VERSION:
             # server version is higher than expected, log only
             self.logger.warning(
-                f"Matter Server detedted with schema version {info.schema_version} "
-                f"which is higher than the preferred api schema {MIN_SCHEMA_VERSION} of this client"
-                " - you may run into compatibility issues."
+                "Matter Server detected with schema version %s "
+                "which is higher than the preferred api schema %s of this client"
+                " - you may run into compatibility issues.",
+                info.schema_version, MIN_SCHEMA_VERSION
             )
 
         self.logger.info(

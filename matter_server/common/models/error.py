@@ -4,8 +4,6 @@
 class MatterError(Exception):
     """Generic Matter exception."""
 
-    pass
-
 
 class NodeCommissionFailed(MatterError):
     """Error raised when interview of a device failed."""

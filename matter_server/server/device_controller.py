@@ -79,7 +79,7 @@ class MatterDeviceController:
             try:
                 await self.subscribe_node(node_id)
             except NodeNotResolving:
-                LOGGER.warning(f"Node {node_id} is not resolving, skipping...")
+                LOGGER.warning("Node %s is not resolving, skipping...", node_id)
         # create task to check for nodes that need any re(interviews)
         self.server.loop.create_task(self._check_interviews())
         LOGGER.debug("CHIP Device Controller Initialized")
@@ -143,13 +143,14 @@ class MatterDeviceController:
         self,
         setup_pin_code: int,
         filter_type: DiscoveryFilterType = DiscoveryFilterType.NONE,
-        filter: Any = None,
+        filter: Any = None,  # pylint: disable=redefined-builtin
     ) -> MatterNode:
         """
         Commission a device already connected to the network.
 
         Does the routine for OnNetworkCommissioning, with a filter for mDNS discovery.
-        The filter can be an integer, a string or None depending on the actual type of selected filter.
+        The filter can be an integer,
+        a string or None depending on the actual type of selected filter.
         Returns full NodeInfo once complete.
         """
         node_id = self._get_next_node_id()
@@ -180,8 +181,7 @@ class MatterDeviceController:
 
         if error_code != 0:
             raise SDKCommandFailed("Set WiFi credentials failed.")
-        else:
-            self.wifi_credentials_set = True
+        self.wifi_credentials_set = True
 
     @api_command(APICommand.SET_THREAD_DATASET)
     async def set_thread_operational_dataset(self, dataset: str) -> None:
@@ -193,8 +193,7 @@ class MatterDeviceController:
 
         if error_code != 0:
             raise SDKCommandFailed("Set Thread credentials failed.")
-        else:
-            self.thread_credentials_set = True
+        self.thread_credentials_set = True
 
     @api_command(APICommand.OPEN_COMMISSIONING_WINDOW)
     async def open_commissioning_window(
@@ -349,6 +348,7 @@ class MatterDeviceController:
             data: Attribute.EventReadResult,
             transaction: Attribute.SubscriptionTransaction,
         ):
+            # pylint: disable=unused-argument
             LOGGER.debug("received node event: %s", data)
             self.event_history.append(data)
             # TODO: This callback does not seem to fire ever or my test devices do not have events
@@ -359,6 +359,7 @@ class MatterDeviceController:
         def error_callback(
             chipError: int, transaction: Attribute.SubscriptionTransaction
         ):
+            # pylint: disable=unused-argument, invalid-name
             LOGGER.error("Got error fron node: %s", chipError)
 
         def resubscription_attempted(
@@ -366,6 +367,7 @@ class MatterDeviceController:
             terminationError: int,
             nextResubscribeIntervalMsec: int,
         ):
+            # pylint: disable=unused-argument, invalid-name
             LOGGER.debug(
                 "Previous subscription failed with Error: %s - re-subscribing in %s ms...",
                 terminationError,
@@ -374,6 +376,7 @@ class MatterDeviceController:
             # TODO: update node status to unavailable
 
         def resubscription_succeeded(transaction: Attribute.SubscriptionTransaction):
+            # pylint: disable=unused-argument, invalid-name
             LOGGER.debug("Subscription succeeded")
             # TODO: update node status to available
 
@@ -388,7 +391,6 @@ class MatterDeviceController:
         """Return next node_id."""
         next_node_id = self.server.storage.get(DATA_KEY_LAST_NODE_ID, 0) + 1
         self.server.storage.set(DATA_KEY_LAST_NODE_ID, next_node_id, force=True)
-        self._last_nodeid = next_node_id
         return next_node_id
 
     async def _call_sdk(self, func: Callable, *args, **kwargs) -> Any:

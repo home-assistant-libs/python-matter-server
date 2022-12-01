@@ -66,6 +66,18 @@ good-names = [
     "ip",
 ]
 
+[tool.pylint."MESSAGES CONTROL"]
+# fixme - we are still a work in progress
+# too-many-instance-attributes - just because it is unavoidable
+# too-few-public-methods - just because it is unavoidable
+# too-many-arguments - just because it is unavoidable
+disable = [
+    "fixme",
+    "too-many-instance-attributes",
+    "too-few-public-methods",
+    "too-many-arguments"
+]
+
 [tool.isort]
 # https://github.com/PyCQA/isort/wiki/isort-Settings
 profile = "black"

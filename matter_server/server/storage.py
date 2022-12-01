@@ -101,11 +101,11 @@ class StorageController:
             for filename in self.filename, f"{self.filename}.backup":
                 try:
                     _filename = os.path.join(self.server.storage_path, filename)
-                    with open(_filename, "r") as _file:
+                    with open(_filename, "r", encoding="utf-8") as _file:
                         return json_loads(_file.read())
                 except FileNotFoundError:
                     pass
-                except JSON_DECODE_EXCEPTIONS:
+                except JSON_DECODE_EXCEPTIONS: # pylint: disable=catching-non-exception
                     LOGGER.error(
                         "Error while reading persistent storage file %s", filename
                     )
@@ -144,7 +144,7 @@ class StorageController:
                     os.remove(filename_backup)
                 os.rename(self.filename, filename_backup)
 
-            with open(self.filename, "w") as _file:
+            with open(self.filename, "w", encoding="utf-8") as _file:
                 _file.write(json_dumps(self._data))
             LOGGER.debug("Saved data to persistent storage")
 
