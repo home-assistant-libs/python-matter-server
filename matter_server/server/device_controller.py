@@ -44,6 +44,7 @@ from ..common.models.error import (
     NodeCommissionFailed,
     NodeInterviewFailed,
     NodeNotExists,
+    NodeNotResolving,
     SDKCommandFailed,
 )
 from ..common.models.events import EventType
@@ -105,7 +106,10 @@ class MatterDeviceController:
             node = dataclass_from_dict(MatterNode, node_dict)
             self._nodes[node_id] = node
             # make sure to start node subscriptions
-            await self.subscribe_node(node_id)
+            try:
+                await self.subscribe_node(node_id)
+            except NodeNotResolving:
+                LOGGER.warning(f"Node {node_id} is not resolving, skipping...")
         # create task to check for nodes that need any re(interviews)
         self.server.loop.create_task(self._check_interviews())
         LOGGER.debug("CHIP Device Controller Initialized")
@@ -331,7 +335,10 @@ class MatterDeviceController:
         assert node_id not in self._subscriptions, "Already subscribed to node"
         LOGGER.debug("Setup subscription for node %s", node_id)
 
-        await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
+        try:
+            await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
+        except ChipStackError as err:
+            raise NodeNotResolving(f"Failed to resolve node {node_id}") from err
         # we follow the pattern of apple and google here and
         # just do a wildcard subscription for all clusters and properties
         # the client will handle filtering of the events.
