@@ -142,7 +142,7 @@ class MatterDeviceController:
     async def commission_on_network(
         self,
         setup_pin_code: int,
-        filter_type: DiscoveryFilterType = DiscoveryFilterType.NONE,
+        filter_type: int = 0,
         filter: Any = None,  # pylint: disable=redefined-builtin
     ) -> MatterNode:
         """
