@@ -379,7 +379,7 @@ class MatterClient:
                 return
             if isinstance(msg, ErrorResultMessage):
                 msg: ErrorResultMessage = msg
-                future.set_exception(FailedCommand(msg.message_id, msg.errorCode))
+                future.set_exception(FailedCommand(msg.message_id, msg.error_code))
                 return
 
         # handle EventMessage
