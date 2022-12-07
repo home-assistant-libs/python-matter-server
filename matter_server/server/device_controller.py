@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Any, Callable, Deque, Optional, Type
 
 from chip.ChipDeviceCtrl import ChipDeviceController
 from chip.clusters import Attribute, ClusterCommand
-from chip.discovery import FilterType as DiscoveryFilterType
 from chip.exceptions import ChipStackError
 
 from ..common.helpers.api import api_command
