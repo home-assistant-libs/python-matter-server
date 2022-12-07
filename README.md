@@ -6,7 +6,7 @@ The goal of this project is primary to have Matter support in Home Assistant but
 
 This repository is for development only (so not for enduser support). For enabling Matter support within Home Assistant, please refer to the [Home Assistant documentation](https://www.home-assistant.io/integrations/matter/).
 
-NOTE: Both Matter and this implementation are in early (v1) state and probably features are missing or could be improved. See our [project board](https://github.com/orgs/home-assistant-libs/projects/1) for status updates and maybe something you'd like to help out with development and/or testing.
+NOTE: Both Matter and this implementation are in early (v1) state and features are probably missing or could be improved. See our [development notes](#development) how you can help out, with development and/or testing.
 
 ## Trying it out
 
