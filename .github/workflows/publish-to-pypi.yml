@@ -9,7 +9,7 @@ jobs:
     name: Builds and publishes releases to PyPI
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3.1.0
+      - uses: actions/checkout@v3.2.0
       - name: Set up Python 3.9
         uses: actions/setup-python@v4.3.1
         with:
