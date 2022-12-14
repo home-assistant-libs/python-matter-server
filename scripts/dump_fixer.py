@@ -16,6 +16,7 @@ from .show_stored_node import PrintButFirst, get_nodes
 
 
 def process_node(node):
+    """Process a node."""
     print(f"Node {node.node_id}")
     for endpoint_id, endpoint_data in node.raw_data["attributes"].items():
         for cluster_name, cluster_info in endpoint_data.items():
@@ -59,6 +60,7 @@ def process_node(node):
 
 
 def main():
+    """Run the script."""
     item_space_printer = PrintButFirst(2)
 
     for node in get_nodes():
