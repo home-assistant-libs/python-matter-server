@@ -38,6 +38,8 @@ jobs:
         run: black --check scripts matter_server/client matter_server/common matter_server/server
       - name: isort
         run: isort --check scripts matter_server/client matter_server/common matter_server/server
+      - name: pylint
+        run: pylint matter_server/client matter_server/common matter_server/server
       # - name: test show stored node script
       #   run: python3 -m scripts.show_stored_node tests/fixtures/nodes/lighting-example-app.json
       # - name: test dump fixer script
