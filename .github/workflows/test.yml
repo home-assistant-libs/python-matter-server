@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install python3-gi
+          sudo apt-get install python3-gi python3-gi-cairo
           python -m pip install --upgrade pip
           pip install -e .[server] -r requirements-test.txt homeassistant
       - name: Flake8
