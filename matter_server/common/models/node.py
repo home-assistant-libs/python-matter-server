@@ -71,7 +71,7 @@ class MatterNode:
     interview_version: int
     # attributes are stored in form of AttributeKey: MatterAttribute
     attributes: Dict[str, MatterAttribute]
-    # below attributes are derrived from the attributes in post init.
+    # below attributes are derived from the attributes in post init.
     endpoints: list[int] = field(default_factory=list, init=False)
     root_device_type_instance: Optional[MatterDeviceTypeInstance[RootNode]] = field(
         default=None, init=False
@@ -178,8 +178,8 @@ class MatterNode:
 
         Returns None is the Cluster is not present on the node.
         """
-        atrributes = self.get_cluster_attributes(endpoint, cluster)
-        if len(atrributes) == 0:
+        attributes = self.get_cluster_attributes(endpoint, cluster)
+        if len(attributes) == 0:
             return None
 
         def _get_attr_key(attr_name: str) -> str:
@@ -196,7 +196,7 @@ class MatterNode:
         from ..helpers.util import dataclass_from_dict
 
         return dataclass_from_dict(
-            cluster, {_get_attr_key(x.attribute_name): x.value for x in atrributes}
+            cluster, {_get_attr_key(x.attribute_name): x.value for x in attributes}
         )
 
     @property
