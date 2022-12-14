@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e . -r requirements-test.txt homeassistant
+          pip install -e .[server] -r requirements-test.txt homeassistant
       - name: Flake8
         run: flake8 scripts matter_server/client matter_server/common matter_server/server
       - name: Black
