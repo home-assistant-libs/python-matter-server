@@ -30,6 +30,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
+          sudo apt-get update
+          sudo apt-get install python3-gi
           python -m pip install --upgrade pip
           pip install -e .[server] -r requirements-test.txt homeassistant
       - name: Flake8
