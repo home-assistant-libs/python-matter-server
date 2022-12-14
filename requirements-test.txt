@@ -1,4 +1,5 @@
 black==22.10.0
 flake8==6.0.0
 isort==5.10.1
+pylint==2.15.8
 pytest==7.2.0
