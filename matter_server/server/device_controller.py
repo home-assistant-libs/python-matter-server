@@ -122,7 +122,7 @@ class MatterDeviceController:
         #     nodeid=node_id,
         # )
         # if not success:
-        #     raise NodeCommissionFailed(f"CommissionWithCode failed for node {node_id}")
+        #     raise NodeCommissionFailed(f"Commission with code failed for node {node_id}")
         await self._call_sdk(
             self.chip_controller.CommissionWithCode,
             setupPayload=code,
@@ -161,7 +161,9 @@ class MatterDeviceController:
             filter=filter,
         )
         if not success:
-            raise NodeCommissionFailed(f"CommissionWithCode failed for node {node_id}")
+            raise NodeCommissionFailed(
+                f"Commission on network failed for node {node_id}"
+            )
         # full interview of the device
         await self.interview_node(node_id)
         # make sure we start a subscription for this newly added node
