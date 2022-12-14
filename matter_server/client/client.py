@@ -49,7 +49,7 @@ SUB_WILDCARD = "*"
 
 
 class MatterClient:
-    """Manage a Matter server over Websockets."""
+    """Manage a Matter server over WebSockets."""
 
     def __init__(self, ws_server_url: str, aiohttp_session: ClientSession):
         """Initialize the Client class."""
