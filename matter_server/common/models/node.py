@@ -214,4 +214,5 @@ class MatterNode:
         )
 
     def __repr__(self):
+        """Return the representation."""
         return f"<MatterNode {self.node_id}>"
