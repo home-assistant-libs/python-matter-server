@@ -362,7 +362,7 @@ class MatterDeviceController:
             chipError: int, transaction: Attribute.SubscriptionTransaction
         ):
             # pylint: disable=unused-argument, invalid-name
-            LOGGER.error("Got error fron node: %s", chipError)
+            LOGGER.error("Got error from node: %s", chipError)
 
         def resubscription_attempted(
             transaction: Attribute.SubscriptionTransaction,
