@@ -1,4 +1,4 @@
-"""Logic to handle a client connected over websockets."""
+"""Logic to handle a client connected over WebSockets."""
 from __future__ import annotations
 
 import asyncio
