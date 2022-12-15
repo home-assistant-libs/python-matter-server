@@ -33,7 +33,7 @@ class MatterStack:
             persistentStoragePath=storage_file, enableServerInteractions=False
         )
 
-        # Initialize Certificate Authoritity Manager
+        # Initialize Certificate Authority Manager
         # yeah this is a bit weird just to prevent a circular import in the underlying SDK
         self.certificate_authority_manager: CertificateAuthorityManager = (
             chip.CertificateAuthority.CertificateAuthorityManager(
