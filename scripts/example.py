@@ -38,7 +38,7 @@ parser.add_argument(
     "--port",
     type=int,
     default=DEFAULT_PORT,
-    help=f"TCP Port on which to run the Matter Websockets Server, defaults to {DEFAULT_PORT}",
+    help=f"TCP Port on which to run the Matter WebSockets Server, defaults to {DEFAULT_PORT}",
 )
 parser.add_argument(
     "--log-level",
