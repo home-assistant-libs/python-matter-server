@@ -1,3 +1,4 @@
+"""Run the Matter Server."""
 import sys
 
 from matter_server.server.__main__ import main

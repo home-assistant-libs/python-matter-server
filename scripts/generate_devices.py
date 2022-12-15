@@ -1,3 +1,4 @@
+"""Generate device types from matter-devices.xml."""
 import pathlib
 
 import black
@@ -12,6 +13,7 @@ OUTPUT_PYTHON = REPO_ROOT / "matter_server/common/models/device_types.py"
 
 
 def gen_cls_name(name: str):
+    """Generate a class name from a cluster name."""
     # Convert uppercase words to titlecase
     name = "".join(
         # Don't mess up wifi name
@@ -36,6 +38,7 @@ def gen_cls_name(name: str):
 
 
 def main():
+    """Generate device types from matter-devices.xml."""
     data = xmltodict.parse(DEVICE_XML.read_text())
     output = [
         '''

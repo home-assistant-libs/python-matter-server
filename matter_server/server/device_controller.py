@@ -44,6 +44,7 @@ class MatterDeviceController:
         self,
         server: MatterServer,
     ):
+        """Initialize the device controller."""
         self.server = server
         # Instantiate the underlying ChipDeviceController instance on the Fabric
         self.chip_controller: ChipDeviceController = (
@@ -84,7 +85,7 @@ class MatterDeviceController:
         LOGGER.debug("CHIP Device Controller Initialized")
 
     async def stop(self) -> None:
-        """ "Handle logic on server stop."""
+        """Handle logic on server stop."""
         # unsubscribe all node subscriptions
         for sub in self._subscriptions.values():
             await self._call_sdk(sub.Shutdown)

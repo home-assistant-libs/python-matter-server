@@ -66,6 +66,7 @@ if __name__ == "__main__":
     )
 
     async def run_matter():
+        """Run the Matter server and client."""
         # start Matter Server
         await server.start()
 
@@ -77,6 +78,7 @@ if __name__ == "__main__":
                 await client.start_listening()
 
     async def handle_stop(loop: asyncio.AbstractEventLoop):
+        """Handle server stop."""
         await server.stop()
 
     # run the server

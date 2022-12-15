@@ -27,7 +27,7 @@ class ResultMessageBase:
 
 @dataclass
 class SuccessResultMessage(ResultMessageBase):
-    """Message sent when a Command has been succesfully executed."""
+    """Message sent when a Command has been successfully executed."""
 
     result: Any
 
@@ -43,7 +43,7 @@ class ErrorCode(IntEnum):
 
 @dataclass
 class ErrorResultMessage(ResultMessageBase):
-    """Message sent when a command did not execute succesfully"""
+    """Message sent when a command did not execute successfully."""
 
     error_code: ErrorCode
     details: Optional[str] = None

@@ -13,8 +13,8 @@ JSON_DECODE_EXCEPTIONS = (orjson.JSONDecodeError,)
 
 
 def json_encoder_default(obj: Any) -> Any:
-    """
-    Convert Special objects.
+    """Convert Special objects.
+
     Hand other objects to the original method.
     """
     if getattr(obj, "do_not_serialize", None):

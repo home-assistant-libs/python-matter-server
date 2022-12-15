@@ -35,18 +35,23 @@ class MatterNodeDevice(AbstractMatterNodeDevice):
     """Device that is the whole node."""
 
     def __init__(self, node: MatterNode) -> None:
+        """Initialize the node device."""
         self._node = node
 
     def node(self) -> MatterNode:
+        """Return the node of this device."""
         return self._node
 
     def device_info(self) -> Clusters.Basic:
+        """Return device info."""
         return self._node.root_device_type_instance.get_cluster(Clusters.Basic)
 
     def device_type_instances(self) -> list[MatterDeviceTypeInstance]:
+        """Return device type instances."""
         return self._node.device_type_instances
 
     def __repr__(self) -> str:
+        """Return the representation."""
         return f"<MatterNodeDevice (N:{self._node.node_id})>"
 
 
@@ -57,17 +62,21 @@ class MatterBridgedNodeDevice(AbstractMatterNodeDevice):
         self,
         bridged_device_type_instance: MatterDeviceTypeInstance[Aggregator],
     ) -> None:
+        """Initialize the bridged node device."""
         self.bridged_device_type_instance = bridged_device_type_instance
 
     def node(self) -> MatterNode:
+        """Return the node of this device."""
         return self.bridged_device_type_instance.node
 
     def device_info(self) -> Clusters.BridgedDeviceBasic:
+        """Return device info."""
         return self.bridged_device_type_instance.get_cluster(
             Clusters.BridgedDeviceBasic
         )
 
     def device_type_instances(self) -> list[MatterDeviceTypeInstance]:
+        """Return device type instances."""
         endpoint = self.bridged_device_type_instance.endpoint
         return [
             inst
@@ -76,5 +85,6 @@ class MatterBridgedNodeDevice(AbstractMatterNodeDevice):
         ]
 
     def __repr__(self) -> str:
+        """Return the representation."""
         bridged = self.bridged_device_type_instance
         return f"<MatterBridgedNodeDevice (N:{bridged.node.node_id}, E:{bridged.endpoint})>"
