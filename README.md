@@ -159,3 +159,18 @@ Please note that development is only possible on Linux and MacOS, no Windows sup
 - Download/clone the repo to your local machine.
 - Create a Python virtual environment.
 - Install the correct SDK wheels for both the cluster and core package, see instructions above if there is no wheel for your setup prebuilt.
+
+## Dockerfile
+
+### Build
+
+```sh
+docker-compose build --no-cache matter-server
+```
+
+### Run
+
+```sh
+docker-compose up -d matter-server
+docker-compose logs -f matter-server
+```
