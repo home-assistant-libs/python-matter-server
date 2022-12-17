@@ -346,8 +346,8 @@ class MatterDeviceController:
             data: Attribute.EventReadResult,
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
-            assert self.server.loop is not None
             # pylint: disable=unused-argument
+            assert self.server.loop is not None
             LOGGER.debug("received node event: %s", data)
             self.event_history.append(data)
             # TODO: This callback does not seem to fire ever or my test devices do not have events
