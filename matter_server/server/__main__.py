@@ -4,7 +4,6 @@ import asyncio
 import logging
 import os
 from pathlib import Path
-import sys
 
 from aiorun import run
 import coloredlogs
@@ -63,7 +62,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-def main():
+def main() -> None:
     """Run main execution."""
     # configure logging
     handlers = None
@@ -81,7 +80,7 @@ def main():
         args.storage_path, int(args.vendorid), int(args.fabricid), int(args.port)
     )
 
-    async def handle_stop(loop: asyncio.AbstractEventLoop):
+    async def handle_stop(loop: asyncio.AbstractEventLoop) -> None:
         # pylint: disable=unused-argument
         await server.stop()
 
@@ -90,4 +89,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
