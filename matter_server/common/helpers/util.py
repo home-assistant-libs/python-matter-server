@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from base64 import b64encode
-from dataclasses import MISSING, asdict, dataclass, fields, is_dataclass
+from dataclasses import MISSING, asdict, fields, is_dataclass
 from datetime import datetime
 from enum import Enum
 from functools import cache
@@ -11,7 +11,7 @@ import logging
 import platform
 from pydoc import locate
 from typing import *  # noqa: F401 F403
-from typing import Any, Optional, Type, Union, get_args, get_origin
+from typing import Any, TypeVar, Union, cast, get_args, get_origin
 
 # the below imports are here to satisfy our dataclass from dict helper
 # it needs to be able to instantiate common class instances from type hints
@@ -47,11 +47,14 @@ except:  # noqa
     NoneType = type(None)
     UnionType = type(Union)
 
+
+_T = TypeVar("_T")
+
 CHIP_CLUSTERS_PKG_NAME = "home-assistant-chip-clusters"
 CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
 
 
-def dataclass_to_dict(obj_in: dataclass, skip_none: bool = False) -> dict:
+def dataclass_to_dict(obj_in: object, skip_none: bool = False) -> dict:
     """Convert dataclass instance to dict, optionally skip None values."""
     if skip_none:
         dict_obj = asdict(
@@ -80,29 +83,29 @@ def dataclass_to_dict(obj_in: dataclass, skip_none: bool = False) -> dict:
             return None
         return value
 
-    def _clean_dict(_dict_obj: dict):
-        final = {}
+    def _clean_dict(_dict_obj: dict) -> dict:
+        _final = {}
         for key, value in _dict_obj.items():
             if isinstance(key, int):
                 key = str(key)
-            final[key] = _convert_value(value)
-        return final
+            _final[key] = _convert_value(value)
+        return _final
 
     dict_obj["_type"] = f"{obj_in.__module__}.{obj_in.__class__.__qualname__}"
     return _clean_dict(dict_obj)
 
 
-def parse_utc_timestamp(datetime_string: str):
+def parse_utc_timestamp(datetime_string: str) -> datetime:
     """Parse datetime from string."""
     return datetime.fromisoformat(datetime_string.replace("Z", "+00:00"))
 
 
 def parse_value(
-    name: str, value: Any, value_type: Union[Type, str], default: Any = MISSING
-):
+    name: str, value: Any, value_type: Union[type[Any], str], default: Any = MISSING
+) -> Any:
     """Try to parse a value from raw (json) data and type definitions."""
     if isinstance(value, dict) and "_type" in value:
-        return dataclass_from_dict(None, value)
+        return implicit_dataclass_from_dict(value)
     if isinstance(value_type, str):
         # type is provided as string
         if value_type == "type":
@@ -199,18 +202,13 @@ def parse_value(
     return value
 
 
-def dataclass_from_dict(cls: Optional[dataclass], dict_obj: dict, strict=False):
+def dataclass_from_dict(cls: type[_T], dict_obj: dict, strict: bool = False) -> _T:
     """
     Create (instance of) a dataclass by providing a dict with values.
 
     Including support for nested structures and common type conversions.
     If strict mode enabled, any additional keys in the provided dict will result in a KeyError.
     """
-    if "_type" in dict_obj:
-        # we support providing the (actual/final) class/type name as `_type` attribute within the dict.
-        # TODO: make this more robust
-        cls_type_str = dict_obj.pop("_type")
-        cls = locate(cls_type_str) or eval(cls_type_str)
     if strict:
         extra_keys = dict_obj.keys() - set([f.name for f in fields(cls)])
         if extra_keys:
@@ -233,6 +231,18 @@ def dataclass_from_dict(cls: Optional[dataclass], dict_obj: dict, strict=False):
     )
 
 
+def implicit_dataclass_from_dict(dict_obj: dict, strict: bool = False) -> Any:
+    """Create (instance of) a dataclass by providing a dict with values.
+
+    The class type name is included as `_type` attribute within the dict.
+    """
+    # Missing _type key will raise.
+    cls_type_str = dict_obj.pop("_type")
+    cls = cast(type[Any], locate(cls_type_str) or eval(cls_type_str))
+
+    return dataclass_from_dict(cls, dict_obj, strict)
+
+
 def package_version(pkg_name: str) -> str:
     """
     Return the version of an installed package.
@@ -242,7 +252,7 @@ def package_version(pkg_name: str) -> str:
     try:
         installed_version = pkg_version(pkg_name)
         if installed_version is None:
-            return "0.0.0"
+            return "0.0.0"  # type: ignore[unreachable]
         return installed_version
     except PackageNotFoundError:
         return "0.0.0"
