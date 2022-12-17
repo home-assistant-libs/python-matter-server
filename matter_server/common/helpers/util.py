@@ -41,7 +41,7 @@ from ..models.node import *  # noqa: F401 F403
 
 try:
     # python 3.10
-    from types import NoneType, UnionType
+    from types import NoneType, UnionType  # type: ignore[attr-defined]
 except:  # noqa
     # older python version
     NoneType = type(None)
@@ -126,7 +126,7 @@ def parse_value(
     if value is None and value_type is NoneType:
         return None
     if is_dataclass(value_type) and isinstance(value, dict):
-        return dataclass_from_dict(value_type, value)
+        return dataclass_from_dict(value_type, value)  # type: ignore[arg-type]
     origin = get_origin(value_type)
     if origin is list:
         return [
@@ -174,9 +174,9 @@ def parse_value(
         raise KeyError(f"`{name}` of type `{value_type}` is required.")
 
     try:
-        if issubclass(value_type, Enum):
-            return value_type(value)
-        if issubclass(value_type, datetime):
+        if issubclass(value_type, Enum):  # type: ignore[arg-type]
+            return value_type(value)  # type: ignore[operator]
+        if issubclass(value_type, datetime):  # type: ignore[arg-type]
             return parse_utc_timestamp(value)
     except TypeError:
         # happens if value_type is not a class
@@ -194,7 +194,7 @@ def parse_value(
         isinstance(value, float) or (isinstance(value, str) and value.isnumeric())
     ):
         return float32(value)
-    if not isinstance(value, value_type):
+    if not isinstance(value, value_type):  # type: ignore[arg-type]
         raise TypeError(
             f"Value {value} of type {type(value)} is invalid for {name}, "
             f"expected value of type {value_type}"
