@@ -1,9 +1,11 @@
 """Several helpers for the WebSockets API."""
 from dataclasses import MISSING, dataclass
 import inspect
-from typing import Any, Callable, Coroutine, Optional
+from typing import Any, Callable, Coroutine, Optional, TypeVar
 
 from matter_server.common.helpers.util import parse_value
+
+_F = TypeVar("_F", bound=Callable[..., Any])
 
 
 @dataclass
@@ -26,10 +28,10 @@ class APICommandHandler:
         )
 
 
-def api_command(command: str) -> Callable:
+def api_command(command: str) -> Callable[[_F], _F]:
     """Decorate a function as API route/command."""
 
-    def decorate(func: Callable) -> Callable[..., Coroutine[Any, Any, Any]]:
+    def decorate(func: _F) -> _F:
         func.api_cmd = command  # type: ignore[attr-defined]
         return func
 
