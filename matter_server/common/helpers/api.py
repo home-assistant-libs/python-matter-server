@@ -30,7 +30,7 @@ def api_command(command: str) -> Callable:
     """Decorate a function as API route/command."""
 
     def decorate(func: Callable) -> Callable[..., Coroutine[Any, Any, Any]]:
-        func.api_cmd = command
+        func.api_cmd = command  # type: ignore[attr-defined]
         return func
 
     return decorate
@@ -44,7 +44,7 @@ def get_typed_signature(call: Callable) -> inspect.Signature:
 
 def parse_arguments(
     func_sig: inspect.Signature, args: Optional[dict], strict: bool = False
-) -> dict:
+) -> dict[str, Any]:
     """Parse (and convert) incoming arguments to correct types."""
     if args is None:
         args = {}
