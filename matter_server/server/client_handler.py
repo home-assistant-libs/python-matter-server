@@ -5,7 +5,7 @@ import asyncio
 from concurrent import futures
 from contextlib import suppress
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Callable, Final, cast
 
 from aiohttp import WSMsgType, web
 import async_timeout
@@ -23,6 +23,7 @@ from ..common.models.message import (
     ErrorResultMessage,
     EventMessage,
     MessageType,
+    ServerInfoMessage,
     SuccessResultMessage,
 )
 
@@ -61,7 +62,8 @@ class WebsocketClientHandler:
     async def disconnect(self) -> None:
         """Disconnect client."""
         self._cancel()
-        await self._writer_task
+        if self._writer_task is not None:
+            await self._writer_task
 
     async def handle_client(self) -> web.WebSocketResponse:
         """Handle a websocket response."""
@@ -81,7 +83,7 @@ class WebsocketClientHandler:
         self._writer_task = asyncio.create_task(self._writer())
 
         # send server(version) info when client connects
-        self._send_message(self.server.get_info())
+        self._send_message(cast(ServerInfoMessage, self.server.get_info()))
 
         disconnect_warn = None
 
@@ -168,7 +170,7 @@ class WebsocketClientHandler:
         all_nodes = self.server.device_controller.get_nodes()
         self._send_message(SuccessResultMessage(msg.message_id, all_nodes))
 
-        def handle_event(evt: EventType, data: Any):
+        def handle_event(evt: EventType, data: Any) -> None:
             self._send_message(EventMessage(event=evt, data=data))
 
         self._unsub_callback = self.server.subscribe(handle_event)
@@ -214,10 +216,10 @@ class WebsocketClientHandler:
 
         Async friendly.
         """
-        message = json_dumps(message)
+        _message = json_dumps(message)
 
         try:
-            self._to_write.put_nowait(message)
+            self._to_write.put_nowait(_message)
         except asyncio.QueueFull:
             self._logger.error(
                 "Client exceeded max pending messages: %s", MAX_PENDING_MSG
