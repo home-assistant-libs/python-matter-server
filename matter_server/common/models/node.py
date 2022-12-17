@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 import logging
-from typing import Any, Dict, Optional, TypeVar, Union
+from typing import Any, Dict, Optional, TypeVar, Union, cast
 
 from chip.clusters import Objects as Clusters
 
@@ -57,9 +57,6 @@ class MatterAttribute:
         """Return path/key for this attribute."""
         return create_attribute_path(self.endpoint, self.cluster_id, self.attribute_id)
 
-    def __post_init__(self):
-        """Initialize optional values after init."""
-
 
 @dataclass
 class MatterNode:
@@ -73,8 +70,9 @@ class MatterNode:
     attributes: Dict[str, MatterAttribute]
     # below attributes are derived from the attributes in post init.
     endpoints: list[int] = field(default_factory=list, init=False)
-    root_device_type_instance: Optional[MatterDeviceTypeInstance[RootNode]] = field(
-        default=None, init=False
+    # Ignore type error as we are setting the value in post init.
+    root_device_type_instance: MatterDeviceTypeInstance[RootNode] = field(
+        default=None, init=False  # type: ignore[arg-type]
     )
     aggregator_device_type_instance: Optional[
         MatterDeviceTypeInstance[Aggregator]
@@ -86,7 +84,7 @@ class MatterNode:
         default_factory=list, init=False
     )
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize optional values after init."""
         # pylint: disable=too-many-branches
         device_type_instances: list[MatterDeviceTypeInstance] = []
@@ -102,10 +100,10 @@ class MatterNode:
                     dev_info = Clusters.Descriptor.Structs.DeviceTypeStruct(**dev_info)
                 device_type = DEVICE_TYPES.get(dev_info.type)
                 if device_type is None:
-                    LOGGER("Found unknown device type %s", dev_info)
+                    LOGGER.debug("Found unknown device type %s", dev_info)
                     continue
 
-                instance = MatterDeviceTypeInstance(
+                instance: MatterDeviceTypeInstance[Any] = MatterDeviceTypeInstance(
                     self, device_type, attr.endpoint, dev_info.revision
                 )
                 if device_type is RootNode:
@@ -117,7 +115,7 @@ class MatterNode:
 
         self.device_type_instances = device_type_instances
 
-        if not hasattr(self, "root_device_type_instance"):
+        if self.root_device_type_instance is None:
             raise ValueError("No root device found")
 
         self.node_devices = []
@@ -202,17 +200,23 @@ class MatterNode:
     @property
     def name(self) -> str:
         """Return friendly name for this node."""
-        return self.get_attribute(
-            self.root_device_type_instance.endpoint, Clusters.Basic, "NodeLabel"
+        return cast(
+            str,
+            self.get_attribute(
+                self.root_device_type_instance.endpoint, Clusters.Basic, "NodeLabel"
+            ).value,
         )
 
     @property
     def unique_id(self) -> str:
         """Return uniqueID for this node."""
-        return self.get_attribute(
-            self.root_device_type_instance.endpoint, Clusters.Basic, "UniqueID"
+        return cast(
+            str,
+            self.get_attribute(
+                self.root_device_type_instance.endpoint, Clusters.Basic, "UniqueID"
+            ).value,
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return the representation."""
         return f"<MatterNode {self.node_id}>"
