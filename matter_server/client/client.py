@@ -5,15 +5,7 @@ import asyncio
 import logging
 import pprint
 from types import TracebackType
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Final,
-    Optional,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Dict, Final, Optional, cast
 import uuid
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
