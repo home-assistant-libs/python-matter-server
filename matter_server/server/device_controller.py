@@ -6,10 +6,10 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Deque, Optional, Type
+from typing import TYPE_CHECKING, Any, Callable, Deque, Optional, Type, TypeVar, cast
 
-from chip.ChipDeviceCtrl import ChipDeviceController
 from chip.clusters import Attribute, ClusterCommand
+from chip.ChipDeviceCtrl import CommissionableNode
 from chip.exceptions import ChipStackError
 
 from ..common.helpers.api import api_command
@@ -30,6 +30,8 @@ if TYPE_CHECKING:
 
     from .server import MatterServer
 
+_T = TypeVar("_T")
+
 DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
@@ -46,9 +48,7 @@ class MatterDeviceController:
         """Initialize the device controller."""
         self.server = server
         # Instantiate the underlying ChipDeviceController instance on the Fabric
-        self.chip_controller: ChipDeviceController = (
-            server.stack.fabric_admin.NewController()
-        )
+        self.chip_controller = server.stack.fabric_admin.NewController()
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: Deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
@@ -60,7 +60,7 @@ class MatterDeviceController:
     @property
     def fabric_id(self) -> int:
         """Return Fabric ID."""
-        return self.chip_controller.fabricId
+        return cast(int, self.chip_controller.fabricId)
 
     async def start(self) -> None:
         """Async initialize of controller."""
@@ -79,7 +79,7 @@ class MatterDeviceController:
             except NodeNotResolving:
                 LOGGER.warning("Node %s is not resolving, skipping...", node_id)
         # create task to check for nodes that need any re(interviews)
-        self.server.loop.create_task(self._check_interviews())
+        asyncio.create_task(self._check_interviews())
         LOGGER.debug("CHIP Device Controller Initialized")
 
     async def stop(self) -> None:
@@ -218,7 +218,9 @@ class MatterDeviceController:
         return discriminator
 
     @api_command(APICommand.DISCOVER)
-    async def discover_commissionable_nodes(self):
+    async def discover_commissionable_nodes(
+        self,
+    ) -> CommissionableNode | list[CommissionableNode] | None:
         """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
 
         result = await self._call_sdk(
@@ -320,7 +322,8 @@ class MatterDeviceController:
         def attribute_updated_callback(
             path: Attribute.TypedAttributePath,
             transaction: Attribute.SubscriptionTransaction,
-        ):
+        ) -> None:
+            assert self.server.loop is not None
             new_value = transaction.GetAttribute(path)
             LOGGER.debug("attribute updated -- %s - new value: %s", path, new_value)
             node = self._nodes[node_id]
@@ -342,7 +345,8 @@ class MatterDeviceController:
         def event_callback(
             data: Attribute.EventReadResult,
             transaction: Attribute.SubscriptionTransaction,
-        ):
+        ) -> None:
+            assert self.server.loop is not None
             # pylint: disable=unused-argument
             LOGGER.debug("received node event: %s", data)
             self.event_history.append(data)
@@ -353,7 +357,7 @@ class MatterDeviceController:
 
         def error_callback(
             chipError: int, transaction: Attribute.SubscriptionTransaction
-        ):
+        ) -> None:
             # pylint: disable=unused-argument, invalid-name
             LOGGER.error("Got error from node: %s", chipError)
 
@@ -361,7 +365,7 @@ class MatterDeviceController:
             transaction: Attribute.SubscriptionTransaction,
             terminationError: int,
             nextResubscribeIntervalMsec: int,
-        ):
+        ) -> None:
             # pylint: disable=unused-argument, invalid-name
             LOGGER.debug(
                 "Previous subscription failed with Error: %s - re-subscribing in %s ms...",
@@ -370,7 +374,9 @@ class MatterDeviceController:
             )
             # TODO: update node status to unavailable
 
-        def resubscription_succeeded(transaction: Attribute.SubscriptionTransaction):
+        def resubscription_succeeded(
+            transaction: Attribute.SubscriptionTransaction,
+        ) -> None:
             # pylint: disable=unused-argument, invalid-name
             LOGGER.debug("Subscription succeeded")
             # TODO: update node status to available
@@ -384,19 +390,26 @@ class MatterDeviceController:
 
     def _get_next_node_id(self) -> int:
         """Return next node_id."""
-        next_node_id = self.server.storage.get(DATA_KEY_LAST_NODE_ID, 0) + 1
+        next_node_id = cast(int, self.server.storage.get(DATA_KEY_LAST_NODE_ID, 0)) + 1
         self.server.storage.set(DATA_KEY_LAST_NODE_ID, next_node_id, force=True)
         return next_node_id
 
-    async def _call_sdk(self, func: Callable, *args, **kwargs) -> Any:
+    async def _call_sdk(self, func: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
         """Call function on the SDK in executor and return result."""
-        return await self.server.loop.run_in_executor(
-            None,
-            partial(func, *args, **kwargs),
+        if self.server.loop is None:
+            raise RuntimeError("Server not started.")
+
+        return cast(
+            _T,
+            await self.server.loop.run_in_executor(
+                None,
+                partial(func, *args, **kwargs),
+            ),
         )
 
     async def _check_interviews(self) -> None:
         """Check if any nodes need to be (re)interviewed."""
+        assert self.server.loop is not None
         # Reinterview all nodes that have an outdated schema
         # and/or have been interviewed more than 30 days ago.
         for node in self._nodes.values():
@@ -406,14 +419,12 @@ class MatterDeviceController:
             ):
                 await self.interview_node(node.node_id)
         # reschedule self to run every hour
-        self.server.loop.call_later(
-            3600, self.server.loop.create_task, self._check_interviews()
-        )
+        self.server.loop.call_later(3600, asyncio.create_task, self._check_interviews())
 
     @staticmethod
     def _parse_attributes_from_read_result(
         node_id: int, attributes: dict[int, dict[Type, dict[Type, Any]]]
-    ) -> dict[int, MatterAttribute]:
+    ) -> dict[str, MatterAttribute]:
         """Parse attributes from ReadResult."""
         result = {}
         for endpoint, cluster_dict in attributes.items():
