@@ -37,6 +37,7 @@ test = [
   "flake8==6.0.0",
   "flake8-docstrings==1.6.0",
   "isort==5.10.1",
+  "mypy==0.991",
   "pylint==2.15.8",
   "pytest==7.2.0",
   "pytest-aiohttp==1.0.4",
@@ -45,6 +46,30 @@ test = [
 
 [project.scripts]
 matter-server = "matter_server.server.__main__:main"
+
+[tool.mypy]
+check_untyped_defs = true
+#disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+mypy_path = "matter_server/"
+no_implicit_optional = true
+show_error_codes = true
+warn_incomplete_stub = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+  "aiorun",
+  "chip.*",
+  "coloredlogs",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
