@@ -79,6 +79,9 @@ platforms = ["any"]
 zip-safe  = false
 include-package-data = true
 
+[tool.setuptools.package-data]
+matter_server = ["py.typed"]
+
 [tool.setuptools.packages.find]
 include = ["matter_server*"]
 
