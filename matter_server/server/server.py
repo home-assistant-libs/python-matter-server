@@ -25,9 +25,9 @@ from .storage import StorageController
 
 def mount_websocket(server: MatterServer, path: str) -> None:
     """Mount the websocket endpoint."""
-    clients: Set[WebsocketClientHandler] = weakref.WeakSet()
+    clients: weakref.WeakSet[WebsocketClientHandler] = weakref.WeakSet()
 
-    async def _handle_ws(request: web.Request):
+    async def _handle_ws(request: web.Request) -> web.WebSocketResponse:
         connection = WebsocketClientHandler(server, request)
         try:
             clients.add(connection)
@@ -35,7 +35,7 @@ def mount_websocket(server: MatterServer, path: str) -> None:
         finally:
             clients.remove(connection)
 
-    async def _handle_shutdown(app: web.Application):
+    async def _handle_shutdown(app: web.Application) -> None:
         # pylint: disable=unused-argument
         for client in set(clients):
             await client.disconnect()
@@ -99,6 +99,9 @@ class MatterServer:
     async def stop(self) -> None:
         """Stop running the server."""
         self.logger.info("Stopping the Matter Server...")
+        if self._http is None or self._runner is None:
+            raise RuntimeError("Server not started.")
+
         self.signal_event(EventType.SERVER_SHUTDOWN)
         await self._http.stop()
         await self._runner.cleanup()
@@ -109,14 +112,16 @@ class MatterServer:
         self.stack.shutdown()
         self.logger.debug("Cleanup complete")
 
-    def subscribe(self, callback: Callable[[EventType, Any], None]) -> None:
+    def subscribe(
+        self, callback: Callable[[EventType, Any], None]
+    ) -> Callable[[], None]:
         """
         Subscribe to events.
 
         Returns handle to remove subscription.
         """
 
-        def unsub():
+        def unsub() -> None:
             self._subscribers.remove(callback)
 
         self._subscribers.add(callback)
@@ -141,7 +146,7 @@ class MatterServer:
         return ServerDiagnostics(
             info=self.get_info(),
             nodes=self.device_controller.get_nodes(),
-            events=self.device_controller.event_history,
+            events=list(self.device_controller.event_history),
         )
 
     def signal_event(self, evt: EventType, data: Any = None) -> None:
