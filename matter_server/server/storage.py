@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, cast
 
 from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_dumps, json_loads
 
@@ -99,18 +99,18 @@ class StorageController:
 
         def _load() -> dict:
             for filename in self.filename, f"{self.filename}.backup":
+                LOGGER.debug("Loading persistent settings from %s", filename)
                 try:
                     _filename = os.path.join(self.server.storage_path, filename)
                     with open(_filename, "r", encoding="utf-8") as _file:
-                        return json_loads(_file.read())
+                        return cast(dict, json_loads(_file.read()))
                 except FileNotFoundError:
                     pass
                 except JSON_DECODE_EXCEPTIONS:  # pylint: disable=catching-non-exception
                     LOGGER.error(
                         "Error while reading persistent storage file %s", filename
                     )
-                else:
-                    LOGGER.debug("Loaded persistent settings from %s", filename)
+
             LOGGER.debug(
                 "Started with empty storage: No persistent storage file found."
             )
@@ -121,6 +121,8 @@ class StorageController:
 
     def save(self, immediate: bool = False) -> None:
         """Schedule save of data to disk."""
+        assert self.server.loop is not None
+
         if self._timer_handle is not None:
             self._timer_handle.cancel()
             self._timer_handle = None
@@ -133,10 +135,11 @@ class StorageController:
                 DEFAULT_SAVE_DELAY, self.server.loop.create_task, self.async_save()
             )
 
-    async def async_save(self):
+    async def async_save(self) -> None:
         """Save persistent data to disk."""
+        assert self.server.loop is not None
 
-        def do_save():
+        def do_save() -> None:
             filename_backup = f"{self.filename}.backup"
             # make backup before we write a new file
             if os.path.isfile(self.filename):
