@@ -1,7 +1,9 @@
 """Several helpers for the WebSockets API."""
+from __future__ import annotations
+
 from dataclasses import MISSING, dataclass
 import inspect
-from typing import Any, Callable, Coroutine, Optional, TypeVar
+from typing import Any, Callable, Coroutine, TypeVar
 
 from matter_server.common.helpers.util import parse_value
 
@@ -45,7 +47,7 @@ def get_typed_signature(call: Callable) -> inspect.Signature:
 
 
 def parse_arguments(
-    func_sig: inspect.Signature, args: Optional[dict], strict: bool = False
+    func_sig: inspect.Signature, args: dict | None, strict: bool = False
 ) -> dict[str, Any]:
     """Parse (and convert) incoming arguments to correct types."""
     if args is None:
