@@ -65,7 +65,9 @@ class MatterDeviceController:
 
     async def start(self) -> None:
         """Async initialize of controller."""
-        self.compressed_fabric_id = await self._call_sdk(self.chip_controller.GetCompressedFabricId)
+        self.compressed_fabric_id = await self._call_sdk(
+            self.chip_controller.GetCompressedFabricId
+        )
         # load nodes from persistent storage
         nodes_data = self.server.storage.get(DATA_KEY_NODES, {})
         for node_id_str, node_dict in nodes_data.items():
@@ -117,7 +119,9 @@ class MatterDeviceController:
             nodeid=node_id,
         )
         if not success:
-            raise NodeCommissionFailed(f"Commission with code failed for node {node_id}")
+            raise NodeCommissionFailed(
+                f"Commission with code failed for node {node_id}"
+            )
 
         # full interview of the device
         await self.interview_node(node_id)
