@@ -1,4 +1,4 @@
-"""Several helpers for the websockets API."""
+"""Several helpers for the WebSockets API."""
 
 
 from dataclasses import MISSING, dataclass

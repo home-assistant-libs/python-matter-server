@@ -14,7 +14,7 @@ OUTPUT_PYTHON = REPO_ROOT / "matter_server/common/models/device_types.py"
 
 def gen_cls_name(name: str):
     """Generate a class name from a cluster name."""
-    # Convert uppercase words to titlecase
+    # Convert uppercase words to title case
     name = "".join(
         # Don't mess up wifi name
         part if part == "WiFi" else part[0].upper() + part[1:].lower()
@@ -77,7 +77,7 @@ class DeviceType:
         name = device["typeName"]
 
         if not name.startswith("Matter "):
-            print("Unexpected: device doesn't start wtih Matter. Skipping")
+            print("Unexpected: device doesn't start with Matter. Skipping")
             continue
 
         name = name[len("Matter ") :]

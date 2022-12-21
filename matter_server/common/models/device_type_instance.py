@@ -49,7 +49,7 @@ class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
     def has_cluster(self, cluster: type[all_clusters.Cluster]) -> bool:
         """Check if device has a specific cluster."""
         # only return True if the cluster belongs to this device type
-        # and is actually present in the atributes.
+        # and is actually present in the attributes.
         return cluster in self.device_type.clusters and any(
             x for x in self.attributes if x.cluster_type == cluster
         )
@@ -57,7 +57,7 @@ class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
     def get_cluster(self, cluster: type[_CLUSTER_T]) -> Optional[_CLUSTER_T]:
         """Get the cluster object."""
         # only return Cluster if the cluster belongs to this device type
-        # and is actually present in the atributes.
+        # and is actually present in the attributes.
         if cluster not in self.device_type.clusters:
             return None
         return self.node.get_cluster(self.endpoint, cluster)

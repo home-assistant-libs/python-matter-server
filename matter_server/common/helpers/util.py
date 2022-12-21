@@ -92,9 +92,9 @@ def dataclass_to_dict(obj_in: dataclass, skip_none: bool = False) -> dict:
     return _clean_dict(dict_obj)
 
 
-def parse_utc_timestamp(datetimestr: str):
+def parse_utc_timestamp(datetime_string: str):
     """Parse datetime from string."""
-    return datetime.fromisoformat(datetimestr.replace("Z", "+00:00"))
+    return datetime.fromisoformat(datetime_string.replace("Z", "+00:00"))
 
 
 def parse_value(
@@ -127,9 +127,9 @@ def parse_value(
     origin = get_origin(value_type)
     if origin is list:
         return [
-            parse_value(name, subval, get_args(value_type)[0])
-            for subval in value
-            if subval is not None
+            parse_value(name, subvalue, get_args(value_type)[0])
+            for subvalue in value
+            if subvalue is not None
         ]
     elif origin is dict:
         subkey_type = get_args(value_type)[0]
