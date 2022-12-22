@@ -39,10 +39,15 @@ test = [
   "isort==5.10.1",
   "pylint==2.15.8",
   "pytest==7.2.0",
+  "pytest-aiohttp==1.0.4",
+  "pytest-cov==4.0.0",
 ]
 
 [project.scripts]
 matter-server = "matter_server.server.__main__:main"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
 
 [tool.setuptools]
 platforms = ["any"]

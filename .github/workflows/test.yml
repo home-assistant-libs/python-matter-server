@@ -37,7 +37,6 @@ jobs:
         run: pylint matter_server/
 
   test:
-    if: ${{ false }} # disable until tests are fixed
     runs-on: ubuntu-latest
     continue-on-error: true
     strategy:
@@ -60,9 +59,5 @@ jobs:
           sudo apt-get install -y libgirepository1.0-dev
           python -m pip install --upgrade pip
           pip install -e .[server] -r requirements-test.txt
-      - name: test show stored node script
-        run: python3 -m scripts.show_stored_node tests/fixtures/nodes/lighting-example-app.json
-      - name: test dump fixer script
-        run: python3 -m scripts.dump_fixer tests/fixtures/nodes/lighting-example-app.json
       - name: Pytest
-        run: pytest tests
+        run: pytest --durations 10 --cov-report term-missing --cov=matter_server --cov-report=xml tests/server/
