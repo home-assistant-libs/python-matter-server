@@ -14,5 +14,6 @@ services:
     ports:
       - "5580:5580"
     volumes:
+      # Create an .env file that sets the USERDIR environment variable.
       - ${USERDIR}/docker/matter-server/data:/data/
       - /run/dbus:/run/dbus:ro
