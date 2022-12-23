@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile.dev
     image: matter-server:latest
     container_name: matter-server
-    restart: always
+    restart: unless-stopped
     security_opt:
       # needed for bluetooth via dbus
       - apparmor:unconfined
