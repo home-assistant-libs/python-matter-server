@@ -4,7 +4,7 @@ services:
   matter-server:
     build:
       context: ./
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     image: matter-server:latest
     container_name: matter-server
     restart: always
