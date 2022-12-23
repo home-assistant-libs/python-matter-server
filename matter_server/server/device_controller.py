@@ -79,7 +79,7 @@ class MatterDeviceController:
             except NodeNotResolving:
                 LOGGER.warning("Node %s is not resolving, skipping...", node_id)
         # create task to check for nodes that need any re(interviews)
-        self.server.loop.create_task(self._check_interviews())
+        self._schedule_interviews()
         LOGGER.debug("CHIP Device Controller Initialized")
 
     async def stop(self) -> None:
@@ -406,9 +406,11 @@ class MatterDeviceController:
             ):
                 await self.interview_node(node.node_id)
         # reschedule self to run every hour
-        self.server.loop.call_later(
-            3600, self.server.loop.create_task, self._check_interviews()
-        )
+        self.server.loop.call_later(3600, self._schedule_interviews)
+
+    def _schedule_interviews(self) -> None:
+        """Schedule interviews."""
+        self.server.loop.create_task(self._check_interviews())
 
     @staticmethod
     def _parse_attributes_from_read_result(
