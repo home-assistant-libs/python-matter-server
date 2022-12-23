@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from collections import deque
 from datetime import datetime
 from functools import partial
@@ -56,19 +55,18 @@ class MatterDeviceController:
         self._nodes: dict[int, MatterNode] = {}
         self.wifi_credentials_set: bool = False
         self.thread_credentials_set: bool = False
+        self.compressed_fabric_id: int | None = None
 
     @property
     def fabric_id(self) -> int:
         """Return Fabric ID."""
         return self.chip_controller.fabricId
 
-    @property
-    def compressed_fabric_id(self) -> int:
-        """Return unique identifier for this initialized fabric."""
-        return self.chip_controller.GetCompressedFabricId()
-
     async def start(self) -> None:
         """Async initialize of controller."""
+        self.compressed_fabric_id = await self._call_sdk(
+            self.chip_controller.GetCompressedFabricId
+        )
         # load nodes from persistent storage
         nodes_data = self.server.storage.get(DATA_KEY_NODES, {})
         for node_id_str, node_dict in nodes_data.items():
@@ -114,22 +112,15 @@ class MatterDeviceController:
         """
         node_id = self._get_next_node_id()
 
-        # TODO TEMP !!!
-        # The call to CommissionWithCode returns early without waiting ?!
-        # This is most likely a bug in the SDK or its python wrapper
-        # success = await self._call_sdk(
-        #     self.chip_controller.CommissionWithCode,
-        #     setupPayload=code,
-        #     nodeid=node_id,
-        # )
-        # if not success:
-        #     raise NodeCommissionFailed(f"Commission with code failed for node {node_id}")
-        await self._call_sdk(
+        success = await self._call_sdk(
             self.chip_controller.CommissionWithCode,
             setupPayload=code,
             nodeid=node_id,
         )
-        await asyncio.sleep(60)
+        if not success:
+            raise NodeCommissionFailed(
+                f"Commission with code failed for node {node_id}"
+            )
 
         # full interview of the device
         await self.interview_node(node_id)
@@ -154,6 +145,7 @@ class MatterDeviceController:
         Returns full NodeInfo once complete.
         """
         node_id = self._get_next_node_id()
+
         success = await self._call_sdk(
             self.chip_controller.CommissionOnNetwork,
             nodeId=node_id,
@@ -165,6 +157,7 @@ class MatterDeviceController:
             raise NodeCommissionFailed(
                 f"Commission on network failed for node {node_id}"
             )
+
         # full interview of the device
         await self.interview_node(node_id)
         # make sure we start a subscription for this newly added node

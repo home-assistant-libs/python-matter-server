@@ -125,6 +125,7 @@ class MatterServer:
     @api_command(APICommand.SERVER_INFO)
     def get_info(self) -> ServerInfo:
         """Return (version)info of the Matter Server."""
+        assert self.device_controller.compressed_fabric_id is not None
         return ServerInfo(
             fabric_id=self.device_controller.fabric_id,
             compressed_fabric_id=self.device_controller.compressed_fabric_id,
