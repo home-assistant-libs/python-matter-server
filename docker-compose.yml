@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  # python-matter-server
+  matter-server:
+    build:
+      context: ./
+      dockerfile: Dockerfile.dev
+    image: matter-server:latest
+    container_name: matter-server
+    restart: always
+    security_opt:
+      # needed for bluetooth via dbus
+      - apparmor:unconfined
+    ports:
+      - "5580:5580"
+    volumes:
+      # Create an .env file that sets the USERDIR environment variable.
+      - ${USERDIR}/docker/matter-server/data:/data/
+      - /run/dbus:/run/dbus:ro
