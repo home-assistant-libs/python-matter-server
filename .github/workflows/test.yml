@@ -35,6 +35,8 @@ jobs:
         run: isort --check scripts/ matter_server/
       - name: pylint
         run: pylint matter_server/
+      - name: mypy
+        run: mypy matter_server/
 
   test:
     runs-on: ubuntu-latest

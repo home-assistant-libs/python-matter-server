@@ -1,9 +1,13 @@
 """Several helpers for the WebSockets API."""
+from __future__ import annotations
+
 from dataclasses import MISSING, dataclass
 import inspect
-from typing import Any, Callable, Coroutine, Optional
+from typing import Any, Callable, Coroutine, TypeVar
 
 from matter_server.common.helpers.util import parse_value
+
+_F = TypeVar("_F", bound=Callable[..., Any])
 
 
 @dataclass
@@ -26,11 +30,11 @@ class APICommandHandler:
         )
 
 
-def api_command(command: str) -> Callable:
+def api_command(command: str) -> Callable[[_F], _F]:
     """Decorate a function as API route/command."""
 
-    def decorate(func: Callable) -> Callable[..., Coroutine[Any, Any, Any]]:
-        func.api_cmd = command
+    def decorate(func: _F) -> _F:
+        func.api_cmd = command  # type: ignore[attr-defined]
         return func
 
     return decorate
@@ -43,8 +47,8 @@ def get_typed_signature(call: Callable) -> inspect.Signature:
 
 
 def parse_arguments(
-    func_sig: inspect.Signature, args: Optional[dict], strict: bool = False
-) -> dict:
+    func_sig: inspect.Signature, args: dict | None, strict: bool = False
+) -> dict[str, Any]:
     """Parse (and convert) incoming arguments to correct types."""
     if args is None:
         args = {}

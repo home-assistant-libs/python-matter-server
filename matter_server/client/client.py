@@ -5,7 +5,7 @@ import asyncio
 import logging
 import pprint
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Callable, Dict, NoReturn, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Final, Optional, cast
 import uuid
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
@@ -45,7 +45,7 @@ from .exceptions import (
 if TYPE_CHECKING:
     from chip.clusters.Objects import ClusterCommand
 
-SUB_WILDCARD = "*"
+SUB_WILDCARD: Final = "*"
 
 
 class MatterClient:
@@ -70,7 +70,7 @@ class MatterClient:
         event_filter: Optional[EventType] = None,
         node_filter: Optional[int] = None,
         attr_path_filter: Optional[str] = None,
-    ) -> Callable:
+    ) -> Callable[[], None]:
         """
         Subscribe to node and server events.
 
@@ -80,20 +80,26 @@ class MatterClient:
         """
         # for fast lookups we create a key based on the filters, allowing
         # a "catch all" with a wildcard (*).
+        _event_filter: str
         if event_filter is None:
-            event_filter = SUB_WILDCARD
+            _event_filter = SUB_WILDCARD
         else:
-            event_filter = event_filter.value
+            _event_filter = event_filter.value
+
+        _node_filter: str
         if node_filter is None:
-            node_filter = SUB_WILDCARD
+            _node_filter = SUB_WILDCARD
+        else:
+            _node_filter = str(node_filter)
+
         if attr_path_filter is None:
             attr_path_filter = SUB_WILDCARD
 
-        key = f"{event_filter}/{node_filter}/{attr_path_filter}"
+        key = f"{_event_filter}/{_node_filter}/{attr_path_filter}"
         self._subscribers.setdefault(key, [])
         self._subscribers[key].append(callback)
 
-        def unsubscribe():
+        def unsubscribe() -> None:
             self._subscribers[key].remove(callback)
 
         return unsubscribe
@@ -162,13 +168,16 @@ class MatterClient:
 
         Returns code to use as discriminator.
         """
-        await self.send_command(
-            APICommand.OPEN_COMMISSIONING_WINDOW,
-            node_id=node_id,
-            timeout=timeout,
-            iteration=iteration,
-            option=option,
-            discriminator=discriminator,
+        return cast(
+            int,
+            await self.send_command(
+                APICommand.OPEN_COMMISSIONING_WINDOW,
+                node_id=node_id,
+                timeout=timeout,
+                iteration=iteration,
+                option=option,
+                discriminator=discriminator,
+            ),
         )
 
     async def send_device_command(
@@ -188,9 +197,15 @@ class MatterClient:
         await self.send_command(APICommand.REMOVE_NODE, node_id=node_id)
 
     async def send_command(
-        self, command: str, require_schema: int | None = None, **kwargs
+        self,
+        command: str,
+        require_schema: int | None = None,
+        **kwargs: Any,
     ) -> Any:
         """Send a command and get a response."""
+        if not self.server_info:
+            raise InvalidState("Not connected")
+
         if (
             require_schema is not None
             and require_schema > self.server_info.schema_version
@@ -205,7 +220,7 @@ class MatterClient:
             command=command,
             args=kwargs,
         )
-        future: asyncio.Future[dict] = self._loop.create_future()
+        future: asyncio.Future[Any] = self._loop.create_future()
         self._result_futures[message.message_id] = future
         await self._send_message(message)
         try:
@@ -214,9 +229,15 @@ class MatterClient:
             self._result_futures.pop(message.message_id)
 
     async def send_command_no_wait(
-        self, command: str, require_schema: int | None = None, **kwargs
+        self,
+        command: str,
+        require_schema: int | None = None,
+        **kwargs: Any,
     ) -> None:
         """Send a command without waiting for the response."""
+        if not self.server_info:
+            raise InvalidState("Not connected")
+
         if (
             require_schema is not None
             and require_schema > self.server_info.schema_version
@@ -252,8 +273,8 @@ class MatterClient:
             raise CannotConnect(err) from err
 
         # at connect, the server sends a single message with the server info
-        info: ServerInfoMessage = await self._receive_message_or_raise()
-        self.server_info = info = info
+        info = cast(ServerInfoMessage, await self._receive_message_or_raise())
+        self.server_info = info
 
         # sdk version must match exactly
         if info.sdk_version != chip_clusters_version():
@@ -290,11 +311,9 @@ class MatterClient:
             info.sdk_version,
         )
 
-    async def start_listening(
-        self, init_ready: asyncio.Event | None = None
-    ) -> NoReturn:
+    async def start_listening(self, init_ready: asyncio.Event | None = None) -> None:
         """Start listening to the websocket (and receive initial state)."""
-        if not self.connected:
+        if not self._ws_client or not self.connected:
             raise InvalidState("Not connected when start listening")
 
         try:
@@ -302,10 +321,13 @@ class MatterClient:
                 message_id=uuid.uuid4().hex, command=APICommand.START_LISTENING
             )
             await self._send_message(message)
-            msg = await self._receive_message_or_raise()
+            nodes_msg = cast(
+                SuccessResultMessage, await self._receive_message_or_raise()
+            )
             # a full dump of all nodes will be the result of the start_listening command
             nodes = {
-                x["node_id"]: dataclass_from_dict(MatterNode, x) for x in msg.result
+                x["node_id"]: dataclass_from_dict(MatterNode, x)
+                for x in nodes_msg.result
             }
             self._nodes = nodes
             # once we've hit this point we're all set
@@ -347,7 +369,7 @@ class MatterClient:
             raise InvalidMessage(f"Received non-Text message: {ws_msg.type}")
 
         try:
-            msg: MessageType = parse_message(json_loads(ws_msg.data))
+            msg = parse_message(json_loads(ws_msg.data))
         except TypeError as err:
             raise InvalidMessage(f"Received unsupported JSON: {err}") from err
         except ValueError as err:
@@ -374,12 +396,12 @@ class MatterClient:
                 return
 
             if isinstance(msg, SuccessResultMessage):
-                msg: SuccessResultMessage = msg
                 future.set_result(msg.result)
                 return
             if isinstance(msg, ErrorResultMessage):
-                msg: ErrorResultMessage = msg
-                future.set_exception(FailedCommand(msg.message_id, msg.error_code))
+                future.set_exception(
+                    FailedCommand(msg.message_id, str(msg.error_code.value))
+                )
                 return
 
         # handle EventMessage

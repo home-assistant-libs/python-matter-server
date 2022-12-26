@@ -62,7 +62,10 @@ class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
             return None
         return self.node.get_cluster(self.endpoint, cluster)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return the representation."""
-        # pylint: disable=line-too-long
-        return f"<MatterDeviceTypeInstance {self.device_type.__name__} (N:{self.node.node_id}, E:{self.endpoint})>"
+        return (
+            "<MatterDeviceTypeInstance "
+            f"{self.device_type.__name__} "  # type: ignore[attr-defined]
+            f"(N:{self.node.node_id}, E:{self.endpoint})>"
+        )
