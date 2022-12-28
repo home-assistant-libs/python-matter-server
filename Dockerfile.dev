@@ -1,10 +1,9 @@
-FROM debian:bullseye as base
+FROM debian:bullseye
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-ARG MATTER_SERVER_VERSION=1.0.7
-ARG HOME_ASSISTANT_CHIP_VERSION=2022.11.1
+ARG MATTER_SERVER_VERSION=1.0.8
 
 WORKDIR /app
 
@@ -29,6 +28,8 @@ RUN \
     && git clone --depth 1 -b master \
     https://github.com/project-chip/connectedhomeip \
     && cp -r connectedhomeip/credentials /root/credentials \
+    && mv /root/credentials/production/paa-root-certs/* \
+          /root/credentials/development/paa-root-certs/ \
     && rm -rf connectedhomeip \
     && apt-get purge -y --auto-remove \
     git \
@@ -37,10 +38,7 @@ RUN \
 
 # hadolint ignore=DL3013
 RUN \
-    pip3 install \
-    home-assistant-chip-clusters==${HOME_ASSISTANT_CHIP_VERSION} \
-    home-assistant-chip-core==${HOME_ASSISTANT_CHIP_VERSION} \
-    && pip3 install --no-cache-dir python-matter-server=="${MATTER_SERVER_VERSION}"
+    pip3 install --no-cache-dir python-matter-server[server]=="${MATTER_SERVER_VERSION}"
 
 COPY docker-entrypoint.sh ./
 
