@@ -62,11 +62,11 @@ class MatterClient:
         self._loop = asyncio.get_running_loop()
         self._nodes: Dict[int, MatterNode] = {}
         self._result_futures: Dict[str, asyncio.Future] = {}
-        self._subscribers: dict[str, list[Callable]] = {}
+        self._subscribers: dict[str, list[Callable[[EventType, Any], None]]] = {}
 
     def subscribe(
         self,
-        callback: Callable[[EventType, Optional[Any]], None],
+        callback: Callable[[EventType, Any], None],
         event_filter: Optional[EventType] = None,
         node_filter: Optional[int] = None,
         attr_path_filter: Optional[str] = None,
@@ -437,7 +437,7 @@ class MatterClient:
     def _signal_event(
         self,
         event: EventType,
-        data: Any = None,
+        data: Any,
         node_id: Optional[int] = None,
         attribute_path: Optional[str] = None,
     ) -> None:
