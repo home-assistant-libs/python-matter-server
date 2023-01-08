@@ -68,9 +68,6 @@ class MatterDeviceController:
         self.compressed_fabric_id = await self._call_sdk(
             self.chip_controller.GetCompressedFabricId
         )
-        LOGGER.debug("CHIP Device Controller Initialized")
-
-    async def load_nodes(self) -> None:
         # load nodes from persistent storage
         nodes_data = self.server.storage.get(DATA_KEY_NODES, {})
         for node_id_str, node_dict in nodes_data.items():
@@ -84,7 +81,7 @@ class MatterDeviceController:
                 LOGGER.warning("Node %s is not resolving, skipping...", node_id)
         # create task to check for nodes that need any re(interviews)
         asyncio.create_task(self._check_interviews())
-        LOGGER.debug("Loaded nodes from persistent storage")
+        LOGGER.debug("CHIP Device Controller Initialized")
 
     async def stop(self) -> None:
         """Handle logic on server stop."""
@@ -157,7 +154,6 @@ class MatterDeviceController:
             filterType=filter_type,
             filter=filter,
         )
-
         if not success:
             raise NodeCommissionFailed(
                 f"Commission on network failed for node {node_id}"
