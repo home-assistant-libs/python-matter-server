@@ -85,6 +85,7 @@ class MatterServer:
                 "CHIP Core version does not match CHIP Clusters version."
             )
         self.loop = asyncio.get_running_loop()
+        await self.device_controller.initialize()
         await self.storage.start()
         await self.device_controller.start()
         mount_websocket(self, "/ws")
