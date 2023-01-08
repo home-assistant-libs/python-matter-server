@@ -9,7 +9,7 @@ from functools import partial
 import logging
 from typing import TYPE_CHECKING, Any, Callable, Deque, Optional, Type, TypeVar, cast
 
-from chip.ChipDeviceCtrl import CommissionableNode
+from chip.ChipDeviceCtrl import CommissionableNode, DiscoveryFilterType
 from chip.clusters import Attribute, ClusterCommand
 from chip.exceptions import ChipStackError
 
