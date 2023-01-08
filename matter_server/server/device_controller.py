@@ -69,8 +69,9 @@ class MatterDeviceController:
             self.chip_controller.GetCompressedFabricId
         )
         LOGGER.debug("CHIP Device Controller Initialized")
-        
+
     async def start(self) -> None:
+        """Handle logic on controller start."""
         # load nodes from persistent storage
         nodes_data = self.server.storage.get(DATA_KEY_NODES, {})
         for node_id_str, node_dict in nodes_data.items():
