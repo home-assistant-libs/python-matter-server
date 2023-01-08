@@ -27,6 +27,7 @@ class StorageController:
     @property
     def filename(self) -> str:
         """Return full path to (fabric-specific) storage file."""
+        LOGGER.debug(f"Compressed Fabric ID: {self.server.device_controller.compressed_fabric_id}")
         return os.path.join(
             self.server.storage_path,
             f"{self.server.device_controller.compressed_fabric_id}.json",
