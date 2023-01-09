@@ -63,11 +63,15 @@ class MatterDeviceController:
         """Return Fabric ID."""
         return cast(int, self.chip_controller.fabricId)
 
-    async def start(self) -> None:
+    async def initialize(self) -> None:
         """Async initialize of controller."""
         self.compressed_fabric_id = await self._call_sdk(
             self.chip_controller.GetCompressedFabricId
         )
+        LOGGER.debug("CHIP Device Controller Initialized")
+
+    async def start(self) -> None:
+        """Handle logic on controller start."""
         # load nodes from persistent storage
         nodes_data = self.server.storage.get(DATA_KEY_NODES, {})
         for node_id_str, node_dict in nodes_data.items():
@@ -81,7 +85,7 @@ class MatterDeviceController:
                 LOGGER.warning("Node %s is not resolving, skipping...", node_id)
         # create task to check for nodes that need any re(interviews)
         asyncio.create_task(self._check_interviews())
-        LOGGER.debug("CHIP Device Controller Initialized")
+        LOGGER.debug("Loaded %s nodes", len(self._nodes))
 
     async def stop(self) -> None:
         """Handle logic on server stop."""
