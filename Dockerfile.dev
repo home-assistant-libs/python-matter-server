@@ -3,8 +3,6 @@ FROM debian:bullseye
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-ARG MATTER_SERVER_VERSION=1.0.8
-
 WORKDIR /app
 
 RUN \
@@ -36,11 +34,13 @@ RUN \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /usr/src/*
 
+
+COPY . ./
+
 # hadolint ignore=DL3013
 RUN \
-    pip3 install --no-cache-dir python-matter-server[server]=="${MATTER_SERVER_VERSION}"
-
-COPY docker-entrypoint.sh ./
+    pip3 install -U pip && \
+    pip3 install --no-cache-dir .[server]
 
 VOLUME ["/data"]
 EXPOSE 5580
