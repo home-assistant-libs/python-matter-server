@@ -13,7 +13,7 @@ from aiorun import run
 import coloredlogs
 
 path.insert(1, dirname(dirname(abspath(__file__))))
-from matter_server.client.client import MatterClient  # noqa: E402
+from matter_server.client.matter import MatterClient  # noqa: E402
 from matter_server.server.server import MatterServer  # noqa: E402
 
 logging.basicConfig(level=logging.DEBUG)
@@ -64,6 +64,7 @@ if __name__ == "__main__":
     server = MatterServer(
         args.storage_path, DEFAULT_VENDOR_ID, DEFAULT_FABRIC_ID, int(args.port)
     )
+    shutdown_evt = asyncio.Event()
 
     async def run_matter():
         """Run the Matter server and client."""
@@ -74,11 +75,12 @@ if __name__ == "__main__":
         url = f"http://127.0.0.1:{args.port}/ws"
         async with aiohttp.ClientSession() as session:
             async with MatterClient(url, session) as client:
-                # start listening
-                await client.start_listening()
+                # just wait forever until stopped
+                await shutdown_evt.wait()
 
     async def handle_stop(loop: asyncio.AbstractEventLoop):
         """Handle server stop."""
+        shutdown_evt.set()
         await server.stop()
 
     # run the server
