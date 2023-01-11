@@ -53,7 +53,6 @@ class MatterClientConnection:
         # server info is retrieved on connect
         self.server_info: ServerInfo | None = None
         self._ws_client: ClientWebSocketResponse | None = None
-        self._loop = asyncio.get_running_loop()
         self._nodes: Dict[int, MatterNode] = {}
         self._result_futures: Dict[str, asyncio.Future] = {}
         self._subscribers: dict[str, list[Callable[[EventType, Any], None]]] = {}

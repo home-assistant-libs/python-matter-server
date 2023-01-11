@@ -13,18 +13,17 @@ from aiorun import run
 import coloredlogs
 
 path.insert(1, dirname(dirname(abspath(__file__))))
+from example_server import (
+    DEFAULT_FABRIC_ID,
+    DEFAULT_PORT,
+    DEFAULT_STORAGE_PATH,
+    DEFAULT_VENDOR_ID,
+)
+
 from matter_server.client.matter import MatterClient  # noqa: E402
 from matter_server.server.server import MatterServer  # noqa: E402
 
 logging.basicConfig(level=logging.DEBUG)
-_LOGGER = logging.getLogger(__name__)
-
-DEFAULT_VENDOR_ID = 0xFFF1
-DEFAULT_FABRIC_ID = 1
-DEFAULT_PORT = 5580
-DEFAULT_URL = f"http://127.0.0.1:{DEFAULT_PORT}/ws"
-DEFAULT_STORAGE_PATH = os.path.join(Path.home(), ".matter_server")
-
 
 # Get parsed passed in arguments.
 parser = argparse.ArgumentParser(description="Matter Server Example.")
@@ -51,6 +50,8 @@ args = parser.parse_args()
 
 
 if __name__ == "__main__":
+
+    loop = asyncio.get_event_loop()
 
     # configure logging
     logging.basicConfig(level=args.log_level.upper())
@@ -84,4 +85,4 @@ if __name__ == "__main__":
         await server.stop()
 
     # run the server
-    run(run_matter(), shutdown_callback=handle_stop)
+    run(run_matter(), loop=loop, shutdown_callback=handle_stop)

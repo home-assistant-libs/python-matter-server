@@ -100,12 +100,11 @@ class MatterServer:
     async def stop(self) -> None:
         """Stop running the server."""
         self.logger.info("Stopping the Matter Server...")
-        if self._http is None or self._runner is None:
-            raise RuntimeError("Server not started.")
-
         self.signal_event(EventType.SERVER_SHUTDOWN)
-        await self._http.stop()
-        await self._runner.cleanup()
+        if self._http is not None:
+            await self._http.stop()
+        if self._runner is not None:
+            await self._runner.cleanup()
         await self.app.shutdown()
         await self.app.cleanup()
         await self.device_controller.stop()

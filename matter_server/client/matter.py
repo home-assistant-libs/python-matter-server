@@ -42,9 +42,9 @@ class MatterClient:
 
     def __init__(self, ws_server_url: str, aiohttp_session: ClientSession):
         """Initialize the Matter Client class."""
+        self.loop: asyncio.AbstractEventLoop | None = None
         self.connection = MatterClientConnection(ws_server_url, aiohttp_session)
         self.devices = MatterClientDeviceController(self)
-        self.loop = asyncio.get_running_loop()
         self._result_futures: Dict[str, asyncio.Future] = {}
         self._subscribers: dict[str, list[Callable[[EventType, Any], None]]] = {}
         self._listen_task: asyncio.Task | None = None
@@ -67,6 +67,7 @@ class MatterClient:
 
     async def start(self) -> None:
         """Start listening to the websocket (and receive initial state)."""
+        self.loop = asyncio.get_running_loop()
         if self._listen_task is not None:
             raise InvalidState("Listen task is already running")
         await self.connect()
@@ -303,7 +304,7 @@ class MatterClient:
     async def __handle_reconnect(self, attempt=1) -> None:
         """Call when (initialized) connection is lost."""
         try:
-            self.connection.connect()
+            await self.connection.connect()
         except CannotConnect:
             LOGGER.debug(
                 "Reconnect attempt %s failed, retrying in 30 seconds...", attempt
@@ -311,7 +312,7 @@ class MatterClient:
             attempt += 1
             # reschedule self
             self.loop.call_later(
-                30, asyncio.create_task, self.__handle_reconnect(), attempt
+                30, asyncio.create_task, self.__handle_reconnect(attempt)
             )
         else:
             # re-initialize when we're reconnected
