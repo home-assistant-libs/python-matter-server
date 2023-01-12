@@ -21,8 +21,9 @@ from ..common.models.message import (
     SuccessResultMessage,
 )
 from ..common.models.node import MatterAttribute, MatterNode
-from ..common.models.server_information import ServerInfo
+from ..common.models.server_information import ServerDiagnostics, ServerInfo
 from .connection import MatterClientConnection
+from .const import MIN_SCHEMA_VERSION
 from .exceptions import (
     ConnectionClosed,
     FailedCommand,
@@ -238,6 +239,11 @@ class MatterClient:
             args=kwargs,
         )
         await self.connection.send_message(message)
+
+    async def get_diagnostics(self) -> ServerDiagnostics:
+        """Return a full dump of the server (for diagnostics)."""
+        data = await self.send_command(APICommand.SERVER_DIAGNOSTICS)
+        return dataclass_from_dict(ServerDiagnostics, data)
 
     async def connect(self) -> None:
         """Connect to the Matter Server (over Websockets)."""
