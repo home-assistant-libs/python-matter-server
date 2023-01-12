@@ -23,7 +23,6 @@ from ..common.models.message import (
 from ..common.models.node import MatterAttribute, MatterNode
 from ..common.models.server_information import ServerDiagnostics, ServerInfo
 from .connection import MatterClientConnection
-from .const import MIN_SCHEMA_VERSION
 from .exceptions import (
     ConnectionClosed,
     FailedCommand,
