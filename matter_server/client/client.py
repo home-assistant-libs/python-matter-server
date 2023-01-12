@@ -188,11 +188,12 @@ class MatterClient:
         **kwargs: Any,
     ) -> Any:
         """Send a command and get a response."""
-        if not self.server_info:
+        if not self.connection.connected or not self._loop:
             raise InvalidState("Not connected")
 
         if (
             require_schema is not None
+            and self.server_info is not None
             and require_schema > self.server_info.schema_version
         ):
             raise InvalidServerVersion(
