@@ -146,6 +146,7 @@ class MatterClientConnection:
     async def send_message(self, message: CommandMessage) -> None:
         """
         Send a CommandMessage to the server.
+        
         Raises NotConnected if client not connected.
         """
         if not self.connected:
