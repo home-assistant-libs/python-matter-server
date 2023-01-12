@@ -39,9 +39,9 @@ class MatterClientConnection:
     ):
         """Initialize the Client class."""
         self.ws_server_url = ws_server_url
-        self.aiohttp_session = aiohttp_session
         # server info is retrieved on connect
         self.server_info: ServerInfo | None = None
+        self._aiohttp_session = aiohttp_session
         self._ws_client: ClientWebSocketResponse | None = None
         self._nodes: Dict[int, MatterNode] = {}
         self._result_futures: Dict[str, asyncio.Future] = {}
