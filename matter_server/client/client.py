@@ -24,10 +24,10 @@ from ..common.models.node import MatterAttribute, MatterNode
 from ..common.models.server_information import ServerInfo
 from .connection import MatterClientConnection
 from .exceptions import (
+    ConnectionClosed,
     FailedCommand,
     InvalidServerVersion,
     InvalidState,
-    ConnectionClosed,
 )
 
 if TYPE_CHECKING:
