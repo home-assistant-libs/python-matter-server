@@ -59,7 +59,7 @@ class MatterClientConnection:
 
         LOGGER.debug("Trying to connect")
         try:
-            self._ws_client = await self.aiohttp_session.ws_connect(
+            self._ws_client = await self._aiohttp_session.ws_connect(
                 self.ws_server_url,
                 heartbeat=55,
                 compress=15,
