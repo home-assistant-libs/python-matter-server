@@ -1,22 +1,15 @@
-"""Client."""
+"""Matter Client implementation."""
 from __future__ import annotations
 
 import asyncio
 import logging
-import pprint
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Callable, Dict, Final, Optional, cast
 import uuid
 
-from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
+from aiohttp import ClientSession
 
-from ..common.helpers.json import json_dumps, json_loads
-from ..common.helpers.util import (
-    chip_clusters_version,
-    dataclass_from_dict,
-    dataclass_to_dict,
-    parse_message,
-)
+from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
 from ..common.models.api_command import APICommand
 from ..common.models.events import EventType
 from ..common.models.message import (
@@ -25,21 +18,16 @@ from ..common.models.message import (
     EventMessage,
     MessageType,
     ResultMessageBase,
-    ServerInfoMessage,
     SuccessResultMessage,
 )
 from ..common.models.node import MatterAttribute, MatterNode
 from ..common.models.server_information import ServerInfo
-from .const import MIN_SCHEMA_VERSION
+from .connection import MatterClientConnection
 from .exceptions import (
-    CannotConnect,
-    ConnectionClosed,
-    ConnectionFailed,
     FailedCommand,
-    InvalidMessage,
     InvalidServerVersion,
     InvalidState,
-    NotConnected,
+    ConnectionClosed,
 )
 
 if TYPE_CHECKING:
@@ -53,16 +41,18 @@ class MatterClient:
 
     def __init__(self, ws_server_url: str, aiohttp_session: ClientSession):
         """Initialize the Client class."""
-        self.ws_server_url = ws_server_url
+        self.loop: asyncio.AbstractEventLoop | None = None
+        self.connection = MatterClientConnection(ws_server_url, aiohttp_session)
         self.logger = logging.getLogger(__package__)
-        self.aiohttp_session = aiohttp_session
-        # server info is retrieved on connect
-        self.server_info: ServerInfo | None = None
-        self._ws_client: ClientWebSocketResponse | None = None
-        self._loop = asyncio.get_running_loop()
         self._nodes: Dict[int, MatterNode] = {}
         self._result_futures: Dict[str, asyncio.Future] = {}
         self._subscribers: dict[str, list[Callable[[EventType, Any], None]]] = {}
+        self._stop_called: bool = False
+
+    @property
+    def server_info(self) -> ServerInfo | None:
+        """Return info of the server we're currently connected to."""
+        return self.connection.server_info
 
     def subscribe(
         self,
@@ -103,11 +93,6 @@ class MatterClient:
             self._subscribers[key].remove(callback)
 
         return unsubscribe
-
-    @property
-    def connected(self) -> bool:
-        """Return if we're currently connected."""
-        return self._ws_client is not None and not self._ws_client.closed
 
     async def get_nodes(self) -> list[MatterNode]:
         """Return all Matter nodes."""
@@ -220,9 +205,9 @@ class MatterClient:
             command=command,
             args=kwargs,
         )
-        future: asyncio.Future[Any] = self._loop.create_future()
+        future: asyncio.Future[Any] = self.loop.create_future()
         self._result_futures[message.message_id] = future
-        await self._send_message(message)
+        await self.connection.send_message(message)
         try:
             return await future
         finally:
@@ -251,78 +236,30 @@ class MatterClient:
             command=command,
             args=kwargs,
         )
-        await self._send_message(message)
+        await self.connection.send_message(message)
 
     async def connect(self) -> None:
-        """Connect to the websocket server."""
-        if self._ws_client is not None:
-            raise InvalidState("Already connected")
-
-        self.logger.debug("Trying to connect")
-        try:
-            self._ws_client = await self.aiohttp_session.ws_connect(
-                self.ws_server_url,
-                heartbeat=55,
-                compress=15,
-                max_msg_size=0,
-            )
-        except (
-            client_exceptions.WSServerHandshakeError,
-            client_exceptions.ClientError,
-        ) as err:
-            raise CannotConnect(err) from err
-
-        # at connect, the server sends a single message with the server info
-        info = cast(ServerInfoMessage, await self._receive_message_or_raise())
-        self.server_info = info
-
-        # sdk version must match exactly
-        if info.sdk_version != chip_clusters_version():
-            await self._ws_client.close()
-            raise InvalidServerVersion(
-                f"Matter Server SDK version is incompatible: {info.sdk_version} "
-                f"version on the client is {chip_clusters_version()} "
-            )
-
-        # basic check for server schema version compatibility
-        if info.schema_version < MIN_SCHEMA_VERSION:
-            # server version is too low, raise exception
-            await self._ws_client.close()
-            raise InvalidServerVersion(
-                f"Matter Server schema version is incompatible: {info.schema_version} "
-                f"a version is required that supports at least api schema {MIN_SCHEMA_VERSION} "
-                " - update the Matter Server to a more recent version."
-            )
-        if self.server_info.schema_version > MIN_SCHEMA_VERSION:
-            # server version is higher than expected, log only
-            self.logger.warning(
-                "Matter Server detected with schema version %s "
-                "which is higher than the preferred api schema %s of this client"
-                " - you may run into compatibility issues.",
-                info.schema_version,
-                MIN_SCHEMA_VERSION,
-            )
-
-        self.logger.info(
-            "Connected to Matter Fabric %s (%s), Schema version %s, CHIP SDK Version %s",
-            info.fabric_id,
-            info.compressed_fabric_id,
-            info.schema_version,
-            info.sdk_version,
-        )
+        """Connect to the Matter Server (over Websockets)."""
+        self.loop = asyncio.get_running_loop()
+        if self.connection.connected:
+            # already connected
+            return
+        await self.connection.connect()
+        # connect will raise when connecting failed,
+        # otherwise signal connected event
+        self._signal_event(EventType.CONNECTED)
 
     async def start_listening(self, init_ready: asyncio.Event | None = None) -> None:
         """Start listening to the websocket (and receive initial state)."""
-        if not self._ws_client or not self.connected:
-            raise InvalidState("Not connected when start listening")
+        await self.connect()
 
         try:
             message = CommandMessage(
                 message_id=uuid.uuid4().hex, command=APICommand.START_LISTENING
             )
-            await self._send_message(message)
+            await self.connection.send_message(message)
             nodes_msg = cast(
-                SuccessResultMessage, await self._receive_message_or_raise()
+                SuccessResultMessage, await self.connection.receive_message_or_raise()
             )
             # a full dump of all nodes will be the result of the start_listening command
             nodes = {
@@ -336,49 +273,24 @@ class MatterClient:
                 init_ready.set()
 
             # keep reading incoming messages
-            while not self._ws_client.closed:
-                msg = await self._receive_message_or_raise()
+            while not self._stop_called:
+                msg = await self.connection.receive_message_or_raise()
                 self._handle_incoming_message(msg)
         except ConnectionClosed:
-            pass
+            if not self._stop_called:
+                # connection lost unexpectedly
+                self._signal_event(EventType.CONNECTION_LOST)
         finally:
             await self.disconnect()
 
     async def disconnect(self) -> None:
-        """Disconnect the client."""
-        self.logger.debug("Closing client connection")
+        """Disconnect the client and cleanup."""
+        self._stop_called = True
         # cancel all command-tasks awaiting a result
         for future in self._result_futures.values():
             future.cancel()
-        # close the client if is still connected
-        if self._ws_client is not None and not self._ws_client.closed:
-            await self._ws_client.close()
-
-    async def _receive_message_or_raise(self) -> MessageType:
-        """Receive (raw) message or raise."""
-        assert self._ws_client
-        ws_msg = await self._ws_client.receive()
-
-        if ws_msg.type in (WSMsgType.CLOSE, WSMsgType.CLOSED, WSMsgType.CLOSING):
-            raise ConnectionClosed("Connection was closed.")
-
-        if ws_msg.type == WSMsgType.ERROR:
-            raise ConnectionFailed()
-
-        if ws_msg.type != WSMsgType.TEXT:
-            raise InvalidMessage(f"Received non-Text message: {ws_msg.type}")
-
-        try:
-            msg = parse_message(json_loads(ws_msg.data))
-        except TypeError as err:
-            raise InvalidMessage(f"Received unsupported JSON: {err}") from err
-        except ValueError as err:
-            raise InvalidMessage("Received invalid JSON.") from err
-
-        if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug("Received message:\n%s\n", pprint.pformat(ws_msg))
-
-        return msg
+        await self.connection.disconnect()
+        self._signal_event(EventType.DISCONNECTED)
 
     def _handle_incoming_message(self, msg: MessageType) -> None:
         """
@@ -437,7 +349,7 @@ class MatterClient:
     def _signal_event(
         self,
         event: EventType,
-        data: Any,
+        data: Any = None,
         node_id: Optional[int] = None,
         attribute_path: Optional[str] = None,
     ) -> None:
@@ -455,23 +367,6 @@ class MatterClient:
                     for callback in self._subscribers.get(key, []):
                         callback(event, data)
 
-    async def _send_message(self, message: CommandMessage) -> None:
-        """
-        Send a CommandMessage to the server.
-
-        Raises NotConnected if client not connected.
-        """
-        if not self.connected:
-            raise NotConnected
-
-        if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug("Publishing message:\n%s\n", pprint.pformat(message))
-
-        assert self._ws_client
-        assert isinstance(message, CommandMessage)
-
-        await self._ws_client.send_json(message, dumps=json_dumps)
-
     async def __aenter__(self) -> "MatterClient":
         """Initialize and connect the Matter Websocket client."""
         await self.connect()
@@ -485,5 +380,6 @@ class MatterClient:
 
     def __repr__(self) -> str:
         """Return the representation."""
-        prefix = "" if self.connected else "not "
-        return f"{type(self).__name__}(ws_server_url={self.ws_server_url!r}, {prefix}connected)"
+        url = self.connection.ws_server_url
+        prefix = "" if self.connection.connected else "not "
+        return f"{type(self).__name__}(ws_server_url={url!r}, {prefix}connected)"
