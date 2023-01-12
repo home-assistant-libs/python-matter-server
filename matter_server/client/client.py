@@ -41,13 +41,13 @@ class MatterClient:
 
     def __init__(self, ws_server_url: str, aiohttp_session: ClientSession):
         """Initialize the Client class."""
-        self.loop: asyncio.AbstractEventLoop | None = None
         self.connection = MatterClientConnection(ws_server_url, aiohttp_session)
         self.logger = logging.getLogger(__package__)
         self._nodes: Dict[int, MatterNode] = {}
         self._result_futures: Dict[str, asyncio.Future] = {}
         self._subscribers: dict[str, list[Callable[[EventType, Any], None]]] = {}
         self._stop_called: bool = False
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     @property
     def server_info(self) -> ServerInfo | None:
@@ -205,7 +205,7 @@ class MatterClient:
             command=command,
             args=kwargs,
         )
-        future: asyncio.Future[Any] = self.loop.create_future()
+        future: asyncio.Future[Any] = self._loop.create_future()
         self._result_futures[message.message_id] = future
         await self.connection.send_message(message)
         try:
@@ -240,7 +240,7 @@ class MatterClient:
 
     async def connect(self) -> None:
         """Connect to the Matter Server (over Websockets)."""
-        self.loop = asyncio.get_running_loop()
+        self._loop = asyncio.get_running_loop()
         if self.connection.connected:
             # already connected
             return
