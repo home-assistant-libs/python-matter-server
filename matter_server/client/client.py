@@ -244,10 +244,8 @@ class MatterClient:
         if self.connection.connected:
             # already connected
             return
+        # NOTE: connect will raise when connecting failed
         await self.connection.connect()
-        # connect will raise when connecting failed,
-        # otherwise signal connected event
-        self._signal_event(EventType.CONNECTED)
 
     async def start_listening(self, init_ready: asyncio.Event | None = None) -> None:
         """Start listening to the websocket (and receive initial state)."""
@@ -277,9 +275,7 @@ class MatterClient:
                 msg = await self.connection.receive_message_or_raise()
                 self._handle_incoming_message(msg)
         except ConnectionClosed:
-            if not self._stop_called:
-                # connection lost unexpectedly
-                self._signal_event(EventType.CONNECTION_LOST)
+            pass
         finally:
             await self.disconnect()
 
@@ -290,7 +286,6 @@ class MatterClient:
         for future in self._result_futures.values():
             future.cancel()
         await self.connection.disconnect()
-        self._signal_event(EventType.DISCONNECTED)
 
     def _handle_incoming_message(self, msg: MessageType) -> None:
         """
