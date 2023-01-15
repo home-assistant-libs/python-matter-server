@@ -8,6 +8,8 @@ services:
     image: matter-server:latest
     container_name: matter-server
     restart: unless-stopped
+    # Required for mDNS to work correctly
+    network_mode: host
     security_opt:
       # needed for bluetooth via dbus
       - apparmor:unconfined
@@ -15,5 +17,5 @@ services:
       - "5580:5580"
     volumes:
       # Create an .env file that sets the USERDIR environment variable.
-      - ${USERDIR}/docker/matter-server/data:/data/
+      - ${USERDIR:-$HOME}/docker/matter-server/data:/data/
       - /run/dbus:/run/dbus:ro
