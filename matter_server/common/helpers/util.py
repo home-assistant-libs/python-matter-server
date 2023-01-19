@@ -53,6 +53,11 @@ _T = TypeVar("_T")
 CHIP_CLUSTERS_PKG_NAME = "home-assistant-chip-clusters"
 CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
 
+# TEMP: Basic Cluster got renamed in SDK version v1.0.0.2
+# we will fix this later when we're basing our datastructure
+# on the ids instead of types.
+chip.clusters.Objects.Basic = chip.clusters.Objects.BasicInformation
+
 
 def dataclass_to_dict(obj_in: object, skip_none: bool = False) -> dict:
     """Convert dataclass instance to dict, optionally skip None values."""

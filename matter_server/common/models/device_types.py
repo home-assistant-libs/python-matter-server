@@ -44,7 +44,7 @@ class RootNode(DeviceType, device_type=0x0016):
 
     clusters = {
         all_clusters.AccessControl,
-        all_clusters.Basic,
+        all_clusters.BasicInformation,
         all_clusters.Descriptor,
         all_clusters.GeneralCommissioning,
         all_clusters.PowerSourceConfiguration,
