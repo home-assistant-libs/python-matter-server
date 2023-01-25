@@ -27,7 +27,3 @@ class NodeNotExists(MatterError):
 
 class VersionMismatch(MatterError):
     """Issue raised when SDK version mismatches."""
-
-
-class SDKCommandFailed(MatterError):
-    """Raised when command on the CHIP SDK Failed."""
