@@ -13,8 +13,6 @@ services:
     security_opt:
       # needed for bluetooth via dbus
       - apparmor:unconfined
-    ports:
-      - "5580:5580"
     volumes:
       # Create an .env file that sets the USERDIR environment variable.
       - ${USERDIR:-$HOME}/docker/matter-server/data:/data/
