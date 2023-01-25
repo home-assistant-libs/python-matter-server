@@ -21,7 +21,6 @@ from ..common.models.error import (
     NodeInterviewFailed,
     NodeNotExists,
     NodeNotResolving,
-    SDKCommandFailed,
 )
 from ..common.models.events import EventType
 from ..common.models.node import MatterAttribute, MatterNode
@@ -173,26 +172,22 @@ class MatterDeviceController:
     @api_command(APICommand.SET_WIFI_CREDENTIALS)
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
         """Set WiFi credentials for commissioning to a (new) device."""
-        error_code = await self._call_sdk(
+        await self._call_sdk(
             self.chip_controller.SetWiFiCredentials,
             ssid=ssid,
             credentials=credentials,
         )
 
-        if error_code != 0:
-            raise SDKCommandFailed("Set WiFi credentials failed.")
         self.wifi_credentials_set = True
 
     @api_command(APICommand.SET_THREAD_DATASET)
     async def set_thread_operational_dataset(self, dataset: str) -> None:
         """Set Thread Operational dataset in the stack."""
-        error_code = await self._call_sdk(
+        await self._call_sdk(
             self.chip_controller.SetThreadOperationalDataset,
             threadOperationalDataset=bytes.fromhex(dataset),
         )
 
-        if error_code != 0:
-            raise SDKCommandFailed("Set Thread credentials failed.")
         self.thread_credentials_set = True
 
     @api_command(APICommand.OPEN_COMMISSIONING_WINDOW)
