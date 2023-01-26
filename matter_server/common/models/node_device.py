@@ -23,7 +23,7 @@ class AbstractMatterNodeDevice(ABC):
         """Return the node of this device."""
 
     @abstractmethod
-    def device_info(self) -> Clusters.Basic | Clusters.BridgedDeviceBasic:
+    def device_info(self) -> Clusters.BasicInformation | Clusters.BridgedDeviceBasic:
         """Return device info."""
 
     @abstractmethod
@@ -42,9 +42,11 @@ class MatterNodeDevice(AbstractMatterNodeDevice):
         """Return the node of this device."""
         return self._node
 
-    def device_info(self) -> Clusters.Basic:
+    def device_info(self) -> Clusters.BasicInformation:
         """Return device info."""
-        return self._node.root_device_type_instance.get_cluster(Clusters.Basic)
+        return self._node.root_device_type_instance.get_cluster(
+            Clusters.BasicInformation
+        )
 
     def device_type_instances(self) -> list[MatterDeviceTypeInstance]:
         """Return device type instances."""
