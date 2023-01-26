@@ -203,7 +203,9 @@ class MatterNode:
         return cast(
             str,
             self.get_attribute(
-                self.root_device_type_instance.endpoint, Clusters.Basic, "NodeLabel"
+                self.root_device_type_instance.endpoint,
+                Clusters.BasicInformation,
+                "NodeLabel",
             ).value,
         )
 
@@ -213,7 +215,9 @@ class MatterNode:
         return cast(
             str,
             self.get_attribute(
-                self.root_device_type_instance.endpoint, Clusters.Basic, "UniqueID"
+                self.root_device_type_instance.endpoint,
+                Clusters.BasicInformation,
+                "UniqueID",
             ).value,
         )
 
