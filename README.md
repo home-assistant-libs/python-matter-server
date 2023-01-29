@@ -174,3 +174,12 @@ docker-compose build --no-cache matter-server
 docker-compose up -d matter-server
 docker-compose logs -f matter-server
 ```
+
+### Existing docker images
+
+If you wish to use the latest version of this code without maintaining a local image, you can also remove the `build` section in the `docker-compose.yml`, and replace the `image` tag with one of the following, dependent on your architecture:
+ - [aarch64](https://hub.docker.com/r/homeassistant/aarch64-addon-matter-server): `homeassistant/aarch64-addon-matter-server`<sup>
+ - [amd64](https://hub.docker.com/r/homeassistant/amd64-addon-matter-server): `homeassistant/amd64-addon-matter-server`
+
+These are maintained and updated in the [home-assistant/addons](https://github.com/home-assistant/addons/tree/master/matter_server) repository
+
