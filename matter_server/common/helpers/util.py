@@ -48,6 +48,7 @@ except:  # noqa
     NoneType = type(None)
     UnionType = type(Union)
 
+
 _T = TypeVar("_T")
 
 CHIP_CLUSTERS_PKG_NAME = "home-assistant-chip-clusters"
@@ -119,14 +120,12 @@ def parse_value(
             value_type = eval(value_type)
         except TypeError:
             pass
-    
+
     elif isinstance(value, dict):
         if hasattr(value_type, "from_dict"):
             return value_type.from_dict(value)
         if hasattr(value_type, "FromDict"):
             return value_type.FromDict(value)
-    
-    #logging.getLogger(__name__).warn("parse_value: %s %s %s %s", name, value, type(value), value_type)
 
     if value is None and not isinstance(default, type(MISSING)):
         return default
@@ -211,7 +210,7 @@ def parse_value(
         # Before we give up, check if we have a ValueDecodeFailure
         if isinstance(value, dict) and "TLVValue" in value and "Reason" in value:
             return ValueDecodeFailure(value["TLVValue"], value["Reason"])
-            
+
         raise TypeError(
             f"Value {value} of type {type(value)} is invalid for {name}, "
             f"expected value of type {value_type}"
