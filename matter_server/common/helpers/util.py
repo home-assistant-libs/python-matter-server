@@ -21,9 +21,9 @@ from typing import Any, TypeVar, Union, cast, get_args, get_origin
 import chip  # noqa: F401
 import chip.clusters  # noqa: F401
 from chip.clusters import Objects  # noqa: F401
+from chip.clusters.Attribute import ValueDecodeFailure  # noqa: F401
 from chip.clusters.Objects import *  # noqa: F401 F403
 from chip.clusters.Types import Nullable, NullValue  # noqa: F401
-from chip.clusters.Attribute import ValueDecodeFailure  # noqa: F401
 from chip.tlv import float32, uint
 
 from ..models.events import *  # noqa: F401 F403
