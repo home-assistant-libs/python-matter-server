@@ -23,6 +23,7 @@ import chip.clusters  # noqa: F401
 from chip.clusters import Objects  # noqa: F401
 from chip.clusters.Objects import *  # noqa: F401 F403
 from chip.clusters.Types import Nullable, NullValue  # noqa: F401
+from chip.clusters.Attribute import ValueDecodeFailure # noqa: F401
 from chip.tlv import float32, uint
 
 from ..models.events import *  # noqa: F401 F403
@@ -46,7 +47,6 @@ except:  # noqa
     # older python version
     NoneType = type(None)
     UnionType = type(Union)
-
 
 _T = TypeVar("_T")
 
@@ -119,12 +119,14 @@ def parse_value(
             value_type = eval(value_type)
         except TypeError:
             pass
-
+    
     elif isinstance(value, dict):
         if hasattr(value_type, "from_dict"):
             return value_type.from_dict(value)
         if hasattr(value_type, "FromDict"):
             return value_type.FromDict(value)
+    
+    #logging.getLogger(__name__).warn("parse_value: %s %s %s %s", name, value, type(value), value_type)
 
     if value is None and not isinstance(default, type(MISSING)):
         return default
@@ -159,6 +161,11 @@ def parse_value(
                 return parse_value(name, value, sub_arg_type)
             except (KeyError, TypeError, ValueError):
                 pass
+        
+        # Before we give up, check if we have a ValueDecodeFailure
+        if isinstance(value, dict) and "TLVValue" in value and "Reason" in value:
+            return ValueDecodeFailure(value["TLVValue"], value["Reason"])
+
         # if we get to this point, all possibilities failed
         # find out if we should raise or log this
         err = (
@@ -168,6 +175,7 @@ def parse_value(
         if NoneType not in sub_value_types:
             # raise exception, we have no idea how to handle this value
             raise TypeError(err)
+        
         # failed to parse the (sub) value but None allowed, log only
         logging.getLogger(__name__).warn(err)
         return None
@@ -200,6 +208,10 @@ def parse_value(
     ):
         return float32(value)
     if not isinstance(value, value_type):  # type: ignore[arg-type]
+        # Before we give up, check if we have a ValueDecodeFailure
+        if isinstance(value, dict) and "TLVValue" in value and "Reason" in value:
+            return ValueDecodeFailure(value["TLVValue"], value["Reason"])
+            
         raise TypeError(
             f"Value {value} of type {type(value)} is invalid for {name}, "
             f"expected value of type {value_type}"
