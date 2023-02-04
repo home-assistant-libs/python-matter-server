@@ -64,15 +64,8 @@ class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
     
     def get_attribute(self, cluster: type[all_clusters.Cluster], attribute: Union[str, int, type]) -> MatterAttribute:
         """Gets an attribute from a cluster for this device type instance."""
-        if not self.has_cluster(cluster):
-            raise ValueError(f"Device does not have cluster {cluster}")
-        
-        attr = self.node.get_attribute(self.endpoint, cluster, attribute)
-        if isinstance(attr.value, dict) and "TLVValue" in attr.value and "Reason" in attr.value:
-            raise ValueError(f"Attribute {attr} has an error: {attr.value['Reason']}")
-        
-        return attr
-    
+        return self.node.get_attribute(self.endpoint, cluster, attribute)
+
     def __repr__(self) -> str:
         """Return the representation."""
         return (
