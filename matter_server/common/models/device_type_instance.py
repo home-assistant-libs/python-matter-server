@@ -61,9 +61,9 @@ class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
         if cluster not in self.device_type.clusters:
             return None
         return self.node.get_cluster(self.endpoint, cluster)
-    
+
     def get_attribute(self, cluster: type[all_clusters.Cluster], attribute: Union[str, int, type]) -> MatterAttribute:
-        """Gets an attribute from a cluster for this device type instance."""
+        """Get attribute from a cluster for this device type instance."""
         return self.node.get_attribute(self.endpoint, cluster, attribute)
 
     def __repr__(self) -> str:
