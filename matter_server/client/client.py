@@ -170,9 +170,9 @@ class MatterClient:
         node_id: int,
         endpoint: int,
         command: ClusterCommand,
-        responseType=None,
-        timedRequestTimeoutMs: Union[None, int] = None,
-        interactionTimeoutMs: Union[None, int] = None,
+        response_type: Any | None = None,
+        timed_request_timeout_ms: Union[None, int] = None,
+        interaction_timeout_ms: Union[None, int] = None,
     ) -> Any:
         """Send a command to a Matter node/device."""
         payload = dataclass_to_dict(command)
@@ -181,9 +181,9 @@ class MatterClient:
             node_id=node_id,
             endpoint=endpoint,
             payload=payload,
-            responseType=responseType,
-            timedRequestTimeoutMs=timedRequestTimeoutMs,
-            interactionTimeoutMs=interactionTimeoutMs,
+            response_type=response_type,
+            timed_request_timeout_ms=timed_request_timeout_ms,
+            interaction_timeout_ms=interaction_timeout_ms,
         )
 
     async def remove_node(self, node_id: int) -> None:

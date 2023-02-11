@@ -7,7 +7,17 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Deque, Optional, Type, TypeVar, cast, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Deque,
+    Optional,
+    Type,
+    TypeVar,
+    cast,
+    Union,
+)
 
 from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute, ClusterCommand
@@ -275,18 +285,18 @@ class MatterDeviceController:
         node_id: int,
         endpoint: int,
         payload: ClusterCommand,
-        responseType=None,
-        timedRequestTimeoutMs: Union[None, int] = None,
-        interactionTimeoutMs: Union[None, int] = None,
+        response_type: Any | None = None,
+        timed_request_timeout_ms: Union[None, int] = None,
+        interaction_timeout_ms: Union[None, int] = None,
     ) -> Any:
         """Send a command to a Matter node/device."""
         return await self.chip_controller.SendCommand(
             nodeid=node_id,
             endpoint=endpoint,
             payload=payload,
-            responseType=responseType,
-            timedRequestTimeoutMs=timedRequestTimeoutMs,
-            interactionTimeoutMs=interactionTimeoutMs,
+            responseType=response_type,
+            timedRequestTimeoutMs=timed_request_timeout_ms,
+            interactionTimeoutMs=interaction_timeout_ms,
         )
 
     @api_command(APICommand.REMOVE_NODE)
