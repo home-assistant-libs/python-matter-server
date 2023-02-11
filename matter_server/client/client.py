@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Callable, Dict, Final, Optional, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, Final, Optional, cast, Union
 import uuid
 
 from aiohttp import ClientSession
@@ -166,7 +166,14 @@ class MatterClient:
         )
 
     async def send_device_command(
-        self, node_id: int, endpoint: int, command: ClusterCommand
+        self,
+        node_id: int,
+        endpoint: int,
+        command: ClusterCommand,
+        responseType=None,
+        timedRequestTimeoutMs: Union[None, int] = None,
+        interactionTimeoutMs: Union[None, int] = None,
+        busyWaitMs: Union[None, int] = None
     ) -> Any:
         """Send a command to a Matter node/device."""
         payload = dataclass_to_dict(command)
@@ -175,6 +182,10 @@ class MatterClient:
             node_id=node_id,
             endpoint=endpoint,
             payload=payload,
+            responseType=responseType,
+            timedRequestTimeoutMs=timedRequestTimeoutMs,
+            interactionTimeoutMs=interactionTimeoutMs,
+            busyWaitMs=busyWaitMs
         )
 
     async def remove_node(self, node_id: int) -> None:
