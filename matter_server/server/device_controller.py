@@ -15,8 +15,8 @@ from typing import (
     Optional,
     Type,
     TypeVar,
-    cast,
     Union,
+    cast,
 )
 
 from chip.ChipDeviceCtrl import CommissionableNode
