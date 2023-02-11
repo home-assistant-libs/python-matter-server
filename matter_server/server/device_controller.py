@@ -278,7 +278,6 @@ class MatterDeviceController:
         responseType=None,
         timedRequestTimeoutMs: Union[None, int] = None,
         interactionTimeoutMs: Union[None, int] = None,
-        busyWaitMs: Union[None, int] = None
     ) -> Any:
         """Send a command to a Matter node/device."""
         return await self.chip_controller.SendCommand(
@@ -288,7 +287,6 @@ class MatterDeviceController:
             responseType=responseType,
             timedRequestTimeoutMs=timedRequestTimeoutMs,
             interactionTimeoutMs=interactionTimeoutMs,
-            busyWaitMs=busyWaitMs
         )
 
     @api_command(APICommand.REMOVE_NODE)

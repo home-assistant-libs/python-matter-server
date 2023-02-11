@@ -173,7 +173,6 @@ class MatterClient:
         responseType=None,
         timedRequestTimeoutMs: Union[None, int] = None,
         interactionTimeoutMs: Union[None, int] = None,
-        busyWaitMs: Union[None, int] = None
     ) -> Any:
         """Send a command to a Matter node/device."""
         payload = dataclass_to_dict(command)
@@ -185,7 +184,6 @@ class MatterClient:
             responseType=responseType,
             timedRequestTimeoutMs=timedRequestTimeoutMs,
             interactionTimeoutMs=interactionTimeoutMs,
-            busyWaitMs=busyWaitMs
         )
 
     async def remove_node(self, node_id: int) -> None:
