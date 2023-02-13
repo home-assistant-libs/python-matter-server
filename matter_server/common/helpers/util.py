@@ -41,11 +41,11 @@ from ..models.node import *  # noqa: F401 F403
 
 try:
     # python 3.10
-    from types import NoneType, UnionType  # type: ignore[attr-defined]
+    from types import NoneType, UnionType
 except:  # noqa
     # older python version
-    NoneType = type(None)
-    UnionType = type(Union)
+    NoneType = type(None)  # type:ignore
+    UnionType = type(Union)  # type:ignore
 
 
 _T = TypeVar("_T")
