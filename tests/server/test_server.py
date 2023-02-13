@@ -228,7 +228,7 @@ async def test_server_start(
             {"node_id": 1, "endpoint": 2, "payload": mock_cluster_command},
             strict=True,
         )
-    ) == {"node_id": 1, "endpoint": 2, "payload": mock_cluster_command}
+    ) == {"node_id": 1, "endpoint": 2, "payload": mock_cluster_command, "response_type": None, "timed_request_timeout_ms": None, "interaction_timeout_ms": None}
     assert (
         parse_arguments(
             server.command_handlers[APICommand.REMOVE_NODE].signature,
