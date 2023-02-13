@@ -270,11 +270,22 @@ class MatterDeviceController:
 
     @api_command(APICommand.DEVICE_COMMAND)
     async def send_device_command(
-        self, node_id: int, endpoint: int, payload: ClusterCommand
+        self,
+        node_id: int,
+        endpoint: int,
+        payload: ClusterCommand,
+        response_type: Any | None = None,
+        timed_request_timeout_ms: int | None = None,
+        interaction_timeout_ms: int | None = None,
     ) -> Any:
         """Send a command to a Matter node/device."""
         return await self.chip_controller.SendCommand(
-            nodeid=node_id, endpoint=endpoint, payload=payload
+            nodeid=node_id,
+            endpoint=endpoint,
+            payload=payload,
+            responseType=response_type,
+            timedRequestTimeoutMs=timed_request_timeout_ms,
+            interactionTimeoutMs=interaction_timeout_ms,
         )
 
     @api_command(APICommand.REMOVE_NODE)
