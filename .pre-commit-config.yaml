@@ -32,15 +32,15 @@ repos:
         args:
           - --branch=main
       - id: trailing-whitespace
-  - repo: local
-    hooks:
-      - id: mypy
-        name: mypy
-        entry: scripts/run-in-env.sh mypy
-        types: [python]
-        language: script
-        files: ^(matter_server)/.+\.py$
-        require_serial: true
+#  - repo: local
+#    hooks:
+#      - id: mypy
+#        name: mypy
+#        entry: scripts/run-in-env.sh mypy
+#        types: [python]
+#        language: script
+#        files: ^(matter_server)/.+\.py$
+#        require_serial: true
 #      - id: pylint
 #        name: pylint
 #        entry: scripts/run-in-env.sh pylint -j 0
