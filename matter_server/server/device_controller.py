@@ -286,8 +286,8 @@ class MatterDeviceController:
         endpoint: int,
         payload: ClusterCommand,
         response_type: Any | None = None,
-        timed_request_timeout_ms: Union[None, int] = None,
-        interaction_timeout_ms: Union[None, int] = None,
+        timed_request_timeout_ms: int | None = None,
+        interaction_timeout_ms: int | None = None,
     ) -> Any:
         """Send a command to a Matter node/device."""
         return await self.chip_controller.SendCommand(
