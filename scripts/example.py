@@ -51,7 +51,6 @@ args = parser.parse_args()
 
 
 if __name__ == "__main__":
-
     # configure logging
     logging.basicConfig(level=args.log_level.upper())
     coloredlogs.install(level=args.log_level.upper())
