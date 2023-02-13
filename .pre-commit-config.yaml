@@ -36,14 +36,14 @@ repos:
 #    hooks:
 #      - id: mypy
 #        name: mypy
-#        entry: scripts/run-in-env.sh mypy
+#        entry: mypy
 #        types: [python]
 #        language: script
 #        files: ^(matter_server)/.+\.py$
 #        require_serial: true
 #      - id: pylint
 #        name: pylint
-#        entry: scripts/run-in-env.sh pylint -j 0
+#        entry: pylint -j 0
 #        types: [python]
 #        language: script
 #        files: ^(matter_server)/.+\.py$
