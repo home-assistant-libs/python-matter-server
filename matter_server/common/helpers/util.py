@@ -113,7 +113,7 @@ def parse_value(
         return implicit_dataclass_from_dict(value)
     if isinstance(value_type, str):
         # type is provided as string
-        if value_type == "type":
+        if value_type == "type" and isinstance(value, str):
             return locate(value) or eval(value)
         try:
             value_type = eval(value_type)
