@@ -27,7 +27,6 @@ from ..common.models.node import MatterAttribute, MatterNode
 from .const import SCHEMA_VERSION
 
 if TYPE_CHECKING:
-
     from .server import MatterServer
 
 _T = TypeVar("_T")
