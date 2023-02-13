@@ -41,8 +41,8 @@ from ..models.node import *  # noqa: F401 F403
 
 try:
     # python 3.10
-    from types import NoneType, UnionType  # type: ignore[attr-defined]
-except:  # noqa
+    from types import NoneType, UnionType  # type:ignore[attr-defined]
+except ImportError:  # noqa
     # older python version
     NoneType = type(None)
     UnionType = type(Union)

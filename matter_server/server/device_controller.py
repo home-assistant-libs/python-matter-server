@@ -443,7 +443,7 @@ class MatterDeviceController:
         result = {}
         for endpoint, cluster_dict in attributes.items():
             # read result output is in format {endpoint: {ClusterClass: {AttributeClass: value}}}
-            # we parse this to our own much more useable format
+            # we parse this to our own much more usable format
             for cluster_cls, attr_dict in cluster_dict.items():
                 for attr_cls, attr_value in attr_dict.items():
                     if attr_cls == Attribute.DataVersion:
