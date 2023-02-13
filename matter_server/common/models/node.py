@@ -189,7 +189,7 @@ class MatterNode:
             return attr_name[:1].lower() + attr_name[1:]
 
         # instantiate a Cluster object from the properties
-        # TODO: find another way to do this without loosing the individual cluster attributes
+        # TODO: find another way to do this without losing the individual cluster attributes
         # pylint: disable=import-outside-toplevel
         from ..helpers.util import dataclass_from_dict
 

@@ -301,7 +301,6 @@ class MatterClient:
         """
         # handle result message
         if isinstance(msg, ResultMessageBase):
-
             future = self._result_futures.get(msg.message_id)
 
             if future is None:

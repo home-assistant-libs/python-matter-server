@@ -39,7 +39,7 @@ The server runs a Matter Controller and includes all logic for storing node info
 
 ### Test devices
 
-Now that the Matter Specification is offically released in its 1.0 version, devices will be available in stores from 2023 that actually have Matter support or least manufacturers run a beta program which you can join to run Matter firmware on your device. Please refer to the documentation of your device if its already Matter enabled out of the box or you need to enable some special firmware(mode).
+Now that the Matter Specification is officially released in its 1.0 version, devices will be available in stores from 2023 that actually have Matter support or least manufacturers run a beta program which you can join to run Matter firmware on your device. Please refer to the documentation of your device if its already Matter enabled out of the box or you need to enable some special firmware(mode).
 
 Besides that it is possible to run Matter firmware on common microcontrollers such as the ESP32 and there is even a whole device emulator available which runs on a regular desktop OS. To make things easier we've prepared a [special page](https://nabucasa.github.io/matter-example-apps) where you can quickly try out running the Matter example apps on ESP32.
 
@@ -76,7 +76,7 @@ Inform the controller about the Thread credentials it needs to use when commissi
 
 **Commission with code**
 Commission a new device. For WiFi or Thread based devices, the credentials need to be set upfront, otherwise commisisoning will fail.
-The controller will use bluetooth for the commissioning of wireless devices. If the machine running the Python Matter Server controller lacks bluetooth support, comissioning will only work for devices already connected to the network (by cable or another controller).
+The controller will use bluetooth for the commissioning of wireless devices. If the machine running the Python Matter Server controller lacks bluetooth support, commissioning will only work for devices already connected to the network (by cable or another controller).
 
 ```
   {
