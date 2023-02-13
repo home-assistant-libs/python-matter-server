@@ -35,7 +35,7 @@ server = [
 test = [
   "black==22.10.0",
   "flake8==6.0.0",
-  "flake8-docstrings==1.6.0",
+  "flake8-docstrings==1.7.0",
   "isort==5.10.1",
   "mypy==0.991",
   "pylint==2.16.1",
