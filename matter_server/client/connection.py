@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, Final, cast
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
 
 from ..common.helpers.json import json_dumps, json_loads
-from ..common.helpers.util import chip_clusters_version, parse_message
+from ..common.helpers.util import parse_message
 from ..common.models.events import EventType
 from ..common.models.message import CommandMessage, MessageType, ServerInfoMessage
 from ..common.models.node import MatterNode
