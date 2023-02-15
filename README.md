@@ -150,7 +150,7 @@ When the start_listening command is issued, the server will dump all existing no
 
 
 **Send a command**
-This is a little bit more involved. Here is an example of turning on a switch.
+Because we use the datamodels of the Matter SDK, this is a little bit more involved. Here is an example of turning on a switch.
 
 ```
 # Import the CHIP clusters
