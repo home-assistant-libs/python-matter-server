@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import MISSING, dataclass
 import inspect
-from typing import Any, Callable, Coroutine, TypeVar
+from typing import Any, Callable, Coroutine, TypeVar, get_type_hints
 
 from matter_server.common.helpers.util import parse_value
 
@@ -16,6 +16,7 @@ class APICommandHandler:
 
     command: str
     signature: inspect.Signature
+    type_hints: dict[str, Any]
     target: Callable[..., Coroutine[Any, Any, Any]]
 
     @classmethod
@@ -25,7 +26,8 @@ class APICommandHandler:
         """Parse APICommandHandler by providing a function."""
         return APICommandHandler(
             command=command,
-            signature=get_typed_signature(func),
+            signature=inspect.signature(func),
+            type_hints=get_type_hints(func),
             target=func,
         )
 
@@ -40,14 +42,11 @@ def api_command(command: str) -> Callable[[_F], _F]:
     return decorate
 
 
-def get_typed_signature(call: Callable) -> inspect.Signature:
-    """Parse signature of function to do type validation and/or api spec generation."""
-    signature = inspect.signature(call)
-    return signature
-
-
 def parse_arguments(
-    func_sig: inspect.Signature, args: dict | None, strict: bool = False
+    func_sig: inspect.Signature,
+    func_types: dict[str, Any],
+    args: dict | None,
+    strict: bool = False,
 ) -> dict[str, Any]:
     """Parse (and convert) incoming arguments to correct types."""
     if args is None:
@@ -65,5 +64,5 @@ def parse_arguments(
             default = MISSING
         else:
             default = param.default
-        final_args[name] = parse_value(name, value, param.annotation, default)
+        final_args[name] = parse_value(name, value, func_types[name], default)
     return final_args

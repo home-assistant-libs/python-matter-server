@@ -10,22 +10,14 @@ from importlib.metadata import PackageNotFoundError, version as pkg_version
 import logging
 import platform
 from pydoc import locate
-from typing import *  # noqa: F401 F403
-from typing import Any, TypeVar, Union, cast, get_args, get_origin
+from types import NoneType, UnionType
+from typing import Any, TypeVar, Union, cast, get_args, get_origin, get_type_hints
 
-# the below imports are here to satisfy our dataclass from dict helper
-# it needs to be able to instantiate common class instances from type hints
-# TODO: find out how we can simplify/drop this all. especially all the eval stuff
-# this would all be a lot less complicated if we can drop python 3.9 support!
-# pylint: disable=unused-import
-import chip  # noqa: F401
-import chip.clusters  # noqa: F401
-from chip.clusters import Objects  # noqa: F401
-from chip.clusters.Objects import *  # noqa: F401 F403
-from chip.clusters.Types import Nullable, NullValue  # noqa: F401
+import chip.clusters
+import chip
+from chip.clusters.Types import Nullable, NullValue
 from chip.tlv import float32, uint
 
-from ..models.events import *  # noqa: F401 F403
 from ..models.message import (
     CommandMessage,
     ErrorResultMessage,
@@ -34,19 +26,6 @@ from ..models.message import (
     ServerInfoMessage,
     SuccessResultMessage,
 )
-from ..models.message import *  # noqa: F401 F403
-from ..models.node import *  # noqa: F401 F403
-
-# pylint: enable=unused-import
-
-try:
-    # python 3.10
-    from types import NoneType, UnionType  # type:ignore[attr-defined]
-except ImportError:  # noqa
-    # older python version
-    NoneType = type(None)
-    UnionType = type(Union)
-
 
 _T = TypeVar("_T")
 
@@ -56,7 +35,10 @@ CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
 # TEMP: Basic Cluster got renamed in SDK version v1.0.0.2
 # we will fix this later when we're basing our datastructure
 # on the ids instead of types.
-chip.clusters.Objects.Basic = chip.clusters.Objects.BasicInformation
+from chip.clusters import Objects
+from chip.clusters.Objects import *
+
+Objects.Basic = Objects.BasicInformation
 
 
 def dataclass_to_dict(obj_in: object, skip_none: bool = False) -> dict:
@@ -105,26 +87,20 @@ def parse_utc_timestamp(datetime_string: str) -> datetime:
     return datetime.fromisoformat(datetime_string.replace("Z", "+00:00"))
 
 
-def parse_value(
-    name: str, value: Any, value_type: Union[type[Any], str], default: Any = MISSING
-) -> Any:
-    """Try to parse a value from raw (json) data and type definitions."""
+def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) -> Any:
+    """Try to parse a value from raw (json) data and type annotations."""
+
+    if isinstance(value_type, str):
+        value_type = get_type_hints(value_type, globals(), locals())
+
+    # always prefer classes that have a from_dict / FromDict
+    if isinstance(value, dict) and hasattr(value_type, "from_dict"):
+        return value_type.from_dict(value)
+    if isinstance(value, dict) and hasattr(value_type, "FromDict"):
+        return value_type.FromDict(value)
+
     if isinstance(value, dict) and "_type" in value:
         return implicit_dataclass_from_dict(value)
-    if isinstance(value_type, str):
-        # type is provided as string
-        if value_type == "type" and isinstance(value, str):
-            return locate(value) or eval(value)
-        try:
-            value_type = eval(value_type)
-        except TypeError:
-            pass
-
-    elif isinstance(value, dict):
-        if hasattr(value_type, "from_dict"):
-            return value_type.from_dict(value)
-        if hasattr(value_type, "FromDict"):
-            return value_type.FromDict(value)
 
     if value is None and not isinstance(default, type(MISSING)):
         return default
@@ -139,6 +115,7 @@ def parse_value(
             for subvalue in value
             if subvalue is not None
         ]
+    # handle dictionary where we should inspect all values
     elif origin is dict:
         subkey_type = get_args(value_type)[0]
         subvalue_type = get_args(value_type)[1]
@@ -148,6 +125,7 @@ def parse_value(
             )
             for subkey, subvalue in value.items()
         }
+    # handle Union type
     elif origin is Union or origin is UnionType:
         # try all possible types
         sub_value_types = get_args(value_type)
@@ -172,7 +150,7 @@ def parse_value(
         logging.getLogger(__name__).warn(err)
         return None
     elif origin is type:
-        return eval(value)
+        return get_type_hints(value, globals(), locals())
     if value_type is Any:
         return value
     if value is None and value_type is not NoneType:
@@ -187,10 +165,18 @@ def parse_value(
         # happens if value_type is not a class
         pass
 
+    # the value type itself is literally type, meaning we should treat the value string
+    # as the actual type - TODO: Remove when we changed the datamodels
+    if value_type is type:
+        return eval(value)
+
+    # common type conversions (e.g. int as string)
     if value_type is float and isinstance(value, int):
         return float(value)
     if value_type is int and isinstance(value, str) and value.isnumeric():
         return int(value)
+
+    # Matter SDK specific types
     if value_type is uint and (
         isinstance(value, int) or (isinstance(value, str) and value.isnumeric())
     ):
@@ -199,6 +185,8 @@ def parse_value(
         isinstance(value, float) or (isinstance(value, str) and value.isnumeric())
     ):
         return float32(value)
+
+    # If we reach this point, we could not match the value with the type and we raise
     if not isinstance(value, value_type):  # type: ignore[arg-type]
         raise TypeError(
             f"Value {value} of type {type(value)} is invalid for {name}, "
@@ -221,13 +209,13 @@ def dataclass_from_dict(cls: type[_T], dict_obj: dict, strict: bool = False) -> 
                 "Extra key(s) %s not allowed for %s"
                 % (",".join(extra_keys), (str(cls)))
             )
-
+    type_hints = get_type_hints(cls)
     return cls(
         **{
             field.name: parse_value(
                 f"{cls.__name__}.{field.name}",
                 dict_obj.get(field.name),
-                field.type,
+                type_hints[field.name],
                 field.default,
             )
             for field in fields(cls)

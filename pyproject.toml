@@ -8,6 +8,7 @@ version = "2.0.2"
 license     = {text = "Apache-2.0"}
 description = "Python Matter WebSocket Server"
 readme = "README.md"
+requires-python = ">=3.10"
 authors = [
     {name = "The Home Assistant Authors", email = "hello@home-assistant.io"}
 ]
@@ -15,8 +16,8 @@ classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "Environment :: Console",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
   "Topic :: Home Automation",
 ]
 dependencies = [
@@ -48,6 +49,7 @@ test = [
 matter-server = "matter_server.server.__main__:main"
 
 [tool.mypy]
+python_version = 3.10
 check_untyped_defs = true
 #disallow_any_generics = true
 disallow_incomplete_defs = true
