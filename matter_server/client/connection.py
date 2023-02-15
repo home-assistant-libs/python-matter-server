@@ -84,15 +84,6 @@ class MatterClientConnection:
                 f"the server requires at least {info.min_supported_schema_version} "
                 " - update the Matter client to a more recent version or downgrade the server."
             )
-        if abs(self.server_info.schema_version - SCHEMA_VERSION) > 1:
-            # server version differs more than one version, log to inform user
-            LOGGER.warning(
-                "Matter Server detected with schema version %s "
-                "which is different than the preferred api schema %s of this client"
-                " - you may run into compatibility issues. Check for updates.",
-                info.schema_version,
-                SCHEMA_VERSION,
-            )
 
         LOGGER.info(
             "Connected to Matter Fabric %s (%s), Schema version %s, CHIP SDK Version %s",
