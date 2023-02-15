@@ -13,6 +13,7 @@ from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute, ClusterCommand
 from chip.exceptions import ChipStackError
 
+from ..common.const import SCHEMA_VERSION
 from ..common.helpers.api import api_command
 from ..common.helpers.util import dataclass_from_dict
 from ..common.models.api_command import APICommand
@@ -24,7 +25,6 @@ from ..common.models.error import (
 )
 from ..common.models.events import EventType
 from ..common.models.node import MatterAttribute, MatterNode
-from .const import SCHEMA_VERSION
 
 if TYPE_CHECKING:
     from .server import MatterServer

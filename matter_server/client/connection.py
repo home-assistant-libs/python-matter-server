@@ -14,7 +14,7 @@ from ..common.models.events import EventType
 from ..common.models.message import CommandMessage, MessageType, ServerInfoMessage
 from ..common.models.node import MatterNode
 from ..common.models.server_information import ServerInfo
-from .const import MIN_SCHEMA_VERSION
+from ..common.const import MIN_SCHEMA_VERSION, MAX_SCHEMA_VERSION, SCHEMA_VERSION
 from .exceptions import (
     CannotConnect,
     ConnectionClosed,
@@ -75,15 +75,7 @@ class MatterClientConnection:
         info = cast(ServerInfoMessage, await self.receive_message_or_raise())
         self.server_info = info
 
-        # sdk version must match exactly
-        if info.sdk_version != chip_clusters_version():
-            await self._ws_client.close()
-            raise InvalidServerVersion(
-                f"Matter Server SDK version is incompatible: {info.sdk_version} "
-                f"version on the client is {chip_clusters_version()} "
-            )
-
-        # basic check for server schema version compatibility
+        # basic checks for server schema version compatibility
         if info.schema_version < MIN_SCHEMA_VERSION:
             # server version is too low, raise exception
             await self._ws_client.close()
@@ -92,14 +84,20 @@ class MatterClientConnection:
                 f"a version is required that supports at least api schema {MIN_SCHEMA_VERSION} "
                 " - update the Matter Server to a more recent version."
             )
-        if self.server_info.schema_version > MIN_SCHEMA_VERSION:
-            # server version is higher than expected, log only
+        if info.schema_version > MAX_SCHEMA_VERSION:
+            # server version is too high, raise exception
+            await self._ws_client.close()
+            raise InvalidServerVersion(
+                f"Matter Server schema version is incompatible: {info.schema_version}"
+            )
+        if self.server_info.schema_version != SCHEMA_VERSION:
+            # server version does not match, log only
             LOGGER.warning(
                 "Matter Server detected with schema version %s "
-                "which is higher than the preferred api schema %s of this client"
+                "which is different than the preferred api schema %s of this client"
                 " - you may run into compatibility issues.",
                 info.schema_version,
-                MIN_SCHEMA_VERSION,
+                SCHEMA_VERSION,
             )
 
         LOGGER.info(

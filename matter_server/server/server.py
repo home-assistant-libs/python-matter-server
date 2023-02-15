@@ -8,13 +8,12 @@ import weakref
 
 from aiohttp import web
 
-from matter_server.common.models.error import VersionMismatch
-from matter_server.server.const import SCHEMA_VERSION
-
+from ..common.const import SCHEMA_VERSION
 from ..common.helpers.api import APICommandHandler, api_command
 from ..common.helpers.json import json_dumps
 from ..common.helpers.util import chip_clusters_version, chip_core_version
 from ..common.models.api_command import APICommand
+from ..common.models.error import VersionMismatch
 from ..common.models.events import EventCallBackType, EventType
 from ..common.models.server_information import ServerDiagnostics, ServerInfo
 from ..server.client_handler import WebsocketClientHandler
