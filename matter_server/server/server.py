@@ -20,6 +20,7 @@ from ..server.client_handler import WebsocketClientHandler
 from .device_controller import MatterDeviceController
 from .stack import MatterStack
 from .storage import StorageController
+from .const import MIN_SCHEMA_VERSION
 
 
 def mount_websocket(server: MatterServer, path: str) -> None:
@@ -135,6 +136,7 @@ class MatterServer:
             fabric_id=self.device_controller.fabric_id,
             compressed_fabric_id=self.device_controller.compressed_fabric_id,
             schema_version=SCHEMA_VERSION,
+            min_supported_schema_version=MIN_SCHEMA_VERSION,
             sdk_version=chip_clusters_version(),
             wifi_credentials_set=self.device_controller.wifi_credentials_set,
             thread_credentials_set=self.device_controller.thread_credentials_set,

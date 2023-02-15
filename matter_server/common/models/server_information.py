@@ -12,6 +12,7 @@ class ServerInfo:
     fabric_id: int
     compressed_fabric_id: int
     schema_version: int
+    min_supported_schema_version: int
     sdk_version: str
     wifi_credentials_set: bool
     thread_credentials_set: bool
