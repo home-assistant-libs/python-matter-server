@@ -17,10 +17,10 @@ from ..common.models.error import VersionMismatch
 from ..common.models.events import EventCallBackType, EventType
 from ..common.models.server_information import ServerDiagnostics, ServerInfo
 from ..server.client_handler import WebsocketClientHandler
+from .const import MIN_SCHEMA_VERSION
 from .device_controller import MatterDeviceController
 from .stack import MatterStack
 from .storage import StorageController
-from .const import MIN_SCHEMA_VERSION
 
 
 def mount_websocket(server: MatterServer, path: str) -> None:
