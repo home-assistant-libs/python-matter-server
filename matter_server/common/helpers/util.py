@@ -13,7 +13,6 @@ from pydoc import locate
 from types import NoneType, UnionType
 from typing import Any, TypeVar, Union, cast, get_args, get_origin, get_type_hints
 
-import chip.clusters
 import chip
 from chip.clusters.Types import Nullable, NullValue
 from chip.tlv import float32, uint
@@ -38,7 +37,7 @@ CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
 from chip.clusters import Objects
 from chip.clusters.Objects import *
 
-Objects.Basic = Objects.BasicInformation
+chip.clusters.Objects.Basic = chip.clusters.Objects.BasicInformation
 
 
 def dataclass_to_dict(obj_in: object, skip_none: bool = False) -> dict:
