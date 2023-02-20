@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from chip.clusters import ClusterCommand
-
 from matter_server.server.server import MatterServer
 from matter_server.common.models.api_command import APICommand
 from matter_server.common.helpers.api import parse_arguments
@@ -142,6 +141,7 @@ async def test_server_start(
     assert not (
         parse_arguments(
             server.command_handlers[APICommand.SERVER_INFO].signature,
+            server.command_handlers[APICommand.SERVER_INFO].type_hints,
             None,
             strict=True,
         )
@@ -149,6 +149,7 @@ async def test_server_start(
     assert not (
         parse_arguments(
             server.command_handlers[APICommand.SERVER_DIAGNOSTICS].signature,
+            server.command_handlers[APICommand.SERVER_DIAGNOSTICS].type_hints,
             None,
             strict=True,
         )
@@ -156,6 +157,7 @@ async def test_server_start(
     assert not (
         parse_arguments(
             server.command_handlers[APICommand.GET_NODES].signature,
+            server.command_handlers[APICommand.GET_NODES].type_hints,
             None,
             strict=True,
         )
@@ -163,6 +165,7 @@ async def test_server_start(
     assert (
         parse_arguments(
             server.command_handlers[APICommand.GET_NODE].signature,
+            server.command_handlers[APICommand.GET_NODE].type_hints,
             {"node_id": 1},
             strict=True,
         )
@@ -170,6 +173,7 @@ async def test_server_start(
     assert (
         parse_arguments(
             server.command_handlers[APICommand.COMMISSION_WITH_CODE].signature,
+            server.command_handlers[APICommand.COMMISSION_WITH_CODE].type_hints,
             {"code": "test_code"},
             strict=True,
         )
@@ -177,6 +181,7 @@ async def test_server_start(
     assert (
         parse_arguments(
             server.command_handlers[APICommand.COMMISSION_ON_NETWORK].signature,
+            server.command_handlers[APICommand.COMMISSION_ON_NETWORK].type_hints,
             {"setup_pin_code": 1234},
             strict=True,
         )
@@ -184,6 +189,7 @@ async def test_server_start(
     assert (
         parse_arguments(
             server.command_handlers[APICommand.SET_WIFI_CREDENTIALS].signature,
+            server.command_handlers[APICommand.SET_WIFI_CREDENTIALS].type_hints,
             {"ssid": "test_ssid", "credentials": "test_credentials"},
             strict=True,
         )
@@ -191,6 +197,7 @@ async def test_server_start(
     assert (
         parse_arguments(
             server.command_handlers[APICommand.SET_THREAD_DATASET].signature,
+            server.command_handlers[APICommand.SET_THREAD_DATASET].type_hints,
             {"dataset": "test_dataset"},
             strict=True,
         )
@@ -198,6 +205,7 @@ async def test_server_start(
     assert (
         parse_arguments(
             server.command_handlers[APICommand.OPEN_COMMISSIONING_WINDOW].signature,
+            server.command_handlers[APICommand.OPEN_COMMISSIONING_WINDOW].type_hints,
             {"node_id": 1},
             strict=True,
         )
@@ -211,6 +219,7 @@ async def test_server_start(
     assert not (
         parse_arguments(
             server.command_handlers[APICommand.DISCOVER].signature,
+            server.command_handlers[APICommand.DISCOVER].type_hints,
             None,
             strict=True,
         )
@@ -218,6 +227,7 @@ async def test_server_start(
     assert (
         parse_arguments(
             server.command_handlers[APICommand.INTERVIEW_NODE].signature,
+            server.command_handlers[APICommand.INTERVIEW_NODE].type_hints,
             {"node_id": 1},
             strict=True,
         )
@@ -225,6 +235,7 @@ async def test_server_start(
     assert (
         parse_arguments(
             server.command_handlers[APICommand.DEVICE_COMMAND].signature,
+            server.command_handlers[APICommand.DEVICE_COMMAND].type_hints,
             {"node_id": 1, "endpoint": 2, "payload": mock_cluster_command},
             strict=True,
         )
@@ -239,6 +250,7 @@ async def test_server_start(
     assert (
         parse_arguments(
             server.command_handlers[APICommand.REMOVE_NODE].signature,
+            server.command_handlers[APICommand.REMOVE_NODE].type_hints,
             {"node_id": 1},
             strict=True,
         )
@@ -249,6 +261,7 @@ async def test_server_start(
     with pytest.raises(KeyError):
         parse_arguments(
             server.command_handlers[APICommand.REMOVE_NODE].signature,
+            server.command_handlers[APICommand.REMOVE_NODE].type_hints,
             {"node_id": 1, "invalid": 2},
             strict=True,
         )
