@@ -180,7 +180,7 @@ class WebsocketClientHandler:
         self, handler: APICommandHandler, msg: CommandMessage
     ) -> None:
         try:
-            args = parse_arguments(handler.signature, msg.args)
+            args = parse_arguments(handler.signature, handler.type_hints, msg.args)
             result = handler.target(**args)
             if asyncio.iscoroutine(result):
                 result = await result
