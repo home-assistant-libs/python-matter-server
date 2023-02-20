@@ -34,8 +34,8 @@ CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
 # TEMP: Basic Cluster got renamed in SDK version v1.0.0.2
 # we will fix this later when we're basing our datastructure
 # on the ids instead of types.
-from chip.clusters import Objects
-from chip.clusters.Objects import *
+from chip.clusters import Objects  # noqa F401 E402
+from chip.clusters.Objects import *  # noqa F403 E402
 
 chip.clusters.Objects.Basic = chip.clusters.Objects.BasicInformation
 
