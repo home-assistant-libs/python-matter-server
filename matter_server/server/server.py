@@ -169,12 +169,15 @@ class MatterServer:
 
     def _register_api_commands(self) -> None:
         """Register all methods decorated as api_command."""
-        for cls in (self, self.stack, self.device_controller):
+        for cls in (self, self.device_controller):
             for attr_name in dir(cls):
                 if attr_name.startswith("__"):
                     continue
                 val = getattr(cls, attr_name)
                 if not hasattr(val, "api_cmd"):
+                    continue
+                if hasattr(val, "mock_calls"):
+                    # filter out mocks
                     continue
                 # method is decorated with our api decorator
                 self.register_api_command(val.api_cmd, val)

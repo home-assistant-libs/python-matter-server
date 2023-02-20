@@ -10,6 +10,7 @@ from matter_server.server.server import MatterServer
 from matter_server.common.models.api_command import APICommand
 from matter_server.common.helpers.api import parse_arguments
 
+
 pytestmark = pytest.mark.usefixtures(
     "application",
     "app_runner",
