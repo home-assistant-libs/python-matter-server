@@ -93,13 +93,13 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         value_type = get_type_hints(value_type, globals(), locals())
 
     # always prefer classes that have a from_dict / FromDict
-    if isinstance(value, dict) and hasattr(value_type, "from_dict"):
-        return value_type.from_dict(value)
-    if isinstance(value, dict) and hasattr(value_type, "FromDict"):
-        return value_type.FromDict(value)
-
-    if isinstance(value, dict) and "_type" in value:
-        return implicit_dataclass_from_dict(value)
+    if isinstance(value, dict):
+        if hasattr(value_type, "from_dict"):
+            return value_type.from_dict(value)
+        if hasattr(value_type, "FromDict"):
+            return value_type.FromDict(value)
+        if "_type" in value:
+            return implicit_dataclass_from_dict(value)
 
     if value is None and not isinstance(default, type(MISSING)):
         return default
