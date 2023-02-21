@@ -21,7 +21,6 @@ from ..common.models import (
     ServerInfoMessage,
     SuccessResultMessage,
 )
-from ..common.models.server_information import ServerInfo
 from .exceptions import (
     CannotConnect,
     ConnectionClosed,
@@ -48,7 +47,7 @@ class MatterClientConnection:
         """Initialize the Client class."""
         self.ws_server_url = ws_server_url
         # server info is retrieved on connect
-        self.server_info: ServerInfo | None = None
+        self.server_info: ServerInfoMessage | None = None
         self._aiohttp_session = aiohttp_session
         self._ws_client: ClientWebSocketResponse | None = None
         self._nodes: Dict[int, MatterNode] = {}
