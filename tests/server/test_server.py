@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from chip.clusters import ClusterCommand
 from matter_server.server.server import MatterServer
-from matter_server.common.models.api_command import APICommand
+from matter_server.common.models import APICommand
 from matter_server.common.helpers.api import parse_arguments
 
 
