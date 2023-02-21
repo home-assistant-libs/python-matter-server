@@ -138,6 +138,7 @@ class MatterNode:
 
     def update(self, node_data: MatterNodeData) -> None:
         """Update MatterNode from MatterNodeData."""
+        # pylint: disable=too-many-branches
         self.node_data = node_data
         # collect per endpoint data
         endpoint_data: dict[int, dict[str, Any]] = {}

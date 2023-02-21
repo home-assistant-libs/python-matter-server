@@ -259,7 +259,7 @@ class MatterDeviceController:
             last_interview=datetime.utcnow(),
             interview_version=SCHEMA_VERSION,
             attributes=self._parse_attributes_from_read_result(
-                node_id, read_response.attributes
+                read_response.attributes
             ),
         )
 
@@ -493,20 +493,21 @@ class MatterDeviceController:
 
     @staticmethod
     def _parse_attributes_from_read_result(
-        node_id: int, read_result: dict[int, dict[Type, dict[Type, Any]]]
+        read_result: dict[int, dict[Type, dict[Type, Any]]]
     ) -> dict[str, Any]:
         """Parse attributes from ReadResult."""
         result = {}
         for endpoint, cluster_dict in read_result.items():
-            # read result output is in format {endpoint: {ClusterClass: {AttributeClass: value}}}
-            # we parse this to our own much more usable format
+            # read result output is in format
+            # {endpoint: {ClusterClass: {AttributeClass: value}}}
             for cluster_cls, attr_dict in cluster_dict.items():
                 for attr_cls, attr_value in attr_dict.items():
                     if attr_cls == Attribute.DataVersion:
                         continue
                     # we are only interested in the raw values and let the client
                     # match back from the id's to the correct cluster/attribute classes
-                    # attributes are stored in form of AttributePath: ENDPOINT/CLUSTER_ID/ATTRIBUTE_ID
+                    # attributes are stored in form of AttributePath:
+                    # ENDPOINT/CLUSTER_ID/ATTRIBUTE_ID
                     attribute_path = create_attribute_path(
                         endpoint, cluster_cls.id, attr_cls.attribute_id
                     )
