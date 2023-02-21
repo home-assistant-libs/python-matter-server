@@ -331,16 +331,16 @@ class MatterClient:
 
     def _handle_event_message(self, msg: EventMessage) -> None:
         """Handle incoming event from the server."""
-        if msg.event == EventType.NODE_ADDED:
-            node = MatterNode(dataclass_from_dict(MatterNodeData, msg.data))
-            self._nodes[node.node_id] = node
-            self._signal_event(EventType.NODE_ADDED, data=node, node_id=node.node_id)
-            return
-        if msg.event == EventType.NODE_UPDATED:
+        if msg.event in (EventType.NODE_ADDED, EventType.NODE_UPDATED):
+            # an update event can potentially arrive for a not yet known node
             node_data = dataclass_from_dict(MatterNodeData, msg.data)
-            node = self._nodes[node_data.node_id]
-            node.update(node_data)
-            self._signal_event(EventType.NODE_UPDATED, data=node, node_id=node.node_id)
+            node = self._nodes.get(node_data.node_id)
+            if node is None:
+                node = MatterNode(node_data)
+                self._nodes[node.node_id] = node
+            else:
+                node.update(node_data)
+            self._signal_event(EventType.NODE_ADDED, data=node, node_id=node.node_id)
             return
         if msg.event == EventType.NODE_DELETED:
             node_id = msg.data

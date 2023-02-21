@@ -64,8 +64,8 @@ class MatterEndpoint:
         Return None if the Cluster is not present on the node.
         """
         if isinstance(cluster, type):
-            return cluster.id in self.clusters
-        return cluster in self.clusters
+            return self.clusters[cluster.id]
+        return self.clusters[cluster]
 
     def get_attribute_value(
         self,
@@ -85,12 +85,12 @@ class MatterEndpoint:
         """Return Matter Cluster Attribute object for given parameters."""
         if cluster := self.get_cluster(cluster):
             if isinstance(attribute, type):
-                return getattr(cluster.Attributes, attribute.__class__.__name__)
+                return getattr(cluster.Attributes, attribute.__name__)
             if isinstance(attribute, str):
                 return getattr(cluster.Attributes, attribute)
             return getattr(
                 cluster.Attributes,
-                ALL_ATTRIBUTES[cluster.id][attribute].__class__.__name__,
+                ALL_ATTRIBUTES[cluster.id][attribute].__name__,
             )
         return None
 
@@ -118,7 +118,7 @@ class MatterEndpoint:
         # and its underlying attributes object
         setattr(cluster_instance, attribute_name, attribute_value)
         cluster_attribute = getattr(
-            cluster_instance.Attributes, attribute_class.__class__.__name__
+            cluster_instance.Attributes, attribute_class.__name__
         )
         setattr(cluster_attribute, "value", attribute_value)
 
