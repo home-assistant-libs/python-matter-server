@@ -49,7 +49,7 @@ test = [
 matter-server = "matter_server.server.__main__:main"
 
 [tool.mypy]
-python_version = 3.10
+python_version = "3.10"
 check_untyped_defs = true
 #disallow_any_generics = true
 disallow_incomplete_defs = true

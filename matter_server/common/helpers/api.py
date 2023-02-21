@@ -45,7 +45,7 @@ def api_command(command: str) -> Callable[[_F], _F]:
 def parse_arguments(
     func_sig: inspect.Signature,
     func_types: dict[str, Any],
-    args: dict | None,
+    args: dict | None = None,
     strict: bool = False,
 ) -> dict[str, Any]:
     """Parse (and convert) incoming arguments to correct types."""

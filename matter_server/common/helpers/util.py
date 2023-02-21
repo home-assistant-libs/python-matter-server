@@ -101,7 +101,7 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
     if value is None and value_type is NoneType:
         return None
     if is_dataclass(value_type) and isinstance(value, dict):
-        return dataclass_from_dict(value_type, value)  # type: ignore[arg-type]
+        return dataclass_from_dict(value_type, value)
     origin = get_origin(value_type)
     if origin is list:
         return [
@@ -151,9 +151,9 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         raise KeyError(f"`{name}` of type `{value_type}` is required.")
 
     try:
-        if issubclass(value_type, Enum):  # type: ignore[arg-type]
-            return value_type(value)  # type: ignore[operator]
-        if issubclass(value_type, datetime):  # type: ignore[arg-type]
+        if issubclass(value_type, Enum):
+            return value_type(value)
+        if issubclass(value_type, datetime):
             return parse_utc_timestamp(value)
     except TypeError:
         # happens if value_type is not a class
