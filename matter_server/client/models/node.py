@@ -7,7 +7,7 @@ from typing import Any, TypeVar, cast
 from chip.clusters import Objects as Clusters
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS
 
-from matter_server.common.helpers.util import parse_attribute_path
+from matter_server.common.helpers.util import parse_attribute_path, parse_value
 from matter_server.common.models import MatterNodeData
 
 from .device_type_instance import MatterDeviceTypeInstance
@@ -26,11 +26,13 @@ _ATTRIBUTE_T = TypeVar("_ATTRIBUTE_T", bound=Clusters.ClusterAttributeDescriptor
 # pylint: enable=invalid-name
 
 
-def get_object_key(descriptor: Clusters.ClusterObjectDescriptor, object_id: int) -> str:
-    """Parse label/key for an object from the descriptors, given the raw object id."""
+def get_object_params(
+    descriptor: Clusters.ClusterObjectDescriptor, object_id: int
+) -> tuple[str, type]:
+    """Parse label/key and type for an object from the descriptors, given the raw object id."""
     for desc in descriptor.Fields:
         if desc.Tag == object_id:
-            return desc.Label
+            return (desc.Label, desc.Type)
     return KeyError(f"No descriptor found for object {object_id}")
 
 
@@ -113,13 +115,19 @@ class MatterEndpoint:
         attribute_class: Clusters.ClusterAttributeDescriptor = ALL_ATTRIBUTES[
             cluster_id
         ][attribute_id]
-        attribute_name = get_object_key(cluster_class.descriptor, attribute_id)
-        # we must set the attribute value both on the cluster instance
-        # and its underlying attributes object
-        setattr(cluster_instance, attribute_name, attribute_value)
+        attribute_name, attribute_type = get_object_params(
+            cluster_class.descriptor, attribute_id
+        )
+
         cluster_attribute = getattr(
             cluster_instance.Attributes, attribute_class.__name__
         )
+        # we must set the attribute value both on the cluster instance
+        # and its underlying attributes object
+        attribute_value = parse_value(
+            attribute_name, attribute_value, attribute_type, attribute_class().value
+        )
+        setattr(cluster_instance, attribute_name, attribute_value)
         setattr(cluster_attribute, "value", attribute_value)
 
 

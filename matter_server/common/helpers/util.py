@@ -1,7 +1,7 @@
 """Utils for Matter server (and client)."""
 from __future__ import annotations
 
-from base64 import b64encode
+from base64 import b64decode, b64encode
 from dataclasses import MISSING, asdict, fields, is_dataclass
 from datetime import datetime
 from enum import Enum
@@ -89,21 +89,30 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         # this shouldn't happen, but just in case
         value_type = get_type_hints(value_type, globals(), locals())
 
-    # always prefer classes that have a from_dict / FromDict
     if isinstance(value, dict):
+        # always prefer classes that have a from_dict
         if hasattr(value_type, "from_dict"):
             return value_type.from_dict(value)
-        if hasattr(value_type, "FromDict"):
-            return value_type.FromDict(value)
+        # handle a parse error in the sdk which is returned as:
+        # {'TLVValue': None, 'Reason': None}
+        if (
+            value.get("TLVValue", MISSING) is None
+            and value.get("Reason", MISSING) is None
+        ):
+            if value_type in (None, Nullable, Any):
+                return None
+            value = None
 
     if value is None and not isinstance(default, type(MISSING)):
         return default
     if value is None and value_type is NoneType:
         return None
+    if value is None and value_type is Nullable:
+        return None
     if is_dataclass(value_type) and isinstance(value, dict):
         return dataclass_from_dict(value_type, value)
     origin = get_origin(value_type)
-    if origin is list:
+    if origin is list and isinstance(value, list):
         return [
             parse_value(name, subvalue, get_args(value_type)[0])
             for subvalue in value
@@ -159,16 +168,13 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         # happens if value_type is not a class
         pass
 
-    # the value type itself is literally type, meaning we should treat the value string
-    # as the actual type - TODO: Remove when we changed the datamodels
-    if value_type is type:
-        return eval(value)
-
     # common type conversions (e.g. int as string)
     if value_type is float and isinstance(value, int):
         return float(value)
     if value_type is int and isinstance(value, str) and value.isnumeric():
         return int(value)
+    if value_type is bytes and isinstance(value, str):
+        return b64decode(value.encode())
 
     # Matter SDK specific types
     if value_type is uint and (
