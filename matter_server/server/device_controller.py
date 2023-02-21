@@ -326,7 +326,8 @@ class MatterDeviceController:
                 f"Node {node_id} does not exist or has not been interviewed."
             )
         assert node_id not in self._subscriptions, "Already subscribed to node"
-        LOGGER.debug("Setup subscription for node %s", node_id)
+        node_logger = LOGGER.getChild(str(node_id))
+        node_logger.debug("Setting up subscriptions...")
 
         node = self._nodes[node_id]
 
@@ -351,7 +352,9 @@ class MatterDeviceController:
         ) -> None:
             assert self.server.loop is not None
             new_value = transaction.GetAttribute(path)
-            LOGGER.debug("attribute updated -- %s - new value: %s", path, new_value)
+            node_logger.debug(
+                "Attribute updated -- %s - new value: %s", path, new_value
+            )
             node = self._nodes[node_id]
             attr_path = str(path.Path)
             node.attributes[attr_path] = new_value
@@ -377,7 +380,7 @@ class MatterDeviceController:
         ) -> None:
             # pylint: disable=unused-argument
             assert self.server.loop is not None
-            LOGGER.debug("received node event: %s", data)
+            node_logger.debug("Received node event: %s", data)
             self.event_history.append(data)
             # TODO: This callback does not seem to fire ever or my test devices do not have events
             self.server.loop.call_soon_threadsafe(
@@ -388,7 +391,7 @@ class MatterDeviceController:
             chipError: int, transaction: Attribute.SubscriptionTransaction
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
-            LOGGER.error("Got error from node: %s", chipError)
+            node_logger.error("Got error from node: %s", chipError)
 
         def resubscription_attempted(
             transaction: Attribute.SubscriptionTransaction,
@@ -396,7 +399,7 @@ class MatterDeviceController:
             nextResubscribeIntervalMsec: int,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
-            LOGGER.debug(
+            node_logger.debug(
                 "Previous subscription failed with Error: %s - re-subscribing in %s ms...",
                 terminationError,
                 nextResubscribeIntervalMsec,
@@ -410,7 +413,7 @@ class MatterDeviceController:
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
-            LOGGER.debug("Subscription succeeded for node %s", node_id)
+            node_logger.debug("Re-Subscription succeeded")
             # mark node as available and signal consumers
             if not node.available:
                 node.available = True
@@ -425,6 +428,7 @@ class MatterDeviceController:
         # if we reach this point, it means the node could be resolved
         # and the initial subscription succeeded, mark the node available.
         node.available = True
+        node_logger.debug("Subscription succeeded")
         self.server.signal_event(EventType.NODE_UPDATED, node)
 
     def _get_next_node_id(self) -> int:
