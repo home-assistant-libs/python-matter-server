@@ -49,26 +49,7 @@ class MatterEndpoint:
         self.clusters: dict[int, Clusters.Cluster] = {}
         # unwrap cluster and clusterattributes from raw node data attributes
         for attribute_path, attribute_value in attributes_data.items():
-            _, cluster_id, attribute_id = parse_attribute_path(attribute_path)
-            cluster_class: Clusters.Cluster = ALL_CLUSTERS[cluster_id]
-            if cluster_id in self.clusters:
-                cluster_instance = self.clusters[cluster_id]
-            else:
-                cluster_instance = cluster_class()
-                self.clusters[cluster_id] = cluster_instance
-
-            # unpack cluster attributes, using the descriptor
-            attribute_class: Clusters.ClusterAttributeDescriptor = ALL_ATTRIBUTES[
-                cluster_id
-            ][attribute_id]
-            attribute_name = get_object_key(cluster_class.descriptor, attribute_id)
-            # we must set the attribute value both on the cluster instance
-            # and its underlying attributes object
-            setattr(cluster_instance, attribute_name, attribute_value)
-            cluster_attribute = getattr(
-                cluster_instance.Attributes, attribute_class.__class__.__name__
-            )
-            setattr(cluster_attribute, "value", attribute_value)
+            self.set_attribute_value(attribute_path, attribute_value)
 
     def has_cluster(self, cluster: type[_CLUSTER_T] | int) -> bool:
         """Check if endpoint has a specific cluster."""
@@ -112,6 +93,34 @@ class MatterEndpoint:
                 ALL_ATTRIBUTES[cluster.id][attribute].__class__.__name__,
             )
         return None
+
+    def set_attribute_value(self, attribute_path: str, attribute_value: Any) -> None:
+        """
+        Set the value of a Cluster Attribute.
+
+        May only be called by logic that received data from the server.
+        Do not modify the data directly from a consumer.
+        """
+        _, cluster_id, attribute_id = parse_attribute_path(attribute_path)
+        cluster_class: Clusters.Cluster = ALL_CLUSTERS[cluster_id]
+        if cluster_id in self.clusters:
+            cluster_instance = self.clusters[cluster_id]
+        else:
+            cluster_instance = cluster_class()
+            self.clusters[cluster_id] = cluster_instance
+
+        # unpack cluster attribute, using the descriptor
+        attribute_class: Clusters.ClusterAttributeDescriptor = ALL_ATTRIBUTES[
+            cluster_id
+        ][attribute_id]
+        attribute_name = get_object_key(cluster_class.descriptor, attribute_id)
+        # we must set the attribute value both on the cluster instance
+        # and its underlying attributes object
+        setattr(cluster_instance, attribute_name, attribute_value)
+        cluster_attribute = getattr(
+            cluster_instance.Attributes, attribute_class.__class__.__name__
+        )
+        setattr(cluster_attribute, "value", attribute_value)
 
 
 class MatterNode:
@@ -186,6 +195,8 @@ class MatterNode:
 
     def update_attribute(self, attribute_path: str, new_value: Any) -> None:
         """Handle Attribute value update."""
+        endpoint_id = int(attribute_path.split("/")[0])
+        self.endpoints[endpoint_id].set_attribute_value(attribute_path, new_value)
 
     @property
     def node_id(self) -> int:

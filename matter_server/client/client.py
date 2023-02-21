@@ -334,19 +334,29 @@ class MatterClient:
         if msg.event == EventType.NODE_ADDED:
             node = MatterNode(dataclass_from_dict(MatterNode, msg.data))
             self._nodes[node.node_id] = node
-            self._signal_event(EventType.NODE_ADDED, data=node)
+            self._signal_event(EventType.NODE_ADDED, data=node, node_id=node.node_id)
             return
         if msg.event == EventType.NODE_UPDATED:
             node_data = dataclass_from_dict(MatterNode, msg.data)
             node = self._nodes[node_data.node_id]
             node.update(node_data)
-            self._signal_event(EventType.NODE_UPDATED, data=node)
+            self._signal_event(EventType.NODE_UPDATED, data=node, node_id=node.node_id)
+            return
+        if msg.event == EventType.NODE_DELETED:
+            node_id = msg.data
+            self._nodes.pop(node_id, None)
+            self._signal_event(EventType.NODE_DELETED, data=node_id, node_id=node_id)
             return
         if msg.event == EventType.ATTRIBUTE_UPDATED:
             # data is tuple[node_id, attribute_path, new_value]
             node_id, attribute_path, new_value = msg.data
             self._nodes[node_id].update_attribute(attribute_path, new_value)
-            self._signal_event(EventType.ATTRIBUTE_UPDATED, msg.data)
+            self._signal_event(
+                EventType.ATTRIBUTE_UPDATED,
+                data=new_value,
+                node_id=node_id,
+                attribute_path=attribute_path,
+            )
             return
         # TODO: handle any other events ?
         self._signal_event(msg.event, msg.data)
