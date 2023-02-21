@@ -466,20 +466,20 @@ class MatterDeviceController:
                     continue
 
             # setup subscriptions for the node
-            if node_id not in self._subscriptions:
+            if node_id in self._subscriptions:
+                continue
+            try:
+                await self.subscribe_node(node_id)
+            except NodeNotResolving as err:
                 # If the node is unreachable on the network now,
                 # it will throw a NodeNotResolving exception, catch this,
                 # log this and just try to resolve this node in the next run.
-                try:
-                    await self.subscribe_node(node_id)
-                except NodeNotResolving as err:
-                    LOGGER.warning(
-                        "Unable to contact Node %s,"
-                        " we will retry later in the background.",
-                        node_id,
-                        exc_info=err,
-                    )
-                    continue
+                LOGGER.warning(
+                    "Unable to contact Node %s,"
+                    " we will retry later in the background.",
+                    node_id,
+                    exc_info=err,
+                )
 
         # reschedule self to run every hour
         def _schedule():
