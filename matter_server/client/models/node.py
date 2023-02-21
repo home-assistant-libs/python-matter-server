@@ -80,7 +80,7 @@ class MatterEndpoint:
         """
         Get a full Cluster object containing all attributes.
 
-        Returns None is the Cluster is not present on the node.
+        Return None if the Cluster is not present on the node.
         """
         if isinstance(cluster, type):
             return cluster.id in self.clusters
