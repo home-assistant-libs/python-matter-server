@@ -8,16 +8,16 @@ import weakref
 
 from aiohttp import web
 
-from matter_server.common.models.error import VersionMismatch
-from matter_server.server.const import SCHEMA_VERSION
-
+from ..common.const import SCHEMA_VERSION
 from ..common.helpers.api import APICommandHandler, api_command
 from ..common.helpers.json import json_dumps
 from ..common.helpers.util import chip_clusters_version, chip_core_version
 from ..common.models.api_command import APICommand
+from ..common.models.error import VersionMismatch
 from ..common.models.events import EventCallBackType, EventType
 from ..common.models.server_information import ServerDiagnostics, ServerInfo
 from ..server.client_handler import WebsocketClientHandler
+from .const import MIN_SCHEMA_VERSION
 from .device_controller import MatterDeviceController
 from .stack import MatterStack
 from .storage import StorageController
@@ -136,6 +136,7 @@ class MatterServer:
             fabric_id=self.device_controller.fabric_id,
             compressed_fabric_id=self.device_controller.compressed_fabric_id,
             schema_version=SCHEMA_VERSION,
+            min_supported_schema_version=MIN_SCHEMA_VERSION,
             sdk_version=chip_clusters_version(),
             wifi_credentials_set=self.device_controller.wifi_credentials_set,
             thread_credentials_set=self.device_controller.thread_credentials_set,
