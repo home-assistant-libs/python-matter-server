@@ -169,11 +169,6 @@ class MatterNode:
                 continue
 
             for dev_info in attribute.value:
-                if not isinstance(
-                    dev_info, Clusters.Descriptor.Structs.DeviceTypeStruct
-                ):
-                    dev_info = Clusters.Descriptor.Structs.DeviceTypeStruct(**dev_info)
-
                 device_type = DEVICE_TYPES.get(dev_info.type)
                 if device_type is None:
                     LOGGER.debug("Found unknown device type %s", dev_info)
