@@ -73,26 +73,21 @@ class MatterEndpoint:
         self,
         cluster: type[_CLUSTER_T] | int,
         attribute: str | int | type[_ATTRIBUTE_T],
-    ) -> Any:
-        """Return Matter Cluster Attribute value for given parameters."""
-        if cluster_attribute := self.get_attribute(cluster, attribute):
-            return cluster_attribute.value
-        return None
-
-    def get_attribute(
-        self,
-        cluster: type[_CLUSTER_T] | int,
-        attribute: str | int | type[_ATTRIBUTE_T],
     ) -> type[_ATTRIBUTE_T] | Clusters.ClusterAttributeDescriptor | None:
         """Return Matter Cluster Attribute object for given parameters."""
-        if cluster := self.get_cluster(cluster):
+        if cluster_obj := self.get_cluster(cluster):
             if isinstance(attribute, type):
-                return getattr(cluster.Attributes, attribute.__name__)
+                attribute_name, _ = get_object_params(
+                    cluster_obj.descriptor, attribute.attribute_id
+                )
+                return getattr(cluster_obj, attribute_name)
             if isinstance(attribute, str):
-                return getattr(cluster.Attributes, attribute)
+                return getattr(cluster_obj, attribute)
+
+            attribute_name, _ = get_object_params(cluster_obj.descriptor, attribute)
             return getattr(
-                cluster.Attributes,
-                ALL_ATTRIBUTES[cluster.id][attribute].__name__,
+                cluster_obj,
+                attribute_name,
             )
         return None
 
@@ -119,16 +114,12 @@ class MatterEndpoint:
             cluster_class.descriptor, attribute_id
         )
 
-        cluster_attribute = getattr(
-            cluster_instance.Attributes, attribute_class.__name__
-        )
-        # we must set the attribute value both on the cluster instance
-        # and its underlying attributes object
+        # we only set the value at cluster instance level and we leave
+        # the underlying Attributes classproperty alone
         attribute_value = parse_value(
             attribute_name, attribute_value, attribute_type, attribute_class().value
         )
         setattr(cluster_instance, attribute_name, attribute_value)
-        setattr(cluster_attribute, "value", attribute_value)
 
 
 class MatterNode:
@@ -162,13 +153,8 @@ class MatterNode:
         # lookup device types from node data
         for endpoint in self.endpoints.values():
             # get DeviceTypeList Attribute on the Descriptor cluster
-            attribute = endpoint.get_attribute(
-                Clusters.Descriptor, Clusters.Descriptor.Attributes.DeviceTypeList
-            )
-            if not attribute:
-                continue
-
-            for dev_info in attribute.value:
+            cluster = endpoint.get_cluster(Clusters.Descriptor)
+            for dev_info in cluster.deviceTypeList:
                 device_type = DEVICE_TYPES.get(dev_info.type)
                 if device_type is None:
                     LOGGER.debug("Found unknown device type %s", dev_info)
