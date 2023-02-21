@@ -32,7 +32,7 @@ def create_attribute_path(endpoint: int, cluster_id: int, attribute_id: int) -> 
 
 
 def parse_attribute_path(attribute_path: str) -> tuple[int, int, int]:
-    """Parse AttributePath string into endpoint_id, cluster_id, attribute_id"""
+    """Parse AttributePath string into endpoint_id, cluster_id, attribute_id."""
     endpoint_id_str, cluster_id_str, attribute_id_str = attribute_path.split("/")
     return (int(endpoint_id_str), int(cluster_id_str), int(attribute_id_str))
 

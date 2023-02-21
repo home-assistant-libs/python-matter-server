@@ -449,7 +449,7 @@ class MatterDeviceController:
         )
 
     async def _check_subscriptions_and_interviews(self) -> None:
-        """Setup subscriptions (and interviews) for known nodes."""
+        """Set-up subscriptions (and interviews) for known nodes."""
         for node_id, node in self._nodes.items():
             # (re)interview node (only) if needed
             if (

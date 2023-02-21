@@ -1,1 +1,1 @@
-"""Client-only models for the Python Matter Server library"""
+"""Client-only models for the Python Matter Server library."""
