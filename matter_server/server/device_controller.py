@@ -352,9 +352,7 @@ class MatterDeviceController:
         ) -> None:
             assert self.server.loop is not None
             new_value = transaction.GetAttribute(path)
-            node_logger.debug(
-                "Attribute updated -- %s - new value: %s", path, new_value
-            )
+            node_logger.debug("Attribute updated: %s - new value: %s", path, new_value)
             node = self._nodes[node_id]
             attr_path = str(path.Path)
             node.attributes[attr_path] = new_value
@@ -400,7 +398,7 @@ class MatterDeviceController:
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
             node_logger.debug(
-                "Previous subscription failed with Error: %s - re-subscribing in %s ms...",
+                "Previous subscription failed with Error: %s, re-subscribing in %s ms...",
                 terminationError,
                 nextResubscribeIntervalMsec,
             )
