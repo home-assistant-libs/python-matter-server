@@ -4,12 +4,12 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator, Generator
 from unittest.mock import MagicMock, patch
 
-import pytest
 from chip.clusters import ClusterCommand
-from matter_server.server.server import MatterServer
-from matter_server.common.models import APICommand
-from matter_server.common.helpers.api import parse_arguments
+import pytest
 
+from matter_server.common.helpers.api import parse_arguments
+from matter_server.common.models import APICommand
+from matter_server.server.server import MatterServer
 
 pytestmark = pytest.mark.usefixtures(
     "application",
