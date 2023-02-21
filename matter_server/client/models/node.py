@@ -58,17 +58,17 @@ class MatterEndpoint:
                 self.clusters[cluster_id] = cluster_instance
 
             # unpack cluster attributes, using the descriptor
-            attrib_class: Clusters.ClusterAttributeDescriptor = ALL_ATTRIBUTES[
+            attribute_class: Clusters.ClusterAttributeDescriptor = ALL_ATTRIBUTES[
                 cluster_id
             ][attribute_id]
-            attrib_name = get_object_key(cluster_class.descriptor, attribute_id)
+            attribute_name = get_object_key(cluster_class.descriptor, attribute_id)
             # we must set the attribute value both on the cluster instance
             # and its underlying attributes object
-            setattr(cluster_instance, attrib_name, attribute_value)
-            cluster_attrib = getattr(
-                cluster_instance.Attributes, attrib_class.__class__.__name__
+            setattr(cluster_instance, attribute_name, attribute_value)
+            cluster_attribute = getattr(
+                cluster_instance.Attributes, attribute_class.__class__.__name__
             )
-            setattr(cluster_attrib, "value", attribute_value)
+            setattr(cluster_attribute, "value", attribute_value)
 
     def has_cluster(self, cluster: type[_CLUSTER_T] | int) -> bool:
         """Check if endpoint has a specific cluster."""
@@ -100,7 +100,7 @@ class MatterEndpoint:
         self,
         cluster: type[_CLUSTER_T] | int,
         attribute: str | int | type[_ATTRIBUTE_T],
-    ) -> type[_ATTRIBUTE_T] | Clusters.ClusterAttributeDescriptor:
+    ) -> type[_ATTRIBUTE_T] | Clusters.ClusterAttributeDescriptor | None:
         """Return Matter Cluster Attribute object for given parameters."""
         if cluster := self.get_cluster(cluster):
             if isinstance(attribute, type):
@@ -133,10 +133,10 @@ class MatterNode:
         self.node_data = node_data
         # collect per endpoint data
         endpoint_data: dict[int, dict[str, Any]] = {}
-        for attrib_path, attrib_data in node_data.attributes.items():
-            endpoint_id = int(attrib_path.split("/")[0])
+        for attribute_path, attribute_data in node_data.attributes.items():
+            endpoint_id = int(attribute_path.split("/")[0])
             endpoint_data.setdefault(endpoint_id, {})
-            endpoint_data[endpoint_id][attrib_path] = attrib_data
+            endpoint_data[endpoint_id][attribute_path] = attribute_data
         # TODO: Should we update existing endpoints instead of overwriting them?
         for endpoint_id, attributes_data in endpoint_data.items():
             self.endpoints[endpoint_id] = MatterEndpoint(
@@ -184,6 +184,9 @@ class MatterNode:
         else:
             self.node_devices.append(MatterNodeDevice(self))
 
+    def update_attribute(self, attribute_path: str, new_value: Any) -> None:
+        """Handle Attribute value update."""
+
     @property
     def node_id(self) -> int:
         """Return Node ID."""
@@ -211,7 +214,7 @@ class MatterNode:
             x
             for x in self.endpoints.values()
             if x.has_cluster(cluster)
-            and (x.endpoint_id == endpoint or endpoint is None)
+            and (endpoint is None or x.endpoint_id == endpoint)
         )
 
     def get_cluster(
@@ -229,11 +232,11 @@ class MatterNode:
         """Return friendly name for this node."""
         return cast(
             str,
-            self.get_attribute(
+            self.get_attribute_value(
                 self.root_device_type_instance.endpoint,
                 Clusters.BasicInformation,
                 "NodeLabel",
-            ).value,
+            ),
         )
 
     @property
@@ -241,11 +244,11 @@ class MatterNode:
         """Return uniqueID for this node."""
         return cast(
             str,
-            self.get_attribute(
+            self.get_attribute_value(
                 self.root_device_type_instance.endpoint,
                 Clusters.BasicInformation,
                 "UniqueID",
-            ).value,
+            ),
         )
 
     def __repr__(self) -> str:

@@ -27,7 +27,7 @@ from ..common.models import (
 )
 from .connection import MatterClientConnection
 from .exceptions import ConnectionClosed, InvalidServerVersion, InvalidState
-from .models.node import MatterAttribute, MatterNode
+from .models.node import MatterNode
 
 if TYPE_CHECKING:
     from chip.clusters.Objects import ClusterCommand
@@ -332,8 +332,7 @@ class MatterClient:
     def _handle_event_message(self, msg: EventMessage) -> None:
         """Handle incoming event from the server."""
         if msg.event == EventType.NODE_ADDED:
-            node_data = dataclass_from_dict(MatterNode, msg.data)
-            node = MatterNode(node_data)
+            node = MatterNode(dataclass_from_dict(MatterNode, msg.data))
             self._nodes[node.node_id] = node
             self._signal_event(EventType.NODE_ADDED, data=node)
             return
@@ -344,11 +343,10 @@ class MatterClient:
             self._signal_event(EventType.NODE_UPDATED, data=node)
             return
         if msg.event == EventType.ATTRIBUTE_UPDATED:
-            attr = dataclass_from_dict(MatterAttribute, msg.data)
-            self._nodes[attr.node_id].attributes[attr.path] = attr
-            self._signal_event(
-                EventType.ATTRIBUTE_UPDATED, attr, attr.node_id, attr.path
-            )
+            # data is tuple[node_id, attribute_path, new_value]
+            node_id, attribute_path, new_value = msg.data
+            self._nodes[node_id].update_attribute(attribute_path, new_value)
+            self._signal_event(EventType.ATTRIBUTE_UPDATED, msg.data)
             return
         # TODO: handle any other events ?
         self._signal_event(msg.event, msg.data)

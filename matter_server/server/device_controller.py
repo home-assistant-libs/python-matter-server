@@ -350,8 +350,8 @@ class MatterDeviceController:
             new_value = transaction.GetAttribute(path)
             LOGGER.debug("attribute updated -- %s - new value: %s", path, new_value)
             node = self._nodes[node_id]
-            attr = node.attributes[str(path.Path)]
-            attr.value = new_value
+            attr_path = str(path.Path)
+            node.attributes[attr_path] = new_value
 
             # schedule save to persistent storage
             self.server.storage.set(
@@ -362,7 +362,10 @@ class MatterDeviceController:
 
             # This callback is running in the CHIP stack thread
             self.server.loop.call_soon_threadsafe(
-                self.server.signal_event, EventType.ATTRIBUTE_UPDATED, attr
+                self.server.signal_event,
+                EventType.ATTRIBUTE_UPDATED,
+                # send data as tuple[node_id, attribute_path, new_value]
+                (node_id, attr_path, new_value),
             )
 
         def event_callback(
