@@ -14,17 +14,15 @@ from chip.clusters import Attribute, ClusterCommand
 from chip.exceptions import ChipStackError
 
 from ..common.const import SCHEMA_VERSION
-from ..common.helpers.api import api_command
-from ..common.helpers.util import dataclass_from_dict
-from ..common.models.api_command import APICommand
-from ..common.models.error import (
+from ..common.errors import (
     NodeCommissionFailed,
     NodeInterviewFailed,
     NodeNotExists,
     NodeNotResolving,
 )
-from ..common.models.events import EventType
-from ..common.models.node import MatterAttribute, MatterNode
+from ..common.helpers.api import api_command
+from ..common.helpers.util import create_attribute_path, dataclass_from_dict
+from ..common.models import APICommand, EventType, MatterNodeData
 
 if TYPE_CHECKING:
     from .server import MatterServer
@@ -51,7 +49,7 @@ class MatterDeviceController:
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: Deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
-        self._nodes: dict[int, MatterNode] = {}
+        self._nodes: dict[int, MatterNodeData | None] = {}
         self.wifi_credentials_set: bool = False
         self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
@@ -71,18 +69,21 @@ class MatterDeviceController:
     async def start(self) -> None:
         """Handle logic on controller start."""
         # load nodes from persistent storage
-        nodes_data = self.server.storage.get(DATA_KEY_NODES, {})
-        for node_id_str, node_dict in nodes_data.items():
+        nodes: dict[str, dict] = self.server.storage.get(DATA_KEY_NODES, {})
+        for node_id_str, node_dict in nodes.items():
             node_id = int(node_id_str)
-            node = dataclass_from_dict(MatterNode, node_dict)
-            self._nodes[node_id] = node
-            # make sure to start node subscriptions
             try:
-                await self.subscribe_node(node_id)
-            except NodeNotResolving:
-                LOGGER.warning("Node %s is not resolving, skipping...", node_id)
-        # create task to check for nodes that need any re(interviews)
-        self._schedule_interviews()
+                node = dataclass_from_dict(MatterNodeData, node_dict)
+            except (TypeError, KeyError, AttributeError) as err:
+                # only accept this to happen if the schema changed
+                if node_dict.get("interview_version") == SCHEMA_VERSION:
+                    raise err
+                # set node to None will be automatically re-interview the node
+                node = None
+            self._nodes[node_id] = node
+        # setup subscriptions and (re)interviews as task in the background
+        # as we do not want it to block our startup
+        asyncio.create_task(self._check_subscriptions_and_interviews())
         LOGGER.debug("Loaded %s nodes", len(self._nodes))
 
     async def stop(self) -> None:
@@ -95,19 +96,23 @@ class MatterDeviceController:
         LOGGER.debug("Stopped.")
 
     @api_command(APICommand.GET_NODES)
-    def get_nodes(self) -> list[MatterNode]:
+    def get_nodes(self, only_available: bool = True) -> list[MatterNodeData]:
         """Return all Nodes known to the server."""
-        return [x for x in self._nodes.values() if x is not None]
+        return [
+            x
+            for x in self._nodes.values()
+            if x is not None and x.available or not only_available
+        ]
 
     @api_command(APICommand.GET_NODE)
-    def get_node(self, node_id: int) -> MatterNode:
+    def get_node(self, node_id: int) -> MatterNodeData:
         """Return info of a single Node."""
         node = self._nodes.get(node_id)
         assert node is not None, "Node does not exist or is not yet interviewed"
         return node
 
     @api_command(APICommand.COMMISSION_WITH_CODE)
-    async def commission_with_code(self, code: str) -> MatterNode:
+    async def commission_with_code(self, code: str) -> MatterNodeData:
         """
         Commission a device using QRCode or ManualPairingCode.
 
@@ -138,7 +143,7 @@ class MatterDeviceController:
         setup_pin_code: int,
         filter_type: int = 0,
         filter: Any = None,  # pylint: disable=redefined-builtin
-    ) -> MatterNode:
+    ) -> MatterNodeData:
         """
         Commission a device already connected to the network.
 
@@ -241,8 +246,9 @@ class MatterDeviceController:
         except ChipStackError as err:
             raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
 
+        is_new_node = node_id not in self._nodes
         existing_info = self._nodes.get(node_id)
-        node = MatterNode(
+        node = MatterNodeData(
             node_id=node_id,
             date_commissioned=existing_info.date_commissioned
             if existing_info
@@ -262,9 +268,12 @@ class MatterDeviceController:
             value=node,
             force=not existing_info,
         )
-        if existing_info is None:
+        if is_new_node:
             # new node - first interview
             self.server.signal_event(EventType.NODE_ADDED, node)
+        else:
+            # existing node, signal node updated event
+            self.server.signal_event(EventType.NODE_UPDATED, node)
 
         LOGGER.debug("Interview of node %s completed", node_id)
 
@@ -316,10 +325,14 @@ class MatterDeviceController:
         assert node_id not in self._subscriptions, "Already subscribed to node"
         LOGGER.debug("Setup subscription for node %s", node_id)
 
+        node = self._nodes[node_id]
+
         try:
             await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
         except ChipStackError as err:
+            node.available = False
             raise NodeNotResolving(f"Failed to resolve node {node_id}") from err
+
         # we follow the pattern of apple and google here and
         # just do a wildcard subscription for all clusters and properties
         # the client will handle filtering of the events.
@@ -382,14 +395,20 @@ class MatterDeviceController:
                 terminationError,
                 nextResubscribeIntervalMsec,
             )
-            # TODO: update node status to unavailable
+            # mark node as unavailable and signal consumers
+            if node.available:
+                node.available = False
+                self.server.signal_event(EventType.NODE_UPDATED, node)
 
         def resubscription_succeeded(
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
-            LOGGER.debug("Subscription succeeded")
-            # TODO: update node status to available
+            LOGGER.debug("Subscription succeeded for node %s", node_id)
+            # mark node as available and signal consumers
+            if not node.available:
+                node.available = True
+                self.server.signal_event(EventType.NODE_UPDATED, node)
 
         sub.SetAttributeUpdateCallback(attribute_updated_callback)
         sub.SetEventUpdateCallback(event_callback)
@@ -397,6 +416,10 @@ class MatterDeviceController:
         sub.SetResubscriptionAttemptedCallback(resubscription_attempted)
         sub.SetResubscriptionSucceededCallback(resubscription_succeeded)
         self._subscriptions[node_id] = sub
+        # if we reach this point, it means the node could be resolved
+        # and the initial subscription succeeded, mark the node available.
+        node.available = True
+        self.server.signal_event(EventType.NODE_UPDATED, node)
 
     def _get_next_node_id(self) -> int:
         """Return next node_id."""
@@ -417,47 +440,67 @@ class MatterDeviceController:
             ),
         )
 
-    async def _check_interviews(self) -> None:
-        """Check if any nodes need to be (re)interviewed."""
-        assert self.server.loop is not None
-        # Reinterview all nodes that have an outdated schema
-        # and/or have been interviewed more than 30 days ago.
-        for node in self._nodes.values():
+    async def _check_subscriptions_and_interviews(self) -> None:
+        """Setup subscriptions (and interviews) for known nodes."""
+        for node_id, node in self._nodes.items():
+            # (re)interview node (only) if needed
             if (
-                SCHEMA_VERSION > node.interview_version
+                node is None
+                or node.interview_version < SCHEMA_VERSION
                 or (datetime.utcnow() - node.last_interview).days > 30
             ):
-                await self.interview_node(node.node_id)
-        # reschedule self to run every hour
-        self.server.loop.call_later(3600, self._schedule_interviews)
+                try:
+                    await self.interview_node(node_id)
+                except NodeInterviewFailed as err:
+                    LOGGER.warning(
+                        "Unable to interview Node %s, we will retry later in the background.",
+                        node_id,
+                        exc_info=err,
+                    )
+                    continue
 
-    def _schedule_interviews(self) -> None:
-        """Schedule interviews."""
-        asyncio.create_task(self._check_interviews())
+            # setup subscriptions for the node
+            if node_id not in self._subscriptions:
+                # If the node is unreachable on the network now,
+                # it will throw a NodeNotResolving exception, catch this,
+                # log this and just try to resolve this node in the next run.
+                try:
+                    await self.subscribe_node(node_id)
+                except NodeNotResolving as err:
+                    LOGGER.warning(
+                        "Unable to contact Node %s,"
+                        " we will retry later in the background.",
+                        node_id,
+                        exc_info=err,
+                    )
+                    continue
+
+        # reschedule self to run every hour
+        def _schedule():
+            asyncio.create_task(self._check_subscriptions_and_interviews())
+
+        # NOTE: do not do this in one call otherwise asyncio will start
+        # complaining about non awaited coroutines at shutdown
+        self.server.loop.call_later(3600, _schedule)
 
     @staticmethod
     def _parse_attributes_from_read_result(
-        node_id: int, attributes: dict[int, dict[Type, dict[Type, Any]]]
-    ) -> dict[str, MatterAttribute]:
+        node_id: int, read_result: dict[int, dict[Type, dict[Type, Any]]]
+    ) -> dict[str, Any]:
         """Parse attributes from ReadResult."""
         result = {}
-        for endpoint, cluster_dict in attributes.items():
+        for endpoint, cluster_dict in read_result.items():
             # read result output is in format {endpoint: {ClusterClass: {AttributeClass: value}}}
             # we parse this to our own much more usable format
             for cluster_cls, attr_dict in cluster_dict.items():
                 for attr_cls, attr_value in attr_dict.items():
                     if attr_cls == Attribute.DataVersion:
                         continue
-                    attr = MatterAttribute(
-                        node_id=node_id,
-                        endpoint=endpoint,
-                        cluster_id=cluster_cls.id,
-                        cluster_type=cluster_cls,
-                        cluster_name=cluster_cls.__name__,
-                        attribute_id=attr_cls.attribute_id,
-                        attribute_type=attr_cls,
-                        attribute_name=attr_cls.__name__,
-                        value=attr_value,
+                    # we are only interested in the raw values and let the client
+                    # match back from the id's to the correct cluster/attribute classes
+                    # attributes are stored in form of AttributePath: ENDPOINT/CLUSTER_ID/ATTRIBUTE_ID
+                    attribute_path = create_attribute_path(
+                        endpoint, cluster_cls.id, attr_cls.attribute_id
                     )
-                    result[attr.path] = attr
+                    result[attribute_path] = attr_value
         return result

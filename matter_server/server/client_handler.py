@@ -12,14 +12,14 @@ import async_timeout
 from chip.exceptions import ChipStackError
 
 from matter_server.common.helpers.json import json_dumps, json_loads
-from matter_server.common.models.events import EventType
+from matter_server.common.models import EventType
 
+from ..common.errors import InvalidCommand, MatterError, SDKStackError
 from ..common.helpers.api import parse_arguments
 from ..common.helpers.util import dataclass_from_dict
-from ..common.models.api_command import APICommand
-from ..common.models.message import (
+from ..common.models import (
+    APICommand,
     CommandMessage,
-    ErrorCode,
     ErrorResultMessage,
     EventMessage,
     MessageType,
@@ -155,7 +155,7 @@ class WebsocketClientHandler:
             self._send_message(
                 ErrorResultMessage(
                     msg.message_id,
-                    ErrorCode.INVALID_COMMAND,
+                    InvalidCommand.error_code,
                     f"Invalid command: {msg.command}",
                 )
             )
@@ -180,20 +180,19 @@ class WebsocketClientHandler:
         self, handler: APICommandHandler, msg: CommandMessage
     ) -> None:
         try:
-            args = parse_arguments(handler.signature, msg.args)
+            args = parse_arguments(handler.signature, handler.type_hints, msg.args)
             result = handler.target(**args)
             if asyncio.iscoroutine(result):
                 result = await result
             self._send_message(SuccessResultMessage(msg.message_id, result))
         except ChipStackError as err:
             self._send_message(
-                ErrorResultMessage(msg.message_id, ErrorCode.STACK_ERROR, str(err))
+                ErrorResultMessage(msg.message_id, SDKStackError.error_code, str(err))
             )
         except Exception as err:  # pylint: disable=broad-except
             self._logger.exception("Error handling message: %s", msg)
-            self._send_message(
-                ErrorResultMessage(msg.message_id, ErrorCode.UNKNOWN_ERROR, str(err))
-            )
+            error_code = getattr(err, "error_code", MatterError.error_code)
+            self._send_message(ErrorResultMessage(msg.message_id, error_code, str(err)))
 
     async def _writer(self) -> None:
         """Write outgoing messages."""

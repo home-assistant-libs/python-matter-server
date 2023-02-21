@@ -8,12 +8,19 @@ from typing import Any, Callable, Dict, Final, cast
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
 
+from matter_server.common.helpers.util import dataclass_from_dict
+
 from ..common.const import SCHEMA_VERSION
 from ..common.helpers.json import json_dumps, json_loads
-from ..common.helpers.util import parse_message
-from ..common.models.events import EventType
-from ..common.models.message import CommandMessage, MessageType, ServerInfoMessage
-from ..common.models.node import MatterNode
+from ..common.models import (
+    CommandMessage,
+    ErrorResultMessage,
+    EventMessage,
+    EventType,
+    MessageType,
+    ServerInfoMessage,
+    SuccessResultMessage,
+)
 from ..common.models.server_information import ServerInfo
 from .exceptions import (
     CannotConnect,
@@ -24,6 +31,7 @@ from .exceptions import (
     InvalidState,
     NotConnected,
 )
+from .models.node import MatterNode
 
 LOGGER = logging.getLogger(f"{__package__}.connection")
 SUB_WILDCARD: Final = "*"
@@ -147,3 +155,16 @@ class MatterClientConnection:
         """Return the representation."""
         prefix = "" if self.connected else "not "
         return f"{type(self).__name__}(ws_server_url={self.ws_server_url!r}, {prefix}connected)"
+
+
+def parse_message(raw: dict) -> MessageType:
+    """Parse Message from raw dict object."""
+    if "event" in raw:
+        return dataclass_from_dict(EventMessage, raw)
+    if "error_code" in raw:
+        return dataclass_from_dict(ErrorResultMessage, raw)
+    if "result" in raw:
+        return dataclass_from_dict(SuccessResultMessage, raw)
+    if "sdk_version" in raw:
+        return dataclass_from_dict(ServerInfoMessage, raw)
+    return dataclass_from_dict(CommandMessage, raw)

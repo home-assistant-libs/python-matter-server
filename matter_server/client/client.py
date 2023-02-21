@@ -9,26 +9,25 @@ import uuid
 
 from aiohttp import ClientSession
 
+from matter_server.common.errors import ERROR_MAP
+
 from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
-from ..common.models.api_command import APICommand
-from ..common.models.events import EventType
-from ..common.models.message import (
+from ..common.models import (
+    APICommand,
     CommandMessage,
     ErrorResultMessage,
     EventMessage,
+    EventType,
+    MatterNodeData,
     MessageType,
     ResultMessageBase,
+    ServerDiagnostics,
+    ServerInfoMessage,
     SuccessResultMessage,
 )
-from ..common.models.node import MatterAttribute, MatterNode
-from ..common.models.server_information import ServerDiagnostics, ServerInfo
 from .connection import MatterClientConnection
-from .exceptions import (
-    ConnectionClosed,
-    FailedCommand,
-    InvalidServerVersion,
-    InvalidState,
-)
+from .exceptions import ConnectionClosed, InvalidServerVersion, InvalidState
+from .models.node import MatterAttribute, MatterNode
 
 if TYPE_CHECKING:
     from chip.clusters.Objects import ClusterCommand
@@ -50,7 +49,7 @@ class MatterClient:
         self._loop: asyncio.AbstractEventLoop | None = None
 
     @property
-    def server_info(self) -> ServerInfo | None:
+    def server_info(self) -> ServerInfoMessage | None:
         """Return info of the server we're currently connected to."""
         return self.connection.server_info
 
@@ -96,39 +95,31 @@ class MatterClient:
 
     async def get_nodes(self) -> list[MatterNode]:
         """Return all Matter nodes."""
-        if self._nodes:
-            # if start_listening is called this dict will be kept up to date
-            return list(self._nodes.values())
-        data = await self.send_command(APICommand.GET_NODES)
-        return [dataclass_from_dict(MatterNode, x) for x in data]
+        return list(self._nodes.values())
 
     async def get_node(self, node_id: int) -> MatterNode:
         """Return Matter node by id."""
-        if node_id in self._nodes:
-            # if start_listening is called this dict will be kept up to date
-            return self._nodes[node_id]
-        data = await self.send_command(APICommand.GET_NODE, node_id=node_id)
-        return dataclass_from_dict(MatterNode, data)
+        return self._nodes[node_id]
 
-    async def commission_with_code(self, code: str) -> MatterNode:
+    async def commission_with_code(self, code: str) -> MatterNodeData:
         """
         Commission a device using QRCode or ManualPairingCode.
 
-        Returns full NodeInfo once complete.
+        Returns basic MatterNodeData once complete.
         """
         data = await self.send_command(APICommand.COMMISSION_WITH_CODE, code=code)
-        return dataclass_from_dict(MatterNode, data)
+        return dataclass_from_dict(MatterNodeData, data)
 
-    async def commission_on_network(self, setup_pin_code: int) -> MatterNode:
+    async def commission_on_network(self, setup_pin_code: int) -> MatterNodeData:
         """
         Commission a device already connected to the network.
 
-        Returns full NodeInfo once complete.
+        Returns basic MatterNodeData once complete.
         """
         data = await self.send_command(
             APICommand.COMMISSION_ON_NETWORK, setup_pin_code=setup_pin_code
         )
-        return dataclass_from_dict(MatterNode, data)
+        return dataclass_from_dict(MatterNodeData, data)
 
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
         """Set WiFi credentials for commissioning to a (new) device."""
@@ -275,11 +266,12 @@ class MatterClient:
                 SuccessResultMessage, await self.connection.receive_message_or_raise()
             )
             # a full dump of all nodes will be the result of the start_listening command
-            nodes = {
-                x["node_id"]: dataclass_from_dict(MatterNode, x)
+            # create MatterNode objects from the basic MatterNodeData objects
+            nodes = [
+                MatterNode(dataclass_from_dict(MatterNodeData, x))
                 for x in nodes_msg.result
-            }
-            self._nodes = nodes
+            ]
+            self._nodes = {node.node_id: node for node in nodes}
             # once we've hit this point we're all set
             self.logger.info("Matter client initialized.")
             if init_ready is not None:
@@ -320,9 +312,8 @@ class MatterClient:
                 future.set_result(msg.result)
                 return
             if isinstance(msg, ErrorResultMessage):
-                future.set_exception(
-                    FailedCommand(msg.message_id, str(msg.error_code.value))
-                )
+                exc = ERROR_MAP[msg.error_code]
+                future.set_exception(exc(msg.details))
                 return
 
         # handle EventMessage
@@ -341,9 +332,16 @@ class MatterClient:
     def _handle_event_message(self, msg: EventMessage) -> None:
         """Handle incoming event from the server."""
         if msg.event == EventType.NODE_ADDED:
-            node = dataclass_from_dict(MatterNode, msg.data)
+            node_data = dataclass_from_dict(MatterNode, msg.data)
+            node = MatterNode(node_data)
             self._nodes[node.node_id] = node
-            self._signal_event(EventType.NODE_ADDED, node)
+            self._signal_event(EventType.NODE_ADDED, data=node)
+            return
+        if msg.event == EventType.NODE_UPDATED:
+            node_data = dataclass_from_dict(MatterNode, msg.data)
+            node = self._nodes[node_data.node_id]
+            node.update(node_data)
+            self._signal_event(EventType.NODE_UPDATED, data=node)
             return
         if msg.event == EventType.ATTRIBUTE_UPDATED:
             attr = dataclass_from_dict(MatterAttribute, msg.data)
