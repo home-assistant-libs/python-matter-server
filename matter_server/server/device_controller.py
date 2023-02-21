@@ -53,6 +53,7 @@ class MatterDeviceController:
         self.wifi_credentials_set: bool = False
         self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
+        self._interview_task: asyncio.Task | None = None
 
     @property
     def fabric_id(self) -> int:
@@ -83,7 +84,9 @@ class MatterDeviceController:
             self._nodes[node_id] = node
         # setup subscriptions and (re)interviews as task in the background
         # as we do not want it to block our startup
-        asyncio.create_task(self._check_subscriptions_and_interviews())
+        self._interview_task = asyncio.create_task(
+            self._check_subscriptions_and_interviews()
+        )
         LOGGER.debug("Loaded %s nodes", len(self._nodes))
 
     async def stop(self) -> None:
@@ -480,10 +483,10 @@ class MatterDeviceController:
 
         # reschedule self to run every hour
         def _schedule():
-            asyncio.create_task(self._check_subscriptions_and_interviews())
+            self._interview_task = asyncio.create_task(
+                self._check_subscriptions_and_interviews()
+            )
 
-        # NOTE: do not do this in one call otherwise asyncio will start
-        # complaining about non awaited coroutines at shutdown
         self.server.loop.call_later(3600, _schedule)
 
     @staticmethod
