@@ -21,6 +21,12 @@ class MatterError(Exception):
         ERROR_MAP[cls.error_code] = cls
 
 
+class UnknownError(MatterError):
+    """Error raised when there an unknown/invalid command is requested."""
+
+    error_code = 0  # to map all generic errors
+
+
 class NodeCommissionFailed(MatterError):
     """Error raised when interview of a device failed."""
 

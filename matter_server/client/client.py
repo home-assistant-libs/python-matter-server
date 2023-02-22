@@ -159,19 +159,25 @@ class MatterClient:
     async def send_device_command(
         self,
         node_id: int,
-        endpoint: int,
+        endpoint_id: int,
         command: ClusterCommand,
         response_type: Any | None = None,
         timed_request_timeout_ms: int | None = None,
         interaction_timeout_ms: int | None = None,
     ) -> Any:
         """Send a command to a Matter node/device."""
-        payload = dataclass_to_dict(command)
+        try:
+            command_name = command.__class__.__name__
+        except AttributeError:
+            # handle case where only the class was provided instead of an instance of it.
+            command_name = command.__name__
         return await self.send_command(
             APICommand.DEVICE_COMMAND,
             node_id=node_id,
-            endpoint=endpoint,
-            payload=payload,
+            endpoint_id=endpoint_id,
+            cluster_id=command.cluster_id,
+            command_name=command_name,
+            payload=dataclass_to_dict(command),
             response_type=response_type,
             timed_request_timeout_ms=timed_request_timeout_ms,
             interaction_timeout_ms=interaction_timeout_ms,

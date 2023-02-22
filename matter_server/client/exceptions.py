@@ -1,10 +1,12 @@
 """Client-specific Exceptions for matter-server library."""
 from __future__ import annotations
 
-from ..common.errors import MatterError
+
+class MatterClientException(Exception):
+    """Generic Matter exception."""
 
 
-class TransportError(MatterError):
+class TransportError(MatterClientException):
     """Exception raised to represent transport errors."""
 
     def __init__(self, message: str, error: Exception | None = None) -> None:
@@ -36,17 +38,17 @@ class ConnectionFailed(TransportError):
         super().__init__(f"{error}", error)
 
 
-class NotConnected(MatterError):
+class NotConnected(MatterClientException):
     """Exception raised when not connected to client."""
 
 
-class InvalidState(MatterError):
+class InvalidState(MatterClientException):
     """Exception raised when data gets in invalid state."""
 
 
-class InvalidMessage(MatterError):
+class InvalidMessage(MatterClientException):
     """Exception raised when an invalid message is received."""
 
 
-class InvalidServerVersion(MatterError):
+class InvalidServerVersion(MatterClientException):
     """Exception raised when connected to server with incompatible version."""

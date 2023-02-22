@@ -7,10 +7,11 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Deque, Optional, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Deque, Type, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
-from chip.clusters import Attribute, ClusterCommand
+from chip.clusters import Attribute
+from chip.clusters.ClusterObjects import ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
 
 from ..common.const import SCHEMA_VERSION
@@ -204,7 +205,7 @@ class MatterDeviceController:
         timeout: int = 300,
         iteration: int = 1000,
         option: int = 0,
-        discriminator: Optional[int] = None,
+        discriminator: int | None = None,
     ) -> int:
         """
         Open a commissioning window to commission a device present on this controller to another.
@@ -284,17 +285,22 @@ class MatterDeviceController:
     async def send_device_command(
         self,
         node_id: int,
-        endpoint: int,
-        payload: ClusterCommand,
+        endpoint_id: int,
+        cluster_id: int,
+        command_name: str,
+        payload: dict,
         response_type: Any | None = None,
         timed_request_timeout_ms: int | None = None,
         interaction_timeout_ms: int | None = None,
     ) -> Any:
         """Send a command to a Matter node/device."""
+        cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
+        command_cls = getattr(cluster_cls.Commands, command_name)
+        command = command_cls.FromDict(payload)
         return await self.chip_controller.SendCommand(
             nodeid=node_id,
-            endpoint=endpoint,
-            payload=payload,
+            endpoint=cluster_id,
+            payload=command,
             responseType=response_type,
             timedRequestTimeoutMs=timed_request_timeout_ms,
             interactionTimeoutMs=interaction_timeout_ms,
