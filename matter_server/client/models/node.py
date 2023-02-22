@@ -69,9 +69,12 @@ class MatterEndpoint:
 
         Return None if the Cluster is not present on the node.
         """
-        if isinstance(cluster, type):
-            return self.clusters[cluster.id]  # type: ignore[no-any-return]
-        return self.clusters[cluster]  # type: ignore[no-any-return]
+        try:
+            if isinstance(cluster, type):
+                return self.clusters[cluster.id]  # type: ignore[no-any-return]
+            return self.clusters[cluster]  # type: ignore[no-any-return]
+        except KeyError:
+            return None
 
     def get_attribute_value(
         self,
