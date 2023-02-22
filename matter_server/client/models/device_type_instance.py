@@ -56,7 +56,7 @@ class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
     def get_attribute_value(
         self,
         cluster: type[_CLUSTER_T] | int | None,
-        attribute: str | int | type[all_clusters.ClusterAttributeDescriptor],
+        attribute: int | type[all_clusters.ClusterAttributeDescriptor],
     ) -> Any:
         """Return Matter Cluster Attribute value for given parameters."""
         return self.endpoint.get_attribute_value(cluster, attribute)

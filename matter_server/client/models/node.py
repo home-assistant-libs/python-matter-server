@@ -72,16 +72,18 @@ class MatterEndpoint:
     def get_attribute_value(
         self,
         cluster: type[_CLUSTER_T] | int | None,
-        attribute: str | int | type[_ATTRIBUTE_T],
+        attribute: int | type[_ATTRIBUTE_T],
     ) -> type[_ATTRIBUTE_T] | Clusters.ClusterAttributeDescriptor | None:
-        """Return Matter Cluster Attribute object for given parameters."""
+        """
+        Return Matter Cluster Attribute object for given parameters.
+
+        Send cluster as None to derive it from the Attribute.
+        """
         if cluster is None:
             # allow sending None for Cluster to auto resolve it from the Attribute
             if isinstance(attribute, int):
                 # get cluster from attribute
                 cluster = ALL_ATTRIBUTES[attribute].cluster_id
-            elif isinstance(attribute, str):
-                raise ValueError("Attribute can not be string if no Cluster given.")
             else:
                 cluster = attribute.cluster_id
         # get cluster first, grab value from cluster instance next
@@ -91,8 +93,6 @@ class MatterEndpoint:
                     cluster_obj.descriptor, attribute.attribute_id
                 )
                 return getattr(cluster_obj, attribute_name)
-            if isinstance(attribute, str):
-                return getattr(cluster_obj, attribute)
             # actual value is just a class attribute on the cluster instance
             # NOTE: do not use the value on the ClusterAttribute
             # instance itself as that is not used!
@@ -214,7 +214,7 @@ class MatterNode:
         self,
         endpoint: int,
         cluster: type[_CLUSTER_T] | int | None,
-        attribute: str | int | type[_ATTRIBUTE_T],
+        attribute: int | type[_ATTRIBUTE_T],
     ) -> Any:
         """Return Matter Cluster Attribute value for given parameters."""
         return self.endpoints[endpoint].get_attribute_value(cluster, attribute)
@@ -245,10 +245,9 @@ class MatterNode:
         """Return friendly name for this node."""
         return cast(
             str,
-            self.get_attribute_value(
-                self.root_device_type_instance.endpoint,
-                Clusters.BasicInformation,
-                "NodeLabel",
+            self.root_device_type_instance.endpoint.get_attribute_value(
+                None,
+                Clusters.BasicInformation.Attributes.NodeLabel,
             ),
         )
 
@@ -257,10 +256,9 @@ class MatterNode:
         """Return uniqueID for this node."""
         return cast(
             str,
-            self.get_attribute_value(
-                self.root_device_type_instance.endpoint,
-                Clusters.BasicInformation,
-                "UniqueID",
+            self.root_device_type_instance.endpoint.get_attribute_value(
+                None,
+                Clusters.BasicInformation.Attributes.UniqueID,
             ),
         )
 
