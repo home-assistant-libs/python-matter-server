@@ -5,11 +5,10 @@ from collections.abc import AsyncGenerator, Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
-from chip.clusters import ClusterCommand
-from matter_server.server.server import MatterServer
-from matter_server.common.models.api_command import APICommand
-from matter_server.common.helpers.api import parse_arguments
 
+from matter_server.common.helpers.api import parse_arguments
+from matter_server.common.models import APICommand
+from matter_server.server.server import MatterServer
 
 pytestmark = pytest.mark.usefixtures(
     "application",
@@ -137,7 +136,6 @@ async def test_server_start(
     assert APICommand.REMOVE_NODE in server.command_handlers
 
     # Check command handler signatures
-    mock_cluster_command = ClusterCommand()
 
     assert not (
         parse_arguments(
@@ -155,14 +153,13 @@ async def test_server_start(
             strict=True,
         )
     )
-    assert not (
+    assert (
         parse_arguments(
             server.command_handlers[APICommand.GET_NODES].signature,
             server.command_handlers[APICommand.GET_NODES].type_hints,
-            None,
             strict=True,
         )
-    )
+    ) == {"only_available": False}
     assert (
         parse_arguments(
             server.command_handlers[APICommand.GET_NODE].signature,
@@ -237,13 +234,21 @@ async def test_server_start(
         parse_arguments(
             server.command_handlers[APICommand.DEVICE_COMMAND].signature,
             server.command_handlers[APICommand.DEVICE_COMMAND].type_hints,
-            {"node_id": 1, "endpoint": 2, "payload": mock_cluster_command},
+            {
+                "node_id": 1,
+                "endpoint_id": 2,
+                "cluster_id": 0x0006,
+                "command_name": "Off",
+                "payload": {},
+            },
             strict=True,
         )
     ) == {
         "node_id": 1,
-        "endpoint": 2,
-        "payload": mock_cluster_command,
+        "endpoint_id": 2,
+        "cluster_id": 0x0006,
+        "command_name": "Off",
+        "payload": {},
         "response_type": None,
         "timed_request_timeout_ms": None,
         "interaction_timeout_ms": None,

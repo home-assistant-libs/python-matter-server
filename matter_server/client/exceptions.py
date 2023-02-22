@@ -1,12 +1,12 @@
-"""Exceptions for matter-server."""
+"""Client-specific Exceptions for matter-server library."""
 from __future__ import annotations
 
-from ..common.models.error import MatterError
 
-# TODO: merge these exceptions with the common ones
+class MatterClientException(Exception):
+    """Generic Matter exception."""
 
 
-class TransportError(MatterError):
+class TransportError(MatterClientException):
     """Exception raised to represent transport errors."""
 
     def __init__(self, message: str, error: Exception | None = None) -> None:
@@ -38,27 +38,17 @@ class ConnectionFailed(TransportError):
         super().__init__(f"{error}", error)
 
 
-class NotConnected(MatterError):
+class NotConnected(MatterClientException):
     """Exception raised when not connected to client."""
 
 
-class InvalidState(MatterError):
+class InvalidState(MatterClientException):
     """Exception raised when data gets in invalid state."""
 
 
-class InvalidMessage(MatterError):
+class InvalidMessage(MatterClientException):
     """Exception raised when an invalid message is received."""
 
 
-class InvalidServerVersion(MatterError):
+class InvalidServerVersion(MatterClientException):
     """Exception raised when connected to server with incompatible version."""
-
-
-class FailedCommand(MatterError):
-    """When a command has failed."""
-
-    def __init__(self, message_id: str, error_code: str, msg: str | None = None):
-        """Initialize a failed command error."""
-        super().__init__(msg or f"Command failed: {error_code}")
-        self.message_id = message_id
-        self.error_code = error_code

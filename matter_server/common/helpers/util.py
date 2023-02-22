@@ -1,7 +1,7 @@
 """Utils for Matter server (and client)."""
 from __future__ import annotations
 
-from base64 import b64encode
+from base64 import b64decode, b64encode
 from dataclasses import MISSING, asdict, fields, is_dataclass
 from datetime import datetime
 from enum import Enum
@@ -9,35 +9,32 @@ from functools import cache
 from importlib.metadata import PackageNotFoundError, version as pkg_version
 import logging
 import platform
-from pydoc import locate
 from types import NoneType, UnionType
-from typing import Any, TypeVar, Union, cast, get_args, get_origin, get_type_hints
+from typing import Any, TypeVar, Union, get_args, get_origin, get_type_hints
 
-import chip
 from chip.clusters.Types import Nullable, NullValue
 from chip.tlv import float32, uint
-
-from ..models.message import (
-    CommandMessage,
-    ErrorResultMessage,
-    EventMessage,
-    MessageType,
-    ServerInfoMessage,
-    SuccessResultMessage,
-)
 
 _T = TypeVar("_T")
 
 CHIP_CLUSTERS_PKG_NAME = "home-assistant-chip-clusters"
 CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
 
-# TEMP: Basic Cluster got renamed in SDK version v1.0.0.2
-# we will fix this later when we're basing our datastructure
-# on the ids instead of types.
-from chip.clusters import Objects  # noqa F401 E402
-from chip.clusters.Objects import *  # noqa F403 E402
 
-chip.clusters.Objects.Basic = chip.clusters.Objects.BasicInformation
+def create_attribute_path(endpoint: int, cluster_id: int, attribute_id: int) -> str:
+    """
+    Create path/identifier for an Attribute.
+
+    Returns same output as `Attribute.AttributePath`
+    endpoint/cluster_id/attribute_id
+    """
+    return f"{endpoint}/{cluster_id}/{attribute_id}"
+
+
+def parse_attribute_path(attribute_path: str) -> tuple[int, int, int]:
+    """Parse AttributePath string into endpoint_id, cluster_id, attribute_id."""
+    endpoint_id_str, cluster_id_str, attribute_id_str = attribute_path.split("/")
+    return (int(endpoint_id_str), int(cluster_id_str), int(attribute_id_str))
 
 
 def dataclass_to_dict(obj_in: object, skip_none: bool = False) -> dict:
@@ -77,7 +74,6 @@ def dataclass_to_dict(obj_in: object, skip_none: bool = False) -> dict:
             _final[key] = _convert_value(value)
         return _final
 
-    dict_obj["_type"] = f"{obj_in.__module__}.{obj_in.__class__.__qualname__}"
     return _clean_dict(dict_obj)
 
 
@@ -90,25 +86,33 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
     """Try to parse a value from raw (json) data and type annotations."""
 
     if isinstance(value_type, str):
+        # this shouldn't happen, but just in case
         value_type = get_type_hints(value_type, globals(), locals())
 
-    # always prefer classes that have a from_dict / FromDict
     if isinstance(value, dict):
+        # always prefer classes that have a from_dict
         if hasattr(value_type, "from_dict"):
             return value_type.from_dict(value)
-        if hasattr(value_type, "FromDict"):
-            return value_type.FromDict(value)
-        if "_type" in value:
-            return implicit_dataclass_from_dict(value)
+        # handle a parse error in the sdk which is returned as:
+        # {'TLVValue': None, 'Reason': None}
+        if (
+            value.get("TLVValue", MISSING) is None
+            and value.get("Reason", MISSING) is None
+        ):
+            if value_type in (None, Nullable, Any):
+                return None
+            value = None
 
     if value is None and not isinstance(default, type(MISSING)):
         return default
     if value is None and value_type is NoneType:
         return None
+    if value is None and value_type is Nullable:
+        return None
     if is_dataclass(value_type) and isinstance(value, dict):
         return dataclass_from_dict(value_type, value)
     origin = get_origin(value_type)
-    if origin is list:
+    if origin is list and isinstance(value, list):
         return [
             parse_value(name, subvalue, get_args(value_type)[0])
             for subvalue in value
@@ -164,16 +168,13 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         # happens if value_type is not a class
         pass
 
-    # the value type itself is literally type, meaning we should treat the value string
-    # as the actual type - TODO: Remove when we changed the datamodels
-    if value_type is type:
-        return eval(value)
-
     # common type conversions (e.g. int as string)
     if value_type is float and isinstance(value, int):
         return float(value)
     if value_type is int and isinstance(value, str) and value.isnumeric():
         return int(value)
+    if value_type is bytes and isinstance(value, str):
+        return b64decode(value.encode())
 
     # Matter SDK specific types
     if value_type is uint and (
@@ -223,18 +224,6 @@ def dataclass_from_dict(cls: type[_T], dict_obj: dict, strict: bool = False) -> 
     )
 
 
-def implicit_dataclass_from_dict(dict_obj: dict, strict: bool = False) -> Any:
-    """Create (instance of) a dataclass by providing a dict with values.
-
-    The class type name is included as `_type` attribute within the dict.
-    """
-    # Missing _type key will raise.
-    cls_type_str = dict_obj.pop("_type")
-    cls = cast(type[Any], locate(cls_type_str) or eval(cls_type_str))
-
-    return dataclass_from_dict(cls, dict_obj, strict)
-
-
 def package_version(pkg_name: str) -> str:
     """
     Return the version of an installed package.
@@ -263,16 +252,3 @@ def chip_core_version() -> str:
         # TODO: Fix this once we can install our own wheels on macos.
         return chip_clusters_version()
     return package_version(CHIP_CORE_PKG_NAME)
-
-
-def parse_message(raw: dict) -> MessageType:
-    """Parse Message from raw dict object."""
-    if "event" in raw:
-        return dataclass_from_dict(EventMessage, raw)
-    if "error_code" in raw:
-        return dataclass_from_dict(ErrorResultMessage, raw)
-    if "result" in raw:
-        return dataclass_from_dict(SuccessResultMessage, raw)
-    if "sdk_version" in raw:
-        return dataclass_from_dict(ServerInfoMessage, raw)
-    return dataclass_from_dict(CommandMessage, raw)

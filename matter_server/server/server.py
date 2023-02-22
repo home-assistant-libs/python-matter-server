@@ -9,13 +9,17 @@ import weakref
 from aiohttp import web
 
 from ..common.const import SCHEMA_VERSION
+from ..common.errors import VersionMismatch
 from ..common.helpers.api import APICommandHandler, api_command
 from ..common.helpers.json import json_dumps
 from ..common.helpers.util import chip_clusters_version, chip_core_version
-from ..common.models.api_command import APICommand
-from ..common.models.error import VersionMismatch
-from ..common.models.events import EventCallBackType, EventType
-from ..common.models.server_information import ServerDiagnostics, ServerInfo
+from ..common.models import (
+    APICommand,
+    EventCallBackType,
+    EventType,
+    ServerDiagnostics,
+    ServerInfoMessage,
+)
 from ..server.client_handler import WebsocketClientHandler
 from .const import MIN_SCHEMA_VERSION
 from .device_controller import MatterDeviceController
@@ -129,10 +133,10 @@ class MatterServer:
         return unsub
 
     @api_command(APICommand.SERVER_INFO)
-    def get_info(self) -> ServerInfo:
+    def get_info(self) -> ServerInfoMessage:
         """Return (version)info of the Matter Server."""
         assert self.device_controller.compressed_fabric_id is not None
-        return ServerInfo(
+        return ServerInfoMessage(
             fabric_id=self.device_controller.fabric_id,
             compressed_fabric_id=self.device_controller.compressed_fabric_id,
             schema_version=SCHEMA_VERSION,
