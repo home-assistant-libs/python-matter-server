@@ -299,7 +299,7 @@ class MatterDeviceController:
         command = command_cls.FromDict(payload)
         return await self.chip_controller.SendCommand(
             nodeid=node_id,
-            endpoint=cluster_id,
+            endpoint=endpoint_id,
             payload=command,
             responseType=response_type,
             timedRequestTimeoutMs=timed_request_timeout_ms,
