@@ -4,7 +4,6 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator, Generator
 from unittest.mock import MagicMock, patch
 
-from chip.clusters import ClusterCommand, OnOff
 import pytest
 
 from matter_server.common.helpers.api import parse_arguments
