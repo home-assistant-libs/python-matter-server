@@ -16,8 +16,6 @@ if TYPE_CHECKING:
 class AbstractMatterNodeDevice(ABC):
     """Device that can be mapped."""
 
-    do_not_serialize = True
-
     @abstractmethod
     def node(self) -> MatterNode:
         """Return the node of this device."""
@@ -89,4 +87,6 @@ class MatterBridgedNodeDevice(AbstractMatterNodeDevice):
     def __repr__(self) -> str:
         """Return the representation."""
         bridged = self.bridged_device_type_instance
-        return f"<MatterBridgedNodeDevice (N:{bridged.node.node_id}, E:{bridged.endpoint})>"
+        return (
+            f"<MatterBridgedNodeDevice (N:{bridged.node_id}, E:{bridged.endpoint_id})>"
+        )

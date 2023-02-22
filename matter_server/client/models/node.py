@@ -162,7 +162,7 @@ class MatterNode:
                     continue
 
                 instance: MatterDeviceTypeInstance[Any] = MatterDeviceTypeInstance(
-                    self, device_type, endpoint.endpoint_id, dev_info.revision
+                    self, device_type, endpoint, dev_info.revision
                 )
                 if device_type is RootNode:
                     self.root_device_type_instance = instance

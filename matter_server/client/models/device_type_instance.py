@@ -1,14 +1,14 @@
 """Models for a DeviceType instance (per endpoint)."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 from chip.clusters import Objects as all_clusters
 
 from .device_types import DeviceType
 
 if TYPE_CHECKING:
-    from .node import MatterNode
+    from .node import MatterEndpoint, MatterNode
 
 
 SubscriberType = Callable[[], None]
@@ -22,13 +22,11 @@ _CLUSTER_T = TypeVar("_CLUSTER_T", bound=all_clusters.Cluster)
 class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
     """Base class for Matter device types on endpoints."""
 
-    do_not_serialize = True
-
     def __init__(
         self,
         node: MatterNode,
         device_type: _DEVICE_TYPE_T,
-        endpoint: int,
+        endpoint: MatterEndpoint,
         device_revision: int,
     ) -> None:
         """Initialize the device type instance."""
@@ -37,18 +35,36 @@ class MatterDeviceTypeInstance(Generic[_DEVICE_TYPE_T]):
         self.device_revision = device_revision
         self.endpoint = endpoint
 
+    @property
+    def node_id(self) -> int:
+        """Return the Node ID this MatterDeviceTypeInstance belongs to."""
+        return self.node.node_id
+
+    @property
+    def endpoint_id(self) -> int:
+        """Return the Endpoint ID this MatterDeviceTypeInstance belongs to."""
+        return self.endpoint.endpoint_id
+
     def has_cluster(self, cluster: type[_CLUSTER_T] | int) -> bool:
         """Check if device has a specific cluster."""
-        return self.node.has_cluster(cluster, self.endpoint)
+        return self.endpoint.has_cluster(cluster)
 
     def get_cluster(self, cluster: type[_CLUSTER_T] | int) -> _CLUSTER_T | None:
         """Get the cluster object."""
-        return self.node.get_cluster(self.endpoint, cluster)
+        return self.endpoint.get_cluster(cluster)
+
+    def get_attribute_value(
+        self,
+        cluster: type[_CLUSTER_T] | int,
+        attribute: str | int | type[all_clusters.ClusterAttributeDescriptor],
+    ) -> Any:
+        """Return Matter Cluster Attribute value for given parameters."""
+        return self.endpoint.get_attribute_value(cluster, attribute)
 
     def __repr__(self) -> str:
         """Return the representation."""
         return (
             "<MatterDeviceTypeInstance "
             f"{self.device_type.__name__} "  # type: ignore[attr-defined]
-            f"(N:{self.node.node_id}, E:{self.endpoint})>"
+            f"(N:{self.node_id}, E:{self.endpoint_id})>"
         )
