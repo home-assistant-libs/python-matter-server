@@ -1,13 +1,10 @@
 """Matter Exceptions."""
 from __future__ import annotations
 
+from typing import Type
+
 # mapping from error_code to Exception class
 ERROR_MAP: dict[int, type] = {}
-
-
-def exception_from_error_code(error_code: int) -> MatterError:
-    """Return correct Exception class from error_code."""
-    return ERROR_MAP.get(error_code, MatterError)
 
 
 class MatterError(Exception):
@@ -15,7 +12,7 @@ class MatterError(Exception):
 
     error_code = 0
 
-    def __init_subclass__(cls, *args, **kwargs) -> None:
+    def __init_subclass__(cls, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
         """Register a subclass."""
         super().__init_subclass__(*args, **kwargs)
         ERROR_MAP[cls.error_code] = cls
@@ -79,3 +76,8 @@ class InvalidCommand(MatterError):
     """Error raised when there an unknown/invalid command is requested."""
 
     error_code = 9
+
+
+def exception_from_error_code(error_code: int) -> Type[MatterError]:
+    """Return correct Exception class from error_code."""
+    return ERROR_MAP.get(error_code, MatterError)

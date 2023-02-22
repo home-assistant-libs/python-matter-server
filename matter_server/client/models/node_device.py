@@ -40,8 +40,10 @@ class MatterNodeDevice(AbstractMatterNodeDevice):
         """Return the node of this device."""
         return self._node
 
-    def device_info(self) -> Clusters.BasicInformation:
+    def device_info(self) -> Clusters.BasicInformation | None:
         """Return device info."""
+        if not self._node.root_device_type_instance:
+            return None
         return self._node.root_device_type_instance.get_cluster(
             Clusters.BasicInformation
         )

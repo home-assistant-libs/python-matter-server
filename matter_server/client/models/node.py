@@ -37,7 +37,7 @@ def get_object_params(
     for desc in descriptor.Fields:
         if desc.Tag == object_id:
             return (desc.Label, desc.Type)
-    return KeyError(f"No descriptor found for object {object_id}")
+    raise KeyError(f"No descriptor found for object {object_id}")
 
 
 class MatterEndpoint:
@@ -70,8 +70,8 @@ class MatterEndpoint:
         Return None if the Cluster is not present on the node.
         """
         if isinstance(cluster, type):
-            return self.clusters[cluster.id]
-        return self.clusters[cluster]
+            return self.clusters[cluster.id]  # type: ignore[no-any-return]
+        return self.clusters[cluster]  # type: ignore[no-any-return]
 
     def get_attribute_value(
         self,
@@ -86,6 +86,8 @@ class MatterEndpoint:
         """
         if cluster is None:
             # allow sending None for Cluster to auto resolve it from the Attribute
+            if isinstance(attribute, int):
+                raise TypeError("Attribute can not be integer if Cluster is omitted")
             cluster = attribute.cluster_id
         # get cluster first, grab value from cluster instance next
         if cluster_obj := self.get_cluster(cluster):
@@ -111,6 +113,8 @@ class MatterEndpoint:
     ) -> bool:
         """Perform a quick check if the endpoint has a specific attribute."""
         if cluster is None:
+            if isinstance(attribute, int):
+                raise TypeError("Attribute can not be integer if Cluster is omitted")
             # allow sending None for Cluster to auto resolve it from the Attribute
             cluster = attribute.cluster_id
         cluster_id = cluster if isinstance(cluster, int) else cluster.id
@@ -185,6 +189,14 @@ class MatterNode:
         for endpoint in self.endpoints.values():
             # get DeviceTypeList Attribute on the Descriptor cluster
             cluster = endpoint.get_cluster(Clusters.Descriptor)
+            if not cluster:
+                LOGGER.debug(
+                    "No Descriptor cluster found on endpoint %s, Node %s",
+                    endpoint.endpoint_id,
+                    endpoint.node.node_id,
+                )
+                continue
+
             for dev_info in cluster.deviceTypeList:
                 device_type = DEVICE_TYPES.get(dev_info.type)
                 if device_type is None:
@@ -259,24 +271,15 @@ class MatterNode:
         return self.endpoints[endpoint].get_cluster(cluster)
 
     @property
-    def name(self) -> str:
+    def name(self) -> str | None:
         """Return friendly name for this node."""
+        if self.root_device_type_instance is None:
+            return None
         return cast(
             str,
             self.root_device_type_instance.endpoint.get_attribute_value(
                 None,
                 Clusters.BasicInformation.Attributes.NodeLabel,
-            ),
-        )
-
-    @property
-    def unique_id(self) -> str:
-        """Return uniqueID for this node."""
-        return cast(
-            str,
-            self.root_device_type_instance.endpoint.get_attribute_value(
-                None,
-                Clusters.BasicInformation.Attributes.UniqueID,
             ),
         )
 

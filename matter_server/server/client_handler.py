@@ -5,7 +5,7 @@ import asyncio
 from concurrent import futures
 from contextlib import suppress
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Final, cast
+from typing import TYPE_CHECKING, Any, Callable, Final
 
 from aiohttp import WSMsgType, web
 import async_timeout
@@ -23,7 +23,6 @@ from ..common.models import (
     ErrorResultMessage,
     EventMessage,
     MessageType,
-    ServerInfoMessage,
     SuccessResultMessage,
 )
 
@@ -84,7 +83,7 @@ class WebsocketClientHandler:
         self._writer_task = asyncio.create_task(self._writer())
 
         # send server(version) info when client connects
-        self._send_message(cast(ServerInfoMessage, self.server.get_info()))
+        self._send_message(self.server.get_info())
 
         disconnect_warn = None
 

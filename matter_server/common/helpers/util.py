@@ -187,7 +187,7 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         return float32(value)
 
     # If we reach this point, we could not match the value with the type and we raise
-    if not isinstance(value, value_type):  # type: ignore[arg-type]
+    if not isinstance(value, value_type):
         raise TypeError(
             f"Value {value} of type {type(value)} is invalid for {name}, "
             f"expected value of type {value_type}"

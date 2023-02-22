@@ -335,7 +335,7 @@ class MatterDeviceController:
         node_logger = LOGGER.getChild(str(node_id))
         node_logger.debug("Setting up subscriptions...")
 
-        node = self._nodes[node_id]
+        node = cast(MatterNodeData, self._nodes[node_id])
 
         try:
             await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
@@ -359,7 +359,6 @@ class MatterDeviceController:
             assert self.server.loop is not None
             new_value = transaction.GetAttribute(path)
             node_logger.debug("Attribute updated: %s - new value: %s", path, new_value)
-            node = self._nodes[node_id]
             attr_path = str(path.Path)
             node.attributes[attr_path] = new_value
 
@@ -490,12 +489,14 @@ class MatterDeviceController:
                 )
 
         # reschedule self to run every hour
-        def _schedule():
+        def _schedule() -> None:
+            """Schedule task."""
             self._interview_task = asyncio.create_task(
                 self._check_subscriptions_and_interviews()
             )
 
-        self.server.loop.call_later(3600, _schedule)
+        loop = cast(asyncio.AbstractEventLoop, self.server.loop)
+        loop.call_later(3600, _schedule)
 
     @staticmethod
     def _parse_attributes_from_read_result(
