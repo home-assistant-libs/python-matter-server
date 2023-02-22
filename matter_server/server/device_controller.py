@@ -73,14 +73,12 @@ class MatterDeviceController:
         nodes: dict[str, dict] = self.server.storage.get(DATA_KEY_NODES, {})
         for node_id_str, node_dict in nodes.items():
             node_id = int(node_id_str)
-            try:
-                node = dataclass_from_dict(MatterNodeData, node_dict)
-            except (TypeError, KeyError, AttributeError) as err:
-                # only accept this to happen if the schema changed
-                if node_dict.get("interview_version") == SCHEMA_VERSION:
-                    raise err
-                # set node to None will be automatically re-interview the node
+            # invalidate node data if schema mismatch,
+            # the node will automatically be scheduled for re-interview
+            if node_dict and node_dict.get("interview_version") != SCHEMA_VERSION:
                 node = None
+            else:
+                node = dataclass_from_dict(MatterNodeData, node_dict)
             self._nodes[node_id] = node
         # setup subscriptions and (re)interviews as task in the background
         # as we do not want it to block our startup
@@ -99,12 +97,12 @@ class MatterDeviceController:
         LOGGER.debug("Stopped.")
 
     @api_command(APICommand.GET_NODES)
-    def get_nodes(self, only_available: bool = True) -> list[MatterNodeData]:
+    def get_nodes(self, only_available: bool = False) -> list[MatterNodeData]:
         """Return all Nodes known to the server."""
         return [
             x
             for x in self._nodes.values()
-            if x is not None and x.available or not only_available
+            if x is not None and (x.available or not only_available)
         ]
 
     @api_command(APICommand.GET_NODE)
