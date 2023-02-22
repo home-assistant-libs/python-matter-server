@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 from chip.clusters import Objects as Clusters
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS
@@ -57,7 +57,7 @@ class MatterEndpoint:
 
     @property
     def is_bridged_device(self) -> bool:
-        """Return if this endpoint represents a Bridged device"""
+        """Return if this endpoint represents a Bridged device."""
         return BridgedDevice in self.device_types
 
     @property
@@ -176,13 +176,14 @@ class MatterEndpoint:
         for attribute_path, attribute_value in attributes_data.items():
             self.set_attribute_value(attribute_path, attribute_value)
         # extract device types from Descriptor Cluster
-        if cluster := self.get_cluster(Clusters.Descriptor):
-            for dev_info in cluster.deviceTypeList:  # type: ignore[unreachable]
-                device_type = DEVICE_TYPES.get(dev_info.type)
-                if device_type is None:
-                    LOGGER.debug("Found unknown device type %s", dev_info)
-                    continue
-                self.device_types.add(device_type)
+        cluster = self.get_cluster(Clusters.Descriptor)
+        assert cluster is not None
+        for dev_info in cluster.deviceTypeList:  # type: ignore[unreachable]
+            device_type = DEVICE_TYPES.get(dev_info.type)
+            if device_type is None:
+                LOGGER.debug("Found unknown device type %s", dev_info)
+                continue
+            self.device_types.add(device_type)
 
     def __repr__(self) -> str:
         """Return the representation."""
@@ -265,7 +266,8 @@ class MatterNode:
         endpoint_data: dict[int, dict[str, Any]] = {}
         for attribute_path, attribute_data in node_data.attributes.items():
             endpoint_id = int(attribute_path.split("/")[0])
-            endpoint_data.setdefault(endpoint_id, {})
+            if endpoint_id not in endpoint_data:
+                endpoint_data[endpoint_id] = {}
             endpoint_data[endpoint_id][attribute_path] = attribute_data
         for endpoint_id, attributes_data in endpoint_data.items():
             if endpoint := self.endpoints.get(endpoint_id):
