@@ -77,15 +77,12 @@ class MatterEndpoint:
         """
         Return Matter Cluster Attribute object for given parameters.
 
-        Send cluster as None to derive it from the Attribute.
+        Send cluster as None to derive it from the Attribute.,
+        you must provide the attribute as type/class in that case.
         """
         if cluster is None:
             # allow sending None for Cluster to auto resolve it from the Attribute
-            if isinstance(attribute, int):
-                # get cluster from attribute
-                cluster = ALL_ATTRIBUTES[attribute].cluster_id
-            else:
-                cluster = attribute.cluster_id
+            cluster = attribute.cluster_id
         # get cluster first, grab value from cluster instance next
         if cluster_obj := self.get_cluster(cluster):
             if isinstance(attribute, type):
