@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator, Generator
 from unittest.mock import MagicMock, patch
 
-from chip.clusters import ClusterCommand
+from chip.clusters import ClusterCommand, OnOff
 import pytest
 
 from matter_server.common.helpers.api import parse_arguments
@@ -137,7 +137,6 @@ async def test_server_start(
     assert APICommand.REMOVE_NODE in server.command_handlers
 
     # Check command handler signatures
-    mock_cluster_command = ClusterCommand()
 
     assert not (
         parse_arguments(
@@ -161,7 +160,7 @@ async def test_server_start(
             server.command_handlers[APICommand.GET_NODES].type_hints,
             strict=True,
         )
-    ) == {'only_available': False}
+    ) == {"only_available": False}
     assert (
         parse_arguments(
             server.command_handlers[APICommand.GET_NODE].signature,
@@ -236,13 +235,21 @@ async def test_server_start(
         parse_arguments(
             server.command_handlers[APICommand.DEVICE_COMMAND].signature,
             server.command_handlers[APICommand.DEVICE_COMMAND].type_hints,
-            {"node_id": 1, "endpoint": 2, "payload": mock_cluster_command},
+            {
+                "node_id": 1,
+                "endpoint_id": 2,
+                "cluster_id": 0x0006,
+                "command_name": "Off",
+                "payload": {},
+            },
             strict=True,
         )
     ) == {
         "node_id": 1,
-        "endpoint": 2,
-        "payload": mock_cluster_command,
+        "endpoint_id": 2,
+        "cluster_id": 0x0006,
+        "command_name": "Off",
+        "payload": {},
         "response_type": None,
         "timed_request_timeout_ms": None,
         "interaction_timeout_ms": None,
