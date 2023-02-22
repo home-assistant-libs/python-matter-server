@@ -14,12 +14,11 @@ from matter_server.common.helpers.util import (
 )
 from matter_server.common.models import MatterNodeData
 
-from .device_type_instance import MatterDeviceTypeInstance
-from .device_types import ALL_TYPES as DEVICE_TYPES, Aggregator, BridgedDevice, RootNode
-from .node_device import (
-    AbstractMatterNodeDevice,
-    MatterBridgedNodeDevice,
-    MatterNodeDevice,
+from .device_types import (
+    ALL_TYPES as DEVICE_TYPES,
+    Aggregator,
+    BridgedDevice,
+    DeviceType,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -53,9 +52,25 @@ class MatterEndpoint:
         self.node = node
         self.endpoint_id = endpoint_id
         self.clusters: dict[int, Clusters.Cluster] = {}
-        # unwrap cluster and clusterattributes from raw node data attributes
-        for attribute_path, attribute_value in attributes_data.items():
-            self.set_attribute_value(attribute_path, attribute_value)
+        self.device_types: set[DeviceType] = set()
+        self.update(attributes_data)
+
+    @property
+    def is_bridged_device(self) -> bool:
+        """Return if this endpoint represents a Bridged device"""
+        return BridgedDevice in self.device_types
+
+    @property
+    def device_info(self) -> Clusters.BasicInformation | Clusters.BridgedDeviceBasic:
+        """
+        Return device info.
+
+        If this endpoint represents a BridgedDevice, returns BridgedDeviceBasic.
+        Otherwise, returns BasicInformation from the Node itself (endpoint 0).
+        """
+        if self.is_bridged_device:
+            return self.get_cluster(Clusters.BridgedDeviceBasic)
+        return self.node.device_info
 
     def has_cluster(self, cluster: type[_CLUSTER_T] | int) -> bool:
         """Check if endpoint has a specific cluster."""
@@ -158,6 +173,24 @@ class MatterEndpoint:
         )
         setattr(cluster_instance, attribute_name, attribute_value)
 
+    def update(self, attributes_data: dict[str, Any]) -> None:
+        """Update MatterEndpoint from (endpoint-specific) raw Attributes data."""
+        # unwrap cluster and clusterattributes from raw node data attributes
+        for attribute_path, attribute_value in attributes_data.items():
+            self.set_attribute_value(attribute_path, attribute_value)
+        # extract device types from Descriptor Cluster
+        if cluster := self.get_cluster(Clusters.Descriptor):
+            for dev_info in cluster.deviceTypeList:  # type: ignore[unreachable]
+                device_type = DEVICE_TYPES.get(dev_info.type)
+                if device_type is None:
+                    LOGGER.debug("Found unknown device type %s", dev_info)
+                    continue
+                self.device_types.add(device_type)
+
+    def __repr__(self) -> str:
+        """Return the representation."""
+        return f"<MatterEndoint {self.endpoint_id} (node {self.node.node_id})>"
+
 
 class MatterNode:
     """Representation of a Matter Node."""
@@ -165,73 +198,7 @@ class MatterNode:
     def __init__(self, node_data: MatterNodeData) -> None:
         """Initialize MatterNode from MatterNodeData."""
         self.endpoints: dict[int, MatterEndpoint] = {}
-        self.root_device_type_instance: MatterDeviceTypeInstance[RootNode] | None = None
-        self.aggregator_device_type_instance: MatterDeviceTypeInstance[
-            Aggregator
-        ] | None = None
-        self.node_devices: list[AbstractMatterNodeDevice] = []
-        self.device_type_instances: list[MatterDeviceTypeInstance] = []
         self.update(node_data)
-
-    def update(self, node_data: MatterNodeData) -> None:
-        """Update MatterNode from MatterNodeData."""
-        # pylint: disable=too-many-branches
-        self.node_data = node_data
-        # collect per endpoint data
-        endpoint_data: dict[int, dict[str, Any]] = {}
-        for attribute_path, attribute_data in node_data.attributes.items():
-            endpoint_id = int(attribute_path.split("/")[0])
-            endpoint_data.setdefault(endpoint_id, {})
-            endpoint_data[endpoint_id][attribute_path] = attribute_data
-        # TODO: Should we update existing endpoints instead of overwriting them?
-        for endpoint_id, attributes_data in endpoint_data.items():
-            self.endpoints[endpoint_id] = MatterEndpoint(
-                endpoint_id=endpoint_id, attributes_data=attributes_data, node=self
-            )
-        # lookup device types from node data
-        for endpoint in self.endpoints.values():
-            # get DeviceTypeList Attribute on the Descriptor cluster
-            cluster = endpoint.get_cluster(Clusters.Descriptor)
-            if not cluster:
-                LOGGER.debug(
-                    "No Descriptor cluster found on endpoint %s, Node %s",
-                    endpoint.endpoint_id,
-                    endpoint.node.node_id,
-                )
-                continue
-
-            for dev_info in cluster.deviceTypeList:  # type: ignore[unreachable]
-                device_type = DEVICE_TYPES.get(dev_info.type)
-                if device_type is None:
-                    LOGGER.debug("Found unknown device type %s", dev_info)
-                    continue
-
-                instance: MatterDeviceTypeInstance[Any] = MatterDeviceTypeInstance(
-                    self, device_type, endpoint, dev_info.revision
-                )
-                if device_type is RootNode:
-                    self.root_device_type_instance = instance
-                elif device_type is Aggregator:
-                    self.aggregator_device_type_instance = instance
-                else:
-                    self.device_type_instances.append(instance)
-
-        if self.root_device_type_instance is None:
-            raise ValueError("No root device found")
-
-        # parse node devices
-        self.node_devices = []
-        if self.aggregator_device_type_instance:
-            for instance in self.device_type_instances:
-                if instance.device_type == BridgedDevice:
-                    self.node_devices.append(MatterBridgedNodeDevice(instance))
-        else:
-            self.node_devices.append(MatterNodeDevice(self))
-
-    def update_attribute(self, attribute_path: str, new_value: Any) -> None:
-        """Handle Attribute value update."""
-        endpoint_id = int(attribute_path.split("/")[0])
-        self.endpoints[endpoint_id].set_attribute_value(attribute_path, new_value)
 
     @property
     def node_id(self) -> int:
@@ -239,9 +206,30 @@ class MatterNode:
         return self.node_data.node_id
 
     @property
+    def name(self) -> str | None:
+        """Return friendly name for this node."""
+        if info := self.device_info:
+            return info.nodeLabel
+        return None
+
+    @property
     def available(self) -> bool:
         """Return availability of the node."""
         return self.node_data.available
+
+    @property
+    def device_info(self) -> Clusters.BasicInformation:
+        """
+        Return device info for this Node.
+
+        Returns BasicInformation from the Node itself (endpoint 0).
+        """
+        return self.get_cluster(0, Clusters.BasicInformation)
+
+    @property
+    def is_bridge_device(self) -> bool:
+        """Return if this Node is a Bridge/Aggregator device."""
+        return any(Aggregator in x.device_types for x in self.endpoints.values())
 
     def get_attribute_value(
         self,
@@ -273,18 +261,27 @@ class MatterNode:
         """
         return self.endpoints[endpoint].get_cluster(cluster)
 
-    @property
-    def name(self) -> str | None:
-        """Return friendly name for this node."""
-        if self.root_device_type_instance is None:
-            return None
-        return cast(
-            str,
-            self.root_device_type_instance.endpoint.get_attribute_value(
-                None,
-                Clusters.BasicInformation.Attributes.NodeLabel,
-            ),
-        )
+    def update(self, node_data: MatterNodeData) -> None:
+        """Update MatterNode from MatterNodeData."""
+        self.node_data = node_data
+        # collect per endpoint data
+        endpoint_data: dict[int, dict[str, Any]] = {}
+        for attribute_path, attribute_data in node_data.attributes.items():
+            endpoint_id = int(attribute_path.split("/")[0])
+            endpoint_data.setdefault(endpoint_id, {})
+            endpoint_data[endpoint_id][attribute_path] = attribute_data
+        for endpoint_id, attributes_data in endpoint_data.items():
+            if endpoint := self.endpoints.get(endpoint_id):
+                endpoint.update(attributes_data)
+            else:
+                self.endpoints[endpoint_id] = MatterEndpoint(
+                    endpoint_id=endpoint_id, attributes_data=attributes_data, node=self
+                )
+
+    def update_attribute(self, attribute_path: str, new_value: Any) -> None:
+        """Handle Attribute value update."""
+        endpoint_id = int(attribute_path.split("/")[0])
+        self.endpoints[endpoint_id].set_attribute_value(attribute_path, new_value)
 
     def __repr__(self) -> str:
         """Return the representation."""
