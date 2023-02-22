@@ -296,7 +296,7 @@ class MatterDeviceController:
         """Send a command to a Matter node/device."""
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
         command_cls = getattr(cluster_cls.Commands, command_name)
-        command = command_cls.FromDict(payload)
+        command = dataclass_from_dict(command_cls, payload)
         return await self.chip_controller.SendCommand(
             nodeid=node_id,
             endpoint=endpoint_id,
