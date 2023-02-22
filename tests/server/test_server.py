@@ -161,7 +161,7 @@ async def test_server_start(
             server.command_handlers[APICommand.GET_NODES].type_hints,
             strict=True,
         )
-    ) == {'only_available': True}
+    ) == {'only_available': False}
     assert (
         parse_arguments(
             server.command_handlers[APICommand.GET_NODE].signature,
