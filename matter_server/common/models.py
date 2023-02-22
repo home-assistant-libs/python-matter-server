@@ -52,9 +52,9 @@ class MatterNodeData:
     date_commissioned: datetime
     last_interview: datetime
     interview_version: int
+    available: bool = False
     # attributes are stored in form of AttributePath: ENDPOINT/CLUSTER_ID/ATTRIBUTE_ID
     attributes: dict[str, Any] = field(default_factory=dict)
-    available: bool = field(init=False, default=False)
 
 
 @dataclass

@@ -336,11 +336,13 @@ class MatterClient:
             node_data = dataclass_from_dict(MatterNodeData, msg.data)
             node = self._nodes.get(node_data.node_id)
             if node is None:
+                event = EventType.NODE_ADDED
                 node = MatterNode(node_data)
                 self._nodes[node.node_id] = node
             else:
+                event = EventType.NODE_UPDATED
                 node.update(node_data)
-            self._signal_event(EventType.NODE_ADDED, data=node, node_id=node.node_id)
+            self._signal_event(event, data=node, node_id=node.node_id)
             return
         if msg.event == EventType.NODE_DELETED:
             node_id = msg.data

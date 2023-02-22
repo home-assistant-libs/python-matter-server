@@ -79,6 +79,8 @@ class MatterDeviceController:
                 node = None
             else:
                 node = dataclass_from_dict(MatterNodeData, node_dict)
+                # always mark node as unavailable at startup until subscriptions are ready
+                node.available = False
             self._nodes[node_id] = node
         # setup subscriptions and (re)interviews as task in the background
         # as we do not want it to block our startup
