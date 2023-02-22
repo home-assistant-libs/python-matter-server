@@ -197,7 +197,7 @@ class MatterNode:
                 )
                 continue
 
-            for dev_info in cluster.deviceTypeList:
+            for dev_info in cluster.deviceTypeList:  # type: ignore[unreachable]
                 device_type = DEVICE_TYPES.get(dev_info.type)
                 if device_type is None:
                     LOGGER.debug("Found unknown device type %s", dev_info)
