@@ -7,7 +7,11 @@ from typing import Any, TypeVar, cast
 from chip.clusters import Objects as Clusters
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS
 
-from matter_server.common.helpers.util import parse_attribute_path, parse_value
+from matter_server.common.helpers.util import (
+    create_attribute_path,
+    parse_attribute_path,
+    parse_value,
+)
 from matter_server.common.models import MatterNodeData
 
 from .device_type_instance import MatterDeviceTypeInstance
@@ -99,6 +103,23 @@ class MatterEndpoint:
                 attribute_name,
             )
         return None
+
+    def has_attribute(
+        self,
+        cluster: type[_CLUSTER_T] | int | None,
+        attribute: int | type[_ATTRIBUTE_T],
+    ) -> bool:
+        """Perform a quick check if the endpoint has a specific attribute."""
+        if cluster is None:
+            # allow sending None for Cluster to auto resolve it from the Attribute
+            cluster = attribute.cluster_id
+        cluster_id = cluster if isinstance(cluster, int) else cluster.id
+        attribute_id = (
+            attribute if isinstance(attribute, int) else attribute.attribute_id
+        )
+        # the fastest way to check this is just by checking the AttributePath in the raw data...
+        attr_path = create_attribute_path(self.endpoint_id, cluster_id, attribute_id)
+        return attr_path in self.node.node_data.attributes
 
     def set_attribute_value(self, attribute_path: str, attribute_value: Any) -> None:
         """
