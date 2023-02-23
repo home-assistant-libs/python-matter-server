@@ -11,7 +11,7 @@ services:
     # Required for mDNS to work correctly
     network_mode: host
     security_opt:
-      # needed for bluetooth via dbus
+      # Needed for Bluetooth via dbus
       - apparmor:unconfined
     volumes:
       # Create an .env file that sets the USERDIR environment variable.

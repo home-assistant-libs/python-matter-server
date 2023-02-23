@@ -198,12 +198,12 @@ Please note that development is only possible on Linux and MacOS, no Windows sup
 ### Build
 
 ```sh
-docker-compose build --no-cache matter-server
+docker compose build --no-cache
 ```
 
 ### Run
 
 ```sh
-docker-compose up -d matter-server
-docker-compose logs -f matter-server
+docker compose up -d
+docker compose logs -f
 ```
