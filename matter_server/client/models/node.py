@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 from chip.clusters import Objects as Clusters
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS
@@ -220,7 +220,7 @@ class MatterNode:
     def name(self) -> str | None:
         """Return friendly name for this node."""
         if info := self.device_info:
-            return info.nodeLabel
+            return cast(str, info.nodeLabel)
         return None
 
     @property
@@ -314,7 +314,7 @@ class MatterNode:
                 continue
             descriptor = endpoint.get_cluster(Clusters.Descriptor)
             assert descriptor is not None
-            if descriptor.partsList:
+            if descriptor.partsList:  # type: ignore[unreachable]
                 for endpoint_id in descriptor.partsList:
                     self._composed_endpoints[endpoint_id] = endpoint.endpoint_id
 
