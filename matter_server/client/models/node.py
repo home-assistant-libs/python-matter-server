@@ -19,6 +19,7 @@ from .device_types import (
     Aggregator,
     BridgedDevice,
     DeviceType,
+    RootNode,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -61,15 +62,23 @@ class MatterEndpoint:
         return BridgedDevice in self.device_types
 
     @property
+    def is_composed_device(self) -> bool:
+        """Return if this endpoint belons to a composed device."""
+        return self.node.get_compose_parent(self.endpoint_id) is not None
+
+    @property
     def device_info(self) -> Clusters.BasicInformation | Clusters.BridgedDeviceBasic:
         """
         Return device info.
 
         If this endpoint represents a BridgedDevice, returns BridgedDeviceBasic.
+        If this endpoint represents a ComposedDevice, returns the info of the compose device.
         Otherwise, returns BasicInformation from the Node itself (endpoint 0).
         """
         if self.is_bridged_device:
             return self.get_cluster(Clusters.BridgedDeviceBasic)
+        if compose_parent := self.node.get_compose_parent(self.endpoint_id):
+            return compose_parent.device_info
         return self.node.device_info
 
     def has_cluster(self, cluster: type[_CLUSTER_T] | int) -> bool:
@@ -196,6 +205,10 @@ class MatterNode:
     def __init__(self, node_data: MatterNodeData) -> None:
         """Initialize MatterNode from MatterNodeData."""
         self.endpoints: dict[int, MatterEndpoint] = {}
+        self._is_bridge_device: bool = False
+        # composed devices reference to other endpoints through the partsList attribute
+        # create a mapping table
+        self._composed_endpoints: dict[int, int] = {}
         self.update(node_data)
 
     @property
@@ -227,7 +240,7 @@ class MatterNode:
     @property
     def is_bridge_device(self) -> bool:
         """Return if this Node is a Bridge/Aggregator device."""
-        return any(Aggregator in x.device_types for x in self.endpoints.values())
+        return self._is_bridge_device
 
     def get_attribute_value(
         self,
@@ -259,6 +272,16 @@ class MatterNode:
         """
         return self.endpoints[endpoint].get_cluster(cluster)
 
+    def get_compose_parent(self, endpoint_id: int) -> MatterEndpoint | None:
+        """Return endpoint of parent if the endpoint belongs to a Composed device."""
+        if parent_id := self._composed_endpoints.get(endpoint_id):
+            return self.endpoints[parent_id]
+        return None
+
+    def get_compose_child_ids(self, endpoint_id: int) -> tuple[int, ...] | None:
+        """Return endpoint ID's of any childs if the endpoint represents a Composed device."""
+        return tuple(x for x, y in self._composed_endpoints.items() if y == endpoint_id)
+
     def update(self, node_data: MatterNodeData) -> None:
         """Update MatterNode from MatterNodeData."""
         self.node_data = node_data
@@ -270,12 +293,30 @@ class MatterNode:
                 endpoint_data[endpoint_id] = {}
             endpoint_data[endpoint_id][attribute_path] = attribute_data
         for endpoint_id, attributes_data in endpoint_data.items():
-            if endpoint := self.endpoints.get(endpoint_id):
-                endpoint.update(attributes_data)
+            if endpoint_id in self.endpoints:
+                self.endpoints[endpoint_id].update(attributes_data)
             else:
                 self.endpoints[endpoint_id] = MatterEndpoint(
                     endpoint_id=endpoint_id, attributes_data=attributes_data, node=self
                 )
+        # lookup if this is a bridge device
+        self._is_bridge_device = any(
+            Aggregator in x.device_types for x in self.endpoints.values()
+        )
+        # composed devices reference to other endpoints through the partsList attribute
+        # create a mapping table to quickly map this
+        for endpoint in self.endpoints.values():
+            if RootNode in endpoint.device_types:
+                # ignore root endoint
+                continue
+            if Aggregator in endpoint.device_types:
+                # ignore Bridge endpoint (as that will also use partsList to indicate its childs)
+                continue
+            descriptor = endpoint.get_cluster(Clusters.Descriptor)
+            assert descriptor is not None
+            if descriptor.partsList:
+                for endpoint_id in descriptor.partsList:
+                    self._composed_endpoints[endpoint_id] = endpoint.endpoint_id
 
     def update_attribute(self, attribute_path: str, new_value: Any) -> None:
         """Handle Attribute value update."""
