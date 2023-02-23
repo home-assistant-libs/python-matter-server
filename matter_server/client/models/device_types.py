@@ -25,7 +25,7 @@ class DeviceType:
         cls.device_type = device_type
         ALL_TYPES[device_type] = cls
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """Return unique hash for this object."""
         return hash(self.device_type)
 
