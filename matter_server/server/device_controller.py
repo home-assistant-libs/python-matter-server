@@ -349,7 +349,7 @@ class MatterDeviceController:
         # if it turns out in the future that this is too much traffic (I don't think so now)
         # we can revisit this choice and do some selected subscriptions.
         sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
-            nodeid=node_id, attributes="*", events="*", reportInterval=(0, 10)
+            nodeid=node_id, attributes="*", events="*", reportInterval=(1, 120)
         )
 
         def attribute_updated_callback(
