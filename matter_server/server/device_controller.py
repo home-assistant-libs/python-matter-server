@@ -223,7 +223,6 @@ class MatterDeviceController:
             discriminator=discriminator,
             option=option,
         )
-        
         return pin, code
 
     @api_command(APICommand.DISCOVER)
