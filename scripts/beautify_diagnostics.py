@@ -1,3 +1,4 @@
+"""Script to beautify diagnostics output."""
 import sys
 import json
 import yaml
@@ -6,6 +7,7 @@ from matter_server.client.models.device_types import ALL_TYPES
 
 
 def main():
+    """Run the script."""
     if len(sys.argv) != 2:
         print("Usage: {} <diagnostics_file.json>".format(sys.argv[0]))
         sys.exit(1)
@@ -25,6 +27,7 @@ def main():
 
 
 def process_node(node):
+    """Process a node."""
     endpoints = {}
     cluster_warn = set()
 
