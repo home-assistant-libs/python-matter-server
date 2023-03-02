@@ -1,8 +1,10 @@
 """Script to beautify diagnostics output."""
-import sys
 import json
+import sys
+
+from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS
 import yaml
-from chip.clusters.ClusterObjects import ALL_CLUSTERS, ALL_ATTRIBUTES
+
 from matter_server.client.models.device_types import ALL_TYPES
 
 
