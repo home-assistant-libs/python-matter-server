@@ -18,7 +18,7 @@ RUN \
         gdb \
         git \
         gcc \
-        python3-dev
+        python3-dev \
     && git clone --depth 1 -b master \
         https://github.com/project-chip/connectedhomeip \
     && cp -r connectedhomeip/credentials /app/credentials \
