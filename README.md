@@ -198,6 +198,8 @@ Please note that development is only possible on Linux and MacOS, no Windows sup
 ### Build
 
 ```sh
+git clone https://github.com/home-assistant-libs/python-matter-server.git
+cd python-matter-server
 docker compose build --no-cache
 ```
 
