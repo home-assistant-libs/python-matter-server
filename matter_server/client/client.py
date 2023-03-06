@@ -145,7 +145,7 @@ class MatterClient:
         Returns code to use as discriminator.
         """
         return cast(
-            (int, str),
+            tuple[int, str],
             await self.send_command(
                 APICommand.OPEN_COMMISSIONING_WINDOW,
                 node_id=node_id,
