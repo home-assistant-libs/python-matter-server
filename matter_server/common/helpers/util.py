@@ -10,12 +10,23 @@ from importlib.metadata import PackageNotFoundError, version as pkg_version
 import logging
 import platform
 from types import NoneType, UnionType
-from typing import Any, TypeVar, Union, get_args, get_origin, get_type_hints
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    TypeVar,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 from chip.clusters.Types import Nullable, NullValue
 from chip.tlv import float32, uint
 
-_T = TypeVar("_T")
+if TYPE_CHECKING:
+    from _typeshed import DataclassInstance
+
+    _T = TypeVar("_T", bound=DataclassInstance)
 
 CHIP_CLUSTERS_PKG_NAME = "home-assistant-chip-clusters"
 CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
@@ -37,7 +48,7 @@ def parse_attribute_path(attribute_path: str) -> tuple[int, int, int]:
     return (int(endpoint_id_str), int(cluster_id_str), int(attribute_id_str))
 
 
-def dataclass_to_dict(obj_in: object, skip_none: bool = False) -> dict:
+def dataclass_to_dict(obj_in: DataclassInstance, skip_none: bool = False) -> dict:
     """Convert dataclass instance to dict, optionally skip None values."""
     if skip_none:
         dict_obj = asdict(
