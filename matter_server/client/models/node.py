@@ -279,7 +279,7 @@ class MatterNode:
         return None
 
     def get_compose_child_ids(self, endpoint_id: int) -> tuple[int, ...] | None:
-        """Return endpoint ID's of any child's if the endpoint represents a Composed device."""
+        """Return endpoint IDs of any child if the endpoint represents a Composed device."""
         return tuple(x for x, y in self._composed_endpoints.items() if y == endpoint_id)
 
     def update(self, node_data: MatterNodeData) -> None:
