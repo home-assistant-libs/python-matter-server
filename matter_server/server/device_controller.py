@@ -244,7 +244,7 @@ class MatterDeviceController:
             await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
             read_response: Attribute.AsyncReadTransaction.ReadResponse = (
                 await self.chip_controller.Read(
-                    nodeid=node_id, attributes="*", events="*"
+                    nodeid=node_id, attributes="*", events="*", fabricFiltered=False
                 )
             )
         except ChipStackError as err:
