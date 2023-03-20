@@ -279,7 +279,7 @@ class MatterNode:
         return None
 
     def get_compose_child_ids(self, endpoint_id: int) -> tuple[int, ...] | None:
-        """Return endpoint ID's of any childs if the endpoint represents a Composed device."""
+        """Return endpoint ID's of any child's if the endpoint represents a Composed device."""
         return tuple(x for x, y in self._composed_endpoints.items() if y == endpoint_id)
 
     def update(self, node_data: MatterNodeData) -> None:
@@ -307,10 +307,11 @@ class MatterNode:
         # create a mapping table to quickly map this
         for endpoint in self.endpoints.values():
             if RootNode in endpoint.device_types:
-                # ignore root endoint
+                # ignore root endpoint
                 continue
             if Aggregator in endpoint.device_types:
-                # ignore Bridge endpoint (as that will also use partsList to indicate its childs)
+                # ignore Bridge endpoint
+                # (as that will also use partsList to indicate its child's)
                 continue
             descriptor = endpoint.get_cluster(Clusters.Descriptor)
             assert descriptor is not None
