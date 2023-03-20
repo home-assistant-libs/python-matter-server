@@ -1,11 +1,13 @@
 """Script to beautify diagnostics output."""
 import json
+from os.path import abspath, dirname
 import sys
 
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS
 import yaml
 
-from matter_server.client.models.device_types import ALL_TYPES
+sys.path.insert(1, dirname(dirname(abspath(__file__))))
+from matter_server.client.models.device_types import ALL_TYPES # noqa: E402
 
 
 def main():
