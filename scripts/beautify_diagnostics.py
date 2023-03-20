@@ -7,7 +7,7 @@ from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS
 import yaml
 
 sys.path.insert(1, dirname(dirname(abspath(__file__))))
-from matter_server.client.models.device_types import ALL_TYPES # noqa: E402
+from matter_server.client.models.device_types import ALL_TYPES  # noqa: E402
 
 
 def main():
