@@ -10,7 +10,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Callable, Deque, Type, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
-from chip.clusters import Attribute
+from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.ClusterObjects import ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
 
@@ -22,7 +22,11 @@ from ..common.errors import (
     NodeNotResolving,
 )
 from ..common.helpers.api import api_command
-from ..common.helpers.util import create_attribute_path, dataclass_from_dict
+from ..common.helpers.util import (
+    create_attribute_path,
+    create_attribute_path_from_attribute,
+    dataclass_from_dict,
+)
 from ..common.models import APICommand, EventType, MatterNodeData
 
 if TYPE_CHECKING:
@@ -313,12 +317,30 @@ class MatterDeviceController:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or has not been interviewed."
             )
-        self._nodes.pop(node_id)
+
+        node = self._nodes.pop(node_id)
         self.server.storage.remove(
             DATA_KEY_NODES,
             subkey=str(node_id),
         )
-        # TODO: Is there functionality to actually reset the device ?
+
+        assert node is not None
+
+        attribute_path = create_attribute_path_from_attribute(
+            0,
+            Clusters.OperationalCredentials.Attributes.CurrentFabricIndex,
+        )
+        fabricIndex = node.attributes.get(attribute_path)
+
+        await self._call_sdk(
+            self.chip_controller.SendCommand,
+            nodeid=node_id,
+            endpoint=0,
+            payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
+                fabricIndex=fabricIndex,
+            ),
+        )
+
         self.server.signal_event(EventType.NODE_DELETED, node_id)
 
     async def subscribe_node(self, node_id: int) -> None:
