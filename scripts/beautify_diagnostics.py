@@ -5,7 +5,7 @@ import sys
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS
 import yaml
 
-from matter_server.client.models.device_types import ALL_TYPES  # noqa: E402
+from matter_server.client.models.device_types import ALL_TYPES
 
 
 def main():
