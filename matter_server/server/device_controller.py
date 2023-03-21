@@ -244,7 +244,7 @@ class MatterDeviceController:
             await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
             read_response: Attribute.AsyncReadTransaction.ReadResponse = (
                 await self.chip_controller.Read(
-                    nodeid=node_id, attributes="*", events="*"
+                    nodeid=node_id, attributes="*", events="*", fabricFiltered=False
                 )
             )
         except ChipStackError as err:
@@ -349,7 +349,11 @@ class MatterDeviceController:
         # if it turns out in the future that this is too much traffic (I don't think so now)
         # we can revisit this choice and do some selected subscriptions.
         sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
-            nodeid=node_id, attributes="*", events="*", reportInterval=(0, 10)
+            nodeid=node_id,
+            attributes="*",
+            events=[("*", 0)],
+            reportInterval=(0, 120),
+            fabricFiltered=False,
         )
 
         def attribute_updated_callback(
