@@ -330,7 +330,7 @@ class MatterDeviceController:
             0,
             Clusters.OperationalCredentials.Attributes.CurrentFabricIndex,
         )
-        fabric_index = node.attributes.get(attribute_path)
+        fabric_index = node.attributes[attribute_path]
 
         await self.chip_controller.SendCommand(
             nodeid=node_id,
