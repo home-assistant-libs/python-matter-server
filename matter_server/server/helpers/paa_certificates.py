@@ -1,5 +1,5 @@
-"""Utils to fetch CHIP Development Product
-Attestation Authority (PAA) certificates from DCL.
+"""
+Utils to fetch CHIP Development Product Attestation Authority (PAA) certificates from DCL.
 
 This is based on the original script from project-chip here:
 https://github.com/project-chip/connectedhomeip/edit/master/credentials/fetch-paa-certs-from-dcl.py
