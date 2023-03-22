@@ -12,7 +12,7 @@ import logging
 import pathlib
 import re
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientError
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 
@@ -67,37 +67,41 @@ async def fetch_certificates(
     if fetch_production_certificates:
         base_urls.add(PRODUCTION_URL)
 
-    async with ClientSession() as http_session:
-        for url_base in base_urls:
-            # fetch the paa certificates list
-            async with http_session.get(
-                f"{url_base}/dcl/pki/root-certificates"
-            ) as response:
-                assert response.status == 200
-                result = await response.json()
-            paa_list = result["approvedRootCertificates"]["certs"]
-            # grab each certificate
-            for paa in paa_list:
-                # do not fetch a certificate if we already fetched it
-                if paa["subjectKeyId"] in LAST_CERT_IDS:
-                    continue
+    try:
+        async with ClientSession(raise_for_status=True) as http_session:
+            for url_base in base_urls:
+                # fetch the paa certificates list
                 async with http_session.get(
-                    f"{url_base}/dcl/pki/certificates/{paa['subject']}/{paa['subjectKeyId']}"
+                    f"{url_base}/dcl/pki/root-certificates"
                 ) as response:
-                    assert response.status == 200
                     result = await response.json()
+                paa_list = result["approvedRootCertificates"]["certs"]
+                # grab each certificate
+                for paa in paa_list:
+                    # do not fetch a certificate if we already fetched it
+                    if paa["subjectKeyId"] in LAST_CERT_IDS:
+                        continue
+                    async with http_session.get(
+                        f"{url_base}/dcl/pki/certificates/{paa['subject']}/{paa['subjectKeyId']}"
+                    ) as response:
+                        result = await response.json()
 
-                certificate_data: dict = result["approvedCertificates"]["certs"][0]
-                certificate: str = certificate_data["pemCert"]
-                subject = certificate_data["subjectAsText"]
-                certificate = certificate.rstrip("\n")
+                    certificate_data: dict = result["approvedCertificates"]["certs"][0]
+                    certificate: str = certificate_data["pemCert"]
+                    subject = certificate_data["subjectAsText"]
+                    certificate = certificate.rstrip("\n")
 
-                await write_paa_root_cert(
-                    certificate,
-                    subject,
-                    paa_trust_store_path,
-                )
-                LAST_CERT_IDS.add(paa["subjectKeyId"])
-                fetch_count += 1
-    LOGGER.info("Fetched %s PAA root certificates from DCL.", fetch_count)
+                    await write_paa_root_cert(
+                        certificate,
+                        subject,
+                        paa_trust_store_path,
+                    )
+                    LAST_CERT_IDS.add(paa["subjectKeyId"])
+                    fetch_count += 1
+    except ClientError as err:
+        LOGGER.warning(
+            "Fetching latest certificates failed: error %s", str(err), exc_info=err
+        )
+    else:
+        LOGGER.info("Fetched %s PAA root certificates from DCL.", fetch_count)
     return fetch_count

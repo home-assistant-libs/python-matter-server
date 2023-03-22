@@ -63,7 +63,8 @@ class MatterDeviceController:
         """Initialize the device controller."""
         self.server = server
         # Instantiate the underlying ChipDeviceController instance on the Fabric
-        assert PAA_ROOT_CERTS_DIR.is_dir()
+        if not PAA_ROOT_CERTS_DIR.is_dir():
+            raise RuntimeError("PAA certificates directory not found")
 
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: Deque[Attribute.EventReadResult] = deque(maxlen=25)
@@ -78,7 +79,7 @@ class MatterDeviceController:
         """Async initialize of controller."""
         # (re)fetch all PAA certificates once at startup
         # NOTE: this must be done before initializing the controller
-        asyncio.create_task(fetch_certificates(PAA_ROOT_CERTS_DIR))
+        await fetch_certificates(PAA_ROOT_CERTS_DIR)
         self.chip_controller = self.server.stack.fabric_admin.NewController(
             paaTrustStorePath=str(PAA_ROOT_CERTS_DIR)
         )
