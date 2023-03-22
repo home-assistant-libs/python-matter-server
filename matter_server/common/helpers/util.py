@@ -20,6 +20,7 @@ from typing import (
     get_type_hints,
 )
 
+from chip.clusters.ClusterObjects import ClusterAttributeDescriptor
 from chip.clusters.Types import Nullable, NullValue
 from chip.tlv import float32, uint
 
@@ -30,6 +31,15 @@ if TYPE_CHECKING:
 
 CHIP_CLUSTERS_PKG_NAME = "home-assistant-chip-clusters"
 CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
+
+
+def create_attribute_path_from_attribute(
+    endpoint_id: int, attribute: ClusterAttributeDescriptor
+) -> str:
+    """Create path/identifier for an Attribute."""
+    return create_attribute_path(
+        endpoint_id, attribute.cluster_id, attribute.attribute_id
+    )
 
 
 def create_attribute_path(endpoint: int, cluster_id: int, attribute_id: int) -> str:
