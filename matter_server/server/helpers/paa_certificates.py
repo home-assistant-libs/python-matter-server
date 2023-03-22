@@ -23,10 +23,12 @@ TEST_URL = "https://on.test-net.dcl.csa-iot.org"
 LAST_CERT_IDS: set[str] = set()
 
 
-async def write_paa_root_cert(certificate: str, subject: str, root_path: pathlib.Path):
+async def write_paa_root_cert(
+    certificate: str, subject: str, root_path: pathlib.Path
+) -> None:
     """Write certificate from string to file."""
 
-    def _write():
+    def _write() -> None:
         filename_base = "dcld_mirror_" + re.sub(
             "[^a-zA-Z0-9_-]", "", re.sub("[=, ]", "_", subject)
         )
