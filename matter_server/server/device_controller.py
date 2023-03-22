@@ -337,7 +337,7 @@ class MatterDeviceController:
             endpoint=0,
             payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
                 fabricIndex=fabricIndex,
-            )
+            ),
         )
 
         self.server.signal_event(EventType.NODE_DELETED, node_id)
