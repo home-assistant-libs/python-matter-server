@@ -62,7 +62,6 @@ class MatterDeviceController:
         self.server = server
         # Instantiate the underlying ChipDeviceController instance on the Fabric
         assert PAA_ROOT_CERTS_DIR.is_dir()
-        
 
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: Deque[Attribute.EventReadResult] = deque(maxlen=25)
@@ -107,7 +106,7 @@ class MatterDeviceController:
             self._check_subscriptions_and_interviews()
         )
         LOGGER.debug("Loaded %s nodes", len(self._nodes))
-        
+
     async def stop(self) -> None:
         """Handle logic on server stop."""
         # unsubscribe all node subscriptions
@@ -140,7 +139,7 @@ class MatterDeviceController:
 
         Returns full NodeInfo once complete.
         """
-        # perform a quick delta sync of certificates to make sure 
+        # perform a quick delta sync of certificates to make sure
         # we have the latest paa root certs
         await fetch_certificates(PAA_ROOT_CERTS_DIR)
         node_id = self._get_next_node_id()
@@ -177,12 +176,12 @@ class MatterDeviceController:
         a string or None depending on the actual type of selected filter.
         Returns full NodeInfo once complete.
         """
-        # perform a quick delta sync of certificates to make sure 
+        # perform a quick delta sync of certificates to make sure
         # we have the latest paa root certs
         # NOTE: Its not very clear if the newly fetched certificates can be used without
         # restarting the device controller
         await fetch_certificates(PAA_ROOT_CERTS_DIR)
-        
+
         node_id = self._get_next_node_id()
 
         success = await self._call_sdk(

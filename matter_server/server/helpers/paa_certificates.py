@@ -8,11 +8,9 @@ All rights reserved.
 """
 
 import asyncio
-
 import logging
 import pathlib
 import re
-
 
 from aiohttp import ClientSession
 from cryptography import x509
