@@ -30,6 +30,7 @@ from ..common.models import APICommand, EventType, MatterNodeData
 
 if TYPE_CHECKING:
     from .server import MatterServer
+    from chip.ChipDeviceCtrl import ChipDeviceController
 
 _T = TypeVar("_T")
 
@@ -53,6 +54,7 @@ PAA_ROOT_CERTS_DIR: Final[pathlib.Path] = (
 
 class MatterDeviceController:
     """Class that manages the Matter devices."""
+    chip_controller: ChipDeviceController | None
 
     def __init__(
         self,

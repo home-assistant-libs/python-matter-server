@@ -36,7 +36,7 @@ async def write_paa_root_cert(
         # handle PEM certificate file
         file_path_pem = f"{filepath_base}.pem"
         LOGGER.debug("Writing certificate %s", file_path_pem)
-        with open(file_path_pem, "w+") as outfile:
+        with open(file_path_pem, "w+", encoding="utf-8") as outfile:
             outfile.write(certificate)
         # handle DER certificate file (converted from PEM)
         pem_certificate = x509.load_pem_x509_certificate(certificate.encode())
