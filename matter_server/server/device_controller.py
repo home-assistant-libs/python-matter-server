@@ -54,6 +54,7 @@ PAA_ROOT_CERTS_DIR: Final[pathlib.Path] = (
 
 class MatterDeviceController:
     """Class that manages the Matter devices."""
+
     chip_controller: ChipDeviceController | None
 
     def __init__(
