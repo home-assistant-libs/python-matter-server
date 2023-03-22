@@ -330,13 +330,13 @@ class MatterDeviceController:
             0,
             Clusters.OperationalCredentials.Attributes.CurrentFabricIndex,
         )
-        fabricIndex = node.attributes.get(attribute_path)
+        fabric_index = node.attributes.get(attribute_path)
 
         await self.chip_controller.SendCommand(
             nodeid=node_id,
             endpoint=0,
             payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
-                fabricIndex=fabricIndex,
+                fabricIndex=fabric_index,
             ),
         )
 
