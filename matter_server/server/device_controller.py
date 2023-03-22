@@ -7,12 +7,15 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Deque, Type, TypeVar, cast
+import pathlib
+from typing import TYPE_CHECKING, Any, Callable, Deque, Final, Type, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute
 from chip.clusters.ClusterObjects import ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
+
+from matter_server.server.helpers.paa_certificates import fetch_certificates
 
 from ..common.const import SCHEMA_VERSION
 from ..common.errors import (
@@ -35,6 +38,18 @@ DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
 
+# the paa-root-certs path is hardcoded in the sdk at this time
+# and always uses the development subfolder
+# regardless of anything you pass into instantiating the controller
+# revisit this once matter 1.1 is released
+PAA_ROOT_CERTS_DIR: Final[pathlib.Path] = (
+    pathlib.Path(__file__)
+    .parent.resolve()
+    .parent.resolve()
+    .parent.resolve()
+    .joinpath("credentials/development/paa-root-certs")
+)
+
 
 class MatterDeviceController:
     """Class that manages the Matter devices."""
@@ -46,7 +61,9 @@ class MatterDeviceController:
         """Initialize the device controller."""
         self.server = server
         # Instantiate the underlying ChipDeviceController instance on the Fabric
-        self.chip_controller = server.stack.fabric_admin.NewController()
+        assert PAA_ROOT_CERTS_DIR.is_dir()
+        
+
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: Deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
@@ -56,13 +73,14 @@ class MatterDeviceController:
         self.compressed_fabric_id: int | None = None
         self._interview_task: asyncio.Task | None = None
 
-    @property
-    def fabric_id(self) -> int:
-        """Return Fabric ID."""
-        return cast(int, self.chip_controller.fabricId)
-
     async def initialize(self) -> None:
         """Async initialize of controller."""
+        # (re)fetch all PAA certificates once at startup
+        # NOTE: this must be done before initializing the controller
+        asyncio.create_task(fetch_certificates(PAA_ROOT_CERTS_DIR))
+        self.chip_controller = self.server.stack.fabric_admin.NewController(
+            paaTrustStorePath=str(PAA_ROOT_CERTS_DIR)
+        )
         self.compressed_fabric_id = await self._call_sdk(
             self.chip_controller.GetCompressedFabricId
         )
@@ -89,7 +107,7 @@ class MatterDeviceController:
             self._check_subscriptions_and_interviews()
         )
         LOGGER.debug("Loaded %s nodes", len(self._nodes))
-
+        
     async def stop(self) -> None:
         """Handle logic on server stop."""
         # unsubscribe all node subscriptions
@@ -122,6 +140,9 @@ class MatterDeviceController:
 
         Returns full NodeInfo once complete.
         """
+        # perform a quick delta sync of certificates to make sure 
+        # we have the latest paa root certs
+        await fetch_certificates(PAA_ROOT_CERTS_DIR)
         node_id = self._get_next_node_id()
 
         success = await self._call_sdk(
@@ -156,6 +177,12 @@ class MatterDeviceController:
         a string or None depending on the actual type of selected filter.
         Returns full NodeInfo once complete.
         """
+        # perform a quick delta sync of certificates to make sure 
+        # we have the latest paa root certs
+        # NOTE: Its not very clear if the newly fetched certificates can be used without
+        # restarting the device controller
+        await fetch_certificates(PAA_ROOT_CERTS_DIR)
+        
         node_id = self._get_next_node_id()
 
         success = await self._call_sdk(
