@@ -332,13 +332,12 @@ class MatterDeviceController:
         )
         fabricIndex = node.attributes.get(attribute_path)
 
-        await self._call_sdk(
-            self.chip_controller.SendCommand,
+        await self.chip_controller.SendCommand(
             nodeid=node_id,
             endpoint=0,
             payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
                 fabricIndex=fabricIndex,
-            ),
+            )
         )
 
         self.server.signal_event(EventType.NODE_DELETED, node_id)
