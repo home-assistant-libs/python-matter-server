@@ -100,7 +100,7 @@ async def fetch_certificates(
                     fetch_count += 1
     except ClientError as err:
         LOGGER.warning(
-            "Fetching latest certificates failed: error %s", str(err), exc_info=err
+            "Fetching latest certificates failed: error %s", err, exc_info=err
         )
     else:
         LOGGER.info("Fetched %s PAA root certificates from DCL.", fetch_count)
