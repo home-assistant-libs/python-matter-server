@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import pathlib
 from collections import deque
 from collections.abc import Callable
 from datetime import datetime
 from functools import partial
-from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute
@@ -31,6 +30,7 @@ from matter_server.common.helpers.util import (
     dataclass_from_dict,
 )
 from matter_server.common.models import APICommand, EventType, MatterNodeData
+from matter_server.server.const import PAA_ROOT_CERTS_DIR
 from matter_server.server.helpers.paa_certificates import fetch_certificates
 
 if TYPE_CHECKING:
@@ -45,18 +45,6 @@ DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
 
-# the paa-root-certs path is hardcoded in the sdk at this time
-# and always uses the development subfolder
-# regardless of anything you pass into instantiating the controller
-# revisit this once matter 1.1 is released
-PAA_ROOT_CERTS_DIR: Final[pathlib.Path] = (
-    pathlib.Path(__file__)
-    .parent.resolve()
-    .parent.resolve()
-    .parent.resolve()
-    .joinpath("credentials/development/paa-root-certs")
-)
-
 
 class MatterDeviceController:
     """Class that manages the Matter devices."""
@@ -69,10 +57,6 @@ class MatterDeviceController:
     ):
         """Initialize the device controller."""
         self.server = server
-        # Instantiate the underlying ChipDeviceController instance on the Fabric
-        if not PAA_ROOT_CERTS_DIR.is_dir():
-            raise RuntimeError("PAA certificates directory not found")
-
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
@@ -86,7 +70,8 @@ class MatterDeviceController:
         """Async initialize of controller."""
         # (re)fetch all PAA certificates once at startup
         # NOTE: this must be done before initializing the controller
-        await fetch_certificates(PAA_ROOT_CERTS_DIR)
+        await fetch_certificates()
+        # Instantiate the underlying ChipDeviceController instance on the Fabric
         self.chip_controller = self.server.stack.fabric_admin.NewController(
             paaTrustStorePath=str(PAA_ROOT_CERTS_DIR)
         )
@@ -145,7 +130,7 @@ class MatterDeviceController:
         """
         # perform a quick delta sync of certificates to make sure
         # we have the latest paa root certs
-        await fetch_certificates(PAA_ROOT_CERTS_DIR)
+        await fetch_certificates()
         node_id = self._get_next_node_id()
 
         success = await self._call_sdk(
@@ -182,7 +167,7 @@ class MatterDeviceController:
         # we have the latest paa root certs
         # NOTE: Its not very clear if the newly fetched certificates can be used without
         # restarting the device controller
-        await fetch_certificates(PAA_ROOT_CERTS_DIR)
+        await fetch_certificates()
 
         node_id = self._get_next_node_id()
 
