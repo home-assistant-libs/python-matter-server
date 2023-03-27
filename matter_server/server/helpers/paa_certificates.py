@@ -12,7 +12,7 @@ import logging
 import pathlib
 import re
 
-from aiohttp import ClientSession, ClientError
+from aiohttp import ClientError, ClientSession
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 
@@ -23,15 +23,11 @@ TEST_URL = "https://on.test-net.dcl.csa-iot.org"
 LAST_CERT_IDS: set[str] = set()
 
 
-async def write_paa_root_cert(
-    certificate: str, subject: str, root_path: pathlib.Path
-) -> None:
+async def write_paa_root_cert(certificate: str, subject: str, root_path: pathlib.Path) -> None:
     """Write certificate from string to file."""
 
     def _write() -> None:
-        filename_base = "dcld_mirror_" + re.sub(
-            "[^a-zA-Z0-9_-]", "", re.sub("[=, ]", "_", subject)
-        )
+        filename_base = "dcld_mirror_" + re.sub("[^a-zA-Z0-9_-]", "", re.sub("[=, ]", "_", subject))
         filepath_base = root_path.joinpath(filename_base)
         # handle PEM certificate file
         file_path_pem = f"{filepath_base}.pem"
@@ -71,9 +67,7 @@ async def fetch_certificates(
         async with ClientSession(raise_for_status=True) as http_session:
             for url_base in base_urls:
                 # fetch the paa certificates list
-                async with http_session.get(
-                    f"{url_base}/dcl/pki/root-certificates"
-                ) as response:
+                async with http_session.get(f"{url_base}/dcl/pki/root-certificates") as response:
                     result = await response.json()
                 paa_list = result["approvedRootCertificates"]["certs"]
                 # grab each certificate
@@ -99,9 +93,7 @@ async def fetch_certificates(
                     LAST_CERT_IDS.add(paa["subjectKeyId"])
                     fetch_count += 1
     except ClientError as err:
-        LOGGER.warning(
-            "Fetching latest certificates failed: error %s", err, exc_info=err
-        )
+        LOGGER.warning("Fetching latest certificates failed: error %s", err, exc_info=err)
     else:
         LOGGER.info("Fetched %s PAA root certificates from DCL.", fetch_count)
     return fetch_count

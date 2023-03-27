@@ -1,9 +1,10 @@
 """Several helpers for the WebSockets API."""
 from __future__ import annotations
 
-from dataclasses import MISSING, dataclass
 import inspect
-from typing import Any, Callable, Coroutine, TypeVar, get_type_hints
+from collections.abc import Callable, Coroutine
+from dataclasses import MISSING, dataclass
+from typing import Any, TypeVar, get_type_hints
 
 from matter_server.common.helpers.util import parse_value
 
@@ -22,7 +23,7 @@ class APICommandHandler:
     @classmethod
     def parse(
         cls, command: str, func: Callable[..., Coroutine[Any, Any, Any]]
-    ) -> "APICommandHandler":
+    ) -> APICommandHandler:
         """Parse APICommandHandler by providing a function."""
         return APICommandHandler(
             command=command,
@@ -60,9 +61,6 @@ def parse_arguments(
     # parse arguments to correct type
     for name, param in func_sig.parameters.items():
         value = args.get(name)
-        if param.default is inspect.Parameter.empty:
-            default = MISSING
-        else:
-            default = param.default
+        default = MISSING if param.default is inspect.Parameter.empty else param.default
         final_args[name] = parse_value(name, value, func_types[name], default)
     return final_args

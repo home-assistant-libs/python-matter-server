@@ -3,38 +3,40 @@
 from __future__ import annotations
 
 import asyncio
-from collections import deque
-from datetime import datetime
-from functools import partial
 import logging
 import pathlib
-from typing import TYPE_CHECKING, Any, Callable, Deque, Final, Type, TypeVar, cast
+from collections import deque
+from collections.abc import Callable
+from datetime import datetime
+from functools import partial
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
-from chip.clusters import Attribute, Objects as Clusters
+from chip.clusters import Attribute
+from chip.clusters import Objects as Clusters
 from chip.clusters.ClusterObjects import ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
 
-from matter_server.server.helpers.paa_certificates import fetch_certificates
-
-from ..common.const import SCHEMA_VERSION
-from ..common.errors import (
+from matter_server.common.const import SCHEMA_VERSION
+from matter_server.common.errors import (
     NodeCommissionFailed,
     NodeInterviewFailed,
     NodeNotExists,
     NodeNotResolving,
 )
-from ..common.helpers.api import api_command
-from ..common.helpers.util import (
+from matter_server.common.helpers.api import api_command
+from matter_server.common.helpers.util import (
     create_attribute_path,
     create_attribute_path_from_attribute,
     dataclass_from_dict,
 )
-from ..common.models import APICommand, EventType, MatterNodeData
+from matter_server.common.models import APICommand, EventType, MatterNodeData
+from matter_server.server.helpers.paa_certificates import fetch_certificates
 
 if TYPE_CHECKING:
-    from .server import MatterServer
     from chip.ChipDeviceCtrl import ChipDeviceController
+
+    from .server import MatterServer
 
 _T = TypeVar("_T")
 
@@ -72,7 +74,7 @@ class MatterDeviceController:
             raise RuntimeError("PAA certificates directory not found")
 
         # we keep the last events in memory so we can include them in the diagnostics dump
-        self.event_history: Deque[Attribute.EventReadResult] = deque(maxlen=25)
+        self.event_history: deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
         self._nodes: dict[int, MatterNodeData | None] = {}
         self.wifi_credentials_set: bool = False
@@ -85,12 +87,10 @@ class MatterDeviceController:
         # (re)fetch all PAA certificates once at startup
         # NOTE: this must be done before initializing the controller
         await fetch_certificates(PAA_ROOT_CERTS_DIR)
-        self.chip_controller = self.server.stack.fabric_admin.NewController(
+        self.chip_controller = self.server.stack.fabric_admin.NewController(  # type: ignore[has-type] # noqa: E501
             paaTrustStorePath=str(PAA_ROOT_CERTS_DIR)
         )
-        self.compressed_fabric_id = await self._call_sdk(
-            self.chip_controller.GetCompressedFabricId
-        )
+        self.compressed_fabric_id = await self._call_sdk(self.chip_controller.GetCompressedFabricId)
         LOGGER.debug("CHIP Device Controller Initialized")
 
     async def start(self) -> None:
@@ -110,9 +110,7 @@ class MatterDeviceController:
             self._nodes[node_id] = node
         # setup subscriptions and (re)interviews as task in the background
         # as we do not want it to block our startup
-        self._interview_task = asyncio.create_task(
-            self._check_subscriptions_and_interviews()
-        )
+        self._interview_task = asyncio.create_task(self._check_subscriptions_and_interviews())
         LOGGER.debug("Loaded %s nodes", len(self._nodes))
 
     async def stop(self) -> None:
@@ -121,16 +119,14 @@ class MatterDeviceController:
         for sub in self._subscriptions.values():
             await self._call_sdk(sub.Shutdown)
         self._subscriptions = {}
-        await self._call_sdk(self.chip_controller.Shutdown)
+        await self._call_sdk(self.chip_controller.Shutdown)  # type: ignore[union-attr]
         LOGGER.debug("Stopped.")
 
     @api_command(APICommand.GET_NODES)
     def get_nodes(self, only_available: bool = False) -> list[MatterNodeData]:
         """Return all Nodes known to the server."""
         return [
-            x
-            for x in self._nodes.values()
-            if x is not None and (x.available or not only_available)
+            x for x in self._nodes.values() if x is not None and (x.available or not only_available)
         ]
 
     @api_command(APICommand.GET_NODE)
@@ -153,14 +149,12 @@ class MatterDeviceController:
         node_id = self._get_next_node_id()
 
         success = await self._call_sdk(
-            self.chip_controller.CommissionWithCode,
+            self.chip_controller.CommissionWithCode,  # type: ignore[union-attr]
             setupPayload=code,
             nodeid=node_id,
         )
         if not success:
-            raise NodeCommissionFailed(
-                f"Commission with code failed for node {node_id}"
-            )
+            raise NodeCommissionFailed(f"Commission with code failed for node {node_id}")
 
         # full interview of the device
         await self.interview_node(node_id)
@@ -193,16 +187,14 @@ class MatterDeviceController:
         node_id = self._get_next_node_id()
 
         success = await self._call_sdk(
-            self.chip_controller.CommissionOnNetwork,
+            self.chip_controller.CommissionOnNetwork,  # type: ignore[union-attr]
             nodeId=node_id,
             setupPinCode=setup_pin_code,
             filterType=filter_type,
             filter=filter,
         )
         if not success:
-            raise NodeCommissionFailed(
-                f"Commission on network failed for node {node_id}"
-            )
+            raise NodeCommissionFailed(f"Commission on network failed for node {node_id}")
 
         # full interview of the device
         await self.interview_node(node_id)
@@ -215,7 +207,7 @@ class MatterDeviceController:
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
         """Set WiFi credentials for commissioning to a (new) device."""
         await self._call_sdk(
-            self.chip_controller.SetWiFiCredentials,
+            self.chip_controller.SetWiFiCredentials,  # type: ignore[union-attr]
             ssid=ssid,
             credentials=credentials,
         )
@@ -226,7 +218,7 @@ class MatterDeviceController:
     async def set_thread_operational_dataset(self, dataset: str) -> None:
         """Set Thread Operational dataset in the stack."""
         await self._call_sdk(
-            self.chip_controller.SetThreadOperationalDataset,
+            self.chip_controller.SetThreadOperationalDataset,  # type: ignore[union-attr]
             threadOperationalDataset=bytes.fromhex(dataset),
         )
 
@@ -250,7 +242,7 @@ class MatterDeviceController:
             discriminator = 3840  # TODO generate random one
 
         await self._call_sdk(
-            self.chip_controller.OpenCommissioningWindow,
+            self.chip_controller.OpenCommissioningWindow,  # type: ignore[union-attr]
             nodeid=node_id,
             timeout=timeout,
             iteration=iteration,
@@ -264,9 +256,8 @@ class MatterDeviceController:
         self,
     ) -> CommissionableNode | list[CommissionableNode] | None:
         """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
-
         result = await self._call_sdk(
-            self.chip_controller.DiscoverCommissionableNodes,
+            self.chip_controller.DiscoverCommissionableNodes,  # type: ignore[union-attr]
         )
         return result
 
@@ -275,9 +266,11 @@ class MatterDeviceController:
         """Interview a node."""
         LOGGER.debug("Interviewing node: %s", node_id)
         try:
-            await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
+            await self._call_sdk(
+                self.chip_controller.ResolveNode, nodeid=node_id  # type: ignore[union-attr]
+            )
             read_response: Attribute.AsyncReadTransaction.ReadResponse = (
-                await self.chip_controller.Read(
+                await self.chip_controller.Read(  # type: ignore[union-attr]
                     nodeid=node_id, attributes="*", events="*", fabricFiltered=False
                 )
             )
@@ -293,9 +286,7 @@ class MatterDeviceController:
             else datetime.utcnow(),
             last_interview=datetime.utcnow(),
             interview_version=SCHEMA_VERSION,
-            attributes=self._parse_attributes_from_read_result(
-                read_response.attributes
-            ),
+            attributes=self._parse_attributes_from_read_result(read_response.attributes),
         )
 
         # save updated node data
@@ -331,7 +322,7 @@ class MatterDeviceController:
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
         command_cls = getattr(cluster_cls.Commands, command_name)
         command = dataclass_from_dict(command_cls, payload)
-        return await self.chip_controller.SendCommand(
+        return await self.chip_controller.SendCommand(  # type: ignore[union-attr]
             nodeid=node_id,
             endpoint=endpoint_id,
             payload=command,
@@ -344,9 +335,7 @@ class MatterDeviceController:
     async def remove_node(self, node_id: int) -> None:
         """Remove a Matter node/device from the fabric."""
         if node_id not in self._nodes:
-            raise NodeNotExists(
-                f"Node {node_id} does not exist or has not been interviewed."
-            )
+            raise NodeNotExists(f"Node {node_id} does not exist or has not been interviewed.")
 
         node = self._nodes.pop(node_id)
         self.server.storage.remove(
@@ -362,7 +351,7 @@ class MatterDeviceController:
         )
         fabric_index = node.attributes[attribute_path]
 
-        await self.chip_controller.SendCommand(
+        await self.chip_controller.SendCommand(  # type: ignore[union-attr]
             nodeid=node_id,
             endpoint=0,
             payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
@@ -378,10 +367,9 @@ class MatterDeviceController:
 
         Note that by using the listen command at server level, you will receive all node events.
         """
+        # ruff: noqa: ARG001,N803
         if node_id not in self._nodes:
-            raise NodeNotExists(
-                f"Node {node_id} does not exist or has not been interviewed."
-            )
+            raise NodeNotExists(f"Node {node_id} does not exist or has not been interviewed.")
         assert node_id not in self._subscriptions, "Already subscribed to node"
         node_logger = LOGGER.getChild(str(node_id))
         node_logger.debug("Setting up subscriptions...")
@@ -389,7 +377,9 @@ class MatterDeviceController:
         node = cast(MatterNodeData, self._nodes[node_id])
 
         try:
-            await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
+            await self._call_sdk(
+                self.chip_controller.ResolveNode, nodeid=node_id  # type: ignore[union-attr]
+            )
         except ChipStackError as err:
             node.available = False
             raise NodeNotResolving(f"Failed to resolve node {node_id}") from err
@@ -399,9 +389,8 @@ class MatterDeviceController:
         # the client will handle filtering of the events.
         # if it turns out in the future that this is too much traffic (I don't think so now)
         # we can revisit this choice and do some selected subscriptions.
-        sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
+        sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(  # type: ignore[union-attr] # noqa:E501
             nodeid=node_id,
-            attributes="*",
             events=[("*", 0)],
             reportInterval=(0, 120),
             fabricFiltered=False,
@@ -445,10 +434,7 @@ class MatterDeviceController:
                 self.server.signal_event, EventType.NODE_EVENT, data
             )
 
-        def error_callback(
-            chipError: int, transaction: Attribute.SubscriptionTransaction
-        ) -> None:
-            # pylint: disable=unused-argument, invalid-name
+        def error_callback(chipError: int, transaction: Attribute.SubscriptionTransaction) -> None:
             node_logger.error("Got error from node: %s", chipError)
 
         def resubscription_attempted(
@@ -468,7 +454,7 @@ class MatterDeviceController:
                 self.server.signal_event(EventType.NODE_UPDATED, node)
 
         def resubscription_succeeded(
-            transaction: Attribute.SubscriptionTransaction,
+            transaction: Attribute.SubscriptionTransaction,  # noqa: ARG001
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
             node_logger.debug("Re-Subscription succeeded")
@@ -537,8 +523,7 @@ class MatterDeviceController:
                 # it will throw a NodeNotResolving exception, catch this,
                 # log this and just try to resolve this node in the next run.
                 LOGGER.warning(
-                    "Unable to contact Node %s,"
-                    " we will retry later in the background.",
+                    "Unable to contact Node %s," " we will retry later in the background.",
                     node_id,
                     exc_info=err,
                 )
@@ -546,16 +531,14 @@ class MatterDeviceController:
         # reschedule self to run every hour
         def _schedule() -> None:
             """Schedule task."""
-            self._interview_task = asyncio.create_task(
-                self._check_subscriptions_and_interviews()
-            )
+            self._interview_task = asyncio.create_task(self._check_subscriptions_and_interviews())
 
         loop = cast(asyncio.AbstractEventLoop, self.server.loop)
         loop.call_later(3600, _schedule)
 
     @staticmethod
     def _parse_attributes_from_read_result(
-        read_result: dict[int, dict[Type, dict[Type, Any]]]
+        read_result: dict[int, dict[type, dict[type, Any]]]
     ) -> dict[str, Any]:
         """Parse attributes from ReadResult."""
         result = {}
@@ -571,7 +554,7 @@ class MatterDeviceController:
                     # attributes are stored in form of AttributePath:
                     # ENDPOINT/CLUSTER_ID/ATTRIBUTE_ID
                     attribute_path = create_attribute_path(
-                        endpoint, cluster_cls.id, attr_cls.attribute_id
+                        endpoint, cluster_cls.id, attr_cls.attribute_id  # type: ignore[attr-defined] # noqa: E501
                     )
                     result[attribute_path] = attr_value
         return result
