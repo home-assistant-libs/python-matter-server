@@ -79,6 +79,8 @@ module = [
   "aiorun",
   "chip.*",
   "coloredlogs",
+  "cryptography",
+  "cryptography.hazmat.primitives"
 ]
 
 [tool.pytest.ini_options]

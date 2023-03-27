@@ -87,7 +87,7 @@ class MatterDeviceController:
         # (re)fetch all PAA certificates once at startup
         # NOTE: this must be done before initializing the controller
         await fetch_certificates(PAA_ROOT_CERTS_DIR)
-        self.chip_controller = self.server.stack.fabric_admin.NewController(  # type: ignore[has-type] # noqa: E501
+        self.chip_controller = self.server.stack.fabric_admin.NewController(
             paaTrustStorePath=str(PAA_ROOT_CERTS_DIR)
         )
         self.compressed_fabric_id = await self._call_sdk(self.chip_controller.GetCompressedFabricId)

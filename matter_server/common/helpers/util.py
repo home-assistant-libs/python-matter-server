@@ -26,7 +26,7 @@ from chip.clusters.Types import Nullable, NullValue
 from chip.tlv import float32, uint
 
 if TYPE_CHECKING:
-    from _typeshed import DataclassInstance  # type: ignore[attr-defined]
+    from _typeshed import DataclassInstance
 
     _T = TypeVar("_T", bound=DataclassInstance)
 
@@ -224,7 +224,7 @@ def dataclass_from_dict(cls: type[_T], dict_obj: dict, strict: bool = False) -> 
                 "Extra key(s) {} not allowed for {}".format(",".join(extra_keys), (str(cls)))
             )
     type_hints = get_type_hints(cls)
-    return cls(  # type: ignore[no-any-return]
+    return cls(
         **{
             field.name: parse_value(
                 f"{cls.__name__}.{field.name}",
