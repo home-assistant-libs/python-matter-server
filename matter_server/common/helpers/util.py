@@ -1,10 +1,8 @@
 """Utils for Matter server (and client)."""
 from __future__ import annotations
 
-import binascii
-import logging
-import platform
 from base64 import b64decode, b64encode
+import binascii
 from dataclasses import MISSING, asdict, fields, is_dataclass
 from datetime import datetime
 from enum import Enum
