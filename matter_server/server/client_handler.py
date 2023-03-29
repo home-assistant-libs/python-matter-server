@@ -2,32 +2,33 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+from collections.abc import Callable
 from concurrent import futures
 from contextlib import suppress
-import logging
-from typing import TYPE_CHECKING, Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Final
 
-from aiohttp import WSMsgType, web
 import async_timeout
+from aiohttp import WSMsgType, web
 from chip.exceptions import ChipStackError
 
+from matter_server.common.errors import InvalidArguments, InvalidCommand, MatterError, SDKStackError
+from matter_server.common.helpers.api import parse_arguments
 from matter_server.common.helpers.json import json_dumps, json_loads
-from matter_server.common.models import EventType
-
-from ..common.errors import InvalidArguments, InvalidCommand, MatterError, SDKStackError
-from ..common.helpers.api import parse_arguments
-from ..common.helpers.util import dataclass_from_dict
-from ..common.models import (
+from matter_server.common.helpers.util import dataclass_from_dict
+from matter_server.common.models import (
     APICommand,
     CommandMessage,
     ErrorResultMessage,
     EventMessage,
+    EventType,
     MessageType,
     SuccessResultMessage,
 )
 
 if TYPE_CHECKING:
-    from ..common.helpers.api import APICommandHandler
+    from matter_server.common.helpers.api import APICommandHandler
+
     from .server import MatterServer
 
 MAX_PENDING_MSG = 512
@@ -67,7 +68,7 @@ class WebsocketClientHandler:
 
     async def handle_client(self) -> web.WebSocketResponse:
         """Handle a websocket response."""
-        # pylint: disable=too-many-branches
+        # ruff: noqa: PLR0915
         request = self.request
         wsock = self.wsock
         try:
@@ -101,9 +102,7 @@ class WebsocketClientHandler:
                 self._logger.debug("Received: %s", msg.data)
 
                 try:
-                    command_msg = dataclass_from_dict(
-                        CommandMessage, json_loads(msg.data)
-                    )
+                    command_msg = dataclass_from_dict(CommandMessage, json_loads(msg.data))
                 except ValueError:
                     disconnect_warn = f"Received invalid JSON: {msg.data}"
                     break
@@ -175,9 +174,7 @@ class WebsocketClientHandler:
 
         self._unsub_callback = self.server.subscribe(handle_event)
 
-    async def _run_handler(
-        self, handler: APICommandHandler, msg: CommandMessage
-    ) -> None:
+    async def _run_handler(self, handler: APICommandHandler, msg: CommandMessage) -> None:
         try:
             try:
                 args = parse_arguments(handler.signature, handler.type_hints, msg.args)
@@ -223,9 +220,7 @@ class WebsocketClientHandler:
         try:
             self._to_write.put_nowait(_message)
         except asyncio.QueueFull:
-            self._logger.error(
-                "Client exceeded max pending messages: %s", MAX_PENDING_MSG
-            )
+            self._logger.error("Client exceeded max pending messages: %s", MAX_PENDING_MSG)
 
             self._cancel()
 

@@ -1,14 +1,15 @@
 """Utils for Matter server (and client)."""
 from __future__ import annotations
 
+import logging
+import platform
 from base64 import b64decode, b64encode
 from dataclasses import MISSING, asdict, fields, is_dataclass
 from datetime import datetime
 from enum import Enum
 from functools import cache
-from importlib.metadata import PackageNotFoundError, version as pkg_version
-import logging
-import platform
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as pkg_version
 from types import NoneType, UnionType
 from typing import (
     TYPE_CHECKING,
@@ -37,9 +38,7 @@ def create_attribute_path_from_attribute(
     endpoint_id: int, attribute: ClusterAttributeDescriptor
 ) -> str:
     """Create path/identifier for an Attribute."""
-    return create_attribute_path(
-        endpoint_id, attribute.cluster_id, attribute.attribute_id
-    )
+    return create_attribute_path(endpoint_id, attribute.cluster_id, attribute.attribute_id)
 
 
 def create_attribute_path(endpoint: int, cluster_id: int, attribute_id: int) -> str:
@@ -61,9 +60,7 @@ def parse_attribute_path(attribute_path: str) -> tuple[int, int, int]:
 def dataclass_to_dict(obj_in: DataclassInstance, skip_none: bool = False) -> dict:
     """Convert dataclass instance to dict, optionally skip None values."""
     if skip_none:
-        dict_obj = asdict(
-            obj_in, dict_factory=lambda x: {k: v for (k, v) in x if v is not None}
-        )
+        dict_obj = asdict(obj_in, dict_factory=lambda x: {k: v for (k, v) in x if v is not None})
     else:
         dict_obj = asdict(obj_in)
 
@@ -91,7 +88,7 @@ def dataclass_to_dict(obj_in: DataclassInstance, skip_none: bool = False) -> dic
         _final = {}
         for key, value in _dict_obj.items():
             if isinstance(key, int):
-                key = str(key)
+                key = str(key)  # noqa: PLW2901
             _final[key] = _convert_value(value)
         return _final
 
@@ -105,7 +102,7 @@ def parse_utc_timestamp(datetime_string: str) -> datetime:
 
 def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) -> Any:
     """Try to parse a value from raw (json) data and type annotations."""
-
+    # ruff: noqa: PLR0912,PLR0911
     if isinstance(value_type, str):
         # this shouldn't happen, but just in case
         value_type = get_type_hints(value_type, globals(), locals())
@@ -116,10 +113,7 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
             return value_type.from_dict(value)
         # handle a parse error in the sdk which is returned as:
         # {'TLVValue': None, 'Reason': None}
-        if (
-            value.get("TLVValue", MISSING) is None
-            and value.get("Reason", MISSING) is None
-        ):
+        if value.get("TLVValue", MISSING) is None and value.get("Reason", MISSING) is None:
             if value_type in (None, Nullable, Any):
                 return None
             value = None
@@ -227,8 +221,7 @@ def dataclass_from_dict(cls: type[_T], dict_obj: dict, strict: bool = False) -> 
         extra_keys = dict_obj.keys() - set([f.name for f in fields(cls)])
         if extra_keys:
             raise KeyError(
-                "Extra key(s) %s not allowed for %s"
-                % (",".join(extra_keys), (str(cls)))
+                "Extra key(s) {} not allowed for {}".format(",".join(extra_keys), (str(cls)))
             )
     type_hints = get_type_hints(cls)
     return cls(

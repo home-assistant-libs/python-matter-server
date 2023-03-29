@@ -5,8 +5,8 @@ import logging
 import os
 from pathlib import Path
 
-from aiorun import run
 import coloredlogs
+from aiorun import run
 
 from .server import MatterServer
 
@@ -16,9 +16,7 @@ DEFAULT_PORT = 5580
 DEFAULT_STORAGE_PATH = os.path.join(Path.home(), ".matter_server")
 
 # Get parsed passed in arguments.
-parser = argparse.ArgumentParser(
-    description="Matter Controller Server using WebSockets."
-)
+parser = argparse.ArgumentParser(description="Matter Controller Server using WebSockets.")
 
 
 parser.add_argument(
@@ -50,7 +48,8 @@ parser.add_argument(
     type=str,
     default="info",
     # pylint: disable=line-too-long
-    help="Provide logging level. Example --log-level debug, default=info, possible=(critical, error, warning, info, debug)",
+    help="Provide logging level. Example --log-level debug, default=info, "
+    "possible=(critical, error, warning, info, debug)",
 )
 parser.add_argument(
     "--log-file",
@@ -76,12 +75,9 @@ def main() -> None:
         os.mkdir(args.storage_path)
 
     # Init server
-    server = MatterServer(
-        args.storage_path, int(args.vendorid), int(args.fabricid), int(args.port)
-    )
+    server = MatterServer(args.storage_path, int(args.vendorid), int(args.fabricid), int(args.port))
 
-    async def handle_stop(loop: asyncio.AbstractEventLoop) -> None:
-        # pylint: disable=unused-argument
+    async def handle_stop(_loop: asyncio.AbstractEventLoop) -> None:
         await server.stop()
 
     # run the server

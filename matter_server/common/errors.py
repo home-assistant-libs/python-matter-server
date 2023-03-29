@@ -1,8 +1,6 @@
 """Matter Exceptions."""
 from __future__ import annotations
 
-from typing import Type
-
 # mapping from error_code to Exception class
 ERROR_MAP: dict[int, type] = {}
 
@@ -78,6 +76,6 @@ class InvalidCommand(MatterError):
     error_code = 9
 
 
-def exception_from_error_code(error_code: int) -> Type[MatterError]:
+def exception_from_error_code(error_code: int) -> type[MatterError]:
     """Return correct Exception class from error_code."""
     return ERROR_MAP.get(error_code, MatterError)

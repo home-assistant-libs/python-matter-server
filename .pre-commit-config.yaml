@@ -1,6 +1,20 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: no-commit-to-branch
+        args:
+          - --branch=main
+      - id: debug-statements
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: 'v0.0.259'
+    hooks:
+      - id: ruff
+        files: ^(matter_server|scripts)/.+\.py$
   - repo: https://github.com/psf/black
     rev: 23.1.0
     hooks:
@@ -15,23 +29,6 @@ repos:
         args: []
         exclude_types: [csv, json]
         exclude: ^tests/fixtures/
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
-    hooks:
-      - id: flake8
-        files: ^(matter_server|scripts)/.+\.py$
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-        files: ^(matter_server|scripts)/.+\.py$
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-      - id: no-commit-to-branch
-        args:
-          - --branch=main
-      - id: trailing-whitespace
   - repo: local
     hooks:
       - id: mypy

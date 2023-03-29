@@ -16,6 +16,8 @@ from matter_server.common.models import MatterNodeData
 
 from .device_types import (
     ALL_TYPES as DEVICE_TYPES,
+)
+from .device_types import (
     Aggregator,
     BridgedDevice,
     DeviceType,
@@ -142,9 +144,7 @@ class MatterEndpoint:
             # allow sending None for Cluster to auto resolve it from the Attribute
             cluster = attribute.cluster_id
         cluster_id = cluster if isinstance(cluster, int) else cluster.id
-        attribute_id = (
-            attribute if isinstance(attribute, int) else attribute.attribute_id
-        )
+        attribute_id = attribute if isinstance(attribute, int) else attribute.attribute_id
         # the fastest way to check this is just by checking the AttributePath in the raw data...
         attr_path = create_attribute_path(self.endpoint_id, cluster_id, attribute_id)
         return attr_path in self.node.node_data.attributes
@@ -165,12 +165,10 @@ class MatterEndpoint:
             self.clusters[cluster_id] = cluster_instance
 
         # unpack cluster attribute, using the descriptor
-        attribute_class: Clusters.ClusterAttributeDescriptor = ALL_ATTRIBUTES[
-            cluster_id
-        ][attribute_id]
-        attribute_name, attribute_type = get_object_params(
-            cluster_class.descriptor, attribute_id
-        )
+        attribute_class: Clusters.ClusterAttributeDescriptor = ALL_ATTRIBUTES[cluster_id][
+            attribute_id
+        ]
+        attribute_name, attribute_type = get_object_params(cluster_class.descriptor, attribute_id)
 
         # we only set the value at cluster instance level and we leave
         # the underlying Attributes classproperty alone
@@ -251,20 +249,15 @@ class MatterNode:
         """Return Matter Cluster Attribute value for given parameters."""
         return self.endpoints[endpoint].get_attribute_value(cluster, attribute)
 
-    def has_cluster(
-        self, cluster: type[_CLUSTER_T] | int, endpoint: int | None = None
-    ) -> bool:
+    def has_cluster(self, cluster: type[_CLUSTER_T] | int, endpoint: int | None = None) -> bool:
         """Check if node has a specific cluster on any of the endpoints."""
         return any(
             x
             for x in self.endpoints.values()
-            if x.has_cluster(cluster)
-            and (endpoint is None or x.endpoint_id == endpoint)
+            if x.has_cluster(cluster) and (endpoint is None or x.endpoint_id == endpoint)
         )
 
-    def get_cluster(
-        self, endpoint: int, cluster: type[_CLUSTER_T] | int
-    ) -> _CLUSTER_T | None:
+    def get_cluster(self, endpoint: int, cluster: type[_CLUSTER_T] | int) -> _CLUSTER_T | None:
         """
         Get a Cluster object containing all attributes.
 
@@ -300,9 +293,7 @@ class MatterNode:
                     endpoint_id=endpoint_id, attributes_data=attributes_data, node=self
                 )
         # lookup if this is a bridge device
-        self._is_bridge_device = any(
-            Aggregator in x.device_types for x in self.endpoints.values()
-        )
+        self._is_bridge_device = any(Aggregator in x.device_types for x in self.endpoints.values())
         # composed devices reference to other endpoints through the partsList attribute
         # create a mapping table to quickly map this
         for endpoint in self.endpoints.values():
