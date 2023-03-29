@@ -10,6 +10,7 @@ All rights reserved.
 import asyncio
 import logging
 import re
+from os import makedirs
 
 from aiohttp import ClientError, ClientSession
 from cryptography import x509
@@ -52,6 +53,9 @@ async def fetch_certificates(
 ) -> int:
     """Fetch PAA Certificates."""
     LOGGER.info("Fetching the latest PAA root certificates from DCL.")
+    if not PAA_ROOT_CERTS_DIR.is_dir():
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, makedirs, PAA_ROOT_CERTS_DIR)
     fetch_count: int = 0
     base_urls = set()
     # determine which url's need to be queried.
