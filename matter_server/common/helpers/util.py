@@ -115,11 +115,8 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         if hasattr(value_type, "from_dict"):
             return value_type.from_dict(value)
         # handle a parse error in the sdk which is returned as:
-        # {'TLVValue': None, 'Reason': None}
-        if (
-            value.get("TLVValue", MISSING) is None
-            and value.get("Reason", MISSING) is None
-        ):
+        # {'TLVValue': None, 'Reason': None} or {'TLVValue': None}
+        if value.get("TLVValue", MISSING) is None:
             if value_type in (None, Nullable, Any):
                 return None
             value = None
@@ -132,13 +129,14 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         return None
     if is_dataclass(value_type) and isinstance(value, dict):
         return dataclass_from_dict(value_type, value)
-    origin = get_origin(value_type)
-    if origin is list and isinstance(value, list):
-        return [
+    # get origin value type and inspect one-by-one
+    origin: Any = get_origin(value_type)
+    if origin in (list, tuple) and isinstance(value, list | tuple):
+        return origin(
             parse_value(name, subvalue, get_args(value_type)[0])
             for subvalue in value
             if subvalue is not None
-        ]
+        )
     # handle dictionary where we should inspect all values
     elif origin is dict:
         subkey_type = get_args(value_type)[0]
