@@ -33,8 +33,9 @@ from ..common.helpers.util import (
 from ..common.models import APICommand, EventType, MatterNodeData
 
 if TYPE_CHECKING:
-    from .server import MatterServer
     from chip.ChipDeviceCtrl import ChipDeviceController
+
+    from .server import MatterServer
 
 _T = TypeVar("_T")
 
