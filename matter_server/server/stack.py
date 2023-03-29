@@ -4,9 +4,9 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
+from chip.ChipStack import ChipStack
 import chip.logging
 import chip.native
-from chip.ChipStack import ChipStack
 
 if TYPE_CHECKING:
     from chip.CertificateAuthority import CertificateAuthorityManager
@@ -36,7 +36,9 @@ class MatterStack:
         # Initialize Certificate Authority Manager
         # yeah this is a bit weird just to prevent a circular import in the underlying SDK
         self.certificate_authority_manager: CertificateAuthorityManager = (
-            chip.CertificateAuthority.CertificateAuthorityManager(chipStack=self._chip_stack)
+            chip.CertificateAuthority.CertificateAuthorityManager(
+                chipStack=self._chip_stack
+            )
         )
         self.certificate_authority_manager.LoadAuthoritiesFromStorage()
 
@@ -49,7 +51,10 @@ class MatterStack:
 
         # Get Fabric Admin (create new if we do not yet have one)
         for admin in cert_auth.adminList:
-            if admin.vendorId == server.vendor_id and admin.fabricId == server.fabric_id:
+            if (
+                admin.vendorId == server.vendor_id
+                and admin.fabricId == server.fabric_id
+            ):
                 self.fabric_admin = admin
                 break
         else:

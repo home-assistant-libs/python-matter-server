@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import typing
 
-from chip.clusters import Objects as all_clusters  # noqa: N813
+from chip.clusters import Objects as all_clusters
 
-ALL_TYPES: dict[int, type[DeviceType]] = {}
+ALL_TYPES: dict[int, type["DeviceType"]] = {}
 
 
 class DeviceType:

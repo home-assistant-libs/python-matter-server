@@ -3,8 +3,8 @@
 from dataclasses import is_dataclass
 from typing import Any
 
-import orjson
 from chip.clusters.Types import Nullable
+import orjson
 
 from .util import dataclass_to_dict
 
@@ -19,7 +19,7 @@ def json_encoder_default(obj: Any) -> Any:
     """
     if getattr(obj, "do_not_serialize", None):
         return None
-    if isinstance(obj, set | tuple):
+    if isinstance(obj, (set, tuple)):
         return list(obj)
     if isinstance(obj, float):
         return float(obj)
@@ -43,7 +43,9 @@ def json_dumps(data: Any) -> str:
     """Dump json string."""
     return orjson.dumps(
         data,
-        option=orjson.OPT_NON_STR_KEYS | orjson.OPT_INDENT_2 | orjson.OPT_PASSTHROUGH_DATACLASS,
+        option=orjson.OPT_NON_STR_KEYS
+        | orjson.OPT_INDENT_2
+        | orjson.OPT_PASSTHROUGH_DATACLASS,
         default=json_encoder_default,
     ).decode("utf-8")
 
