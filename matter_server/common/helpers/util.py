@@ -1,6 +1,9 @@
 """Utils for Matter server (and client)."""
 from __future__ import annotations
 
+import binascii
+import logging
+import platform
 from base64 import b64decode, b64encode
 from dataclasses import MISSING, asdict, fields, is_dataclass
 from datetime import datetime
@@ -78,7 +81,7 @@ def dataclass_to_dict(obj_in: DataclassInstance, skip_none: bool = False) -> dic
         if isinstance(value, Enum):
             return value.value
         if isinstance(value, bytes):
-            return b64encode(value).decode()
+            return b64encode(value).decode("utf-8")
         if isinstance(value, float32):
             return float(value)
         if type(value) == type:
@@ -201,8 +204,14 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         return float(value)
     if value_type is int and isinstance(value, str) and value.isnumeric():
         return int(value)
+    # handle bytes values (sent over the wire as base64 encoded strings)
     if value_type is bytes and isinstance(value, str):
-        return b64decode(value.encode())
+        try:
+            return b64decode(value.encode("utf-8"))
+        except binascii.Error:
+            # unfortunately sometimes the data is malformed
+            # as it is not super important we ignore it (for now)
+            return b""
 
     # Matter SDK specific types
     if value_type is uint and (
