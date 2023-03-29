@@ -177,13 +177,10 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
     # handle Any as value type (which is basically unprocessable)
     if value_type is Any:
         return value
-    # raise is value is None and the value is required according to annotations
+    # raise if value is None and the value is required according to annotations
     if value is None and value_type is not NoneType:
         raise KeyError(f"`{name}` of type `{value_type}` is required.")
 
-    if value_type is Enum and value not in value_type._value2member_map_:
-        # we do not want to crash so we return the raw value
-        return value
     try:
         if issubclass(value_type, Enum):
             # handle enums from the SDK that have a value that does not exist in the enum (sigh)
