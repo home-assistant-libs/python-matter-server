@@ -7,15 +7,12 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
-import pathlib
-from typing import TYPE_CHECKING, Any, Callable, Deque, Final, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Deque, Type, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.ClusterObjects import ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
-
-from matter_server.server.helpers.paa_certificates import fetch_certificates
 
 from ..common.const import SCHEMA_VERSION
 from ..common.errors import (
@@ -31,6 +28,8 @@ from ..common.helpers.util import (
     dataclass_from_dict,
 )
 from ..common.models import APICommand, EventType, MatterNodeData
+from .const import PAA_ROOT_CERTS_DIR
+from .helpers.paa_certificates import fetch_certificates
 
 if TYPE_CHECKING:
     from chip.ChipDeviceCtrl import ChipDeviceController
@@ -44,18 +43,6 @@ DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
 
-# the paa-root-certs path is hardcoded in the sdk at this time
-# and always uses the development subfolder
-# regardless of anything you pass into instantiating the controller
-# revisit this once matter 1.1 is released
-PAA_ROOT_CERTS_DIR: Final[pathlib.Path] = (
-    pathlib.Path(__file__)
-    .parent.resolve()
-    .parent.resolve()
-    .parent.resolve()
-    .joinpath("credentials/development/paa-root-certs")
-)
-
 
 class MatterDeviceController:
     """Class that manages the Matter devices."""
@@ -68,10 +55,6 @@ class MatterDeviceController:
     ):
         """Initialize the device controller."""
         self.server = server
-        # Instantiate the underlying ChipDeviceController instance on the Fabric
-        if not PAA_ROOT_CERTS_DIR.is_dir():
-            raise RuntimeError("PAA certificates directory not found")
-
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: Deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
@@ -85,7 +68,8 @@ class MatterDeviceController:
         """Async initialize of controller."""
         # (re)fetch all PAA certificates once at startup
         # NOTE: this must be done before initializing the controller
-        await fetch_certificates(PAA_ROOT_CERTS_DIR)
+        await fetch_certificates()
+        # Instantiate the underlying ChipDeviceController instance on the Fabric
         self.chip_controller = self.server.stack.fabric_admin.NewController(
             paaTrustStorePath=str(PAA_ROOT_CERTS_DIR)
         )
@@ -118,6 +102,9 @@ class MatterDeviceController:
 
     async def stop(self) -> None:
         """Handle logic on server stop."""
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+
         # unsubscribe all node subscriptions
         for sub in self._subscriptions.values():
             await self._call_sdk(sub.Shutdown)
@@ -148,9 +135,12 @@ class MatterDeviceController:
 
         Returns full NodeInfo once complete.
         """
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+
         # perform a quick delta sync of certificates to make sure
         # we have the latest paa root certs
-        await fetch_certificates(PAA_ROOT_CERTS_DIR)
+        await fetch_certificates()
         node_id = self._get_next_node_id()
 
         success = await self._call_sdk(
@@ -185,11 +175,14 @@ class MatterDeviceController:
         a string or None depending on the actual type of selected filter.
         Returns full NodeInfo once complete.
         """
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+
         # perform a quick delta sync of certificates to make sure
         # we have the latest paa root certs
         # NOTE: Its not very clear if the newly fetched certificates can be used without
         # restarting the device controller
-        await fetch_certificates(PAA_ROOT_CERTS_DIR)
+        await fetch_certificates()
 
         node_id = self._get_next_node_id()
 
@@ -215,6 +208,9 @@ class MatterDeviceController:
     @api_command(APICommand.SET_WIFI_CREDENTIALS)
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
         """Set WiFi credentials for commissioning to a (new) device."""
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+
         await self._call_sdk(
             self.chip_controller.SetWiFiCredentials,
             ssid=ssid,
@@ -226,6 +222,9 @@ class MatterDeviceController:
     @api_command(APICommand.SET_THREAD_DATASET)
     async def set_thread_operational_dataset(self, dataset: str) -> None:
         """Set Thread Operational dataset in the stack."""
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+
         await self._call_sdk(
             self.chip_controller.SetThreadOperationalDataset,
             threadOperationalDataset=bytes.fromhex(dataset),
@@ -247,6 +246,9 @@ class MatterDeviceController:
 
         Returns code to use as discriminator.
         """
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+
         if discriminator is None:
             discriminator = 3840  # TODO generate random one
 
@@ -265,6 +267,8 @@ class MatterDeviceController:
         self,
     ) -> CommissionableNode | list[CommissionableNode] | None:
         """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
 
         result = await self._call_sdk(
             self.chip_controller.DiscoverCommissionableNodes,
@@ -274,6 +278,9 @@ class MatterDeviceController:
     @api_command(APICommand.INTERVIEW_NODE)
     async def interview_node(self, node_id: int) -> None:
         """Interview a node."""
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+
         LOGGER.debug("Interviewing node: %s", node_id)
         try:
             await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
@@ -329,6 +336,9 @@ class MatterDeviceController:
         interaction_timeout_ms: int | None = None,
     ) -> Any:
         """Send a command to a Matter node/device."""
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
         command_cls = getattr(cluster_cls.Commands, command_name)
         command = dataclass_from_dict(command_cls, payload)
@@ -344,6 +354,9 @@ class MatterDeviceController:
     @api_command(APICommand.REMOVE_NODE)
     async def remove_node(self, node_id: int) -> None:
         """Remove a Matter node/device from the fabric."""
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+
         if node_id not in self._nodes:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or has not been interviewed."
@@ -379,6 +392,9 @@ class MatterDeviceController:
 
         Note that by using the listen command at server level, you will receive all node events.
         """
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+
         if node_id not in self._nodes:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or has not been interviewed."
