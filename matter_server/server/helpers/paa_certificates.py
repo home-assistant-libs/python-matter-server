@@ -9,14 +9,12 @@ All rights reserved.
 
 import asyncio
 import logging
+import pathlib
 import re
-from os import makedirs
 
-from aiohttp import ClientError, ClientSession
+from aiohttp import ClientSession, ClientError
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
-
-from matter_server.server.const import PAA_ROOT_CERTS_DIR
 
 LOGGER = logging.getLogger(__name__)
 PRODUCTION_URL = "https://on.dcl.csa-iot.org"
@@ -25,12 +23,16 @@ TEST_URL = "https://on.test-net.dcl.csa-iot.org"
 LAST_CERT_IDS: set[str] = set()
 
 
-async def write_paa_root_cert(certificate: str, subject: str) -> None:
+async def write_paa_root_cert(
+    certificate: str, subject: str, root_path: pathlib.Path
+) -> None:
     """Write certificate from string to file."""
 
     def _write() -> None:
-        filename_base = "dcld_mirror_" + re.sub("[^a-zA-Z0-9_-]", "", re.sub("[=, ]", "_", subject))
-        filepath_base = PAA_ROOT_CERTS_DIR.joinpath(filename_base)
+        filename_base = "dcld_mirror_" + re.sub(
+            "[^a-zA-Z0-9_-]", "", re.sub("[=, ]", "_", subject)
+        )
+        filepath_base = root_path.joinpath(filename_base)
         # handle PEM certificate file
         file_path_pem = f"{filepath_base}.pem"
         LOGGER.debug("Writing certificate %s", file_path_pem)
@@ -48,14 +50,12 @@ async def write_paa_root_cert(certificate: str, subject: str) -> None:
 
 
 async def fetch_certificates(
+    paa_trust_store_path: pathlib.Path,
     fetch_test_certificates: bool = True,
     fetch_production_certificates: bool = True,
 ) -> int:
     """Fetch PAA Certificates."""
     LOGGER.info("Fetching the latest PAA root certificates from DCL.")
-    if not PAA_ROOT_CERTS_DIR.is_dir():
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, makedirs, PAA_ROOT_CERTS_DIR)
     fetch_count: int = 0
     base_urls = set()
     # determine which url's need to be queried.
@@ -71,7 +71,9 @@ async def fetch_certificates(
         async with ClientSession(raise_for_status=True) as http_session:
             for url_base in base_urls:
                 # fetch the paa certificates list
-                async with http_session.get(f"{url_base}/dcl/pki/root-certificates") as response:
+                async with http_session.get(
+                    f"{url_base}/dcl/pki/root-certificates"
+                ) as response:
                     result = await response.json()
                 paa_list = result["approvedRootCertificates"]["certs"]
                 # grab each certificate
@@ -92,11 +94,14 @@ async def fetch_certificates(
                     await write_paa_root_cert(
                         certificate,
                         subject,
+                        paa_trust_store_path,
                     )
                     LAST_CERT_IDS.add(paa["subjectKeyId"])
                     fetch_count += 1
     except ClientError as err:
-        LOGGER.warning("Fetching latest certificates failed: error %s", err, exc_info=err)
+        LOGGER.warning(
+            "Fetching latest certificates failed: error %s", err, exc_info=err
+        )
     else:
         LOGGER.info("Fetched %s PAA root certificates from DCL.", fetch_count)
     return fetch_count

@@ -3,16 +3,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import uuid
-from collections.abc import Callable
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, Final, Optional, cast
+import uuid
 
 from aiohttp import ClientSession
 
 from matter_server.common.errors import ERROR_MAP
-from matter_server.common.helpers.util import dataclass_from_dict, dataclass_to_dict
-from matter_server.common.models import (
+
+from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
+from ..common.models import (
     APICommand,
     CommandMessage,
     ErrorResultMessage,
@@ -25,7 +25,6 @@ from matter_server.common.models import (
     ServerInfoMessage,
     SuccessResultMessage,
 )
-
 from .connection import MatterClientConnection
 from .exceptions import ConnectionClosed, InvalidServerVersion, InvalidState
 from .models.node import MatterNode
@@ -43,8 +42,8 @@ class MatterClient:
         """Initialize the Client class."""
         self.connection = MatterClientConnection(ws_server_url, aiohttp_session)
         self.logger = logging.getLogger(__package__)
-        self._nodes: dict[int, MatterNode] = {}
-        self._result_futures: dict[str, asyncio.Future] = {}
+        self._nodes: Dict[int, MatterNode] = {}
+        self._result_futures: Dict[str, asyncio.Future] = {}
         self._subscribers: dict[str, list[Callable[[EventType, Any], None]]] = {}
         self._stop_called: bool = False
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -57,9 +56,9 @@ class MatterClient:
     def subscribe(
         self,
         callback: Callable[[EventType, Any], None],
-        event_filter: EventType | None = None,
-        node_filter: int | None = None,
-        attr_path_filter: str | None = None,
+        event_filter: Optional[EventType] = None,
+        node_filter: Optional[int] = None,
+        attr_path_filter: Optional[str] = None,
     ) -> Callable[[], None]:
         """
         Subscribe to node and server events.
@@ -71,10 +70,16 @@ class MatterClient:
         # for fast lookups we create a key based on the filters, allowing
         # a "catch all" with a wildcard (*).
         _event_filter: str
-        _event_filter = SUB_WILDCARD if event_filter is None else event_filter.value
+        if event_filter is None:
+            _event_filter = SUB_WILDCARD
+        else:
+            _event_filter = event_filter.value
 
         _node_filter: str
-        _node_filter = SUB_WILDCARD if node_filter is None else str(node_filter)
+        if node_filter is None:
+            _node_filter = SUB_WILDCARD
+        else:
+            _node_filter = str(node_filter)
 
         if attr_path_filter is None:
             attr_path_filter = SUB_WILDCARD
@@ -118,7 +123,9 @@ class MatterClient:
 
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
         """Set WiFi credentials for commissioning to a (new) device."""
-        await self.send_command(APICommand.SET_WIFI_CREDENTIALS, ssid=ssid, credentials=credentials)
+        await self.send_command(
+            APICommand.SET_WIFI_CREDENTIALS, ssid=ssid, credentials=credentials
+        )
 
     async def set_thread_operational_dataset(self, dataset: str) -> None:
         """Set Thread Operational dataset in the stack."""
@@ -130,7 +137,7 @@ class MatterClient:
         timeout: int = 300,
         iteration: int = 1000,
         option: int = 0,
-        discriminator: int | None = None,
+        discriminator: Optional[int] = None,
     ) -> int:
         """
         Open a commissioning window to commission a device present on this controller to another.
@@ -223,7 +230,10 @@ class MatterClient:
         if not self.server_info:
             raise InvalidState("Not connected")
 
-        if require_schema is not None and require_schema > self.server_info.schema_version:
+        if (
+            require_schema is not None
+            and require_schema > self.server_info.schema_version
+        ):
             raise InvalidServerVersion(
                 "Command not available due to incompatible server version. Update the Matter "
                 f"Server to a version that supports at least api schema {require_schema}."
@@ -258,10 +268,15 @@ class MatterClient:
                 message_id=uuid.uuid4().hex, command=APICommand.START_LISTENING
             )
             await self.connection.send_message(message)
-            nodes_msg = cast(SuccessResultMessage, await self.connection.receive_message_or_raise())
+            nodes_msg = cast(
+                SuccessResultMessage, await self.connection.receive_message_or_raise()
+            )
             # a full dump of all nodes will be the result of the start_listening command
             # create MatterNode objects from the basic MatterNodeData objects
-            nodes = [MatterNode(dataclass_from_dict(MatterNodeData, x)) for x in nodes_msg.result]
+            nodes = [
+                MatterNode(dataclass_from_dict(MatterNodeData, x))
+                for x in nodes_msg.result
+            ]
             self._nodes = {node.node_id: node for node in nodes}
             # once we've hit this point we're all set
             self.logger.info("Matter client initialized.")
@@ -358,8 +373,8 @@ class MatterClient:
         self,
         event: EventType,
         data: Any = None,
-        node_id: int | None = None,
-        attribute_path: str | None = None,
+        node_id: Optional[int] = None,
+        attribute_path: Optional[str] = None,
     ) -> None:
         """Signal event to all subscribers."""
         # instead of iterating all subscribers we iterate over subscription keys
@@ -375,7 +390,7 @@ class MatterClient:
                     for callback in self._subscribers.get(key, []):
                         callback(event, data)
 
-    async def __aenter__(self) -> MatterClient:
+    async def __aenter__(self) -> "MatterClient":
         """Initialize and connect the Matter Websocket client."""
         await self.connect()
         return self

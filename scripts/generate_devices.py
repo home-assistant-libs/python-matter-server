@@ -29,7 +29,7 @@ def gen_cls_name(name: str):
             next_upper = True
             continue
         elif next_upper:
-            char = char.upper()  # noqa: PLW2901
+            char = char.upper()
             next_upper = False
 
         new_name.append(char)

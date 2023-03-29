@@ -25,10 +25,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgirepository1.0-dev
-          python -m pip install --upgrade pip build setuptools
-          pip install .[server] .[test]
-      - name: Lint/test with pre-commit
-        run: pre-commit run --all-files
+          python -m pip install --upgrade pip
+          pip install -e .[server] -r requirements-test.txt
+      - name: Flake8
+        run: flake8 scripts/ matter_server/
+      - name: Black
+        run: black --check scripts/ matter_server/
+      - name: isort
+        run: isort --check scripts/ matter_server/
+      - name: pylint
+        run: pylint matter_server/
+      - name: mypy
+        run: mypy matter_server/
 
   test:
     runs-on: ubuntu-latest
@@ -51,7 +59,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgirepository1.0-dev
-          python -m pip install --upgrade pip build setuptools
-          pip install .[server] .[test]
+          python -m pip install --upgrade pip
+          pip install -e .[server] -r requirements-test.txt
       - name: Pytest
         run: pytest --durations 10 --cov-report term-missing --cov=matter_server --cov-report=xml tests/server/

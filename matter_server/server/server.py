@@ -3,26 +3,24 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any, Callable, Set
 import weakref
-from collections.abc import Callable
-from typing import Any
 
 from aiohttp import web
 
-from matter_server.common.const import SCHEMA_VERSION
-from matter_server.common.errors import VersionMismatch
-from matter_server.common.helpers.api import APICommandHandler, api_command
-from matter_server.common.helpers.json import json_dumps
-from matter_server.common.helpers.util import chip_clusters_version, chip_core_version
-from matter_server.common.models import (
+from ..common.const import SCHEMA_VERSION
+from ..common.errors import VersionMismatch
+from ..common.helpers.api import APICommandHandler, api_command
+from ..common.helpers.json import json_dumps
+from ..common.helpers.util import chip_clusters_version, chip_core_version
+from ..common.models import (
     APICommand,
     EventCallBackType,
     EventType,
     ServerDiagnostics,
     ServerInfoMessage,
 )
-from matter_server.server.client_handler import WebsocketClientHandler
-
+from ..server.client_handler import WebsocketClientHandler
 from .const import MIN_SCHEMA_VERSION
 from .device_controller import MatterDeviceController
 from .stack import MatterStack
@@ -41,7 +39,7 @@ def mount_websocket(server: MatterServer, path: str) -> None:
         finally:
             clients.remove(connection)
 
-    async def _handle_shutdown(_app: web.Application) -> None:
+    async def _handle_shutdown(app: web.Application) -> None:
         # pylint: disable=unused-argument
         for client in set(clients):
             await client.disconnect()
@@ -79,7 +77,7 @@ class MatterServer:
         self.storage = StorageController(self)
         # we dynamically register command handlers
         self.command_handlers: dict[str, APICommandHandler] = {}
-        self._subscribers: set[EventCallBackType] = set()
+        self._subscribers: Set[EventCallBackType] = set()
         self._register_api_commands()
 
     async def start(self) -> None:
@@ -87,7 +85,9 @@ class MatterServer:
         self.logger.info("Starting the Matter Server...")
         # safety shield: make sure we use same clusters and core packages!
         if chip_clusters_version() != chip_core_version():
-            raise VersionMismatch("CHIP Core version does not match CHIP Clusters version.")
+            raise VersionMismatch(
+                "CHIP Core version does not match CHIP Clusters version."
+            )
         self.loop = asyncio.get_running_loop()
         await self.device_controller.initialize()
         await self.storage.start()
@@ -117,7 +117,9 @@ class MatterServer:
         self.stack.shutdown()
         self.logger.debug("Cleanup complete")
 
-    def subscribe(self, callback: Callable[[EventType, Any], None]) -> Callable[[], None]:
+    def subscribe(
+        self, callback: Callable[[EventType, Any], None]
+    ) -> Callable[[], None]:
         """
         Subscribe to events.
 
@@ -185,7 +187,7 @@ class MatterServer:
                 # method is decorated with our api decorator
                 self.register_api_command(val.api_cmd, val)
 
-    async def _handle_info(self, _request: web.Request) -> web.Response:
+    async def _handle_info(self, request: web.Request) -> web.Response:
         """Handle info endpoint to serve basic server (version) info."""
         # pylint: disable=unused-argument
         return web.json_response(self.get_info(), dumps=json_dumps)

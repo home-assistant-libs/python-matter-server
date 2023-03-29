@@ -7,8 +7,8 @@ import os
 from pathlib import Path
 
 import aiohttp
-import coloredlogs
 from aiorun import run
+import coloredlogs
 
 from matter_server.client.client import MatterClient
 from matter_server.server.server import MatterServer
@@ -41,8 +41,7 @@ parser.add_argument(
     "--log-level",
     type=str,
     default="info",
-    help="Provide logging level. Example --log-level debug, default=info, "
-    "possible=(critical, error, warning, info, debug)",
+    help="Provide logging level. Example --log-level debug, default=info, possible=(critical, error, warning, info, debug)",
 )
 
 args = parser.parse_args()
@@ -58,7 +57,9 @@ if __name__ == "__main__":
         os.mkdir(args.storage_path)
 
     # Init server
-    server = MatterServer(args.storage_path, DEFAULT_VENDOR_ID, DEFAULT_FABRIC_ID, int(args.port))
+    server = MatterServer(
+        args.storage_path, DEFAULT_VENDOR_ID, DEFAULT_FABRIC_ID, int(args.port)
+    )
 
     async def run_matter():
         """Run the Matter server and client."""
@@ -72,7 +73,7 @@ if __name__ == "__main__":
                 # start listening
                 await client.start_listening()
 
-    async def handle_stop(_loop: asyncio.AbstractEventLoop):
+    async def handle_stop(loop: asyncio.AbstractEventLoop):
         """Handle server stop."""
         await server.stop()
 

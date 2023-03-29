@@ -4,15 +4,15 @@ from __future__ import annotations
 import asyncio
 import logging
 import pprint
-from collections.abc import Callable
-from typing import Any, Final, cast
+from typing import Any, Callable, Dict, Final, cast
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
 
-from matter_server.common.const import SCHEMA_VERSION
-from matter_server.common.helpers.json import json_dumps, json_loads
 from matter_server.common.helpers.util import dataclass_from_dict
-from matter_server.common.models import (
+
+from ..common.const import SCHEMA_VERSION
+from ..common.helpers.json import json_dumps, json_loads
+from ..common.models import (
     CommandMessage,
     ErrorResultMessage,
     EventMessage,
@@ -21,7 +21,6 @@ from matter_server.common.models import (
     ServerInfoMessage,
     SuccessResultMessage,
 )
-
 from .exceptions import (
     CannotConnect,
     ConnectionClosed,
@@ -51,8 +50,8 @@ class MatterClientConnection:
         self.server_info: ServerInfoMessage | None = None
         self._aiohttp_session = aiohttp_session
         self._ws_client: ClientWebSocketResponse | None = None
-        self._nodes: dict[int, MatterNode] = {}
-        self._result_futures: dict[str, asyncio.Future] = {}
+        self._nodes: Dict[int, MatterNode] = {}
+        self._result_futures: Dict[str, asyncio.Future] = {}
         self._subscribers: dict[str, list[Callable[[EventType, Any], None]]] = {}
 
     @property

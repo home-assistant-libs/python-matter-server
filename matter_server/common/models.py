@@ -1,11 +1,10 @@
 """Models that are (serializeable) shared between server and client."""
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Callable
 
 # Enums and constants
 
@@ -123,5 +122,9 @@ class ServerInfoMessage:
 
 
 MessageType = (
-    CommandMessage | EventMessage | SuccessResultMessage | ErrorResultMessage | ServerInfoMessage
+    CommandMessage
+    | EventMessage
+    | SuccessResultMessage
+    | ErrorResultMessage
+    | ServerInfoMessage
 )
