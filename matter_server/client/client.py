@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Final, Optional, cast
 import uuid
 
 from aiohttp import ClientSession
+from chip.clusters import Objects as Clusters
 
 from matter_server.common.errors import ERROR_MAP
 
@@ -153,6 +154,37 @@ class MatterClient:
                 iteration=iteration,
                 option=option,
                 discriminator=discriminator,
+            ),
+        )
+
+    async def get_matter_fabrics(
+        self, node_id: int
+    ) -> list[tuple[int, int, int, str | None]]:
+        """
+        Get Matter fabrics from a device.
+
+        Returns a list of tuples containing fabric id, vendor id, fabric index and fabric label.
+        """
+
+        node = await self.get_node(node_id)
+        fabric: list[
+            Clusters.OperationalCredentials.Structs.FabricDescriptor
+        ] = node.get_attribute_value(
+            0, None, Clusters.OperationalCredentials.Attributes.Fabrics
+        )
+
+        return [(f.fabricId, f.vendorId, f.fabricIndex, None) for f in fabric]
+
+    async def remove_matter_fabric(self, node_id: int, fabric_index: int) -> None:
+        """
+        Remove Matter fabric from a device.
+        """
+
+        await self.send_device_command(
+            node_id,
+            0,
+            Clusters.OperationalCredentials.Commands.RemoveFabric(
+                fabricIndex=fabric_index,
             ),
         )
 
