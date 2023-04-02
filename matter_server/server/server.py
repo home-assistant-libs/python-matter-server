@@ -23,6 +23,7 @@ from ..common.models import (
 from ..server.client_handler import WebsocketClientHandler
 from .const import MIN_SCHEMA_VERSION
 from .device_controller import MatterDeviceController
+from .helpers.vendor_names import fetch_vendors
 from .stack import MatterStack
 from .storage import StorageController
 
@@ -88,6 +89,7 @@ class MatterServer:
             raise VersionMismatch(
                 "CHIP Core version does not match CHIP Clusters version."
             )
+        await fetch_vendors()
         self.loop = asyncio.get_running_loop()
         await self.device_controller.initialize()
         await self.storage.start()

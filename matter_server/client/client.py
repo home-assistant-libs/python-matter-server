@@ -159,11 +159,11 @@ class MatterClient:
 
     async def get_matter_fabrics(
         self, node_id: int
-    ) -> list[tuple[int, int, int, str | None]]:
+    ) -> list[tuple[int, int, int, str | None, str | None]]:
         """
         Get Matter fabrics from a device.
 
-        Returns a list of tuples containing fabric id, vendor id, fabric index and fabric label.
+        Returns a list of tuples containing fabric id, vendor id, fabric index, fabric label and vendor name.
         """
 
         node = await self.get_node(node_id)
@@ -173,7 +173,18 @@ class MatterClient:
             0, None, Clusters.OperationalCredentials.Attributes.Fabrics
         )
 
-        return [(f.fabricId, f.vendorId, f.fabricIndex, None) for f in fabric]
+        vendors_map = await self.send_command(APICommand.GET_VENDOR_NAMES)
+
+        return [
+            (
+                f.fabricId,
+                f.vendorId,
+                f.fabricIndex,
+                f.label,
+                vendors_map.get(f.vendorId),
+            )
+            for f in fabric
+        ]
 
     async def remove_matter_fabric(self, node_id: int, fabric_index: int) -> None:
         """
