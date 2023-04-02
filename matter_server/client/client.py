@@ -173,7 +173,10 @@ class MatterClient:
             0, None, Clusters.OperationalCredentials.Attributes.Fabrics
         )
 
-        vendors_map = await self.send_command(APICommand.GET_VENDOR_NAMES)
+        vendors_map = await self.send_command(
+            APICommand.GET_VENDOR_NAMES,
+            filter_vendors=[f.vendorId for f in fabric],
+        )
 
         return [
             (

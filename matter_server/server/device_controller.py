@@ -391,7 +391,7 @@ class MatterDeviceController:
     async def get_vendor_names(
         self, filter_vendors: list[int] | None = None
     ) -> dict[int, str]:
-        """Get a map of vendor ids to vendor names for a node."""
+        """Get a map of vendor ids to vendor names"""
 
         if filter_vendors is not None:
             vendors: dict[int, str] = {}
