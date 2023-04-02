@@ -1,6 +1,4 @@
-"""
-Util to resolve the vendor name from the CSA Vendor ID.
-"""
+"""Util to resolve the vendor name from the CSA Vendor ID."""
 
 import logging
 

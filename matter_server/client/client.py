@@ -163,7 +163,8 @@ class MatterClient:
         """
         Get Matter fabrics from a device.
 
-        Returns a list of tuples containing fabric id, vendor id, fabric index, fabric label and vendor name.
+        Returns a list of tuples containing:
+        fabric id, vendor id, fabric index, fabric label and vendor name.
         """
 
         node = await self.get_node(node_id)
@@ -190,10 +191,7 @@ class MatterClient:
         ]
 
     async def remove_matter_fabric(self, node_id: int, fabric_index: int) -> None:
-        """
-        Remove Matter fabric from a device.
-        """
-
+        """Remove Matter fabric from a device."""
         await self.send_device_command(
             node_id,
             0,
