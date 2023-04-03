@@ -35,7 +35,7 @@ server = [
   "cryptography==39.0.1"
 ]
 test = [
-  "black==23.1.0",
+  "black==23.3.0",
   "flake8==6.0.0",
   "flake8-docstrings==1.7.0",
   "isort==5.12.0",
