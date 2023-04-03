@@ -28,7 +28,7 @@ from ..common.models import (
 )
 from .connection import MatterClientConnection
 from .exceptions import ConnectionClosed, InvalidServerVersion, InvalidState
-from .models.node import MatterNode
+from .models.node import MatterFabricData, MatterNode
 
 if TYPE_CHECKING:
     from chip.clusters.Objects import ClusterCommand
@@ -157,9 +157,7 @@ class MatterClient:
             ),
         )
 
-    async def get_matter_fabrics(
-        self, node_id: int
-    ) -> list[tuple[int, int, int, str | None, str | None]]:
+    async def get_matter_fabrics(self, node_id: int) -> list[MatterFabricData]:
         """
         Get Matter fabrics from a device.
 
@@ -180,12 +178,12 @@ class MatterClient:
         )
 
         return [
-            (
-                f.fabricId,
-                f.vendorId,
-                f.fabricIndex,
-                f.label if f.label else None,
-                vendors_map.get(f.vendorId),
+            MatterFabricData(
+                fabric_id=f.fabricId,
+                vendor_id=f.vendorId,
+                fabric_index=f.fabricIndex,
+                fabric_label=f.label if f.label else None,
+                vendor_name=vendors_map.get(f.vendorId),
             )
             for f in fabric
         ]
