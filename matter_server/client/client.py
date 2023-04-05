@@ -161,8 +161,7 @@ class MatterClient:
         """
         Get Matter fabrics from a device.
 
-        Returns a list of tuples containing:
-        fabric id, vendor id, fabric index, fabric label and vendor name.
+        Returns a list of MatterFabricData objects.
         """
 
         node = await self.get_node(node_id)
