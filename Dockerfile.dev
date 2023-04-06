@@ -17,12 +17,6 @@ RUN \
         libcairo2 \
         gdb \
         git \
-    && git clone --depth 1 -b master \
-        https://github.com/project-chip/connectedhomeip \
-    && cp -r connectedhomeip/credentials /app/credentials \
-    && mv /app/credentials/production/paa-root-certs/* \
-          /app/credentials/development/paa-root-certs/ \
-    && rm -rf connectedhomeip \
     && apt-get purge -y --auto-remove \
         git \
     && rm -rf \
