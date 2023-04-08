@@ -16,13 +16,10 @@ RUN \
         unzip \
         libcairo2 \
         gdb \
-        git \
     && apt-get purge -y --auto-remove \
-        git \
     && rm -rf \
         /var/lib/apt/lists/* \
         /usr/src/*
-
 
 COPY . ./
 
