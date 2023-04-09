@@ -46,6 +46,18 @@ EventCallBackType = Callable[[EventType, Any], None]
 
 
 @dataclass
+class VendorInfo:
+    """Vendor info as received from the CSA."""
+
+    vendorID: int
+    vendorName: str
+    companyLegalName: str
+    companyPreferredName: str
+    vendorLandingPageURL: str
+    creator: str
+
+
+@dataclass
 class MatterNodeData:
     """Matter node data as received from (and stored on) the server."""
 

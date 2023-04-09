@@ -30,7 +30,6 @@ from ..common.helpers.util import (
 from ..common.models import APICommand, EventType, MatterNodeData
 from .const import PAA_ROOT_CERTS_DIR
 from .helpers.paa_certificates import fetch_certificates
-from .helpers.vendor_names import VENDORS
 
 if TYPE_CHECKING:
     from chip.ChipDeviceCtrl import ChipDeviceController
@@ -386,21 +385,6 @@ class MatterDeviceController:
         )
 
         self.server.signal_event(EventType.NODE_DELETED, node_id)
-
-    @api_command(APICommand.GET_VENDOR_NAMES)
-    async def get_vendor_names(
-        self, filter_vendors: list[int] | None = None
-    ) -> dict[int, str]:
-        """Get a map of vendor ids to vendor names."""
-
-        if filter_vendors is not None:
-            vendors: dict[int, str] = {}
-            for vendor_id in filter_vendors:
-                if vendor_id in VENDORS:
-                    vendors[vendor_id] = VENDORS[vendor_id]
-            return vendors
-
-        return VENDORS
 
     async def subscribe_node(self, node_id: int) -> None:
         """
