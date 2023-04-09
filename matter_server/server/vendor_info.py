@@ -19,7 +19,7 @@ DATA_KEY_VENDOR_INFO = "vendor_info"
 
 
 class VendorInfo:
-    """Fetches vendor info from the CSA and handles api call to get it."""
+    """Fetches vendor info from the CSA and handles api calls to get it."""
 
     def __init__(self, server: MatterServer):
         """Initialize the vendor info."""
