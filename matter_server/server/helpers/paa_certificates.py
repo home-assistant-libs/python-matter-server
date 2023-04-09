@@ -21,12 +21,11 @@ from matter_server.server.const import PAA_ROOT_CERTS_DIR
 LOGGER = logging.getLogger(__name__)
 PRODUCTION_URL = "https://on.dcl.csa-iot.org"
 TEST_URL = "https://on.test-net.dcl.csa-iot.org"
-GIT_URL = "https://github.com/project-chip/connectedhomeip/raw/master/credentials/development/paa-root-certs"
+GIT_URL = "https://github.com/project-chip/connectedhomeip/raw/master/credentials/development/paa-root-certs"  # pylint: disable=line-too-long
 GIT_CERTS = [
     "Chip-Test-PAA-FFF1-Cert",
     "Chip-Test-PAA-NoVID-Cert",
 ]
-
 LAST_CERT_IDS: set[str] = set()
 
 
@@ -54,11 +53,11 @@ async def write_paa_root_cert(certificate: str, subject: str) -> None:
     return await asyncio.get_running_loop().run_in_executor(None, _write)
 
 
-async def fetch_certificates(
+async def fetch_dcl_certificates(
     fetch_test_certificates: bool = True,
     fetch_production_certificates: bool = True,
 ) -> int:
-    """Fetch PAA Certificates."""
+    """Fetch DCL PAA Certificates."""
     LOGGER.info("Fetching the latest PAA root certificates from DCL.")
     if not PAA_ROOT_CERTS_DIR.is_dir():
         loop = asyncio.get_running_loop()
@@ -111,22 +110,46 @@ async def fetch_certificates(
     else:
         LOGGER.info("Fetched %s PAA root certificates from DCL.", fetch_count)
 
-    # fetch the certificates from the git repo
-    if fetch_test_certificates:
-        try:
-            async with ClientSession(raise_for_status=True) as http_session:
-                for cert in GIT_CERTS:
-                    if cert in LAST_CERT_IDS:
-                        continue
+    return fetch_count
 
-                    async with http_session.get(f"{GIT_URL}/{cert}.pem") as response:
-                        certificate = await response.text()
-                    LAST_CERT_IDS.add(cert)
-                    await write_paa_root_cert(certificate, cert)
+
+async def fetch_git_certificates() -> int:
+    """Fetch Git PAA Certificates."""
+    fetch_count = 0
+    LOGGER.info("Fetching the latest PAA root certificates from Git.")
+    try:
+        async with ClientSession(raise_for_status=True) as http_session:
+            for cert in GIT_CERTS:
+                if cert in LAST_CERT_IDS:
+                    continue
+
+                async with http_session.get(f"{GIT_URL}/{cert}.pem") as response:
+                    certificate = await response.text()
+                await write_paa_root_cert(certificate, cert)
+                LAST_CERT_IDS.add(cert)
                 fetch_count += 1
-        except ClientError as err:
-            LOGGER.warning(
-                "Fetching latest certificates failed: error %s", err, exc_info=err
-            )
+    except ClientError as err:
+        LOGGER.warning(
+            "Fetching latest certificates failed: error %s", err, exc_info=err
+        )
+
+    LOGGER.info("Fetched %s PAA root certificates from Git.", fetch_count)
+
+    return fetch_count
+
+
+async def fetch_certificates(
+    fetch_test_certificates: bool = True,
+    fetch_production_certificates: bool = True,
+) -> int:
+    """Fetch PAA Certificates."""
+
+    fetch_count = await fetch_dcl_certificates(
+        fetch_test_certificates=fetch_test_certificates,
+        fetch_production_certificates=fetch_production_certificates,
+    )
+
+    if fetch_test_certificates:
+        fetch_count += await fetch_git_certificates()
 
     return fetch_count
