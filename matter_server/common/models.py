@@ -49,11 +49,11 @@ EventCallBackType = Callable[[EventType, Any], None]
 class VendorInfo:
     """Vendor info as received from the CSA."""
 
-    vendorID: int
-    vendorName: str
-    companyLegalName: str
-    companyPreferredName: str
-    vendorLandingPageURL: str
+    vendor_id: int
+    vendor_name: str
+    company_legal_name: str
+    company_prefered_name: str
+    vendor_landing_page_url: str
     creator: str
 
 

@@ -19,12 +19,15 @@ DATA_KEY_VENDOR_INFO = "vendor_info"
 
 
 class VendorInfo:
+    """Fetches vendor info from the CSA and handles api call to get it."""
+
     def __init__(self, server: MatterServer):
+        """Initialize the vendor info."""
         self._data: dict[int, VendorInfoModel] = {}
         self._server = server
 
     async def start(self) -> None:
-        """Initialize the vendor info."""
+        """Async initialize the vendor info."""
         self._load_vendors()
         await self._fetch_vendors()
         self._save_vendors()
@@ -47,8 +50,13 @@ class VendorInfo:
                 ) as response:
                     data = await response.json()
                     for vendorinfo in data["vendorInfo"]:
-                        vendors[vendorinfo["vendorID"]] = dataclass_from_dict(
-                            VendorInfoModel, vendorinfo
+                        vendors[vendorinfo["vendorID"]] = VendorInfoModel(
+                            vendor_id=vendorinfo["vendorID"],
+                            vendor_name=vendorinfo["vendorName"],
+                            company_legal_name=vendorinfo["companyLegalName"],
+                            company_prefered_name=vendorinfo["companyPreferedName"],
+                            vendor_landing_page_url=vendorinfo["vendorLandingPageURL"],
+                            creator=vendorinfo["creator"],
                         )
         except ClientError as err:
             LOGGER.error("Unable to fetch vendor info from DCL: %s", err)
@@ -77,7 +85,10 @@ class VendorInfo:
             vendors: dict[int, str] = {}
             for vendor_id in filter_vendors:
                 if vendor_id in filter_vendors:
-                    vendors[vendor_id] = self._data[vendor_id].vendorName
+                    vendors[vendor_id] = self._data[vendor_id].vendor_name
             return vendors
 
-        return {vendor_id: self._data[vendor_id].vendorName for vendor_id in self._data}
+        return {
+            vendor_id: vendor_info.vendor_name
+            for vendor_id, vendor_info in self._data.items()
+        }
