@@ -35,9 +35,12 @@ class VendorInfo:
     def _load_vendors(self) -> None:
         """Load vendor info from storage."""
         LOGGER.info("Loading vendor info from storage.")
+        vendor_count = 0
         data = self._server.storage.get(DATA_KEY_VENDOR_INFO, {})
         for vendor_id, vendor_info in data.items():
             self._data[vendor_id] = dataclass_from_dict(VendorInfoModel, vendor_info)
+            vendor_count += 1
+        LOGGER.info("Loaded %s vendors from storage.", vendor_count)
 
     async def _fetch_vendors(self) -> None:
         """Fetch the vendor names from the CSA."""
@@ -54,7 +57,7 @@ class VendorInfo:
                             vendor_id=vendorinfo["vendorID"],
                             vendor_name=vendorinfo["vendorName"],
                             company_legal_name=vendorinfo["companyLegalName"],
-                            company_prefered_name=vendorinfo["companyPreferedName"],
+                            company_preferred_name=vendorinfo["companyPreferredName"],
                             vendor_landing_page_url=vendorinfo["vendorLandingPageURL"],
                             creator=vendorinfo["creator"],
                         )
