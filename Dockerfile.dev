@@ -16,6 +16,9 @@ RUN \
         unzip \
         libcairo2 \
         gdb \
+        gcc \
+        linux-libc-dev \
+        libc6-dev \
     && apt-get purge -y --auto-remove \
     && rm -rf \
         /var/lib/apt/lists/* \
