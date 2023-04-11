@@ -137,7 +137,7 @@ class MatterServer:
         """Return (version)info of the Matter Server."""
         assert self.device_controller.compressed_fabric_id is not None
         return ServerInfoMessage(
-            fabric_id=self.device_controller.fabric_id,
+            fabric_id=self.fabric_id,
             compressed_fabric_id=self.device_controller.compressed_fabric_id,
             schema_version=SCHEMA_VERSION,
             min_supported_schema_version=MIN_SCHEMA_VERSION,

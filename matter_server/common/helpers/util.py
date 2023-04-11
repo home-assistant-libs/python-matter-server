@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from base64 import b64decode, b64encode
+import binascii
 from dataclasses import MISSING, asdict, fields, is_dataclass
 from datetime import datetime
 from enum import Enum
@@ -20,6 +21,7 @@ from typing import (
     get_type_hints,
 )
 
+from chip.clusters.ClusterObjects import ClusterAttributeDescriptor
 from chip.clusters.Types import Nullable, NullValue
 from chip.tlv import float32, uint
 
@@ -30,6 +32,15 @@ if TYPE_CHECKING:
 
 CHIP_CLUSTERS_PKG_NAME = "home-assistant-chip-clusters"
 CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
+
+
+def create_attribute_path_from_attribute(
+    endpoint_id: int, attribute: ClusterAttributeDescriptor
+) -> str:
+    """Create path/identifier for an Attribute."""
+    return create_attribute_path(
+        endpoint_id, attribute.cluster_id, attribute.attribute_id
+    )
 
 
 def create_attribute_path(endpoint: int, cluster_id: int, attribute_id: int) -> str:
@@ -68,7 +79,7 @@ def dataclass_to_dict(obj_in: DataclassInstance, skip_none: bool = False) -> dic
         if isinstance(value, Enum):
             return value.value
         if isinstance(value, bytes):
-            return b64encode(value).decode()
+            return b64encode(value).decode("utf-8")
         if isinstance(value, float32):
             return float(value)
         if type(value) == type:
@@ -105,11 +116,8 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         if hasattr(value_type, "from_dict"):
             return value_type.from_dict(value)
         # handle a parse error in the sdk which is returned as:
-        # {'TLVValue': None, 'Reason': None}
-        if (
-            value.get("TLVValue", MISSING) is None
-            and value.get("Reason", MISSING) is None
-        ):
+        # {'TLVValue': None, 'Reason': None} or {'TLVValue': None}
+        if value.get("TLVValue", MISSING) is None:
             if value_type in (None, Nullable, Any):
                 return None
             value = None
@@ -122,13 +130,14 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         return None
     if is_dataclass(value_type) and isinstance(value, dict):
         return dataclass_from_dict(value_type, value)
-    origin = get_origin(value_type)
-    if origin is list and isinstance(value, list):
-        return [
+    # get origin value type and inspect one-by-one
+    origin: Any = get_origin(value_type)
+    if origin in (list, tuple) and isinstance(value, list | tuple):
+        return origin(
             parse_value(name, subvalue, get_args(value_type)[0])
             for subvalue in value
             if subvalue is not None
-        ]
+        )
     # handle dictionary where we should inspect all values
     elif origin is dict:
         subkey_type = get_args(value_type)[0]
@@ -165,13 +174,19 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         return None
     elif origin is type:
         return get_type_hints(value, globals(), locals())
+    # handle Any as value type (which is basically unprocessable)
     if value_type is Any:
         return value
+    # raise if value is None and the value is required according to annotations
     if value is None and value_type is not NoneType:
         raise KeyError(f"`{name}` of type `{value_type}` is required.")
 
     try:
         if issubclass(value_type, Enum):
+            # handle enums from the SDK that have a value that does not exist in the enum (sigh)
+            if value not in value_type._value2member_map_:
+                # we do not want to crash so we return the raw value
+                return value
             return value_type(value)
         if issubclass(value_type, datetime):
             return parse_utc_timestamp(value)
@@ -184,8 +199,14 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         return float(value)
     if value_type is int and isinstance(value, str) and value.isnumeric():
         return int(value)
+    # handle bytes values (sent over the wire as base64 encoded strings)
     if value_type is bytes and isinstance(value, str):
-        return b64decode(value.encode())
+        try:
+            return b64decode(value.encode("utf-8"))
+        except binascii.Error:
+            # unfortunately sometimes the data is malformed
+            # as it is not super important we ignore it (for now)
+            return b""
 
     # Matter SDK specific types
     if value_type is uint and (

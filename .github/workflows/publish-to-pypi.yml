@@ -9,7 +9,7 @@ jobs:
     name: Builds and publishes releases to PyPI
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3.4.0
+      - uses: actions/checkout@v3.5.0
       - name: Set up Python 3.10
         uses: actions/setup-python@v4.5.0
         with:
@@ -21,7 +21,7 @@ jobs:
         run: >-
           python3 -m build
       - name: Publish release to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.8.0
+        uses: pypa/gh-action-pypi-publish@v1.8.5
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
