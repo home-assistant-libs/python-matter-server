@@ -165,7 +165,7 @@ class MatterClient:
         """
 
         node = await self.get_node(node_id)
-        fabric: list[
+        fabrics: list[
             Clusters.OperationalCredentials.Structs.FabricDescriptor
         ] = node.get_attribute_value(
             0, None, Clusters.OperationalCredentials.Attributes.Fabrics
@@ -173,7 +173,7 @@ class MatterClient:
 
         vendors_map = await self.send_command(
             APICommand.GET_VENDOR_NAMES,
-            filter_vendors=[f.vendorId for f in fabric],
+            filter_vendors=[f.vendorId for f in fabrics],
         )
 
         return [
@@ -184,7 +184,7 @@ class MatterClient:
                 fabric_label=f.label if f.label else None,
                 vendor_name=vendors_map.get(f.vendorId),
             )
-            for f in fabric
+            for f in fabrics
         ]
 
     async def remove_matter_fabric(self, node_id: int, fabric_index: int) -> None:
