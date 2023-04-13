@@ -537,13 +537,38 @@ class MatterDeviceController:
                 or node.interview_version < SCHEMA_VERSION
                 or (datetime.utcnow() - node.last_interview).days > 30
             ):
-                tasks.append(self.interview_node(node_id))
+
+                async def _interview_node(node_id: int) -> None:
+                    """Run interview for node."""
+                    try:
+                        await self.interview_node(node_id)
+                    except NodeInterviewFailed as err:
+                        LOGGER.warning(
+                            "Unable to interview Node %s, we will retry later in the background.",
+                            node_id,
+                            exc_info=err,
+                        )
+
+                tasks.append(_interview_node(node_id))
                 continue
 
             # setup subscriptions for the node
             if node_id in self._subscriptions:
                 continue
-            tasks.append(self.subscribe_node(node_id))
+
+            async def _subscribe_node(node_id: int) -> None:
+                """Subscribe to node events."""
+                try:
+                    await self.subscribe_node(node_id)
+                except NodeNotResolving as err:
+                    LOGGER.warning(
+                        "Unable to subscribe to Node %s,"
+                        "we will retry later in the background.",
+                        node_id,
+                        exc_info=err,
+                    )
+
+            tasks.append(_subscribe_node(node_id))
 
         async def _run_coro(task: Coroutine[Any, Any, None]) -> None:
             """Run coroutine and release semaphore."""
