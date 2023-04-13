@@ -1,6 +1,7 @@
 """Matter node."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 import logging
 from typing import Any, TypeVar, cast
 
@@ -38,6 +39,17 @@ def get_object_params(
         if desc.Tag == object_id:
             return (desc.Label, desc.Type)
     raise KeyError(f"No descriptor found for object {object_id}")
+
+
+@dataclass
+class MatterFabricData:
+    """Data about a Matter fabric."""
+
+    fabric_id: int
+    vendor_id: int
+    fabric_index: int
+    fabric_label: str | None = None
+    vendor_name: str | None = None
 
 
 class MatterEndpoint:

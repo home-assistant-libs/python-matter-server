@@ -37,11 +37,24 @@ class APICommand(str, Enum):
     INTERVIEW_NODE = "interview_node"
     DEVICE_COMMAND = "device_command"
     REMOVE_NODE = "remove_node"
+    GET_VENDOR_NAMES = "get_vendor_names"
 
 
 EventCallBackType = Callable[[EventType, Any], None]
 
 # Generic model(s)
+
+
+@dataclass
+class VendorInfo:
+    """Vendor info as received from the CSA."""
+
+    vendor_id: int
+    vendor_name: str
+    company_legal_name: str
+    company_preferred_name: str
+    vendor_landing_page_url: str
+    creator: str
 
 
 @dataclass
