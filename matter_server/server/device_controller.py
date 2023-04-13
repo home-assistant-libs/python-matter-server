@@ -527,6 +527,8 @@ class MatterDeviceController:
 
     async def _check_subscriptions_and_interviews(self) -> None:
         """Run subscriptions (and interviews) for known nodes."""
+        interview_tasks: list[asyncio.Task] = []
+        subscription_tasks: list[asyncio.Task] = []
         for node_id, node in self._nodes.items():
             # (re)interview node (only) if needed
             if (
@@ -534,31 +536,18 @@ class MatterDeviceController:
                 or node.interview_version < SCHEMA_VERSION
                 or (datetime.utcnow() - node.last_interview).days > 30
             ):
-                try:
-                    await self.interview_node(node_id)
-                except NodeInterviewFailed as err:
-                    LOGGER.warning(
-                        "Unable to interview Node %s, we will retry later in the background.",
-                        node_id,
-                        exc_info=err,
-                    )
-                    continue
+                interview_tasks.append(
+                    asyncio.create_task(self.interview_node(node_id))
+                )
+                continue
 
             # setup subscriptions for the node
             if node_id in self._subscriptions:
                 continue
-            try:
-                await self.subscribe_node(node_id)
-            except NodeNotResolving as err:
-                # If the node is unreachable on the network now,
-                # it will throw a NodeNotResolving exception, catch this,
-                # log this and just try to resolve this node in the next run.
-                LOGGER.warning(
-                    "Unable to contact Node %s,"
-                    " we will retry later in the background.",
-                    node_id,
-                    exc_info=err,
-                )
+            subscription_tasks.append(asyncio.create_task(self.subscribe_node(node_id)))
+
+        # wait for all tasks to finish
+        await asyncio.gather(*interview_tasks, *subscription_tasks)
 
         # reschedule self to run every hour
         def _schedule() -> None:
