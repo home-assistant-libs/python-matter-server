@@ -7,7 +7,7 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Deque, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Deque, Type, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute, Objects as Clusters
@@ -42,6 +42,7 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
+INTERVIEW_TASK_LIMIT = 5
 
 
 class MatterDeviceController:
@@ -527,8 +528,8 @@ class MatterDeviceController:
 
     async def _check_subscriptions_and_interviews(self) -> None:
         """Run subscriptions (and interviews) for known nodes."""
-        interview_tasks: list[asyncio.Task] = []
-        subscription_tasks: list[asyncio.Task] = []
+        tasks: list[Coroutine[Any, Any, None]] = []
+        task_limit: asyncio.Semaphore = asyncio.Semaphore(INTERVIEW_TASK_LIMIT)
         for node_id, node in self._nodes.items():
             # (re)interview node (only) if needed
             if (
@@ -536,18 +537,21 @@ class MatterDeviceController:
                 or node.interview_version < SCHEMA_VERSION
                 or (datetime.utcnow() - node.last_interview).days > 30
             ):
-                interview_tasks.append(
-                    asyncio.create_task(self.interview_node(node_id))
-                )
+                tasks.append(self.interview_node(node_id))
                 continue
 
             # setup subscriptions for the node
             if node_id in self._subscriptions:
                 continue
-            subscription_tasks.append(asyncio.create_task(self.subscribe_node(node_id)))
+            tasks.append(self.subscribe_node(node_id))
+
+        async def _run_coro(task: Coroutine[Any, Any, None]) -> None:
+            """Run coroutine and release semaphore."""
+            async with task_limit:
+                await task
 
         # wait for all tasks to finish
-        await asyncio.gather(*interview_tasks, *subscription_tasks)
+        await asyncio.gather(*(_run_coro(task) for task in tasks))
 
         # reschedule self to run every hour
         def _schedule() -> None:
