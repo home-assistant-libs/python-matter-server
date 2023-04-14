@@ -7,6 +7,7 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
+import time
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Deque, Type, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
@@ -528,8 +529,12 @@ class MatterDeviceController:
 
     async def _check_subscriptions_and_interviews(self) -> None:
         """Run subscriptions (and interviews) for known nodes."""
+        # Set default resubscribe interval to 1 hour
+        reschedule_interval = 3600
+        start_time = time.time()
         tasks: list[Coroutine[Any, Any, None]] = []
         task_limit: asyncio.Semaphore = asyncio.Semaphore(INTERVIEW_TASK_LIMIT)
+
         for node_id, node in self._nodes.items():
             # (re)interview node (only) if needed
             if (
@@ -548,6 +553,7 @@ class MatterDeviceController:
                             node_id,
                             exc_info=err,
                         )
+                        raise err
 
                 tasks.append(_interview_node(node_id))
                 continue
@@ -562,21 +568,36 @@ class MatterDeviceController:
                     await self.subscribe_node(node_id)
                 except NodeNotResolving as err:
                     LOGGER.warning(
-                        "Unable to subscribe to Node %s,"
+                        "Unable to subscribe to Node %s, "
                         "we will retry later in the background.",
                         node_id,
                         exc_info=err,
                     )
+                    raise err
 
             tasks.append(_subscribe_node(node_id))
 
-        async def _run_coro(task: Coroutine[Any, Any, None]) -> None:
+        async def _run_task(task: Coroutine[Any, Any, None]) -> None:
             """Run coroutine and release semaphore."""
             async with task_limit:
                 await task
 
+        LOGGER.debug("Running %s tasks", len(tasks))
         # wait for all tasks to finish
-        await asyncio.gather(*(_run_coro(task) for task in tasks))
+        futures: list[asyncio.Future] = await asyncio.gather(
+            *(_run_task(task) for task in tasks), return_exceptions=True
+        )
+        LOGGER.debug(
+            "Done running %s tasks in %s seconds",
+            len(futures),
+            start_time - time.time(),
+        )
+        # check if any of the tasks failed
+        for future in futures:
+            if isinstance(future, Exception):
+                # if any of the tasks failed, reschedule in 5 minutes
+                reschedule_interval = 300
+                break
 
         # reschedule self to run every hour
         def _schedule() -> None:
@@ -585,8 +606,9 @@ class MatterDeviceController:
                 self._check_subscriptions_and_interviews()
             )
 
+        LOGGER.debug("Rescheduling interviews in %s seconds", reschedule_interval)
         loop = cast(asyncio.AbstractEventLoop, self.server.loop)
-        loop.call_later(3600, _schedule)
+        loop.call_later(reschedule_interval, _schedule)
 
     @staticmethod
     def _parse_attributes_from_read_result(
