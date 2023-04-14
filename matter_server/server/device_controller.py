@@ -43,7 +43,7 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
-INTERVIEW_TASK_LIMIT = 5
+INTERVIEW_TASK_LIMIT = 10
 
 
 class MatterDeviceController:
