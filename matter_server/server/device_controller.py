@@ -584,17 +584,17 @@ class MatterDeviceController:
 
         LOGGER.debug("Running %s tasks", len(tasks))
         # wait for all tasks to finish
-        futures: list[asyncio.Future] = await asyncio.gather(
+        results: list[Exception | None] = await asyncio.gather(
             *(_run_task(task) for task in tasks), return_exceptions=True
         )
         LOGGER.debug(
             "Done running %s tasks in %s seconds",
-            len(futures),
+            len(results),
             start_time - time.time(),
         )
         # check if any of the tasks failed
-        for future in futures:
-            if isinstance(future, Exception):
+        for result in results:
+            if isinstance(result, Exception):
                 # if any of the tasks failed, reschedule in 5 minutes
                 reschedule_interval = 300
                 break
