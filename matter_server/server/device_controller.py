@@ -376,18 +376,15 @@ class MatterDeviceController:
         )
         fabric_index = node.attributes[attribute_path]
 
-        try:
-            await self.chip_controller.SendCommand(
-                nodeid=node_id,
-                endpoint=0,
-                payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
-                    fabricIndex=fabric_index,
-                ),
-            )
-        except ChipStackError as err:
-            LOGGER.error("Failed to remove node %s from fabric: %s", node_id, err)
-
         self.server.signal_event(EventType.NODE_DELETED, node_id)
+
+        await self.chip_controller.SendCommand(
+            nodeid=node_id,
+            endpoint=0,
+            payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
+                fabricIndex=fabric_index,
+            ),
+        )
 
     async def subscribe_node(self, node_id: int) -> None:
         """
