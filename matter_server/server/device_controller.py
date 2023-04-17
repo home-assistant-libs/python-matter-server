@@ -7,7 +7,8 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Deque, Type, TypeVar, cast
+import time
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Deque, Type, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute, Objects as Clusters
@@ -42,6 +43,7 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
+INTERVIEW_TASK_LIMIT = 10
 
 
 class MatterDeviceController:
@@ -527,6 +529,12 @@ class MatterDeviceController:
 
     async def _check_subscriptions_and_interviews(self) -> None:
         """Run subscriptions (and interviews) for known nodes."""
+        # Set default resubscribe interval to 1 hour
+        reschedule_interval = 3600
+        start_time = time.time()
+        tasks: list[Coroutine[Any, Any, None]] = []
+        task_limit: asyncio.Semaphore = asyncio.Semaphore(INTERVIEW_TASK_LIMIT)
+
         for node_id, node in self._nodes.items():
             # (re)interview node (only) if needed
             if (
@@ -534,31 +542,62 @@ class MatterDeviceController:
                 or node.interview_version < SCHEMA_VERSION
                 or (datetime.utcnow() - node.last_interview).days > 30
             ):
-                try:
-                    await self.interview_node(node_id)
-                except NodeInterviewFailed as err:
-                    LOGGER.warning(
-                        "Unable to interview Node %s, we will retry later in the background.",
-                        node_id,
-                        exc_info=err,
-                    )
-                    continue
+
+                async def _interview_node(node_id: int) -> None:
+                    """Run interview for node."""
+                    try:
+                        await self.interview_node(node_id)
+                    except NodeInterviewFailed as err:
+                        LOGGER.warning(
+                            "Unable to interview Node %s, we will retry later in the background.",
+                            node_id,
+                            exc_info=err,
+                        )
+                        raise err
+
+                tasks.append(_interview_node(node_id))
+                continue
 
             # setup subscriptions for the node
             if node_id in self._subscriptions:
                 continue
-            try:
-                await self.subscribe_node(node_id)
-            except NodeNotResolving as err:
-                # If the node is unreachable on the network now,
-                # it will throw a NodeNotResolving exception, catch this,
-                # log this and just try to resolve this node in the next run.
-                LOGGER.warning(
-                    "Unable to contact Node %s,"
-                    " we will retry later in the background.",
-                    node_id,
-                    exc_info=err,
-                )
+
+            async def _subscribe_node(node_id: int) -> None:
+                """Subscribe to node events."""
+                try:
+                    await self.subscribe_node(node_id)
+                except NodeNotResolving as err:
+                    LOGGER.warning(
+                        "Unable to subscribe to Node %s, "
+                        "we will retry later in the background.",
+                        node_id,
+                        exc_info=err,
+                    )
+                    raise err
+
+            tasks.append(_subscribe_node(node_id))
+
+        async def _run_task(task: Coroutine[Any, Any, None]) -> None:
+            """Run coroutine and release semaphore."""
+            async with task_limit:
+                await task
+
+        LOGGER.debug("Running %s tasks", len(tasks))
+        # wait for all tasks to finish
+        results: list[Exception | None] = await asyncio.gather(
+            *(_run_task(task) for task in tasks), return_exceptions=True
+        )
+        LOGGER.debug(
+            "Done running %s tasks in %s seconds",
+            len(results),
+            start_time - time.time(),
+        )
+        # check if any of the tasks failed
+        for result in results:
+            if isinstance(result, Exception):
+                # if any of the tasks failed, reschedule in 5 minutes
+                reschedule_interval = 300
+                break
 
         # reschedule self to run every hour
         def _schedule() -> None:
@@ -567,8 +606,9 @@ class MatterDeviceController:
                 self._check_subscriptions_and_interviews()
             )
 
+        LOGGER.debug("Rescheduling interviews in %s seconds", reschedule_interval)
         loop = cast(asyncio.AbstractEventLoop, self.server.loop)
-        loop.call_later(3600, _schedule)
+        loop.call_later(reschedule_interval, _schedule)
 
     @staticmethod
     def _parse_attributes_from_read_result(
