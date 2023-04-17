@@ -173,6 +173,7 @@ class MatterClient:
 
         vendors_map = await self.send_command(
             APICommand.GET_VENDOR_NAMES,
+            require_schema=3,
             filter_vendors=[f.vendorId for f in fabrics],
         )
 
