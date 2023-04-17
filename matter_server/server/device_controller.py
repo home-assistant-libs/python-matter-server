@@ -376,6 +376,8 @@ class MatterDeviceController:
         )
         fabric_index = node.attributes[attribute_path]
 
+        self.server.signal_event(EventType.NODE_DELETED, node_id)
+
         await self.chip_controller.SendCommand(
             nodeid=node_id,
             endpoint=0,
@@ -383,8 +385,6 @@ class MatterDeviceController:
                 fabricIndex=fabric_index,
             ),
         )
-
-        self.server.signal_event(EventType.NODE_DELETED, node_id)
 
     async def subscribe_node(self, node_id: int) -> None:
         """
