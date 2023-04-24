@@ -87,6 +87,15 @@ def storage_controller_fixture() -> Generator[MagicMock, None, None]:
         yield storage_controller
 
 
+@pytest.fixture(name="fetch_certificates", autouse=True)
+def fetch_certificates_fixture() -> Generator[MagicMock, None, None]:
+    """Return a mocked fetch certificates."""
+    with patch(
+        "matter_server.server.device_controller.fetch_certificates", autospec=True
+    ) as fetch_certificates:
+        yield fetch_certificates
+
+
 @pytest.fixture(name="server")
 async def server_fixture() -> AsyncGenerator[MatterServer, None]:
     """Yield a server."""

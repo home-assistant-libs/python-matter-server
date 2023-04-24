@@ -1,6 +1,7 @@
 """Matter node."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 import logging
 from typing import Any, TypeVar, cast
 
@@ -38,6 +39,17 @@ def get_object_params(
         if desc.Tag == object_id:
             return (desc.Label, desc.Type)
     raise KeyError(f"No descriptor found for object {object_id}")
+
+
+@dataclass
+class MatterFabricData:
+    """Data about a Matter fabric."""
+
+    fabric_id: int
+    vendor_id: int
+    fabric_index: int
+    fabric_label: str | None = None
+    vendor_name: str | None = None
 
 
 class MatterEndpoint:
@@ -279,7 +291,7 @@ class MatterNode:
         return None
 
     def get_compose_child_ids(self, endpoint_id: int) -> tuple[int, ...] | None:
-        """Return endpoint ID's of any childs if the endpoint represents a Composed device."""
+        """Return endpoint IDs of any child if the endpoint represents a Composed device."""
         return tuple(x for x, y in self._composed_endpoints.items() if y == endpoint_id)
 
     def update(self, node_data: MatterNodeData) -> None:
@@ -307,10 +319,11 @@ class MatterNode:
         # create a mapping table to quickly map this
         for endpoint in self.endpoints.values():
             if RootNode in endpoint.device_types:
-                # ignore root endoint
+                # ignore root endpoint
                 continue
             if Aggregator in endpoint.device_types:
-                # ignore Bridge endpoint (as that will also use partsList to indicate its childs)
+                # ignore Bridge endpoint
+                # (as that will also use partsList to indicate its child's)
                 continue
             descriptor = endpoint.get_cluster(Clusters.Descriptor)
             assert descriptor is not None

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Final, Optional, cast
 import uuid
 
 from aiohttp import ClientSession
+from chip.clusters import Objects as Clusters
 
 from matter_server.common.errors import ERROR_MAP
 
@@ -27,7 +28,7 @@ from ..common.models import (
 )
 from .connection import MatterClientConnection
 from .exceptions import ConnectionClosed, InvalidServerVersion, InvalidState
-from .models.node import MatterNode
+from .models.node import MatterFabricData, MatterNode
 
 if TYPE_CHECKING:
     from chip.clusters.Objects import ClusterCommand
@@ -153,6 +154,47 @@ class MatterClient:
                 iteration=iteration,
                 option=option,
                 discriminator=discriminator,
+            ),
+        )
+
+    async def get_matter_fabrics(self, node_id: int) -> list[MatterFabricData]:
+        """
+        Get Matter fabrics from a device.
+
+        Returns a list of MatterFabricData objects.
+        """
+
+        node = await self.get_node(node_id)
+        fabrics: list[
+            Clusters.OperationalCredentials.Structs.FabricDescriptor
+        ] = node.get_attribute_value(
+            0, None, Clusters.OperationalCredentials.Attributes.Fabrics
+        )
+
+        vendors_map = await self.send_command(
+            APICommand.GET_VENDOR_NAMES,
+            require_schema=3,
+            filter_vendors=[f.vendorId for f in fabrics],
+        )
+
+        return [
+            MatterFabricData(
+                fabric_id=f.fabricId,
+                vendor_id=f.vendorId,
+                fabric_index=f.fabricIndex,
+                fabric_label=f.label if f.label else None,
+                vendor_name=vendors_map.get(f.vendorId),
+            )
+            for f in fabrics
+        ]
+
+    async def remove_matter_fabric(self, node_id: int, fabric_index: int) -> None:
+        """Remove Matter fabric from a device."""
+        await self.send_device_command(
+            node_id,
+            0,
+            Clusters.OperationalCredentials.Commands.RemoveFabric(
+                fabricIndex=fabric_index,
             ),
         )
 

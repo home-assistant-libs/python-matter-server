@@ -25,6 +25,7 @@ from .const import MIN_SCHEMA_VERSION
 from .device_controller import MatterDeviceController
 from .stack import MatterStack
 from .storage import StorageController
+from .vendor_info import VendorInfo
 
 
 def mount_websocket(server: MatterServer, path: str) -> None:
@@ -75,6 +76,7 @@ class MatterServer:
         # of Matter devices and their subscriptions.
         self.device_controller = MatterDeviceController(self)
         self.storage = StorageController(self)
+        self.vendor_info = VendorInfo(self)
         # we dynamically register command handlers
         self.command_handlers: dict[str, APICommandHandler] = {}
         self._subscribers: Set[EventCallBackType] = set()
@@ -92,6 +94,7 @@ class MatterServer:
         await self.device_controller.initialize()
         await self.storage.start()
         await self.device_controller.start()
+        await self.vendor_info.start()
         mount_websocket(self, "/ws")
         self.app.router.add_route("GET", "/", self._handle_info)
         self._runner = web.AppRunner(self.app, access_log=None)
@@ -137,7 +140,7 @@ class MatterServer:
         """Return (version)info of the Matter Server."""
         assert self.device_controller.compressed_fabric_id is not None
         return ServerInfoMessage(
-            fabric_id=self.device_controller.fabric_id,
+            fabric_id=self.fabric_id,
             compressed_fabric_id=self.device_controller.compressed_fabric_id,
             schema_version=SCHEMA_VERSION,
             min_supported_schema_version=MIN_SCHEMA_VERSION,
@@ -174,7 +177,7 @@ class MatterServer:
 
     def _register_api_commands(self) -> None:
         """Register all methods decorated as api_command."""
-        for cls in (self, self.device_controller):
+        for cls in (self, self.device_controller, self.vendor_info):
             for attr_name in dir(cls):
                 if attr_name.startswith("__"):
                     continue
