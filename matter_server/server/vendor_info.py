@@ -87,7 +87,7 @@ class VendorInfo:
         if filter_vendors:
             vendors: dict[int, str] = {}
             for vendor_id in filter_vendors:
-                if vendor_id in filter_vendors:
+                if vendor_id in filter_vendors and vendor_id in self._data:
                     vendors[vendor_id] = self._data[vendor_id].vendor_name
             return vendors
 

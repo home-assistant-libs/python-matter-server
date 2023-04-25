@@ -183,7 +183,7 @@ class MatterClient:
                 vendor_id=f.vendorId,
                 fabric_index=f.fabricIndex,
                 fabric_label=f.label if f.label else None,
-                vendor_name=vendors_map.get(f.vendorId),
+                vendor_name=vendors_map.get(str(f.vendorId)),
             )
             for f in fabrics
         ]
