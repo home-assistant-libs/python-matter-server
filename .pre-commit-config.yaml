@@ -32,15 +32,15 @@ repos:
         args:
           - --branch=main
       - id: trailing-whitespace
-  # - repo: local
-  #   hooks:
-  #     - id: mypy
-  #       name: mypy
-  #       entry: mypy
-  #       types: [python]
-  #       language: system
-  #       files: ^(matter_server)/.+\.py$
-  #       require_serial: true
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: mypy
+        types: [python]
+        language: system
+        files: ^(matter_server)/.+\.py$
+        require_serial: true
 #      - id: pylint
 #        name: pylint
 #        entry: pylint -j 0
