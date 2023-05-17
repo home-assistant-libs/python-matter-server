@@ -26,14 +26,13 @@ dependencies = [
   "coloredlogs",
   "dacite",
   "orjson",
-  "home-assistant-chip-clusters==2023.5.0"
+  "home-assistant-chip-clusters==2023.5.1"
 ]
 
 [project.optional-dependencies]
 server = [
-  "home-assistant-chip-core==2023.5.0",
-  "cryptography==40.0.2",
-  "ecdsa>=0.18.0"
+  "home-assistant-chip-core==2023.5.1",
+  "cryptography==40.0.2"
 ]
 test = [
   "black==23.3.0",
