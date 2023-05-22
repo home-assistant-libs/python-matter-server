@@ -200,7 +200,7 @@ class MatterEndpoint:
         cluster = self.get_cluster(Clusters.Descriptor)
         assert cluster is not None
         for dev_info in cluster.deviceTypeList:  # type: ignore[unreachable]
-            device_type = DEVICE_TYPES.get(dev_info.type)
+            device_type = DEVICE_TYPES.get(dev_info.deviceType)
             if device_type is None:
                 LOGGER.debug("Found unknown device type %s", dev_info)
                 continue
