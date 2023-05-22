@@ -240,9 +240,9 @@ class MatterDeviceController:
         node_id: int,
         timeout: int = 300,
         iteration: int = 1000,
-        option: int = 0,
+        option: int = 1,
         discriminator: int | None = None,
-    ) -> int:
+    ) -> tuple[int, str]:
         """
         Open a commissioning window to commission a device present on this controller to another.
 
@@ -254,7 +254,7 @@ class MatterDeviceController:
         if discriminator is None:
             discriminator = 3840  # TODO generate random one
 
-        await self._call_sdk(
+        pin, code = await self._call_sdk(
             self.chip_controller.OpenCommissioningWindow,
             nodeid=node_id,
             timeout=timeout,
@@ -262,7 +262,7 @@ class MatterDeviceController:
             discriminator=discriminator,
             option=option,
         )
-        return discriminator
+        return pin, code
 
     @api_command(APICommand.DISCOVER)
     async def discover_commissionable_nodes(

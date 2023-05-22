@@ -220,7 +220,7 @@ async def test_server_start(
         "node_id": 1,
         "timeout": 300,
         "iteration": 1000,
-        "option": 0,
+        "option": 1,
         "discriminator": None,
     }
     assert not (
