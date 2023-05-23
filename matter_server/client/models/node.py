@@ -326,6 +326,11 @@ class MatterNode:
                 continue
             descriptor = endpoint.get_cluster(Clusters.Descriptor)
             if descriptor is None:
+                LOGGER.warning(
+                    "Found endpoint without a Descriptor: Node %s, endpoint %s",
+                    self.node_id,
+                    endpoint.endpoint_id,
+                )
                 continue
             if descriptor.partsList:  # type: ignore[unreachable]
                 for endpoint_id in descriptor.partsList:
