@@ -197,14 +197,13 @@ class MatterEndpoint:
         for attribute_path, attribute_value in attributes_data.items():
             self.set_attribute_value(attribute_path, attribute_value)
         # extract device types from Descriptor Cluster
-        cluster = self.get_cluster(Clusters.Descriptor)
-        assert cluster is not None
-        for dev_info in cluster.deviceTypeList:  # type: ignore[unreachable]
-            device_type = DEVICE_TYPES.get(dev_info.deviceType)
-            if device_type is None:
-                LOGGER.debug("Found unknown device type %s", dev_info)
-                continue
-            self.device_types.add(device_type)
+        if cluster := self.get_cluster(Clusters.Descriptor):
+            for dev_info in cluster.deviceTypeList:  # type: ignore[unreachable]
+                device_type = DEVICE_TYPES.get(dev_info.deviceType)
+                if device_type is None:
+                    LOGGER.debug("Found unknown device type %s", dev_info)
+                    continue
+                self.device_types.add(device_type)
 
     def __repr__(self) -> str:
         """Return the representation."""
@@ -326,7 +325,13 @@ class MatterNode:
                 # (as that will also use partsList to indicate its child's)
                 continue
             descriptor = endpoint.get_cluster(Clusters.Descriptor)
-            assert descriptor is not None
+            if descriptor is None:
+                LOGGER.warning(
+                    "Found endpoint without a Descriptor: Node %s, endpoint %s",
+                    self.node_id,
+                    endpoint.endpoint_id,
+                )
+                continue
             if descriptor.partsList:  # type: ignore[unreachable]
                 for endpoint_id in descriptor.partsList:
                     self._composed_endpoints[endpoint_id] = endpoint.endpoint_id
