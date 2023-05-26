@@ -1,4 +1,4 @@
-FROM python:3.10-slim-bullseye
+FROM python:3.11-slim-bullseye
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -16,9 +16,6 @@ RUN \
         unzip \
         libcairo2 \
         gdb \
-        gcc \
-        linux-libc-dev \
-        libc6-dev \
     && apt-get purge -y --auto-remove \
     && rm -rf \
         /var/lib/apt/lists/* \
