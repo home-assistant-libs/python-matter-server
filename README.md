@@ -207,3 +207,16 @@ docker compose build --no-cache
 docker compose up -d
 docker compose logs -f
 ```
+
+### Note when using Thread based Matter devices
+
+When communicating with Thread devices through a non-local Thread border router,
+your host must process ICMPv6 Router Advertisements. See the [openthread.io
+Bidirectional IPv6 Connectivity code labs](https://openthread.io/codelabs/openthread-border-router#6)
+on how-to setup your host correctly. Note that NetworkManager has its own ICMPv6
+Router Advertisement processing. A recent version of NetworkManager is
+necessary, and there are still known issues (see NetworkManager issue
+[#1232](https://gitlab.freedesktop.org/NetworkManager/NetworkManager/-/issues/1232)).
+
+The Home Assistant Operating System 10 and newer correctly processes ICMPv6
+Router Advertisements.
