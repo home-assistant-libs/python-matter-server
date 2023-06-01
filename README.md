@@ -8,9 +8,9 @@ This repository is for development only (so not for enduser support). For enabli
 
 NOTE: Both Matter and this implementation are in early (v1) state and features are probably missing or could be improved. See our [development notes](#development) how you can help out, with development and/or testing.
 
-## Trying it out
+## Running the development server
 
-`For enabling Matter support within Home Assistant, please refer to the Home Assistant documentation. These instructions are for development/advanced scenarios only!`
+**For enabling Matter support within Home Assistant, please refer to the Home Assistant documentation. These instructions are for development/advanced scenarios only!**
 
 To install the server (including client): `pip install python-matter-server[server]`
 To only install the client part: `pip install python-matter-server`
@@ -192,21 +192,6 @@ Please note that development is only possible on Linux and MacOS, no Windows sup
 - Download/clone the repo to your local machine.
 - Create a Python virtual environment.
 - Install the correct SDK wheels for both the cluster and core package, see instructions above if there is no wheel for your setup prebuilt.
-
-## Dockerfile
-
-### Build
-
-```sh
-docker compose build --no-cache
-```
-
-### Run
-
-```sh
-docker compose up -d
-docker compose logs -f
-```
 
 ### Note when using Thread based Matter devices
 
