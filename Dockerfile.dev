@@ -13,6 +13,8 @@ RUN \
         openssl \
         zlib1g \
         libjson-c5 \
+        libnl-3-200 \
+        libnl-route-3-200 \
         unzip \
         libcairo2 \
         gdb \
