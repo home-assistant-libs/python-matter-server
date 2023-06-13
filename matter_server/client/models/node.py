@@ -65,7 +65,7 @@ class MatterEndpoint:
         self.node = node
         self.endpoint_id = endpoint_id
         self.clusters: dict[int, Clusters.Cluster] = {}
-        self.device_types: set[DeviceType] = set()
+        self.device_types: set[type[DeviceType]] = set()
         self.update(attributes_data)
 
     @property
