@@ -291,7 +291,7 @@ class MatterDeviceController:
                     nodeid=node_id, attributes="*", events="*", fabricFiltered=False
                 )
             )
-        except ChipStackError as err:
+        except (ChipStackError, NodeNotResolving) as err:
             raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
 
         is_new_node = node_id not in self._nodes
