@@ -421,7 +421,7 @@ class MatterDeviceController:
         sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
             nodeid=node_id,
             attributes="*",
-            events=[("*", 0)],
+            events=[("*", 1)],
             reportInterval=(0, 120),
             fabricFiltered=False,
         )
