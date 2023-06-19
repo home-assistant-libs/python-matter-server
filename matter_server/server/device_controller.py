@@ -655,6 +655,6 @@ class MatterDeviceController:
                 # when we're out of retries, raise NodeNotResolving
                 raise NodeNotResolving(f"Unable to resolve Node {node_id}") from err
             await self._resolve_node(
-                node_id=node_id, retries=retries - 1, allow_pase=retries == 0
+                node_id=node_id, retries=retries - 1, allow_pase=retries - 1== 0
             )
             await asyncio.sleep(2)
