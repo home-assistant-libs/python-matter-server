@@ -285,13 +285,13 @@ class MatterDeviceController:
 
         LOGGER.debug("Interviewing node: %s", node_id)
         try:
-            await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
+            await self._resolve_node(node_id=node_id)
             read_response: Attribute.AsyncReadTransaction.ReadResponse = (
                 await self.chip_controller.Read(
                     nodeid=node_id, attributes="*", events="*", fabricFiltered=False
                 )
             )
-        except ChipStackError as err:
+        except (ChipStackError, NodeNotResolving) as err:
             raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
 
         is_new_node = node_id not in self._nodes
@@ -406,12 +406,9 @@ class MatterDeviceController:
         node_logger.debug("Setting up subscriptions...")
 
         node = cast(MatterNodeData, self._nodes[node_id])
-
-        try:
-            await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
-        except ChipStackError as err:
-            node.available = False
-            raise NodeNotResolving(f"Failed to resolve node {node_id}") from err
+        node.available = False
+        await self._resolve_node(node_id=node_id)
+        node.available = True
 
         # we follow the pattern of apple and google here and
         # just do a wildcard subscription for all clusters and properties
@@ -421,7 +418,7 @@ class MatterDeviceController:
         sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
             nodeid=node_id,
             attributes="*",
-            events=[("*", 0)],
+            events=[("*", 1)],
             reportInterval=(0, 120),
             fabricFiltered=False,
         )
@@ -632,3 +629,32 @@ class MatterDeviceController:
                     )
                     result[attribute_path] = attr_value
         return result
+
+    async def _resolve_node(
+        self, node_id: int, retries: int = 3, allow_pase: bool = False
+    ) -> None:
+        """Resolve a Node on the network."""
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+        try:
+            if allow_pase:
+                # last attempt allows PASE connection (last resort)
+                LOGGER.debug(
+                    "Attempting to resolve node %s (with PASE connection)", node_id
+                )
+                await self._call_sdk(
+                    self.chip_controller.GetConnectedDeviceSync,
+                    nodeid=node_id,
+                    allowPASE=True,
+                )
+                return
+            LOGGER.debug("Resolving node %s", node_id)
+            await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
+        except (ChipStackError, TimeoutError) as err:
+            if not retries:
+                # when we're out of retries, raise NodeNotResolving
+                raise NodeNotResolving(f"Unable to resolve Node {node_id}") from err
+            await self._resolve_node(
+                node_id=node_id, retries=retries - 1, allow_pase=retries - 1 == 0
+            )
+            await asyncio.sleep(2)

@@ -27,7 +27,7 @@ class DeviceType:
 
     def __hash__(self) -> int:
         """Return unique hash for this object."""
-        return hash(self.device_type)
+        return self.device_type
 
 
 class OrphanClusters(DeviceType, device_type=0xF001):

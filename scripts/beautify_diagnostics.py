@@ -75,7 +75,7 @@ def process_node(node):
             continue
 
         for device_type in device_types:
-            device_type_id = device_type["type"]
+            device_type_id = device_type["deviceType"]
             if device_type_id in ALL_TYPES:
                 device_type_name = ALL_TYPES[device_type_id].__name__
             else:

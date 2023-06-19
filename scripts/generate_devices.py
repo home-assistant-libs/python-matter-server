@@ -9,7 +9,7 @@ REPO_ROOT = pathlib.Path(__file__).parent.parent
 CHIP_ROOT = REPO_ROOT / "../../project-chip/connectedhomeip"
 DEVICE_XML = CHIP_ROOT / "src/app/zap-templates/zcl/data-model/chip/matter-devices.xml"
 
-OUTPUT_PYTHON = REPO_ROOT / "matter_server/common/models/device_types.py"
+OUTPUT_PYTHON = REPO_ROOT / "matter_server/client/models/device_types.py"
 
 
 def gen_cls_name(name: str):
