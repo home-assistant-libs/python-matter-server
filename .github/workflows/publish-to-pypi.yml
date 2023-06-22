@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3.5.3
+      - name: Get tag
+        id: vars
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Set up Python 3.10
         uses: actions/setup-python@v4.6.1
         with:
@@ -17,6 +20,13 @@ jobs:
       - name: Install build
         run: >-
           pip install build
+      - name: Validate tag matches Python project version
+        shell: python
+        run: |-
+          import tomli
+          with open("pyproject.toml", "rb") as f:
+            pyproject = tomli.load(f)
+          assert pyproject["project"]["version"] == "${{ steps.vars.outputs.tag }}"
       - name: Build
         run: >-
           python3 -m build
