@@ -4,7 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "python-matter-server"
-version = "3.5.1"
+# The version is set by GH action on release
+version = "0.0.0"
 license     = {text = "Apache-2.0"}
 description = "Python Matter WebSocket Server"
 readme = "README.md"
