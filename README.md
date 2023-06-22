@@ -4,7 +4,94 @@ This project implements a Matter Controller Server over WebSockets using the [of
 
 The goal of this project is primary to have Matter support in Home Assistant but its universal approach makes it suitable to be used in other projects too.
 
-This repository is for development only (so not for enduser support). For enabling Matter support within Home Assistant, please refer to the [Home Assistant documentation](https://www.home-assistant.io/integrations/matter/).
+We strongly recommend to use Home Assistant OS along with the official Matter
+Server add-on to use Matter with Home Assistant. The Matter integration
+automatically installs the Python Matter Server add-on. Please refer to the
+[Home Assistant documentation](https://www.home-assistant.io/integrations/matter/).
+Home Assistant OS has been tested and tuned to be used with Matter and Thead,
+which makes this combination the best tested and largely worry free
+environement.
+
+If you still prefer a self-managed container installation, we do offer an
+official container image. Please keep in mind that you might expierence
+communication issues with Matter devices, especially Thread based devices.
+This is mostly because the container installation uses host networking, and
+relies on the networking managed by your operating system.
+
+## Requirements to communicate with Wi-Fi/Ethernet based Thread devices
+
+Make sure your you run the container on the host network. The host network
+interface needs to be in the same network as the Android/iPhone device
+you are using for commissioning. Matter uses link-local multicast protocols
+which do not work accross different LANs or VLANs.
+
+The host network interface needs IPv6 support enabled.
+
+## Requirements to communicate with Thread devices through Thread border routers
+
+For communication through Thread border routers which are not running on the same
+host as the Matter Controller server to work, IPv6 routing needs to be properly
+working. IPv6 routing is largely setup automatically through the IPv6 Neighbor
+Discovery Protocol, specifically the Route Information Options (RIO). However,
+if IPv6 ND RIO's are processed, and processed correctly depends on the network
+management software your system is using, there may be bugs and cavats in
+processing this Route Information Options.
+
+In general, make sure the kernel option `CONFIG_IPV6_ROUTER_PREF` is enabeld and
+that IPv6 forwarding is disabled (sysctl variable `net.ipv6.conf.all.forwarding`).
+If IPv6 forwarding is enabled, the Linux kernel doesn't employ reachability
+probing (RFC 4191), which can lead to longer outages (up to 30min) until
+network changes are detected.
+
+If you are using NetworkManager, make sure to use at least NetworkManager 1.42.
+Previous versions loose track of routes and stale routs can lead to unreachable
+Thread devices. All current released NetworkManager versions can't handle
+multiple routes to the same network properly. This means if you have multiple
+Thread border routers, the fallback won't work immeaditly (see [NetworkManager
+issue #1232](https://gitlab.freedesktop.org/NetworkManager/NetworkManager/-/issues/1232)).
+
+We currently don't have experience with systemd-networkd. It seems to have its
+own IPv6 Neighbor Discovery Protocol handling.
+
+If you don't use NetworkManager or systemd-networkd, you can use the kernel's
+IPv6 Neighbor Discovery Protocol handling.
+
+Make sure the kernel options `CONFIG_IPV6_ROUTE_INFO` is enabled and the
+following sysctl variables:
+
+```
+sysctl -w net.ipv6.conf.wlan0.accept_ra=1
+sysctl -w net.ipv6.conf.wlan0.accept_ra_rt_info_max_plen=64
+```
+
+If your system has IPv6 forwarding enabled (not recommended, see above), you'll
+have to use 2 for the accept_ra variable. See also the [Thread Border Router - Bidirectional IPv6 Connectivity and DNS-Based Service Discovery codelab](https://openthread.io/codelabs/openthread-border-router#6).
+
+## Running the Matter Server using container image
+
+With the following command you can run the Matter Server in a container using
+Docker. The Matter network data (fabric information) are stored in a newly
+created directory `data` in the current directory. Adjust the command to
+choose another location instead.
+
+```
+mkdir data
+docker run -d \
+  --name matter-server \
+  --restart=unless-stopped \
+  --security-opt apparmor=unconfined \
+  -v $(pwd)/data:/data \
+  -v /run/dbus:/run/dbus:ro \
+  --network=host \
+  ghcr.io/agners/python-matter-server:stable
+```
+
+### Running using Docker compose
+
+```sh
+docker compose up -d
+docker compose logs -f
+```
 
 NOTE: Both Matter and this implementation are in early (v1) state and features are probably missing or could be improved. See our [development notes](#development) how you can help out, with development and/or testing.
 

@@ -2,9 +2,6 @@ version: "3.8"
 services:
   # python-matter-server
   matter-server:
-    build:
-      context: ./
-      dockerfile: Dockerfile.dev
     image: matter-server:latest
     container_name: matter-server
     restart: unless-stopped
