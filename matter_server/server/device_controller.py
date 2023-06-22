@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Callable, Coroutine, Deque, Type, TypeVar
 
 from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute, Objects as Clusters
+from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
 
@@ -23,6 +24,7 @@ from ..common.errors import (
     NodeNotResolving,
 )
 from ..common.helpers.api import api_command
+from ..common.helpers.json import json_dumps
 from ..common.helpers.util import (
     create_attribute_path,
     create_attribute_path_from_attribute,
@@ -429,6 +431,10 @@ class MatterDeviceController:
         ) -> None:
             assert self.server.loop is not None
             new_value = transaction.GetAttribute(path)
+            # failsafe: ignore ValueDecodeErrors
+            # these are set by the SDK if parsing the value failed miserably
+            if isinstance(new_value, ValueDecodeFailure):
+                return
             node_logger.debug("Attribute updated: %s - new value: %s", path, new_value)
             attr_path = str(path.Path)
             node.attributes[attr_path] = new_value
@@ -456,7 +462,6 @@ class MatterDeviceController:
             assert self.server.loop is not None
             node_logger.debug("Received node event: %s", data)
             self.event_history.append(data)
-            # TODO: This callback does not seem to fire ever or my test devices do not have events
             self.server.loop.call_soon_threadsafe(
                 self.server.signal_event, EventType.NODE_EVENT, data
             )
@@ -627,6 +632,25 @@ class MatterDeviceController:
                     attribute_path = create_attribute_path(
                         endpoint, cluster_cls.id, attr_cls.attribute_id
                     )
+                    # failsafe: ignore ValueDecodeErrors
+                    # these are set by the SDK if parsing the value failed miserably
+                    if isinstance(attr_value, ValueDecodeFailure):
+                        continue
+                    # failsafe: make sure the attribute is serializable
+                    # there is a chance we receive malformed data from the sdk
+                    # due to all magic parsing to/from TLV.
+                    # skip an attribute in that case to prevent serialization issues
+                    # of the whole node.
+                    try:
+                        json_dumps(attr_value)
+                    except TypeError as err:
+                        LOGGER.warning(
+                            "Unserializable data found - "
+                            "skip attribute %s - error details: %s",
+                            attribute_path,
+                            err,
+                        )
+                        continue
                     result[attribute_path] = attr_value
         return result
 
