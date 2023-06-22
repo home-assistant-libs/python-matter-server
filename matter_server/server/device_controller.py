@@ -7,8 +7,7 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
-import time
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Deque, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Deque, Type, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute, Objects as Clusters
@@ -45,7 +44,7 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
-INTERVIEW_TASK_LIMIT = 10
+INTERVIEW_TASK_LIMIT = 5
 
 
 class MatterDeviceController:
@@ -67,6 +66,9 @@ class MatterDeviceController:
         self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
         self._interview_task: asyncio.Task | None = None
+        self._interview_limit: asyncio.Semaphore = asyncio.Semaphore(
+            INTERVIEW_TASK_LIMIT
+        )
 
     async def initialize(self) -> None:
         """Async initialize of controller."""
@@ -97,11 +99,9 @@ class MatterDeviceController:
                 # always mark node as unavailable at startup until subscriptions are ready
                 node.available = False
             self._nodes[node_id] = node
-        # setup subscriptions and (re)interviews as task in the background
-        # as we do not want it to block our startup
-        self._interview_task = asyncio.create_task(
-            self._check_subscriptions_and_interviews()
-        )
+            # setup subscription and (re)interview as task in the background
+            # as we do not want it to block our startup
+            asyncio.create_task(self._check_interview_and_subscription(node_id))
         LOGGER.debug("Loaded %s nodes", len(self._nodes))
 
     async def stop(self) -> None:
@@ -529,88 +529,55 @@ class MatterDeviceController:
             ),
         )
 
-    async def _check_subscriptions_and_interviews(self) -> None:
-        """Run subscriptions (and interviews) for known nodes."""
-        # Set default resubscribe interval to 1 hour
-        reschedule_interval = 3600
-        start_time = time.time()
-        tasks: list[Coroutine[Any, Any, None]] = []
-        task_limit: asyncio.Semaphore = asyncio.Semaphore(INTERVIEW_TASK_LIMIT)
+    async def _check_interview_and_subscription(
+        self, node_id: int, reschedule_interval: int = 300
+    ) -> None:
+        """Handle interview (if needed) and subscription for known node."""
 
-        for node_id, node in self._nodes.items():
-            # (re)interview node (only) if needed
-            if (
-                node is None
-                or node.interview_version < SCHEMA_VERSION
-                or (datetime.utcnow() - node.last_interview).days > 30
-            ):
-
-                async def _interview_node(node_id: int) -> None:
-                    """Run interview for node."""
-                    try:
-                        await self.interview_node(node_id)
-                    except NodeInterviewFailed as err:
-                        LOGGER.warning(
-                            "Unable to interview Node %s, we will retry later in the background.",
-                            node_id,
-                            exc_info=err,
-                        )
-                        raise err
-
-                tasks.append(_interview_node(node_id))
-                continue
-
-            # setup subscriptions for the node
-            if node_id in self._subscriptions:
-                continue
-
-            async def _subscribe_node(node_id: int) -> None:
-                """Subscribe to node events."""
-                try:
-                    await self.subscribe_node(node_id)
-                except NodeNotResolving as err:
-                    LOGGER.warning(
-                        "Unable to subscribe to Node %s, "
-                        "we will retry later in the background.",
-                        node_id,
-                        exc_info=err,
-                    )
-                    raise err
-
-            tasks.append(_subscribe_node(node_id))
-
-        async def _run_task(task: Coroutine[Any, Any, None]) -> None:
-            """Run coroutine and release semaphore."""
-            async with task_limit:
-                await task
-
-        LOGGER.debug("Running %s tasks", len(tasks))
-        # wait for all tasks to finish
-        results: list[Exception | None] = await asyncio.gather(
-            *(_run_task(task) for task in tasks), return_exceptions=True
-        )
-        LOGGER.debug(
-            "Done running %s tasks in %s seconds",
-            len(results),
-            start_time - time.time(),
-        )
-        # check if any of the tasks failed
-        for result in results:
-            if isinstance(result, Exception):
-                # if any of the tasks failed, reschedule in 5 minutes
-                reschedule_interval = 300
-                break
-
-        # reschedule self to run every hour
-        def _schedule() -> None:
-            """Schedule task."""
-            self._interview_task = asyncio.create_task(
-                self._check_subscriptions_and_interviews()
+        def reschedule():
+            """(Re)Schedule interview and/or initial subscription for a node."""
+            loop = asyncio.get_event_loop()
+            loop.call_later(
+                reschedule_interval,
+                asyncio.create_task,
+                self._check_interview_and_subscription,
+                node_id,
+                # increase interval at each attempt with maximum of 1 hour
+                min(reschedule_interval + 300, 3600),
             )
 
-        LOGGER.debug("Rescheduling interviews in %s seconds", reschedule_interval)
-        loop = cast(asyncio.AbstractEventLoop, self.server.loop)
-        loop.call_later(reschedule_interval, _schedule)
+        # (re)interview node (only) if needed
+        node_data = self._nodes.get(node_id)
+        if (
+            node_data is None
+            or node_data.interview_version < SCHEMA_VERSION
+            or (datetime.utcnow() - node_data.last_interview).days > 30
+        ):
+            async with self._interview_limit:
+                try:
+                    await self.interview_node(node_id)
+                except NodeInterviewFailed:
+                    LOGGER.warning(
+                        "Unable to interview Node %s, will retry later in the background.",
+                        node_id,
+                    )
+                    # reschedule self on error
+                    reschedule()
+                    return
+
+        # setup subscriptions for the node
+        if node_id in self._subscriptions:
+            return
+
+        try:
+            await self.subscribe_node(node_id)
+        except NodeNotResolving:
+            LOGGER.warning(
+                "Unable to subscribe to Node %s as it is unavailable, "
+                "will retry later in the background.",
+                node_id,
+            )
+            reschedule()
 
     @staticmethod
     def _parse_attributes_from_read_result(
@@ -670,6 +637,7 @@ class MatterDeviceController:
                     self.chip_controller.GetConnectedDeviceSync,
                     nodeid=node_id,
                     allowPASE=True,
+                    timeoutMs=30000
                 )
                 return
             LOGGER.debug("Resolving node %s", node_id)
