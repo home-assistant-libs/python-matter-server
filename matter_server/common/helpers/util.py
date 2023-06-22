@@ -1,7 +1,7 @@
 """Utils for Matter server (and client)."""
 from __future__ import annotations
 
-from base64 import b64decode, b64encode
+from base64 import b64decode
 import binascii
 from dataclasses import MISSING, asdict, fields, is_dataclass
 from datetime import datetime
@@ -22,7 +22,7 @@ from typing import (
 )
 
 from chip.clusters.ClusterObjects import ClusterAttributeDescriptor
-from chip.clusters.Types import Nullable, NullValue
+from chip.clusters.Types import Nullable
 from chip.tlv import float32, uint
 
 if TYPE_CHECKING:
@@ -59,44 +59,17 @@ def parse_attribute_path(attribute_path: str) -> tuple[int, int, int]:
     return (int(endpoint_id_str), int(cluster_id_str), int(attribute_id_str))
 
 
-def dataclass_to_dict(obj_in: DataclassInstance, skip_none: bool = False) -> dict:
-    """Convert dataclass instance to dict, optionally skip None values."""
-    if skip_none:
-        dict_obj = asdict(
-            obj_in, dict_factory=lambda x: {k: v for (k, v) in x if v is not None}
-        )
-    else:
-        dict_obj = asdict(obj_in)
+def dataclass_to_dict(obj_in: DataclassInstance) -> dict:
+    """Convert dataclass instance to dict."""
 
-    def _convert_value(value: Any) -> Any:
-        """Do some common conversions."""
-        if isinstance(value, list):
-            return [_convert_value(x) for x in value]
-        if isinstance(value, Nullable) or value == NullValue:
-            return None
-        if isinstance(value, dict):
-            return _clean_dict(value)
-        if isinstance(value, Enum):
-            return value.value
-        if isinstance(value, bytes):
-            return b64encode(value).decode("utf-8")
-        if isinstance(value, float32):
-            return float(value)
-        if type(value) == type:
-            return f"{value.__module__}.{value.__qualname__}"
-        if isinstance(value, Exception):
-            return None
-        return value
-
-    def _clean_dict(_dict_obj: dict) -> dict:
-        _final = {}
-        for key, value in _dict_obj.items():
-            if isinstance(key, int):
-                key = str(key)
-            _final[key] = _convert_value(value)
-        return _final
-
-    return _clean_dict(dict_obj)
+    return asdict(
+        obj_in,
+        dict_factory=lambda x: {
+            # ensure the dict key is a string
+            str(k): v
+            for (k, v) in x
+        },
+    )
 
 
 def parse_utc_timestamp(datetime_string: str) -> datetime:
