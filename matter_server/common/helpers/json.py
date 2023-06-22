@@ -4,7 +4,9 @@ from base64 import b64encode
 from dataclasses import is_dataclass
 from typing import Any
 
+from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.Types import Nullable
+from chip.tlv import float32, uint
 import orjson
 
 from .util import dataclass_to_dict
@@ -20,10 +22,14 @@ def json_encoder_default(obj: Any) -> Any:
     """
     if getattr(obj, "do_not_serialize", None):
         return None
+    if isinstance(obj, ValueDecodeFailure):
+        return None
     if isinstance(obj, (set, tuple)):
         return list(obj)
-    if isinstance(obj, float):
+    if isinstance(obj, float32):
         return float(obj)
+    if isinstance(obj, uint):
+        return int(obj)
     if hasattr(obj, "as_dict"):
         return obj.as_dict()
     if is_dataclass(obj):
