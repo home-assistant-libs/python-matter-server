@@ -10,7 +10,7 @@ automatically installs the Python Matter Server add-on. Please refer to the
 [Home Assistant documentation](https://www.home-assistant.io/integrations/matter/).
 Home Assistant OS has been tested and tuned to be used with Matter and Thead,
 which makes this combination the best tested and largely worry free
-environement.
+environment.
 
 If you still prefer a self-managed container installation, we do offer an
 official container image. Please keep in mind that you might expierence
@@ -37,17 +37,17 @@ if IPv6 ND RIO's are processed, and processed correctly depends on the network
 management software your system is using, there may be bugs and cavats in
 processing this Route Information Options.
 
-In general, make sure the kernel option `CONFIG_IPV6_ROUTER_PREF` is enabeld and
+In general, make sure the kernel option `CONFIG_IPV6_ROUTER_PREF` is enabled and
 that IPv6 forwarding is disabled (sysctl variable `net.ipv6.conf.all.forwarding`).
 If IPv6 forwarding is enabled, the Linux kernel doesn't employ reachability
 probing (RFC 4191), which can lead to longer outages (up to 30min) until
 network changes are detected.
 
 If you are using NetworkManager, make sure to use at least NetworkManager 1.42.
-Previous versions loose track of routes and stale routs can lead to unreachable
+Previous versions lose track of routes and stale routes can lead to unreachable
 Thread devices. All current released NetworkManager versions can't handle
 multiple routes to the same network properly. This means if you have multiple
-Thread border routers, the fallback won't work immeaditly (see [NetworkManager
+Thread border routers, the fallback won't work immediately (see [NetworkManager
 issue #1232](https://gitlab.freedesktop.org/NetworkManager/NetworkManager/-/issues/1232)).
 
 We currently don't have experience with systemd-networkd. It seems to have its
@@ -83,7 +83,7 @@ docker run -d \
   -v $(pwd)/data:/data \
   -v /run/dbus:/run/dbus:ro \
   --network=host \
-  ghcr.io/agners/python-matter-server:stable
+  ghcr.io/home-assistant-libs/python-matter-server:stable
 ```
 
 ### Running using Docker compose
