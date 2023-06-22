@@ -47,6 +47,8 @@ jobs:
   build-and-push-container-image:
     name: Builds and pushes the Matter Server container to ghcr.io
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     needs: build-and-publish-pypi
     steps:
       - uses: actions/checkout@v3.5.3
