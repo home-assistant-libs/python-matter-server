@@ -13,7 +13,7 @@ which makes this combination the best tested and largely worry free
 environment.
 
 If you still prefer a self-managed container installation, we do offer an
-official container image. Please keep in mind that you might expierence
+official container image. Please keep in mind that you might experience
 communication issues with Matter devices, especially Thread based devices.
 This is mostly because the container installation uses host networking, and
 relies on the networking managed by your operating system.
@@ -34,7 +34,7 @@ host as the Matter Controller server to work, IPv6 routing needs to be properly
 working. IPv6 routing is largely setup automatically through the IPv6 Neighbor
 Discovery Protocol, specifically the Route Information Options (RIO). However,
 if IPv6 ND RIO's are processed, and processed correctly depends on the network
-management software your system is using, there may be bugs and cavats in
+management software your system is using. There may be bugs and cavats in
 processing this Route Information Options.
 
 In general, make sure the kernel option `CONFIG_IPV6_ROUTER_PREF` is enabled and
@@ -57,7 +57,7 @@ If you don't use NetworkManager or systemd-networkd, you can use the kernel's
 IPv6 Neighbor Discovery Protocol handling.
 
 Make sure the kernel options `CONFIG_IPV6_ROUTE_INFO` is enabled and the
-following sysctl variables:
+following sysctl variables are set:
 
 ```
 sysctl -w net.ipv6.conf.wlan0.accept_ra=1
@@ -65,7 +65,7 @@ sysctl -w net.ipv6.conf.wlan0.accept_ra_rt_info_max_plen=64
 ```
 
 If your system has IPv6 forwarding enabled (not recommended, see above), you'll
-have to use 2 for the accept_ra variable. See also the [Thread Border Router - Bidirectional IPv6 Connectivity and DNS-Based Service Discovery codelab](https://openthread.io/codelabs/openthread-border-router#6).
+have to use `2` for the accept_ra variable. See also the [Thread Border Router - Bidirectional IPv6 Connectivity and DNS-Based Service Discovery codelab](https://openthread.io/codelabs/openthread-border-router#6).
 
 ## Running the Matter Server using container image
 
