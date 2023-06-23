@@ -21,7 +21,7 @@ If you experience issues using Matter with Home Assistant, please open an issue
 report in the [Home Assistant Core repository](https://github.com/home-assistant/core/issues/new/choose).
 
 You may also open issues in this repository if you are absolutely sure that your
-issue in related to the Matter Server component.
+issue is related to the Matter Server component.
 
 ## Installation
 
