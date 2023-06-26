@@ -13,10 +13,10 @@ from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import (
+    ALL_ATTRIBUTES,
     ALL_CLUSTERS,
     Cluster,
     ClusterAttributeDescriptor,
-    ALL_ATTRIBUTES,
 )
 from chip.exceptions import ChipStackError
 
@@ -32,8 +32,8 @@ from ..common.helpers.json import json_dumps
 from ..common.helpers.util import (
     create_attribute_path,
     create_attribute_path_from_attribute,
-    parse_attribute_path,
     dataclass_from_dict,
+    parse_attribute_path,
 )
 from ..common.models import APICommand, EventType, MatterNodeData
 from .const import PAA_ROOT_CERTS_DIR
@@ -331,8 +331,8 @@ class MatterDeviceController:
         if existing_info:
             node.attribute_subscriptions = existing_info.attribute_subscriptions
         # work out if the node is a bridge device by looking at the devicetype of endpoint 1
+        attr_data: list[Clusters.Descriptor.Structs.DeviceTypeStruct]
         if attr_data := node.attributes.get("1/29/0"):
-            attr_data: list[Clusters.Descriptor.Structs.DeviceTypeStruct]
             node.is_bridge = any(x.deviceType == 14 for x in attr_data)
 
         # save updated node data

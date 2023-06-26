@@ -123,7 +123,8 @@ class StorageController:
         """Schedule save of data to disk."""
         assert self.server.loop is not None
 
-        def _do_save():
+        def _do_save() -> None:
+            assert self.server.loop is not None
             self.server.loop.create_task(self.async_save())
 
         if self._timer_handle is not None:
