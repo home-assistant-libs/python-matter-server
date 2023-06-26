@@ -477,7 +477,7 @@ class MatterDeviceController:
         # a very limited amount of concurrent subscriptions.
         if sub := self._subscriptions.pop(node_id, None):
             async with node_lock:
-                node_logger.debug("Unsubscribing from existing subscription.")
+                node_logger.info("Unsubscribing from existing subscription.")
                 await self._call_sdk(sub.Shutdown)
 
         node = cast(MatterNodeData, self._nodes[node_id])
@@ -510,7 +510,7 @@ class MatterDeviceController:
                 # Wildcard endpoint, specific cluster
                 attr_subscriptions.append(cluster)
 
-        node_logger.info("Setting up attributes and events subscription.")
+        node_logger.debug("Setting up attributes and events subscription.")
         if len(attr_subscriptions) > 50:
             # prevent memory overload on node and fallback to wildcard sub if too many
             # individual subscriptions
@@ -597,7 +597,7 @@ class MatterDeviceController:
         ) -> None:
             # pylint: disable=unused-argument
             assert self.server.loop is not None
-            node_logger.info(
+            node_logger.debug(
                 "Received node event: %s - transaction: %s", data, transaction
             )
             self.event_history.append(data)
@@ -675,8 +675,7 @@ class MatterDeviceController:
 
         def reschedule():
             """(Re)Schedule interview and/or initial subscription for a node."""
-            loop = asyncio.get_event_loop()
-            loop.call_later(
+            self.server.loop.call_later(
                 reschedule_interval,
                 asyncio.create_task,
                 self._check_interview_and_subscription(
