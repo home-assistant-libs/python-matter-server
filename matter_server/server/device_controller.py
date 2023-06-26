@@ -32,7 +32,6 @@ from ..common.helpers.json import json_dumps
 from ..common.helpers.util import (
     create_attribute_path,
     create_attribute_path_from_attribute,
-    parse_attribute_path,
     dataclass_from_dict,
 )
 from ..common.models import APICommand, EventType, MatterNodeData
@@ -53,12 +52,12 @@ LOGGER = logging.getLogger(__name__)
 INTERVIEW_TASK_LIMIT = 5
 
 # a list of attributes we should always watch on all nodes
-DEFAULT_SUBSCRIBE_ATTRIBUTES = [
+DEFAULT_SUBSCRIBE_ATTRIBUTES = {
     ("*", 0x001D, 0x00000000),  # all endpoints, descriptor cluster, deviceTypeList
     ("*", 0x001D, 0x00000003),  # all endpoints, descriptor cluster, partsList
     (0, 0x0028, "*"),  # endpoint 0, BasicInformation cluster, all attributes
     ("*", 0x0039, "*"),  # BridgedDeviceBasicInformation
-]
+}
 
 
 class MatterDeviceController:
@@ -418,7 +417,7 @@ class MatterDeviceController:
         )
 
     @api_command(APICommand.SUBSCRIBE_ATTRIBUTE)
-    async def subscribe_attributes(
+    async def subscribe_attribute(
         self, node_id: int, attribute_path: str | list[str]
     ) -> None:
         """
@@ -440,18 +439,13 @@ class MatterDeviceController:
 
         # work out added subscriptions
         attribute_paths = (
-            attribute_path if isinstance(attribute_path, list) else [attribute_path]
+            set(attribute_path)
+            if isinstance(attribute_path, list)
+            else {attribute_path}
         )
-        has_changes = False
-        for _path in attribute_paths:
-            sub_tuple = parse_attribute_path(_path)
-            if sub_tuple not in node.attribute_subscriptions:
-                node.attribute_subscriptions.append(sub_tuple)
-                has_changes = True
-
-        if not has_changes:
+        if not node.attribute_subscriptions.difference(attribute_paths):
             return  # nothing to do
-
+        node.attribute_subscriptions.update(attribute_paths)
         # save updated node data
         self.server.storage.set(
             DATA_KEY_NODES,
@@ -492,9 +486,11 @@ class MatterDeviceController:
 
         # work out attribute subscriptions
         attr_subscriptions = []
-        for endpoint_id, cluster_id, attribute_id in (
-            DEFAULT_SUBSCRIBE_ATTRIBUTES + node.attribute_subscriptions
-        ):
+        for (
+            endpoint_id,
+            cluster_id,
+            attribute_id,
+        ) in set.union(DEFAULT_SUBSCRIBE_ATTRIBUTES, node.attribute_subscriptions):
             endpoint: int | None = None if endpoint_id == "*" else endpoint_id
             cluster: Type[Cluster] = ALL_CLUSTERS[cluster_id]
             attribute: Type[ClusterAttributeDescriptor] | None = (
@@ -516,6 +512,10 @@ class MatterDeviceController:
                 attr_subscriptions.append(cluster)
 
         node_logger.info("Setting up attributes and events subscription.")
+        if len(attr_subscriptions) > 50:
+            # prevent memory overload on node and fallback to wildcard sub if too many
+            # individual subscriptions
+            attr_subscriptions = [tuple()]
         async with node_lock:
             sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
                 nodeid=node_id,

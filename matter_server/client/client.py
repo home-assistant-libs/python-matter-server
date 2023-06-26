@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import suppress
 import logging
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Callable, Dict, Final, Optional, cast
@@ -234,7 +233,7 @@ class MatterClient:
         """Remove a Matter node/device from the fabric."""
         await self.send_command(APICommand.REMOVE_NODE, node_id=node_id)
 
-    async def subscribe_attributes(
+    async def subscribe_attribute(
         self, node_id: int, attribute_path: str | list[str]
     ) -> None:
         """
@@ -425,8 +424,7 @@ class MatterClient:
                 EventType.ENDPOINT_REMOVED, data=msg.data, node_id=node_id
             )
             # cleanup endpoint only after signalling subscribers
-            with suppress(KeyError):
-                node = self._nodes.get(node_id)
+            if node := self._nodes.get(node_id):
                 node.endpoints.pop(msg.data["endpoint_id"], None)
             return
         if msg.event == EventType.ATTRIBUTE_UPDATED:

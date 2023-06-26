@@ -34,7 +34,7 @@ from .exceptions import (
 from .models.node import MatterNode
 
 LOGGER = logging.getLogger(f"{__package__}.connection")
-VERBOSE_LOGGER = os.environ.get("VERBOSE")
+VERBOSE_LOGGER = os.environ.get("MATTER_VERBOSE_LOGGING")
 SUB_WILDCARD: Final = "*"
 
 

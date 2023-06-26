@@ -105,7 +105,7 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         return dataclass_from_dict(value_type, value)
     # get origin value type and inspect one-by-one
     origin: Any = get_origin(value_type)
-    if origin in (list, tuple) and isinstance(value, list | tuple):
+    if origin in (list, tuple, set) and isinstance(value, list | tuple | set):
         return origin(
             parse_value(name, subvalue, get_args(value_type)[0])
             for subvalue in value

@@ -73,9 +73,9 @@ class MatterNodeData:
     # attributes are stored in form of AttributePath: ENDPOINT/CLUSTER_ID/ATTRIBUTE_ID
     attributes: dict[str, Any] = field(default_factory=dict)
     # all attribute subscriptions we need to persist for this node,
-    # a list of tuples in format (endpoint_id, cluster_id, attribute_id)
+    # a set of tuples in format (endpoint_id, cluster_id, attribute_id)
     # where each value can also be a '*' for wildcard
-    attribute_subscriptions: list[tuple[int | str, int | str, int | str]] = field(
+    attribute_subscriptions: set[tuple[int | str, int | str, int | str]] = field(
         default_factory=list
     )
 
