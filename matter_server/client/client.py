@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 import logging
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Callable, Dict, Final, Optional, cast
@@ -386,7 +387,7 @@ class MatterClient:
 
         # handle EventMessage
         if isinstance(msg, EventMessage):
-            self.logger.debug("Received event: %s", msg)
+            self.logger.debug("Received event: %s", msg.event)
             self._handle_event_message(msg)
             return
 
@@ -424,7 +425,9 @@ class MatterClient:
                 EventType.ENDPOINT_REMOVED, data=msg.data, node_id=node_id
             )
             # cleanup endpoint only after signalling subscribers
-            self._nodes[node_id].endpoints.pop(msg.data["endpoint_id"])
+            with suppress(KeyError):
+                node = self._nodes.get(node_id)
+                node.endpoints.pop(msg.data["endpoint_id"], None)
             return
         if msg.event == EventType.ATTRIBUTE_UPDATED:
             # data is tuple[node_id, attribute_path, new_value]

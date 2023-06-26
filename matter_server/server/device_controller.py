@@ -50,7 +50,7 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
-INTERVIEW_TASK_LIMIT = 5
+INTERVIEW_TASK_LIMIT = 1
 
 # a list of attributes we should always watch on all nodes
 DEFAULT_SUBSCRIBE_ATTRIBUTES = [
@@ -670,10 +670,11 @@ class MatterDeviceController:
             loop.call_later(
                 reschedule_interval,
                 asyncio.create_task,
-                self._check_interview_and_subscription,
-                node_id,
-                # increase interval at each attempt with maximum of 1 hour
-                min(reschedule_interval + 300, 3600),
+                self._check_interview_and_subscription(
+                    node_id,
+                    # increase interval at each attempt with maximum of 1 hour
+                    min(reschedule_interval + 300, 3600),
+                ),
             )
 
         # (re)interview node (only) if needed
