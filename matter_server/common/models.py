@@ -38,6 +38,7 @@ class APICommand(str, Enum):
     DEVICE_COMMAND = "device_command"
     REMOVE_NODE = "remove_node"
     GET_VENDOR_NAMES = "get_vendor_names"
+    SUBSCRIBE_ATTRIBUTE = "subscribe_attribute"
 
 
 EventCallBackType = Callable[[EventType, Any], None]
@@ -66,8 +67,15 @@ class MatterNodeData:
     last_interview: datetime
     interview_version: int
     available: bool = False
+    is_bridge: bool = False
     # attributes are stored in form of AttributePath: ENDPOINT/CLUSTER_ID/ATTRIBUTE_ID
     attributes: dict[str, Any] = field(default_factory=dict)
+    # all attribute subscriptions we need to persist for this node,
+    # a set of tuples in format (endpoint_id, cluster_id, attribute_id)
+    # where each value can also be a '*' for wildcard
+    attribute_subscriptions: set[tuple[int | str, int | str, int | str]] = field(
+        default_factory=set
+    )
 
 
 @dataclass
