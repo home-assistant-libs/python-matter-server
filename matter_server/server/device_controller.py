@@ -400,7 +400,7 @@ class MatterDeviceController:
         )
         fabric_index = node.attributes[attribute_path]
 
-        self.server.signal_event(EventType.NODE_DELETED, node_id)
+        self.server.signal_event(EventType.NODE_REMOVED, node_id)
 
         await self.chip_controller.SendCommand(
             nodeid=node_id,
@@ -555,11 +555,11 @@ class MatterDeviceController:
                 endpoints_removed = set(old_value or []) - set(new_value)
                 endpoints_added = set(new_value) - set(old_value or [])
                 if endpoints_removed:
-                    asyncio.create_task(
-                        self._handle_endpoints_removed(node_id, endpoints_removed)
+                    self.server.loop.call_soon_threadsafe(
+                        self._handle_endpoints_removed, node_id, endpoints_removed
                     )
                 if endpoints_added:
-                    asyncio.create_task(
+                    self.server.loop.create_task(
                         self._handle_endpoints_added(node_id, endpoints_added)
                     )
                 return
@@ -783,9 +783,7 @@ class MatterDeviceController:
             )
             await asyncio.sleep(2)
 
-    async def _handle_endpoints_removed(
-        self, node_id: int, endpoints: Iterable[int]
-    ) -> None:
+    def _handle_endpoints_removed(self, node_id: int, endpoints: Iterable[int]) -> None:
         """Handle callback for when bridge endpoint(s) get deleted."""
         node = cast(MatterNodeData, self._nodes[node_id])
         for endpoint_id in endpoints:

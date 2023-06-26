@@ -4,7 +4,6 @@ from base64 import b64encode
 from dataclasses import is_dataclass
 from typing import Any
 
-from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.Types import Nullable
 from chip.tlv import float32, uint
 import orjson
@@ -21,8 +20,6 @@ def json_encoder_default(obj: Any) -> Any:
     Hand other objects to the original method.
     """
     if getattr(obj, "do_not_serialize", None):
-        return None
-    if isinstance(obj, ValueDecodeFailure):
         return None
     if isinstance(obj, (set, tuple)):
         return list(obj)

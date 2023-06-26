@@ -216,7 +216,6 @@ class MatterNode:
     def __init__(self, node_data: MatterNodeData) -> None:
         """Initialize MatterNode from MatterNodeData."""
         self.endpoints: dict[int, MatterEndpoint] = {}
-        self._is_bridge_device: bool = False
         # composed devices reference to other endpoints through the partsList attribute
         # create a mapping table
         self._composed_endpoints: dict[int, int] = {}
@@ -251,7 +250,7 @@ class MatterNode:
     @property
     def is_bridge_device(self) -> bool:
         """Return if this Node is a Bridge/Aggregator device."""
-        return self._is_bridge_device
+        return self.node_data.is_bridge
 
     def get_attribute_value(
         self,
@@ -310,10 +309,6 @@ class MatterNode:
                 self.endpoints[endpoint_id] = MatterEndpoint(
                     endpoint_id=endpoint_id, attributes_data=attributes_data, node=self
                 )
-        # lookup if this is a bridge device
-        self._is_bridge_device = any(
-            Aggregator in x.device_types for x in self.endpoints.values()
-        )
         # composed devices reference to other endpoints through the partsList attribute
         # create a mapping table to quickly map this
         for endpoint in self.endpoints.values():
@@ -339,6 +334,9 @@ class MatterNode:
     def update_attribute(self, attribute_path: str, new_value: Any) -> None:
         """Handle Attribute value update."""
         endpoint_id = int(attribute_path.split("/")[0])
+        if endpoint_id not in self.endpoints:
+            # race condition when a bridge is in the process of adding a new endpoint
+            return
         self.endpoints[endpoint_id].set_attribute_value(attribute_path, new_value)
 
     def __repr__(self) -> str:

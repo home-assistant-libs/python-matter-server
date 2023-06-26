@@ -14,7 +14,7 @@ class EventType(Enum):
 
     NODE_ADDED = "node_added"
     NODE_UPDATED = "node_updated"
-    NODE_DELETED = "node_deleted"
+    NODE_REMOVED = "node_removed"
     NODE_EVENT = "node_event"
     ATTRIBUTE_UPDATED = "attribute_updated"
     SERVER_SHUTDOWN = "server_shutdown"

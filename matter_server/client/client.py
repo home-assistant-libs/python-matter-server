@@ -67,6 +67,10 @@ class MatterClient:
         Optionally filter by specific events or node attributes.
         Returns:
             function to unsubscribe.
+
+        NOTE: To receive attribute changed events,
+        you must also register the attributes to subscribe to
+        with the `subscribe_attributes` method.
         """
         # for fast lookups we create a key based on the filters, allowing
         # a "catch all" with a wildcard (*).
@@ -94,11 +98,11 @@ class MatterClient:
 
         return unsubscribe
 
-    async def get_nodes(self) -> list[MatterNode]:
+    def get_nodes(self) -> list[MatterNode]:
         """Return all Matter nodes."""
         return list(self._nodes.values())
 
-    async def get_node(self, node_id: int) -> MatterNode:
+    def get_node(self, node_id: int) -> MatterNode:
         """Return Matter node by id."""
         return self._nodes[node_id]
 
@@ -228,6 +232,22 @@ class MatterClient:
     async def remove_node(self, node_id: int) -> None:
         """Remove a Matter node/device from the fabric."""
         await self.send_command(APICommand.REMOVE_NODE, node_id=node_id)
+
+    async def subscribe_attributes(
+        self, node_id: int, attribute_path: str | list[str]
+    ) -> None:
+        """
+        Subscribe to given AttributePath(s).
+
+        Either supply a single attribute path or a list of paths.
+        The given attribute path(s) will be added to the list of attributes that
+        are watched for the given node. This is persistent over restarts.
+        """
+        await self.send_command(
+            APICommand.SUBSCRIBE_ATTRIBUTE,
+            node_id=node_id,
+            attribute_path=attribute_path,
+        )
 
     async def send_command(
         self,
@@ -392,10 +412,19 @@ class MatterClient:
                 node.update(node_data)
             self._signal_event(event, data=node, node_id=node.node_id)
             return
-        if msg.event == EventType.NODE_DELETED:
+        if msg.event == EventType.NODE_REMOVED:
             node_id = msg.data
+            self._signal_event(EventType.NODE_REMOVED, data=node_id, node_id=node_id)
+            # cleanup node only after signalling subscribers
             self._nodes.pop(node_id, None)
-            self._signal_event(EventType.NODE_DELETED, data=node_id, node_id=node_id)
+            return
+        if msg.event == EventType.ENDPOINT_REMOVED:
+            node_id = msg.data["node_id"]
+            self._signal_event(
+                EventType.ENDPOINT_REMOVED, data=msg.data, node_id=node_id
+            )
+            # cleanup endpoint only after signalling subscribers
+            self._nodes[node_id].endpoints.pop(msg.data["endpoint_id"])
             return
         if msg.event == EventType.ATTRIBUTE_UPDATED:
             # data is tuple[node_id, attribute_path, new_value]
