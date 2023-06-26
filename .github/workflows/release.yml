@@ -68,7 +68,7 @@ jobs:
           echo "minor=${patch%.*}" >> $GITHUB_OUTPUT
           echo "major=${patch%.*.*}" >> $GITHUB_OUTPUT
       - name: Build and Push
-        uses: docker/build-push-action@v3.3.0
+        uses: docker/build-push-action@v4.1.1
         with:
           context: .
           platforms: linux/amd64,linux/arm64
