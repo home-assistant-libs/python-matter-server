@@ -50,7 +50,7 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
-INTERVIEW_TASK_LIMIT = 1
+INTERVIEW_TASK_LIMIT = 5
 
 # a list of attributes we should always watch on all nodes
 DEFAULT_SUBSCRIBE_ATTRIBUTES = [
@@ -82,6 +82,7 @@ class MatterDeviceController:
         self._interview_limit: asyncio.Semaphore = asyncio.Semaphore(
             INTERVIEW_TASK_LIMIT
         )
+        self._node_lock: dict[int, asyncio.Lock] = {}
 
     async def initialize(self) -> None:
         """Async initialize of controller."""
@@ -300,11 +301,16 @@ class MatterDeviceController:
         LOGGER.debug("Interviewing node: %s", node_id)
         try:
             await self._resolve_node(node_id=node_id)
-            read_response: Attribute.AsyncReadTransaction.ReadResponse = (
-                await self.chip_controller.Read(
-                    nodeid=node_id, attributes="*", events="*", fabricFiltered=False
-                )
-            )
+            async with self._interview_limit:
+                async with self._get_node_lock(node_id):
+                    read_response: Attribute.AsyncReadTransaction.ReadResponse = (
+                        await self.chip_controller.Read(
+                            nodeid=node_id,
+                            attributes="*",
+                            events="*",
+                            fabricFiltered=False,
+                        )
+                    )
         except (ChipStackError, NodeNotResolving) as err:
             raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
 
@@ -366,14 +372,15 @@ class MatterDeviceController:
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
         command_cls = getattr(cluster_cls.Commands, command_name)
         command = dataclass_from_dict(command_cls, payload)
-        return await self.chip_controller.SendCommand(
-            nodeid=node_id,
-            endpoint=endpoint_id,
-            payload=command,
-            responseType=response_type,
-            timedRequestTimeoutMs=timed_request_timeout_ms,
-            interactionTimeoutMs=interaction_timeout_ms,
-        )
+        async with self._get_node_lock(node_id):
+            return await self.chip_controller.SendCommand(
+                nodeid=node_id,
+                endpoint=endpoint_id,
+                payload=command,
+                responseType=response_type,
+                timedRequestTimeoutMs=timed_request_timeout_ms,
+                interactionTimeoutMs=interaction_timeout_ms,
+            )
 
     @api_command(APICommand.REMOVE_NODE)
     async def remove_node(self, node_id: int) -> None:
@@ -468,62 +475,62 @@ class MatterDeviceController:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or has not been interviewed."
             )
+        async with self._get_node_lock(node_id):
+            node_logger = LOGGER.getChild(str(node_id))
+            node_logger.debug("Setting up subscriptions...")
+            # check if we already have an subscription for this node,
+            # if so, we need to unsubscribe first because a device can only maintain
+            # a very limited amount of concurrent subscriptions.
+            if sub := self._subscriptions.get(node_id):
+                node_logger.debug("Unsubscribing from existing subscription.")
+                await self._call_sdk(sub.Shutdown)
 
-        node_logger = LOGGER.getChild(str(node_id))
-        node_logger.debug("Setting up subscriptions...")
-        # check if we already have an subscription for this node,
-        # if so, we need to unsubscribe first because a device can only maintain
-        # a very limited amount of concurrent subscriptions.
-        if sub := self._subscriptions.get(node_id):
-            node_logger.debug("Unsubscribing from existing subscription.")
-            await self._call_sdk(sub.Shutdown)
+            node = cast(MatterNodeData, self._nodes[node_id])
+            await self._resolve_node(node_id=node_id)
 
-        node = cast(MatterNodeData, self._nodes[node_id])
-        await self._resolve_node(node_id=node_id)
+            # work out attribute subscriptions
+            attr_subscriptions = []
+            for endpoint_id, cluster_id, attribute_id in (
+                DEFAULT_SUBSCRIBE_ATTRIBUTES + node.attribute_subscriptions
+            ):
+                endpoint: int | None = None if endpoint_id == "*" else endpoint_id
+                cluster: Type[Cluster] = ALL_CLUSTERS[cluster_id]
+                attribute: Type[ClusterAttributeDescriptor] | None = (
+                    None
+                    if attribute_id == "*"
+                    else ALL_ATTRIBUTES[cluster_id][attribute_id]
+                )
+                if endpoint and attribute:
+                    # Concrete path: specific endpoint, specific clusterattribute
+                    attr_subscriptions.append((endpoint, attribute))
+                elif endpoint and cluster:
+                    # Specific endpoint, Wildcard attribute id (specific cluster)
+                    attr_subscriptions.append((endpoint, cluster))
+                elif attribute:
+                    # Wildcard endpoint, specific attribute
+                    attr_subscriptions.append(attribute)
+                elif cluster:
+                    # Wildcard endpoint, specific cluster
+                    attr_subscriptions.append(cluster)
 
-        # work out attribute subscriptions
-        attr_subscriptions = []
-        for endpoint_id, cluster_id, attribute_id in (
-            DEFAULT_SUBSCRIBE_ATTRIBUTES + node.attribute_subscriptions
-        ):
-            endpoint: int | None = None if endpoint_id == "*" else endpoint_id
-            cluster: Type[Cluster] = ALL_CLUSTERS[cluster_id]
-            attribute: Type[ClusterAttributeDescriptor] | None = (
-                None
-                if attribute_id == "*"
-                else ALL_ATTRIBUTES[cluster_id][attribute_id]
+            node_logger.info("Setting up attributes and events subscription.")
+            sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
+                nodeid=node_id,
+                # in order to prevent network congestion due to wildcard subscriptions on all nodes,
+                # we keep a list of attributes we are explicitly interested in.
+                attributes=attr_subscriptions,
+                # simply subscribe to all (urgent and non urgent) device events
+                events=[("*", 1), ("*", 0)],
+                # use a report interval of 0, 300 which means we want to receive state changes
+                # as soon as possible (the 0 as floor) but we want to receive a report at least once every
+                # 5 minutes (300 as ceiling), this is also used to detect the node is still alive.
+                # a resubscription will be initiated automatically by the sdk if there was no report
+                # within the interval.
+                reportInterval=(0, 300),
+                # use fabricfiltered as False to detect changes made by other controllers
+                # and to be able to provide a list of all fabrics attached to the device
+                fabricFiltered=False,
             )
-            if endpoint and attribute:
-                # Concrete path: specific endpoint, specific clusterattribute
-                attr_subscriptions.append((endpoint, attribute))
-            elif endpoint and cluster:
-                # Specific endpoint, Wildcard attribute id (specific cluster)
-                attr_subscriptions.append((endpoint, cluster))
-            elif attribute:
-                # Wildcard endpoint, specific attribute
-                attr_subscriptions.append(attribute)
-            elif cluster:
-                # Wildcard endpoint, specific cluster
-                attr_subscriptions.append(cluster)
-
-        node_logger.info("Setting up attributes and events subscription.")
-        sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
-            nodeid=node_id,
-            # in order to prevent network congestion due to wildcard subscriptions on all nodes,
-            # we keep a list of attributes we are explicitly interested in.
-            attributes=attr_subscriptions,
-            # simply subscribe to all (urgent and non urgent) device events
-            events=[("*", 1), ("*", 0)],
-            # use a report interval of 0, 300 which means we want to receive state changes
-            # as soon as possible (the 0 as floor) but we want to receive a report at least once every
-            # 5 minutes (300 as ceiling), this is also used to detect the node is still alive.
-            # a resubscription will be initiated automatically by the sdk if there was no report
-            # within the interval.
-            reportInterval=(0, 300),
-            # use fabricfiltered as False to detect changes made by other controllers
-            # and to be able to provide a list of all fabrics attached to the device
-            fabricFiltered=False,
-        )
 
         def attribute_updated_callback(
             path: Attribute.TypedAttributePath,
@@ -686,17 +693,16 @@ class MatterDeviceController:
             # re-interview every 30 days
             or (datetime.utcnow() - node_data.last_interview).days > 30
         ):
-            async with self._interview_limit:
-                try:
-                    await self.interview_node(node_id)
-                except NodeInterviewFailed:
-                    LOGGER.warning(
-                        "Unable to interview Node %s, will retry later in the background.",
-                        node_id,
-                    )
-                    # reschedule self on error
-                    reschedule()
-                    return
+            try:
+                await self.interview_node(node_id)
+            except NodeInterviewFailed:
+                LOGGER.warning(
+                    "Unable to interview Node %s, will retry later in the background.",
+                    node_id,
+                )
+                # reschedule self on error
+                reschedule()
+                return
 
         # setup subscriptions for the node
         if node_id in self._subscriptions:
@@ -766,12 +772,13 @@ class MatterDeviceController:
                 LOGGER.debug(
                     "Attempting to resolve node %s (with PASE connection)", node_id
                 )
-                await self._call_sdk(
-                    self.chip_controller.GetConnectedDeviceSync,
-                    nodeid=node_id,
-                    allowPASE=True,
-                    timeoutMs=30000,
-                )
+                async with self._get_node_lock(node_id):
+                    await self._call_sdk(
+                        self.chip_controller.GetConnectedDeviceSync,
+                        nodeid=node_id,
+                        allowPASE=True,
+                        timeoutMs=30000,
+                    )
                 return
             LOGGER.debug("Resolving node %s", node_id)
             await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
@@ -779,9 +786,10 @@ class MatterDeviceController:
             if not retries:
                 # when we're out of retries, raise NodeNotResolving
                 raise NodeNotResolving(f"Unable to resolve Node {node_id}") from err
-            await self._resolve_node(
-                node_id=node_id, retries=retries - 1, allow_pase=retries - 1 == 0
-            )
+            async with self._get_node_lock(node_id):
+                await self._resolve_node(
+                    node_id=node_id, retries=retries - 1, allow_pase=retries - 1 == 0
+                )
             await asyncio.sleep(2)
 
     def _handle_endpoints_removed(self, node_id: int, endpoints: Iterable[int]) -> None:
@@ -816,3 +824,9 @@ class MatterDeviceController:
                 EventType.ENDPOINT_ADDED,
                 {"node_id": node_id, "endpoint_id": endpoint_id},
             )
+
+    def _get_node_lock(self, node_id: int) -> asyncio.Lock:
+        """Return lock for given node."""
+        if node_id not in self._node_lock:
+            self._node_lock[node_id] = asyncio.Lock()
+        return self._node_lock[node_id]
