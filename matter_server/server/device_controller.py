@@ -475,45 +475,48 @@ class MatterDeviceController:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or has not been interviewed."
             )
-        async with self._get_node_lock(node_id):
-            node_logger = LOGGER.getChild(f"[node {node_id}]")
-            node_logger.debug("Setting up subscriptions...")
-            # check if we already have an subscription for this node,
-            # if so, we need to unsubscribe first because a device can only maintain
-            # a very limited amount of concurrent subscriptions.
-            if sub := self._subscriptions.get(node_id):
+
+        node_logger = LOGGER.getChild(f"[node {node_id}]")
+        node_logger.debug("Setting up subscriptions...")
+        node_lock = self._get_node_lock(node_id)
+        # check if we already have an subscription for this node,
+        # if so, we need to unsubscribe first because a device can only maintain
+        # a very limited amount of concurrent subscriptions.
+        if sub := self._subscriptions.pop(node_id, None):
+            async with node_lock:
                 node_logger.debug("Unsubscribing from existing subscription.")
                 await self._call_sdk(sub.Shutdown)
 
-            node = cast(MatterNodeData, self._nodes[node_id])
-            await self._resolve_node(node_id=node_id)
+        node = cast(MatterNodeData, self._nodes[node_id])
+        await self._resolve_node(node_id=node_id)
 
-            # work out attribute subscriptions
-            attr_subscriptions = []
-            for endpoint_id, cluster_id, attribute_id in (
-                DEFAULT_SUBSCRIBE_ATTRIBUTES + node.attribute_subscriptions
-            ):
-                endpoint: int | None = None if endpoint_id == "*" else endpoint_id
-                cluster: Type[Cluster] = ALL_CLUSTERS[cluster_id]
-                attribute: Type[ClusterAttributeDescriptor] | None = (
-                    None
-                    if attribute_id == "*"
-                    else ALL_ATTRIBUTES[cluster_id][attribute_id]
-                )
-                if endpoint and attribute:
-                    # Concrete path: specific endpoint, specific clusterattribute
-                    attr_subscriptions.append((endpoint, attribute))
-                elif endpoint and cluster:
-                    # Specific endpoint, Wildcard attribute id (specific cluster)
-                    attr_subscriptions.append((endpoint, cluster))
-                elif attribute:
-                    # Wildcard endpoint, specific attribute
-                    attr_subscriptions.append(attribute)
-                elif cluster:
-                    # Wildcard endpoint, specific cluster
-                    attr_subscriptions.append(cluster)
+        # work out attribute subscriptions
+        attr_subscriptions = []
+        for endpoint_id, cluster_id, attribute_id in (
+            DEFAULT_SUBSCRIBE_ATTRIBUTES + node.attribute_subscriptions
+        ):
+            endpoint: int | None = None if endpoint_id == "*" else endpoint_id
+            cluster: Type[Cluster] = ALL_CLUSTERS[cluster_id]
+            attribute: Type[ClusterAttributeDescriptor] | None = (
+                None
+                if attribute_id == "*"
+                else ALL_ATTRIBUTES[cluster_id][attribute_id]
+            )
+            if endpoint and attribute:
+                # Concrete path: specific endpoint, specific clusterattribute
+                attr_subscriptions.append((endpoint, attribute))
+            elif endpoint and cluster:
+                # Specific endpoint, Wildcard attribute id (specific cluster)
+                attr_subscriptions.append((endpoint, cluster))
+            elif attribute:
+                # Wildcard endpoint, specific attribute
+                attr_subscriptions.append(attribute)
+            elif cluster:
+                # Wildcard endpoint, specific cluster
+                attr_subscriptions.append(cluster)
 
-            node_logger.info("Setting up attributes and events subscription.")
+        node_logger.info("Setting up attributes and events subscription.")
+        async with node_lock:
             sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
                 nodeid=node_id,
                 # in order to prevent network congestion due to wildcard subscriptions on all nodes,
@@ -546,7 +549,7 @@ class MatterDeviceController:
             attr_path = str(path.Path)
             old_value = node.attributes.get(attr_path)
 
-            node_logger.info(
+            node_logger.debug(
                 "Attribute updated: %s - old value: %s - new value: %s",
                 path,
                 old_value,
@@ -764,6 +767,7 @@ class MatterDeviceController:
         self, node_id: int, retries: int = 3, allow_pase: bool = False
     ) -> None:
         """Resolve a Node on the network."""
+        node_lock = self._get_node_lock(node_id)
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         try:
@@ -772,7 +776,7 @@ class MatterDeviceController:
                 LOGGER.debug(
                     "Attempting to resolve node %s (with PASE connection)", node_id
                 )
-                async with self._get_node_lock(node_id):
+                async with node_lock:
                     await self._call_sdk(
                         self.chip_controller.GetConnectedDeviceSync,
                         nodeid=node_id,
@@ -786,7 +790,7 @@ class MatterDeviceController:
             if not retries:
                 # when we're out of retries, raise NodeNotResolving
                 raise NodeNotResolving(f"Unable to resolve Node {node_id}") from err
-            async with self._get_node_lock(node_id):
+            async with node_lock:
                 await self._resolve_node(
                     node_id=node_id, retries=retries - 1, allow_pase=retries - 1 == 0
                 )
