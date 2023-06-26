@@ -7,7 +7,7 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Deque, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Deque, Iterable, Type, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute, Objects as Clusters
@@ -342,6 +342,7 @@ class MatterDeviceController:
             self.server.signal_event(EventType.NODE_ADDED, node)
         else:
             # existing node, signal node updated event
+            # TODO: maybe only signal this event if attributes actually changed ?
             self.server.signal_event(EventType.NODE_UPDATED, node)
 
         LOGGER.debug("Interview of node %s completed", node_id)
@@ -534,8 +535,36 @@ class MatterDeviceController:
             # these are set by the SDK if parsing the value failed miserably
             if isinstance(new_value, ValueDecodeFailure):
                 return
-            node_logger.info("Attribute updated: %s - new value: %s", path, new_value)
+
             attr_path = str(path.Path)
+            old_value = node.attributes.get(attr_path)
+
+            node_logger.info(
+                "Attribute updated: %s - old value: %s - new value: %s",
+                path,
+                old_value,
+                new_value,
+            )
+
+            # work out added/removed endpoints on bridges
+            if (
+                node.is_bridge
+                and path.Path.EndpointId == 0
+                and path.AttributeType == Clusters.Descriptor.Attributes.PartsList
+            ):
+                endpoints_removed = set(old_value or []) - set(new_value)
+                endpoints_added = set(new_value) - set(old_value or [])
+                if endpoints_removed:
+                    asyncio.create_task(
+                        self._handle_endpoints_removed(node_id, endpoints_removed)
+                    )
+                if endpoints_added:
+                    asyncio.create_task(
+                        self._handle_endpoints_added(node_id, endpoints_added)
+                    )
+                return
+
+            # store updated value in node attributes
             node.attributes[attr_path] = new_value
 
             # schedule save to persistent storage
@@ -753,3 +782,38 @@ class MatterDeviceController:
                 node_id=node_id, retries=retries - 1, allow_pase=retries - 1 == 0
             )
             await asyncio.sleep(2)
+
+    async def _handle_endpoints_removed(
+        self, node_id: int, endpoints: Iterable[int]
+    ) -> None:
+        """Handle callback for when bridge endpoint(s) get deleted."""
+        node = cast(MatterNodeData, self._nodes[node_id])
+        for endpoint_id in endpoints:
+            node.attributes = {
+                key: value
+                for key, value in node.attributes.items()
+                if not key.startswith(f"{endpoint_id}/")
+            }
+            self.server.signal_event(
+                EventType.ENDPOINT_REMOVED,
+                {"node_id": node_id, "endpoint_id": endpoint_id},
+            )
+        # schedule save to persistent storage
+        self.server.storage.set(
+            DATA_KEY_NODES,
+            subkey=str(node_id),
+            value=node,
+        )
+
+    async def _handle_endpoints_added(
+        self, node_id: int, endpoints: Iterable[int]
+    ) -> None:
+        """Handle callback for when bridge endpoint(s) get added."""
+        # we simply do a full interview of the node
+        await self.interview_node(node_id)
+        # signal event to consumers
+        for endpoint_id in endpoints:
+            self.server.signal_event(
+                EventType.ENDPOINT_ADDED,
+                {"node_id": node_id, "endpoint_id": endpoint_id},
+            )

@@ -132,6 +132,7 @@ class StorageController:
 
         if immediate:
             _do_save()
+
         else:
             # schedule the save for later
             self._timer_handle = self.server.loop.call_later(
