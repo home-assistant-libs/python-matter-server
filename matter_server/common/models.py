@@ -76,7 +76,7 @@ class MatterNodeData:
     # a set of tuples in format (endpoint_id, cluster_id, attribute_id)
     # where each value can also be a '*' for wildcard
     attribute_subscriptions: set[tuple[int | str, int | str, int | str]] = field(
-        default_factory=list
+        default_factory=set
     )
 
 

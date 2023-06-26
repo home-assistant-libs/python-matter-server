@@ -32,6 +32,7 @@ from ..common.helpers.json import json_dumps
 from ..common.helpers.util import (
     create_attribute_path,
     create_attribute_path_from_attribute,
+    parse_attribute_path,
     dataclass_from_dict,
 )
 from ..common.models import APICommand, EventType, MatterNodeData
@@ -438,11 +439,9 @@ class MatterDeviceController:
         node = self._nodes[node_id]
 
         # work out added subscriptions
-        attribute_paths = (
-            set(attribute_path)
-            if isinstance(attribute_path, list)
-            else {attribute_path}
-        )
+        if not isinstance(attribute_path, list):
+            attribute_path = [attribute_path]
+        attribute_paths = {parse_attribute_path(x) for x in attribute_path}
         if not node.attribute_subscriptions.difference(attribute_paths):
             return  # nothing to do
         node.attribute_subscriptions.update(attribute_paths)
@@ -490,7 +489,7 @@ class MatterDeviceController:
             endpoint_id,
             cluster_id,
             attribute_id,
-        ) in set.union(DEFAULT_SUBSCRIBE_ATTRIBUTES, node.attribute_subscriptions):
+        ) in set.union(DEFAULT_SUBSCRIBE_ATTRIBUTES, *node.attribute_subscriptions):
             endpoint: int | None = None if endpoint_id == "*" else endpoint_id
             cluster: Type[Cluster] = ALL_CLUSTERS[cluster_id]
             attribute: Type[ClusterAttributeDescriptor] | None = (
