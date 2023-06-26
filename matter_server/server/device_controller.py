@@ -476,7 +476,7 @@ class MatterDeviceController:
                 f"Node {node_id} does not exist or has not been interviewed."
             )
         async with self._get_node_lock(node_id):
-            node_logger = LOGGER.getChild(str(node_id))
+            node_logger = LOGGER.getChild(f"[node {node_id}]")
             node_logger.debug("Setting up subscriptions...")
             # check if we already have an subscription for this node,
             # if so, we need to unsubscribe first because a device can only maintain
