@@ -12,7 +12,12 @@ from typing import TYPE_CHECKING, Any, Callable, Deque, Type, TypeVar, cast
 from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
-from chip.clusters.ClusterObjects import ALL_CLUSTERS, Cluster
+from chip.clusters.ClusterObjects import (
+    ALL_CLUSTERS,
+    Cluster,
+    ClusterAttributeDescriptor,
+    ALL_ATTRIBUTES,
+)
 from chip.exceptions import ChipStackError
 
 from ..common.const import SCHEMA_VERSION
@@ -48,12 +53,12 @@ LOGGER = logging.getLogger(__name__)
 INTERVIEW_TASK_LIMIT = 5
 
 # a list of attributes we should always watch on all nodes
-DEFAULT_SUBSCRIBE_ATTRIBUTES = {
+DEFAULT_SUBSCRIBE_ATTRIBUTES = [
     ("*", 0x001D, 0x00000000),  # all endpoints, descriptor cluster, deviceTypeList
     ("*", 0x001D, 0x00000003),  # all endpoints, descriptor cluster, partsList
     (0, 0x0028, "*"),  # endpoint 0, BasicInformation cluster, all attributes
     ("*", 0x0039, "*"),  # BridgedDeviceBasicInformation
-}
+]
 
 
 class MatterDeviceController:
@@ -317,10 +322,8 @@ class MatterDeviceController:
             ),
         )
 
-        # work out default attributes to subscribe to
         if existing_info:
             node.attribute_subscriptions = existing_info.attribute_subscriptions
-        node.attribute_subscriptions.update(DEFAULT_SUBSCRIBE_ATTRIBUTES)
         # work out if the node is a bridge device by looking at the devicetype of endpoint 1
         if attr_data := node.attributes.get("1/29/0"):
             attr_data: list[Clusters.Descriptor.Structs.DeviceTypeStruct]
@@ -477,14 +480,37 @@ class MatterDeviceController:
         node = cast(MatterNodeData, self._nodes[node_id])
         await self._resolve_node(node_id=node_id)
 
+        # work out attribute subscriptions
+        attr_subscriptions = []
+        for endpoint_id, cluster_id, attribute_id in (
+            DEFAULT_SUBSCRIBE_ATTRIBUTES + node.attribute_subscriptions
+        ):
+            endpoint: int | None = None if endpoint_id == "*" else endpoint_id
+            cluster: Type[Cluster] = ALL_CLUSTERS[cluster_id]
+            attribute: Type[ClusterAttributeDescriptor] | None = (
+                None
+                if attribute_id == "*"
+                else ALL_ATTRIBUTES[cluster_id][attribute_id]
+            )
+            if endpoint and attribute:
+                # Concrete path: specific endpoint, specific clusterattribute
+                attr_subscriptions.append((endpoint, attribute))
+            elif endpoint and cluster:
+                # Specific endpoint, Wildcard attribute id (specific cluster)
+                attr_subscriptions.append((endpoint, cluster))
+            elif attribute:
+                # Wildcard endpoint, specific attribute
+                attr_subscriptions.append(attribute)
+            elif cluster:
+                # Wildcard endpoint, specific cluster
+                attr_subscriptions.append(cluster)
+
         node_logger.info("Setting up attributes and events subscription.")
         sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
             nodeid=node_id,
             # in order to prevent network congestion due to wildcard subscriptions on all nodes,
             # we keep a list of attributes we are explicitly interested in.
-            # the sdk chokes on an empty list so fallback to None
-            # if we do not (yet) have attribute subscriptions for this node.
-            attributes=list(node.attribute_subscriptions) or None,
+            attributes=attr_subscriptions,
             # simply subscribe to all (urgent and non urgent) device events
             events=[("*", 1), ("*", 0)],
             # use a report interval of 0, 300 which means we want to receive state changes
@@ -508,7 +534,7 @@ class MatterDeviceController:
             # these are set by the SDK if parsing the value failed miserably
             if isinstance(new_value, ValueDecodeFailure):
                 return
-            node_logger.debug("Attribute updated: %s - new value: %s", path, new_value)
+            node_logger.info("Attribute updated: %s - new value: %s", path, new_value)
             attr_path = str(path.Path)
             node.attributes[attr_path] = new_value
 
@@ -553,7 +579,7 @@ class MatterDeviceController:
             nextResubscribeIntervalMsec: int,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
-            node_logger.debug(
+            node_logger.info(
                 "Previous subscription failed with Error: %s, re-subscribing in %s ms...",
                 terminationError,
                 nextResubscribeIntervalMsec,
@@ -567,7 +593,7 @@ class MatterDeviceController:
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
-            node_logger.debug("Re-Subscription succeeded")
+            node_logger.info("Re-Subscription succeeded")
             # mark node as available and signal consumers
             if not node.available:
                 node.available = True
