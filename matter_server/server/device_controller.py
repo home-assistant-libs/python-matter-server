@@ -517,7 +517,14 @@ class MatterDeviceController:
 
         if len(attr_subscriptions) > 50:
             # prevent memory overload on node and fallback to wildcard sub if too many
-            # individual subscriptions
+            # individual subscriptions (e.g. bridges)
+            attr_subscriptions = "*"  # type: ignore[assignment]
+
+        if node.attribute_subscriptions == []:
+            # temp fix for backwards compatbility with HA releases below 2023.7
+            # fallback to wildcard subscriptions if we have no explicit
+            # node subscriptions defined.
+            # TODO: remove this after HA release 2023.8
             attr_subscriptions = "*"  # type: ignore[assignment]
 
         # check if we already have an subscription for this node,
