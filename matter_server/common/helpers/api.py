@@ -56,7 +56,7 @@ def parse_arguments(
     if strict:
         for key, value in args.items():
             if key not in func_sig.parameters:
-                raise KeyError("Invalid parameter: '%s'" % key)
+                raise KeyError(f"Invalid parameter: '{key}'")
     # parse arguments to correct type
     for name, param in func_sig.parameters.items():
         value = args.get(name)

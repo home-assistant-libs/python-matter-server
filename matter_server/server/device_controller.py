@@ -53,7 +53,7 @@ LOGGER = logging.getLogger(__name__)
 INTERVIEW_TASK_LIMIT = 5
 
 # a list of attributes we should always watch on all nodes
-DEFAULT_SUBSCRIBE_ATTRIBUTES = {
+DEFAULT_SUBSCRIBE_ATTRIBUTES: set[tuple[int | str, int | str, int | str]] = {
     ("*", 0x001D, 0x00000000),  # all endpoints, descriptor cluster, deviceTypeList
     ("*", 0x001D, 0x00000003),  # all endpoints, descriptor cluster, partsList
     (0, 0x0028, "*"),  # endpoint 0, BasicInformation cluster, all attributes
@@ -333,7 +333,6 @@ class MatterDeviceController:
         if existing_info:
             node.attribute_subscriptions = existing_info.attribute_subscriptions
         # work out if the node is a bridge device by looking at the devicetype of endpoint 1
-        attr_data: list[Clusters.Descriptor.Structs.DeviceTypeStruct]
         if attr_data := node.attributes.get("1/29/0"):
             node.is_bridge = any(x.deviceType == 14 for x in attr_data)
 
@@ -439,6 +438,7 @@ class MatterDeviceController:
             )
 
         node = self._nodes[node_id]
+        assert node is not None
 
         # work out added subscriptions
         if not isinstance(attribute_path, list):
@@ -458,12 +458,13 @@ class MatterDeviceController:
         # (re)setup node subscription
         # this could potentially be called multiple times within a short timeframe
         # so debounce it a bit
-        def resubscribe():
+        def resubscribe() -> None:
             self._resub_timer.pop(node_id, None)
             asyncio.create_task(self._subscribe_node(node_id))
 
         if existing_timer := self._resub_timer.pop(node_id, None):
             existing_timer.cancel()
+        assert self.server.loop is not None
         self._resub_timer[node_id] = self.server.loop.call_later(5, resubscribe)
 
     async def _subscribe_node(self, node_id: int) -> None:
@@ -696,7 +697,7 @@ class MatterDeviceController:
     ) -> None:
         """Handle interview (if needed) and subscription for known node."""
 
-        def reschedule():
+        def reschedule() -> None:
             """(Re)Schedule interview and/or initial subscription for a node."""
             self.server.loop.call_later(
                 reschedule_interval,

@@ -112,7 +112,7 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
             if subvalue is not None
         )
     # handle dictionary where we should inspect all values
-    elif origin is dict:
+    if origin is dict:
         subkey_type = get_args(value_type)[0]
         subvalue_type = get_args(value_type)[1]
         return {
@@ -122,7 +122,7 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
             for subkey, subvalue in value.items()
         }
     # handle Union type
-    elif origin is Union or origin is UnionType:
+    if origin is Union or origin is UnionType:
         # try all possible types
         sub_value_types = get_args(value_type)
         for sub_arg_type in sub_value_types:

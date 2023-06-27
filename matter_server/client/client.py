@@ -168,7 +168,7 @@ class MatterClient:
         Returns a list of MatterFabricData objects.
         """
 
-        node = await self.get_node(node_id)
+        node = self.get_node(node_id)
         fabrics: list[
             Clusters.OperationalCredentials.Structs.FabricDescriptor
         ] = node.get_attribute_value(
