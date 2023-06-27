@@ -519,19 +519,19 @@ class MatterDeviceController:
         async with node_lock:
             sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
                 nodeid=node_id,
-                # in order to prevent network congestion due to wildcard subscriptions on all nodes,
+                # In order to prevent network congestion due to wildcard subscriptions on all nodes,
                 # we keep a list of attributes we are explicitly interested in.
                 attributes=attr_subscriptions,
                 # simply subscribe to all (urgent and non urgent) device events
                 events=[("*", 1), ("*", 0)],
-                # use a report interval of 0, 300 which means we want to receive state changes
+                # Use a report interval of 0, 300 which means we want to receive state changes
                 # as soon as possible (the 0 as floor) but we want to receive a report
-                # at least once every 5 minutes (300 as ceiling),
-                # 5 minutes (300 as ceiling), this is also used to detect the node is still alive.
-                # a resubscription will be initiated automatically by the sdk if there was no report
-                # within the interval.
+                # at least once every 5 minutes (300 as ceiling).
+                # This is also used to detect the node is still alive.
+                # A resubscription will be initiated automatically by the sdk
+                # if there was no report within the interval.
                 reportInterval=(0, 300),
-                # use fabricfiltered as False to detect changes made by other controllers
+                # Use fabricfiltered as False to detect changes made by other controllers
                 # and to be able to provide a list of all fabrics attached to the device
                 fabricFiltered=False,
             )
