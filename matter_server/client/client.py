@@ -434,12 +434,13 @@ class MatterClient:
         if msg.event == EventType.ATTRIBUTE_UPDATED:
             # data is tuple[node_id, attribute_path, new_value]
             node_id, attribute_path, new_value = msg.data
-            self.logger.debug(
-                "Attribute updated: Node: %s - Attribute: %s - New value: %s",
-                node_id,
-                attribute_path,
-                new_value,
-            )
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(
+                    "Attribute updated: Node: %s - Attribute: %s - New value: %s",
+                    node_id,
+                    attribute_path,
+                    new_value,
+                )
             self._nodes[node_id].update_attribute(attribute_path, new_value)
             self._signal_event(
                 EventType.ATTRIBUTE_UPDATED,
