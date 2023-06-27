@@ -453,7 +453,8 @@ class MatterClient:
             endpoint_id = msg.data["endpoint_id"]
             self.logger.debug("Endpoint added: %s/%s", node_id, endpoint_id)
         # simply forward all other events as-is
-        self.logger.debug("Received event: %s", msg)
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug("Received event: %s", msg)
         self._signal_event(msg.event, msg.data)
 
     def _signal_event(
