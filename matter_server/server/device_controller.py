@@ -489,13 +489,13 @@ class MatterDeviceController:
         await self._resolve_node(node_id=node_id)
 
         # work out all (current) attribute subscriptions
-        attr_subscriptions = []
+        attr_subscriptions: list[Any] = []
         for (
             endpoint_id,
             cluster_id,
             attribute_id,
         ) in set.union(DEFAULT_SUBSCRIBE_ATTRIBUTES, node.attribute_subscriptions):
-            endpoint: int | None = None if endpoint_id == "*" else endpoint_id
+            endpoint: int | None = None if endpoint_id == "*" else int(endpoint_id)
             cluster: Type[Cluster] = ALL_CLUSTERS[cluster_id]
             attribute: Type[ClusterAttributeDescriptor] | None = (
                 None
@@ -518,19 +518,19 @@ class MatterDeviceController:
         if len(attr_subscriptions) > 50:
             # prevent memory overload on node and fallback to wildcard sub if too many
             # individual subscriptions
-            attr_subscriptions = "*"
+            attr_subscriptions = "*"  # type: ignore[assignment]
 
         # check if we already have an subscription for this node,
         # if so, we need to unsubscribe first because a device can only maintain
         # a very limited amount of concurrent subscriptions.
-        if sub := self._subscriptions.pop(node_id, None):
+        if prev_sub := self._subscriptions.pop(node_id, None):
             if self._attr_subscriptions.get(node_id) == attr_subscriptions:
                 # the current subscription already matches, no need to re-setup
                 node_logger.debug("Re-using existing subscription.")
                 return
             async with node_lock:
                 node_logger.debug("Unsubscribing from existing subscription.")
-                await self._call_sdk(sub.Shutdown)
+                await self._call_sdk(prev_sub.Shutdown)
 
         node_logger.debug("Setting up attributes and events subscription.")
         self._attr_subscriptions[node_id] = attr_subscriptions
@@ -699,6 +699,7 @@ class MatterDeviceController:
 
         def reschedule() -> None:
             """(Re)Schedule interview and/or initial subscription for a node."""
+            assert self.server.loop is not None
             self.server.loop.call_later(
                 reschedule_interval,
                 asyncio.create_task,
