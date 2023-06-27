@@ -465,7 +465,7 @@ class MatterDeviceController:
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
 
-        if node_id not in self._nodes:
+        if self._nodes.get(node_id) is None:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or has not been interviewed."
             )
