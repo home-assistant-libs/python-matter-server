@@ -666,7 +666,9 @@ class MatterDeviceController:
         # and the initial subscription succeeded, mark the node available.
         node.available = True
         node_logger.info("Subscription succeeded")
-        cache = sub.GetAttributes()
+        # update attributes with current state from read request
+        current_atributes = self._parse_attributes_from_read_result(sub.GetAttributes())
+        node.attributes.update(current_atributes)
         self.server.signal_event(EventType.NODE_UPDATED, node)
 
     def _get_next_node_id(self) -> int:
