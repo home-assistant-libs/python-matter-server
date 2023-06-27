@@ -514,7 +514,7 @@ class MatterDeviceController:
         if len(attr_subscriptions) > 50:
             # prevent memory overload on node and fallback to wildcard sub if too many
             # individual subscriptions
-            attr_subscriptions = [tuple()]
+            attr_subscriptions = "*"
         async with node_lock:
             sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
                 nodeid=node_id,
