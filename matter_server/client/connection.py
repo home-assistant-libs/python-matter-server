@@ -130,11 +130,8 @@ class MatterClientConnection:
         except ValueError as err:
             raise InvalidMessage("Received invalid JSON.") from err
 
-        if LOGGER.isEnabledFor(logging.DEBUG):
-            if VERBOSE_LOGGER:
-                LOGGER.debug("Received message:\n%s\n", pprint.pformat(ws_msg))
-            else:
-                LOGGER.debug("Received message: %s ...", ws_msg.data[:50])
+        if VERBOSE_LOGGER and LOGGER.isEnabledFor(logging.DEBUG):
+            LOGGER.debug("Received message:\n%s\n", pprint.pformat(ws_msg))
 
         return msg
 
@@ -147,11 +144,8 @@ class MatterClientConnection:
         if not self.connected:
             raise NotConnected
 
-        if LOGGER.isEnabledFor(logging.DEBUG):
-            if VERBOSE_LOGGER:
-                LOGGER.debug("Publishing message:\n%s\n", pprint.pformat(message))
-            else:
-                LOGGER.debug("Publishing message: %s", message)
+        if VERBOSE_LOGGER and LOGGER.isEnabledFor(logging.DEBUG):
+            LOGGER.debug("Publishing message:\n%s\n", pprint.pformat(message))
 
         assert self._ws_client
         assert isinstance(message, CommandMessage)
