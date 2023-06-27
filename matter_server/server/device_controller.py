@@ -442,9 +442,10 @@ class MatterDeviceController:
         if not isinstance(attribute_path, list):
             attribute_path = [attribute_path]
         attribute_paths = {parse_attribute_path(x) for x in attribute_path}
-        if not node.attribute_subscriptions.difference(attribute_paths):
-            return  # nothing to do
+        prev_subs = set(node.attribute_subscriptions)
         node.attribute_subscriptions.update(attribute_paths)
+        if prev_subs == node.attribute_subscriptions:
+            return  # nothing to do
         # save updated node data
         self.server.storage.set(
             DATA_KEY_NODES,
@@ -489,7 +490,7 @@ class MatterDeviceController:
             endpoint_id,
             cluster_id,
             attribute_id,
-        ) in set.union(DEFAULT_SUBSCRIBE_ATTRIBUTES, *node.attribute_subscriptions):
+        ) in set.union(DEFAULT_SUBSCRIBE_ATTRIBUTES, node.attribute_subscriptions):
             endpoint: int | None = None if endpoint_id == "*" else endpoint_id
             cluster: Type[Cluster] = ALL_CLUSTERS[cluster_id]
             attribute: Type[ClusterAttributeDescriptor] | None = (
