@@ -44,7 +44,7 @@ relies on the networking managed by your operating system.
 Make sure your you run the container on the host network. The host network
 interface needs to be in the same network as the Android/iPhone device
 you are using for commissioning. Matter uses link-local multicast protocols
-which do not work accross different LANs or VLANs.
+which do not work across different LANs or VLANs.
 
 The host network interface needs IPv6 support enabled.
 
