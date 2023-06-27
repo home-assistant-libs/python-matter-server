@@ -4,7 +4,6 @@ from base64 import b64encode
 from dataclasses import is_dataclass
 from typing import Any
 
-from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.Types import Nullable
 from chip.tlv import float32, uint
 import orjson
@@ -22,8 +21,6 @@ def json_encoder_default(obj: Any) -> Any:
     """
     if getattr(obj, "do_not_serialize", None):
         return None
-    if isinstance(obj, ValueDecodeFailure):
-        return None
     if isinstance(obj, (set, tuple)):
         return list(obj)
     if isinstance(obj, float32):
@@ -40,7 +37,7 @@ def json_encoder_default(obj: Any) -> Any:
         return b64encode(obj).decode("utf-8")
     if isinstance(obj, Exception):
         return str(obj)
-    if type(obj) == type:
+    if type(obj) == type:  # pylint: disable=unidiomatic-typecheck
         return f"{obj.__module__}.{obj.__qualname__}"
 
     raise TypeError

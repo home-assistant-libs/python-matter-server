@@ -7,13 +7,17 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
-import time
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Deque, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Deque, Iterable, Type, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
-from chip.clusters.ClusterObjects import ALL_CLUSTERS, Cluster
+from chip.clusters.ClusterObjects import (
+    ALL_ATTRIBUTES,
+    ALL_CLUSTERS,
+    Cluster,
+    ClusterAttributeDescriptor,
+)
 from chip.exceptions import ChipStackError
 
 from ..common.const import SCHEMA_VERSION
@@ -29,6 +33,7 @@ from ..common.helpers.util import (
     create_attribute_path,
     create_attribute_path_from_attribute,
     dataclass_from_dict,
+    parse_attribute_path,
 )
 from ..common.models import APICommand, EventType, MatterNodeData
 from .const import PAA_ROOT_CERTS_DIR
@@ -45,7 +50,15 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
-INTERVIEW_TASK_LIMIT = 10
+INTERVIEW_TASK_LIMIT = 5
+
+# a list of attributes we should always watch on all nodes
+DEFAULT_SUBSCRIBE_ATTRIBUTES: set[tuple[int | str, int | str, int | str]] = {
+    ("*", 0x001D, 0x00000000),  # all endpoints, descriptor cluster, deviceTypeList
+    ("*", 0x001D, 0x00000003),  # all endpoints, descriptor cluster, partsList
+    (0, 0x0028, "*"),  # endpoint 0, BasicInformation cluster, all attributes
+    ("*", 0x0039, "*"),  # BridgedDeviceBasicInformation
+}
 
 
 class MatterDeviceController:
@@ -62,11 +75,16 @@ class MatterDeviceController:
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: Deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
+        self._attr_subscriptions: dict[int, list[tuple[Any, ...]] | str] = {}
+        self._resub_timer: dict[int, asyncio.TimerHandle] = {}
         self._nodes: dict[int, MatterNodeData | None] = {}
         self.wifi_credentials_set: bool = False
         self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
-        self._interview_task: asyncio.Task | None = None
+        self._interview_limit: asyncio.Semaphore = asyncio.Semaphore(
+            INTERVIEW_TASK_LIMIT
+        )
+        self._node_lock: dict[int, asyncio.Lock] = {}
 
     async def initialize(self) -> None:
         """Async initialize of controller."""
@@ -97,11 +115,9 @@ class MatterDeviceController:
                 # always mark node as unavailable at startup until subscriptions are ready
                 node.available = False
             self._nodes[node_id] = node
-        # setup subscriptions and (re)interviews as task in the background
-        # as we do not want it to block our startup
-        self._interview_task = asyncio.create_task(
-            self._check_subscriptions_and_interviews()
-        )
+            # setup subscription and (re)interview as task in the background
+            # as we do not want it to block our startup
+            asyncio.create_task(self._check_interview_and_subscription(node_id))
         LOGGER.debug("Loaded %s nodes", len(self._nodes))
 
     async def stop(self) -> None:
@@ -160,7 +176,7 @@ class MatterDeviceController:
         # full interview of the device
         await self.interview_node(node_id)
         # make sure we start a subscription for this newly added node
-        await self.subscribe_node(node_id)
+        await self._subscribe_node(node_id)
         # return full node object once we're complete
         return self.get_node(node_id)
 
@@ -205,7 +221,7 @@ class MatterDeviceController:
         # full interview of the device
         await self.interview_node(node_id)
         # make sure we start a subscription for this newly added node
-        await self.subscribe_node(node_id)
+        await self._subscribe_node(node_id)
         # return full node object once we're complete
         return self.get_node(node_id)
 
@@ -245,8 +261,7 @@ class MatterDeviceController:
         option: int = 1,
         discriminator: int | None = None,
     ) -> tuple[int, str]:
-        """
-        Open a commissioning window to commission a device present on this controller to another.
+        """Open a commissioning window to commission a device present on this controller to another.
 
         Returns code to use as discriminator.
         """
@@ -288,11 +303,16 @@ class MatterDeviceController:
         LOGGER.debug("Interviewing node: %s", node_id)
         try:
             await self._resolve_node(node_id=node_id)
-            read_response: Attribute.AsyncReadTransaction.ReadResponse = (
-                await self.chip_controller.Read(
-                    nodeid=node_id, attributes="*", events="*", fabricFiltered=False
-                )
-            )
+            async with self._interview_limit:
+                async with self._get_node_lock(node_id):
+                    read_response: Attribute.AsyncReadTransaction.ReadResponse = (
+                        await self.chip_controller.Read(
+                            nodeid=node_id,
+                            attributes="*",
+                            events="*",
+                            fabricFiltered=False,
+                        )
+                    )
         except (ChipStackError, NodeNotResolving) as err:
             raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
 
@@ -310,6 +330,12 @@ class MatterDeviceController:
             ),
         )
 
+        if existing_info:
+            node.attribute_subscriptions = existing_info.attribute_subscriptions
+        # work out if the node is a bridge device by looking at the devicetype of endpoint 1
+        if attr_data := node.attributes.get("1/29/0"):
+            node.is_bridge = any(x.deviceType == 14 for x in attr_data)
+
         # save updated node data
         self._nodes[node_id] = node
         self.server.storage.set(
@@ -323,6 +349,7 @@ class MatterDeviceController:
             self.server.signal_event(EventType.NODE_ADDED, node)
         else:
             # existing node, signal node updated event
+            # TODO: maybe only signal this event if attributes actually changed ?
             self.server.signal_event(EventType.NODE_UPDATED, node)
 
         LOGGER.debug("Interview of node %s completed", node_id)
@@ -346,14 +373,15 @@ class MatterDeviceController:
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
         command_cls = getattr(cluster_cls.Commands, command_name)
         command = dataclass_from_dict(command_cls, payload)
-        return await self.chip_controller.SendCommand(
-            nodeid=node_id,
-            endpoint=endpoint_id,
-            payload=command,
-            responseType=response_type,
-            timedRequestTimeoutMs=timed_request_timeout_ms,
-            interactionTimeoutMs=interaction_timeout_ms,
-        )
+        async with self._get_node_lock(node_id):
+            return await self.chip_controller.SendCommand(
+                nodeid=node_id,
+                endpoint=endpoint_id,
+                payload=command,
+                responseType=response_type,
+                timedRequestTimeoutMs=timed_request_timeout_ms,
+                interactionTimeoutMs=interaction_timeout_ms,
+            )
 
     @api_command(APICommand.REMOVE_NODE)
     async def remove_node(self, node_id: int) -> None:
@@ -380,7 +408,7 @@ class MatterDeviceController:
         )
         fabric_index = node.attributes[attribute_path]
 
-        self.server.signal_event(EventType.NODE_DELETED, node_id)
+        self.server.signal_event(EventType.NODE_REMOVED, node_id)
 
         await self.chip_controller.SendCommand(
             nodeid=node_id,
@@ -390,11 +418,16 @@ class MatterDeviceController:
             ),
         )
 
-    async def subscribe_node(self, node_id: int) -> None:
+    @api_command(APICommand.SUBSCRIBE_ATTRIBUTE)
+    async def subscribe_attribute(
+        self, node_id: int, attribute_path: str | list[str]
+    ) -> None:
         """
-        Subscribe to all node state changes/events for an individual node.
+        Subscribe to given AttributePath(s).
 
-        Note that by using the listen command at server level, you will receive all node events.
+        Either supply a single attribute path or a list of paths.
+        The given attribute path(s) will be added to the list of attributes that
+        are watched for the given node. This is persistent over restarts.
         """
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
@@ -403,27 +436,123 @@ class MatterDeviceController:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or has not been interviewed."
             )
-        assert node_id not in self._subscriptions, "Already subscribed to node"
-        node_logger = LOGGER.getChild(str(node_id))
-        node_logger.debug("Setting up subscriptions...")
 
-        node = cast(MatterNodeData, self._nodes[node_id])
-        node.available = False
-        await self._resolve_node(node_id=node_id)
-        node.available = True
+        node = self._nodes[node_id]
+        assert node is not None
 
-        # we follow the pattern of apple and google here and
-        # just do a wildcard subscription for all clusters and properties
-        # the client will handle filtering of the events.
-        # if it turns out in the future that this is too much traffic (I don't think so now)
-        # we can revisit this choice and do some selected subscriptions.
-        sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
-            nodeid=node_id,
-            attributes="*",
-            events=[("*", 1)],
-            reportInterval=(0, 120),
-            fabricFiltered=False,
+        # work out added subscriptions
+        if not isinstance(attribute_path, list):
+            attribute_path = [attribute_path]
+        attribute_paths = {parse_attribute_path(x) for x in attribute_path}
+        prev_subs = set(node.attribute_subscriptions)
+        node.attribute_subscriptions.update(attribute_paths)
+        if prev_subs == node.attribute_subscriptions:
+            return  # nothing to do
+        # save updated node data
+        self.server.storage.set(
+            DATA_KEY_NODES,
+            subkey=str(node_id),
+            value=node,
         )
+
+        # (re)setup node subscription
+        # this could potentially be called multiple times within a short timeframe
+        # so debounce it a bit
+        def resubscribe() -> None:
+            self._resub_timer.pop(node_id, None)
+            asyncio.create_task(self._subscribe_node(node_id))
+
+        if existing_timer := self._resub_timer.pop(node_id, None):
+            existing_timer.cancel()
+        assert self.server.loop is not None
+        self._resub_timer[node_id] = self.server.loop.call_later(5, resubscribe)
+
+    async def _subscribe_node(self, node_id: int) -> None:
+        """
+        Subscribe to all node state changes/events for an individual node.
+
+        Note that by using the listen command at server level,
+        you will receive all (subscribed) node events and attribute updates.
+        """
+        # pylint: disable=too-many-locals,too-many-statements
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+
+        if self._nodes.get(node_id) is None:
+            raise NodeNotExists(
+                f"Node {node_id} does not exist or has not been interviewed."
+            )
+
+        node_logger = LOGGER.getChild(f"[node {node_id}]")
+        node_lock = self._get_node_lock(node_id)
+        node = cast(MatterNodeData, self._nodes[node_id])
+        await self._resolve_node(node_id=node_id)
+
+        # work out all (current) attribute subscriptions
+        attr_subscriptions: list[Any] = []
+        for (
+            endpoint_id,
+            cluster_id,
+            attribute_id,
+        ) in set.union(DEFAULT_SUBSCRIBE_ATTRIBUTES, node.attribute_subscriptions):
+            endpoint: int | None = None if endpoint_id == "*" else int(endpoint_id)
+            cluster: Type[Cluster] = ALL_CLUSTERS[cluster_id]
+            attribute: Type[ClusterAttributeDescriptor] | None = (
+                None
+                if attribute_id == "*"
+                else ALL_ATTRIBUTES[cluster_id][attribute_id]
+            )
+            if endpoint and attribute:
+                # Concrete path: specific endpoint, specific clusterattribute
+                attr_subscriptions.append((endpoint, attribute))
+            elif endpoint and cluster:
+                # Specific endpoint, Wildcard attribute id (specific cluster)
+                attr_subscriptions.append((endpoint, cluster))
+            elif attribute:
+                # Wildcard endpoint, specific attribute
+                attr_subscriptions.append(attribute)
+            elif cluster:
+                # Wildcard endpoint, specific cluster
+                attr_subscriptions.append(cluster)
+
+        if len(attr_subscriptions) > 50:
+            # prevent memory overload on node and fallback to wildcard sub if too many
+            # individual subscriptions
+            attr_subscriptions = "*"  # type: ignore[assignment]
+
+        # check if we already have an subscription for this node,
+        # if so, we need to unsubscribe first because a device can only maintain
+        # a very limited amount of concurrent subscriptions.
+        if prev_sub := self._subscriptions.pop(node_id, None):
+            if self._attr_subscriptions.get(node_id) == attr_subscriptions:
+                # the current subscription already matches, no need to re-setup
+                node_logger.debug("Re-using existing subscription.")
+                return
+            async with node_lock:
+                node_logger.debug("Unsubscribing from existing subscription.")
+                await self._call_sdk(prev_sub.Shutdown)
+
+        node_logger.debug("Setting up attributes and events subscription.")
+        self._attr_subscriptions[node_id] = attr_subscriptions
+        async with node_lock:
+            sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
+                nodeid=node_id,
+                # In order to prevent network congestion due to wildcard subscriptions on all nodes,
+                # we keep a list of attributes we are explicitly interested in.
+                attributes=attr_subscriptions,
+                # simply subscribe to all (urgent and non urgent) device events
+                events=[("*", 1), ("*", 0)],
+                # Use a report interval of 0, 300 which means we want to receive state changes
+                # as soon as possible (the 0 as floor) but we want to receive a report
+                # at least once every 5 minutes (300 as ceiling).
+                # This is also used to detect the node is still alive.
+                # A resubscription will be initiated automatically by the sdk
+                # if there was no report within the interval.
+                reportInterval=(0, 300),
+                # Use fabricfiltered as False to detect changes made by other controllers
+                # and to be able to provide a list of all fabrics attached to the device
+                fabricFiltered=False,
+            )
 
         def attribute_updated_callback(
             path: Attribute.TypedAttributePath,
@@ -435,8 +564,36 @@ class MatterDeviceController:
             # these are set by the SDK if parsing the value failed miserably
             if isinstance(new_value, ValueDecodeFailure):
                 return
-            node_logger.debug("Attribute updated: %s - new value: %s", path, new_value)
+
             attr_path = str(path.Path)
+            old_value = node.attributes.get(attr_path)
+
+            node_logger.debug(
+                "Attribute updated: %s - old value: %s - new value: %s",
+                path,
+                old_value,
+                new_value,
+            )
+
+            # work out added/removed endpoints on bridges
+            if (
+                node.is_bridge
+                and path.Path.EndpointId == 0
+                and path.AttributeType == Clusters.Descriptor.Attributes.PartsList
+            ):
+                endpoints_removed = set(old_value or []) - set(new_value)
+                endpoints_added = set(new_value) - set(old_value or [])
+                if endpoints_removed:
+                    self.server.loop.call_soon_threadsafe(
+                        self._handle_endpoints_removed, node_id, endpoints_removed
+                    )
+                if endpoints_added:
+                    self.server.loop.create_task(
+                        self._handle_endpoints_added(node_id, endpoints_added)
+                    )
+                return
+
+            # store updated value in node attributes
             node.attributes[attr_path] = new_value
 
             # schedule save to persistent storage
@@ -460,7 +617,9 @@ class MatterDeviceController:
         ) -> None:
             # pylint: disable=unused-argument
             assert self.server.loop is not None
-            node_logger.debug("Received node event: %s", data)
+            node_logger.debug(
+                "Received node event: %s - transaction: %s", data, transaction
+            )
             self.event_history.append(data)
             self.server.loop.call_soon_threadsafe(
                 self.server.signal_event, EventType.NODE_EVENT, data
@@ -478,7 +637,7 @@ class MatterDeviceController:
             nextResubscribeIntervalMsec: int,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
-            node_logger.debug(
+            node_logger.info(
                 "Previous subscription failed with Error: %s, re-subscribing in %s ms...",
                 terminationError,
                 nextResubscribeIntervalMsec,
@@ -492,7 +651,7 @@ class MatterDeviceController:
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
-            node_logger.debug("Re-Subscription succeeded")
+            node_logger.info("Re-Subscription succeeded")
             # mark node as available and signal consumers
             if not node.available:
                 node.available = True
@@ -504,10 +663,14 @@ class MatterDeviceController:
         sub.SetResubscriptionAttemptedCallback(resubscription_attempted)
         sub.SetResubscriptionSucceededCallback(resubscription_succeeded)
         self._subscriptions[node_id] = sub
+
         # if we reach this point, it means the node could be resolved
         # and the initial subscription succeeded, mark the node available.
         node.available = True
-        node_logger.debug("Subscription succeeded")
+        node_logger.info("Subscription succeeded")
+        # update attributes with current state from read request
+        current_atributes = self._parse_attributes_from_read_result(sub.GetAttributes())
+        node.attributes.update(current_atributes)
         self.server.signal_event(EventType.NODE_UPDATED, node)
 
     def _get_next_node_id(self) -> int:
@@ -529,88 +692,57 @@ class MatterDeviceController:
             ),
         )
 
-    async def _check_subscriptions_and_interviews(self) -> None:
-        """Run subscriptions (and interviews) for known nodes."""
-        # Set default resubscribe interval to 1 hour
-        reschedule_interval = 3600
-        start_time = time.time()
-        tasks: list[Coroutine[Any, Any, None]] = []
-        task_limit: asyncio.Semaphore = asyncio.Semaphore(INTERVIEW_TASK_LIMIT)
+    async def _check_interview_and_subscription(
+        self, node_id: int, reschedule_interval: int = 300
+    ) -> None:
+        """Handle interview (if needed) and subscription for known node."""
 
-        for node_id, node in self._nodes.items():
-            # (re)interview node (only) if needed
-            if (
-                node is None
-                or node.interview_version < SCHEMA_VERSION
-                or (datetime.utcnow() - node.last_interview).days > 30
-            ):
-
-                async def _interview_node(node_id: int) -> None:
-                    """Run interview for node."""
-                    try:
-                        await self.interview_node(node_id)
-                    except NodeInterviewFailed as err:
-                        LOGGER.warning(
-                            "Unable to interview Node %s, we will retry later in the background.",
-                            node_id,
-                            exc_info=err,
-                        )
-                        raise err
-
-                tasks.append(_interview_node(node_id))
-                continue
-
-            # setup subscriptions for the node
-            if node_id in self._subscriptions:
-                continue
-
-            async def _subscribe_node(node_id: int) -> None:
-                """Subscribe to node events."""
-                try:
-                    await self.subscribe_node(node_id)
-                except NodeNotResolving as err:
-                    LOGGER.warning(
-                        "Unable to subscribe to Node %s, "
-                        "we will retry later in the background.",
-                        node_id,
-                        exc_info=err,
-                    )
-                    raise err
-
-            tasks.append(_subscribe_node(node_id))
-
-        async def _run_task(task: Coroutine[Any, Any, None]) -> None:
-            """Run coroutine and release semaphore."""
-            async with task_limit:
-                await task
-
-        LOGGER.debug("Running %s tasks", len(tasks))
-        # wait for all tasks to finish
-        results: list[Exception | None] = await asyncio.gather(
-            *(_run_task(task) for task in tasks), return_exceptions=True
-        )
-        LOGGER.debug(
-            "Done running %s tasks in %s seconds",
-            len(results),
-            start_time - time.time(),
-        )
-        # check if any of the tasks failed
-        for result in results:
-            if isinstance(result, Exception):
-                # if any of the tasks failed, reschedule in 5 minutes
-                reschedule_interval = 300
-                break
-
-        # reschedule self to run every hour
-        def _schedule() -> None:
-            """Schedule task."""
-            self._interview_task = asyncio.create_task(
-                self._check_subscriptions_and_interviews()
+        def reschedule() -> None:
+            """(Re)Schedule interview and/or initial subscription for a node."""
+            assert self.server.loop is not None
+            self.server.loop.call_later(
+                reschedule_interval,
+                asyncio.create_task,
+                self._check_interview_and_subscription(
+                    node_id,
+                    # increase interval at each attempt with maximum of 1 hour
+                    min(reschedule_interval + 300, 3600),
+                ),
             )
 
-        LOGGER.debug("Rescheduling interviews in %s seconds", reschedule_interval)
-        loop = cast(asyncio.AbstractEventLoop, self.server.loop)
-        loop.call_later(reschedule_interval, _schedule)
+        # (re)interview node (only) if needed
+        node_data = self._nodes.get(node_id)
+        if (
+            node_data is None
+            # re-interview if the schema has changed
+            or node_data.interview_version < SCHEMA_VERSION
+            # re-interview every 30 days
+            or (datetime.utcnow() - node_data.last_interview).days > 30
+        ):
+            try:
+                await self.interview_node(node_id)
+            except NodeInterviewFailed:
+                LOGGER.warning(
+                    "Unable to interview Node %s, will retry later in the background.",
+                    node_id,
+                )
+                # reschedule self on error
+                reschedule()
+                return
+
+        # setup subscriptions for the node
+        if node_id in self._subscriptions:
+            return
+
+        try:
+            await self._subscribe_node(node_id)
+        except NodeNotResolving:
+            LOGGER.warning(
+                "Unable to subscribe to Node %s as it is unavailable, "
+                "will retry later in the background.",
+                node_id,
+            )
+            reschedule()
 
     @staticmethod
     def _parse_attributes_from_read_result(
@@ -658,6 +790,7 @@ class MatterDeviceController:
         self, node_id: int, retries: int = 3, allow_pase: bool = False
     ) -> None:
         """Resolve a Node on the network."""
+        node_lock = self._get_node_lock(node_id)
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         try:
@@ -666,11 +799,13 @@ class MatterDeviceController:
                 LOGGER.debug(
                     "Attempting to resolve node %s (with PASE connection)", node_id
                 )
-                await self._call_sdk(
-                    self.chip_controller.GetConnectedDeviceSync,
-                    nodeid=node_id,
-                    allowPASE=True,
-                )
+                async with node_lock:
+                    await self._call_sdk(
+                        self.chip_controller.GetConnectedDeviceSync,
+                        nodeid=node_id,
+                        allowPASE=True,
+                        timeoutMs=30000,
+                    )
                 return
             LOGGER.debug("Resolving node %s", node_id)
             await self._call_sdk(self.chip_controller.ResolveNode, nodeid=node_id)
@@ -678,7 +813,47 @@ class MatterDeviceController:
             if not retries:
                 # when we're out of retries, raise NodeNotResolving
                 raise NodeNotResolving(f"Unable to resolve Node {node_id}") from err
-            await self._resolve_node(
-                node_id=node_id, retries=retries - 1, allow_pase=retries - 1 == 0
-            )
+            async with node_lock:
+                await self._resolve_node(
+                    node_id=node_id, retries=retries - 1, allow_pase=retries - 1 == 0
+                )
             await asyncio.sleep(2)
+
+    def _handle_endpoints_removed(self, node_id: int, endpoints: Iterable[int]) -> None:
+        """Handle callback for when bridge endpoint(s) get deleted."""
+        node = cast(MatterNodeData, self._nodes[node_id])
+        for endpoint_id in endpoints:
+            node.attributes = {
+                key: value
+                for key, value in node.attributes.items()
+                if not key.startswith(f"{endpoint_id}/")
+            }
+            self.server.signal_event(
+                EventType.ENDPOINT_REMOVED,
+                {"node_id": node_id, "endpoint_id": endpoint_id},
+            )
+        # schedule save to persistent storage
+        self.server.storage.set(
+            DATA_KEY_NODES,
+            subkey=str(node_id),
+            value=node,
+        )
+
+    async def _handle_endpoints_added(
+        self, node_id: int, endpoints: Iterable[int]
+    ) -> None:
+        """Handle callback for when bridge endpoint(s) get added."""
+        # we simply do a full interview of the node
+        await self.interview_node(node_id)
+        # signal event to consumers
+        for endpoint_id in endpoints:
+            self.server.signal_event(
+                EventType.ENDPOINT_ADDED,
+                {"node_id": node_id, "endpoint_id": endpoint_id},
+            )
+
+    def _get_node_lock(self, node_id: int) -> asyncio.Lock:
+        """Return lock for given node."""
+        if node_id not in self._node_lock:
+            self._node_lock[node_id] = asyncio.Lock()
+        return self._node_lock[node_id]

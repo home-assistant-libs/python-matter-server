@@ -70,6 +70,8 @@ def main() -> None:
         handlers = [logging.FileHandler(args.log_file)]
     logging.basicConfig(handlers=handlers, level=args.log_level.upper())
     coloredlogs.install(level=args.log_level.upper())
+    if not logging.getLogger().isEnabledFor(logging.DEBUG):
+        logging.getLogger("chip").setLevel(logging.WARNING)
 
     # make sure storage path exists
     if not os.path.isdir(args.storage_path):
