@@ -473,6 +473,7 @@ class MatterDeviceController:
         Note that by using the listen command at server level,
         you will receive all (subscribed) node events and attribute updates.
         """
+        # pylint: disable=too-many-locals,too-many-statements
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
 
