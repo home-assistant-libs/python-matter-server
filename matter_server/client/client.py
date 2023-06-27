@@ -386,7 +386,6 @@ class MatterClient:
 
         # handle EventMessage
         if isinstance(msg, EventMessage):
-            self.logger.debug("Received event: %s", msg.event)
             self._handle_event_message(msg)
             return
 
@@ -407,29 +406,41 @@ class MatterClient:
                 event = EventType.NODE_ADDED
                 node = MatterNode(node_data)
                 self._nodes[node.node_id] = node
+                self.logger.debug("New node added: %s", node.node_id)
             else:
                 event = EventType.NODE_UPDATED
                 node.update(node_data)
+                self.logger.debug("Node updated: %s", node.node_id)
             self._signal_event(event, data=node, node_id=node.node_id)
             return
         if msg.event == EventType.NODE_REMOVED:
             node_id = msg.data
+            self.logger.debug("Node removed: %s", node_id)
             self._signal_event(EventType.NODE_REMOVED, data=node_id, node_id=node_id)
             # cleanup node only after signalling subscribers
             self._nodes.pop(node_id, None)
             return
         if msg.event == EventType.ENDPOINT_REMOVED:
             node_id = msg.data["node_id"]
+            endpoint_id = msg.data["endpoint_id"]
+            self.logger.debug("Endpoint removed: %s/%s", node_id, endpoint_id)
             self._signal_event(
                 EventType.ENDPOINT_REMOVED, data=msg.data, node_id=node_id
             )
             # cleanup endpoint only after signalling subscribers
             if node := self._nodes.get(node_id):
-                node.endpoints.pop(msg.data["endpoint_id"], None)
+                node.endpoints.pop(endpoint_id, None)
             return
         if msg.event == EventType.ATTRIBUTE_UPDATED:
             # data is tuple[node_id, attribute_path, new_value]
             node_id, attribute_path, new_value = msg.data
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(
+                    "Attribute updated: Node: %s - Attribute: %s - New value: %s",
+                    node_id,
+                    attribute_path,
+                    new_value,
+                )
             self._nodes[node_id].update_attribute(attribute_path, new_value)
             self._signal_event(
                 EventType.ATTRIBUTE_UPDATED,
@@ -438,7 +449,13 @@ class MatterClient:
                 attribute_path=attribute_path,
             )
             return
-        # TODO: handle any other events ?
+        if msg.event == EventType.ENDPOINT_ADDED:
+            node_id = msg.data["node_id"]
+            endpoint_id = msg.data["endpoint_id"]
+            self.logger.debug("Endpoint added: %s/%s", node_id, endpoint_id)
+        # simply forward all other events as-is
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug("Received event: %s", msg)
         self._signal_event(msg.event, msg.data)
 
     def _signal_event(
