@@ -524,7 +524,8 @@ class MatterDeviceController:
                 # simply subscribe to all (urgent and non urgent) device events
                 events=[("*", 1), ("*", 0)],
                 # use a report interval of 0, 300 which means we want to receive state changes
-                # as soon as possible (the 0 as floor) but we want to receive a report at least once every
+                # as soon as possible (the 0 as floor) but we want to receive a report
+                # at least once every 5 minutes (300 as ceiling),
                 # 5 minutes (300 as ceiling), this is also used to detect the node is still alive.
                 # a resubscription will be initiated automatically by the sdk if there was no report
                 # within the interval.
