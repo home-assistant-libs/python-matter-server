@@ -54,7 +54,7 @@ For communication through Thread border routers which are not running on the sam
 host as the Matter Controller server to work, IPv6 routing needs to be properly
 working. IPv6 routing is largely setup automatically through the IPv6 Neighbor
 Discovery Protocol, specifically the Route Information Options (RIO). However,
-if IPv6 ND RIO's are processed, and processed correctly depends on the network
+if IPv6 Neighbor Discovery RIO's are processed, and processed correctly depends on the network
 management software your system is using. There may be bugs and cavats in
 processing this Route Information Options.
 

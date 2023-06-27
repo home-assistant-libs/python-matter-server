@@ -51,7 +51,7 @@ test = [
 matter-server = "matter_server.server.__main__:main"
 
 [tool.codespell]
-ignore-words-list = "pase,nd"
+ignore-words-list = "pase,"
 
 [tool.mypy]
 python_version = "3.10"
