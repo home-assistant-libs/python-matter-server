@@ -520,7 +520,7 @@ class MatterDeviceController:
             # individual subscriptions (e.g. bridges)
             attr_subscriptions = "*"  # type: ignore[assignment]
 
-        if node.attribute_subscriptions == []:
+        if not node.attribute_subscriptions:
             # temp fix for backwards compatbility with HA releases below 2023.7
             # fallback to wildcard subscriptions if we have no explicit
             # node subscriptions defined.
