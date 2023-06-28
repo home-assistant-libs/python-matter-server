@@ -242,6 +242,7 @@ class MatterClient:
         """Write an attribute(value) on a target node."""
         return await self.send_command(
             APICommand.WRITE_ATTRIBUTE,
+            require_schema=4,
             node_id=node_id,
             attribute_path=attribute_path,
             value=value,
