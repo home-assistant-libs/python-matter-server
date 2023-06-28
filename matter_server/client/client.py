@@ -35,6 +35,8 @@ if TYPE_CHECKING:
 
 SUB_WILDCARD: Final = "*"
 
+# pylint: disable=too-many-public-methods
+
 
 class MatterClient:
     """Manage a Matter server over WebSockets."""
