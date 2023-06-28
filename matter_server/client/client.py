@@ -103,7 +103,7 @@ class MatterClient:
         return list(self._nodes.values())
 
     def get_node(self, node_id: int) -> MatterNode | None:
-        """Return Matter node by id or None if no nod eexists by that id."""
+        """Return Matter node by id or None if no node exists by that id."""
         return self._nodes.get(node_id)
 
     async def commission_with_code(self, code: str) -> MatterNodeData:
