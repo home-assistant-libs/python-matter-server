@@ -389,8 +389,6 @@ class MatterDeviceController:
         node_id: int,
         attribute_path: str | list[str],
         value: Any,
-        timed_request_timeout_ms: int | None = None,
-        interaction_timeout_ms: int | None = None,
     ) -> Any:
         """Write an attribute(value) on a target node."""
         if self.chip_controller is None:
@@ -401,8 +399,6 @@ class MatterDeviceController:
         return await self.chip_controller.WriteAttribute(
             nodeid=node_id,
             attributes=[(endpoint_id, attribute)],
-            timedRequestTimeoutMs=timed_request_timeout_ms,
-            interactionTimeoutMs=interaction_timeout_ms,
         )
 
     @api_command(APICommand.REMOVE_NODE)
