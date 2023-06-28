@@ -42,6 +42,7 @@ class APICommand(str, Enum):
     GET_VENDOR_NAMES = "get_vendor_names"
     SUBSCRIBE_ATTRIBUTE = "subscribe_attribute"
     READ_ATTRIBUTE = "read_attribute"
+    WRITE_ATTRIBUTE = "write_attribute"
 
 
 EventCallBackType = Callable[[EventType, Any], None]

@@ -246,6 +246,21 @@ class MatterClient:
             attribute_path=attribute_path,
         )
 
+    async def write_attribute(
+        self,
+        node_id: int,
+        attribute_path: str,
+        value: Any,
+    ) -> Any:
+        """Write an attribute(value) on a target node."""
+        return await self.send_command(
+            APICommand.WRITE_ATTRIBUTE,
+            require_schema=4,
+            node_id=node_id,
+            attribute_path=attribute_path,
+            value=value,
+        )
+
     async def remove_node(self, node_id: int) -> None:
         """Remove a Matter node/device from the fabric."""
         await self.send_command(APICommand.REMOVE_NODE, node_id=node_id)

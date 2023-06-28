@@ -409,6 +409,24 @@ class MatterDeviceController:
             read_atributes = self._parse_attributes_from_read_result(result.attributes)
             return read_atributes[attribute_path]
 
+    @api_command(APICommand.WRITE_ATTRIBUTE)
+    async def write_attribute(
+        self,
+        node_id: int,
+        attribute_path: str,
+        value: Any,
+    ) -> Any:
+        """Write an attribute(value) on a target node."""
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+        endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
+        attribute = ALL_ATTRIBUTES[cluster_id][attribute_id]()
+        attribute.value = value
+        return await self.chip_controller.WriteAttribute(
+            nodeid=node_id,
+            attributes=[(endpoint_id, attribute)],
+        )
+
     @api_command(APICommand.REMOVE_NODE)
     async def remove_node(self, node_id: int) -> None:
         """Remove a Matter node/device from the fabric."""
@@ -546,7 +564,7 @@ class MatterDeviceController:
             # individual subscriptions (e.g. bridges)
             attr_subscriptions = "*"  # type: ignore[assignment]
 
-        if node.attribute_subscriptions == []:
+        if not node.attribute_subscriptions:
             # temp fix for backwards compatbility with HA releases below 2023.7
             # fallback to wildcard subscriptions if we have no explicit
             # node subscriptions defined.
