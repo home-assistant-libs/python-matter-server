@@ -394,7 +394,7 @@ class MatterDeviceController:
         timed_request_timeout_ms: int | None = None,
         interaction_timeout_ms: int | None = None,
     ) -> Any:
-        """Write a attribute on a target node."""
+        """Write an attribute(value) on a target node."""
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         attribute = ALL_ATTRIBUTES[cluster_id][attribute_id]()

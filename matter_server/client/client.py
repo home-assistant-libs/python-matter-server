@@ -240,7 +240,7 @@ class MatterClient:
         timed_request_timeout_ms: int | None = None,
         interaction_timeout_ms: int | None = None,
     ) -> Any:
-        """Send a command to a Matter node/device."""
+        """Write an attribute(value) on a target node."""
         return await self.send_command(
             APICommand.WRITE_ATTRIBUTE,
             node_id=node_id,
