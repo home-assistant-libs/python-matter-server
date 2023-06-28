@@ -31,7 +31,7 @@ from .exceptions import ConnectionClosed, InvalidServerVersion, InvalidState
 from .models.node import MatterFabricData, MatterNode
 
 if TYPE_CHECKING:
-    from chip.clusters.Objects import ClusterAttributeDescriptor, ClusterCommand
+    from chip.clusters.Objects import ClusterCommand
 
 SUB_WILDCARD: Final = "*"
 
