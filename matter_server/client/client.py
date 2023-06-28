@@ -238,9 +238,6 @@ class MatterClient:
         node_id: int,
         attribute_path: str,
         value: Any,
-        response_type: Any | None = None,
-        timed_request_timeout_ms: int | None = None,
-        interaction_timeout_ms: int | None = None,
     ) -> Any:
         """Write an attribute(value) on a target node."""
         return await self.send_command(
@@ -248,9 +245,6 @@ class MatterClient:
             node_id=node_id,
             attribute_path=attribute_path,
             value=value,
-            response_type=response_type,
-            timed_request_timeout_ms=timed_request_timeout_ms,
-            interaction_timeout_ms=interaction_timeout_ms,
         )
 
     async def remove_node(self, node_id: int) -> None:
