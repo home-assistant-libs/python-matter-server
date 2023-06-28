@@ -387,7 +387,7 @@ class MatterDeviceController:
     async def read_attribute(
         self,
         node_id: int,
-        attribute_path: str | list[str],
+        attribute_path: str,
     ) -> Any:
         """Read a single attribute on a node."""
         if self.chip_controller is None:
