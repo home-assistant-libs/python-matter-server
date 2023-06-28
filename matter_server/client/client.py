@@ -31,7 +31,7 @@ from .exceptions import ConnectionClosed, InvalidServerVersion, InvalidState
 from .models.node import MatterFabricData, MatterNode
 
 if TYPE_CHECKING:
-    from chip.clusters.Objects import ClusterCommand
+    from chip.clusters.Objects import ClusterCommand, ClusterAttributeDescriptor
 
 SUB_WILDCARD: Final = "*"
 
@@ -226,6 +226,28 @@ class MatterClient:
             cluster_id=command.cluster_id,
             command_name=command_name,
             payload=dataclass_to_dict(command),
+            response_type=response_type,
+            timed_request_timeout_ms=timed_request_timeout_ms,
+            interaction_timeout_ms=interaction_timeout_ms,
+        )
+
+    async def write_attribute(
+        self,
+        node_id: int,
+        endpoint_id: int,
+        attribute: ClusterAttributeDescriptor,
+        response_type: Any | None = None,
+        timed_request_timeout_ms: int | None = None,
+        interaction_timeout_ms: int | None = None,
+    ) -> Any:
+        """Send a command to a Matter node/device."""
+        return await self.send_command(
+            APICommand.WRITE_ATTRIBUTE,
+            node_id=node_id,
+            endpoint_id=endpoint_id,
+            cluster_id=attribute.cluster_id,
+            attribute_id=attribute.attribute_id,
+            value=attribute.value,
             response_type=response_type,
             timed_request_timeout_ms=timed_request_timeout_ms,
             interaction_timeout_ms=interaction_timeout_ms,

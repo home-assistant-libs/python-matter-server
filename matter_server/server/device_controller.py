@@ -383,6 +383,29 @@ class MatterDeviceController:
                 interactionTimeoutMs=interaction_timeout_ms,
             )
 
+    @api_command(APICommand.WRITE_ATTRIBUTE)
+    async def write_attribute(
+        self,
+        node_id: int,
+        endpoint_id: int,
+        cluster_id: int,
+        attribute_id: int,
+        value: Any,
+        timed_request_timeout_ms: int | None = None,
+        interaction_timeout_ms: int | None = None,
+    ) -> Any:
+        """Write a attribute on a target node."""
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+        attribute = ALL_ATTRIBUTES[cluster_id][attribute_id]()
+        attribute.value = value
+        return await self.chip_controller.WriteAttribute(
+            nodeid=node_id,
+            attributes=[(endpoint_id, attribute)],
+            timedRequestTimeoutMs=timed_request_timeout_ms,
+            interactionTimeoutMs=interaction_timeout_ms,
+        )
+
     @api_command(APICommand.REMOVE_NODE)
     async def remove_node(self, node_id: int) -> None:
         """Remove a Matter node/device from the fabric."""
