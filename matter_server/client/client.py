@@ -245,6 +245,7 @@ class MatterClient:
         """
         await self.send_command(
             APICommand.SUBSCRIBE_ATTRIBUTE,
+            require_schema=4,
             node_id=node_id,
             attribute_path=attribute_path,
         )
