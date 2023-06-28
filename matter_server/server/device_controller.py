@@ -144,9 +144,9 @@ class MatterDeviceController:
     @api_command(APICommand.GET_NODE)
     def get_node(self, node_id: int) -> MatterNodeData:
         """Return info of a single Node."""
-        node = self._nodes.get(node_id)
-        assert node is not None, "Node does not exist or is not yet interviewed"
-        return node
+        if node := self._nodes.get(node_id):
+            return node
+        raise NodeNotExists(f"Node {node_id} does not exist or is not yet interviewed")
 
     @api_command(APICommand.COMMISSION_WITH_CODE)
     async def commission_with_code(self, code: str) -> MatterNodeData:

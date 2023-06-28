@@ -10,7 +10,7 @@ import uuid
 from aiohttp import ClientSession
 from chip.clusters import Objects as Clusters
 
-from matter_server.common.errors import ERROR_MAP
+from matter_server.common.errors import ERROR_MAP, NodeNotExists
 
 from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
 from ..common.models import (
@@ -54,7 +54,7 @@ class MatterClient:
         """Return info of the server we're currently connected to."""
         return self.connection.server_info
 
-    def subscribe(
+    def subscribe_events(
         self,
         callback: Callable[[EventType, Any], None],
         event_filter: Optional[EventType] = None,
@@ -103,8 +103,10 @@ class MatterClient:
         return list(self._nodes.values())
 
     def get_node(self, node_id: int) -> MatterNode:
-        """Return Matter node by id."""
-        return self._nodes[node_id]
+        """Return Matter node by id or None if no node exists by that id."""
+        if node := self._nodes.get(node_id):
+            return node
+        raise NodeNotExists(f"Node {node_id} does not exist or is not yet interviewed")
 
     async def commission_with_code(self, code: str) -> MatterNodeData:
         """
@@ -245,6 +247,7 @@ class MatterClient:
         """
         await self.send_command(
             APICommand.SUBSCRIBE_ATTRIBUTE,
+            require_schema=4,
             node_id=node_id,
             attribute_path=attribute_path,
         )
