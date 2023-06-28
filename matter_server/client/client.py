@@ -35,6 +35,8 @@ if TYPE_CHECKING:
 
 SUB_WILDCARD: Final = "*"
 
+# pylint: disable=too-many-public-methods
+
 
 class MatterClient:
     """Manage a Matter server over WebSockets."""
@@ -229,6 +231,21 @@ class MatterClient:
             response_type=response_type,
             timed_request_timeout_ms=timed_request_timeout_ms,
             interaction_timeout_ms=interaction_timeout_ms,
+        )
+
+    async def write_attribute(
+        self,
+        node_id: int,
+        attribute_path: str,
+        value: Any,
+    ) -> Any:
+        """Write an attribute(value) on a target node."""
+        return await self.send_command(
+            APICommand.WRITE_ATTRIBUTE,
+            require_schema=4,
+            node_id=node_id,
+            attribute_path=attribute_path,
+            value=value,
         )
 
     async def remove_node(self, node_id: int) -> None:
