@@ -387,9 +387,7 @@ class MatterDeviceController:
     async def write_attribute(
         self,
         node_id: int,
-        endpoint_id: int,
-        cluster_id: int,
-        attribute_id: int,
+        attribute_path: str | list[str],
         value: Any,
         timed_request_timeout_ms: int | None = None,
         interaction_timeout_ms: int | None = None,
@@ -397,6 +395,7 @@ class MatterDeviceController:
         """Write an attribute(value) on a target node."""
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
+        endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
         attribute = ALL_ATTRIBUTES[cluster_id][attribute_id]()
         attribute.value = value
         return await self.chip_controller.WriteAttribute(

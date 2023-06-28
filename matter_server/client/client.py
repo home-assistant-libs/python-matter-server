@@ -236,8 +236,8 @@ class MatterClient:
     async def write_attribute(
         self,
         node_id: int,
-        endpoint_id: int,
-        attribute: ClusterAttributeDescriptor,
+        attribute_path: str,
+        value: Any,
         response_type: Any | None = None,
         timed_request_timeout_ms: int | None = None,
         interaction_timeout_ms: int | None = None,
@@ -246,10 +246,8 @@ class MatterClient:
         return await self.send_command(
             APICommand.WRITE_ATTRIBUTE,
             node_id=node_id,
-            endpoint_id=endpoint_id,
-            cluster_id=attribute.cluster_id,
-            attribute_id=attribute.attribute_id,
-            value=attribute.value,
+            attribute_path=attribute_path,
+            value=value,
             response_type=response_type,
             timed_request_timeout_ms=timed_request_timeout_ms,
             interaction_timeout_ms=interaction_timeout_ms,
