@@ -387,7 +387,7 @@ class MatterDeviceController:
     async def write_attribute(
         self,
         node_id: int,
-        attribute_path: str | list[str],
+        attribute_path: str,
         value: Any,
     ) -> Any:
         """Write an attribute(value) on a target node."""
