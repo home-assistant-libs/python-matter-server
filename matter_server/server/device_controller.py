@@ -383,6 +383,32 @@ class MatterDeviceController:
                 interactionTimeoutMs=interaction_timeout_ms,
             )
 
+    @api_command(APICommand.READ_ATTRIBUTE)
+    async def read_attribute(
+        self,
+        node_id: int,
+        attribute_path: str | list[str],
+    ) -> Any:
+        """Read a single attribute on a node."""
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+        node_lock = self._get_node_lock(node_id)
+        await self._resolve_node(node_id=node_id)
+        endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
+        attribute: Type[ClusterAttributeDescriptor] = ALL_ATTRIBUTES[cluster_id][
+            attribute_id
+        ]
+        async with node_lock:
+            result: Attribute.AsyncReadTransaction.ReadResponse = (
+                await self.chip_controller.Read(
+                    nodeid=node_id,
+                    attributes=[(endpoint_id, attribute)],
+                    fabricFiltered=False,
+                )
+            )
+            read_atributes = self._parse_attributes_from_read_result(result.attributes)
+            return read_atributes[attribute_path]
+
     @api_command(APICommand.REMOVE_NODE)
     async def remove_node(self, node_id: int) -> None:
         """Remove a Matter node/device from the fabric."""

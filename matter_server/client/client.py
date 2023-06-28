@@ -231,6 +231,19 @@ class MatterClient:
             interaction_timeout_ms=interaction_timeout_ms,
         )
 
+    async def read_attribute(
+        self,
+        node_id: int,
+        attribute_path: str | list[str],
+    ) -> Any:
+        """Read a single attribute on a node."""
+        return await self.send_command(
+            APICommand.READ_ATTRIBUTE,
+            require_schema=4,
+            node_id=node_id,
+            attribute_path=attribute_path,
+        )
+
     async def remove_node(self, node_id: int) -> None:
         """Remove a Matter node/device from the fabric."""
         await self.send_command(APICommand.REMOVE_NODE, node_id=node_id)
