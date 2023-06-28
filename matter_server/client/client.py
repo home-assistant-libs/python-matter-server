@@ -10,7 +10,7 @@ import uuid
 from aiohttp import ClientSession
 from chip.clusters import Objects as Clusters
 
-from matter_server.common.errors import ERROR_MAP
+from matter_server.common.errors import ERROR_MAP, NodeNotExists
 
 from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
 from ..common.models import (
@@ -102,9 +102,11 @@ class MatterClient:
         """Return all Matter nodes."""
         return list(self._nodes.values())
 
-    def get_node(self, node_id: int) -> MatterNode | None:
+    def get_node(self, node_id: int) -> MatterNode:
         """Return Matter node by id or None if no node exists by that id."""
-        return self._nodes.get(node_id)
+        if node := self._nodes.get(node_id):
+            return node
+        raise NodeNotExists(f"Node {node_id} does not exist or is not yet interviewed")
 
     async def commission_with_code(self, code: str) -> MatterNodeData:
         """
