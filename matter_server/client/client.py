@@ -54,7 +54,7 @@ class MatterClient:
         """Return info of the server we're currently connected to."""
         return self.connection.server_info
 
-    def subscribe(
+    def subscribe_events(
         self,
         callback: Callable[[EventType, Any], None],
         event_filter: Optional[EventType] = None,
