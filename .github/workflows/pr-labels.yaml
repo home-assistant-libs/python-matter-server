@@ -14,11 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🏷 Verify PR has a valid label
-        uses: jesusvasquez333/verify-pr-label-action@v1.4.0
+        uses: ludeeus/action-require-labels@main
         with:
-          pull-request-number: "${{ github.event.pull_request.number }}"
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
-          valid-labels: >-
-            breaking-change, bugfix, refactor, new-feature, 
-            maintenance, ci, dependencies
-          disable-reviews: true
+         labels: >-
+            breaking-change, bugfix, refactor, new-feature, maintenance, ci, dependencies
