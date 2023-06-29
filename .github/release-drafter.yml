@@ -1,3 +1,5 @@
+name-template: '$RESOLVED_VERSION'
+tag-template: '$RESOLVED_VERSION'
 change-template: "- #$NUMBER - $TITLE (@$AUTHOR)"
 categories:
   - title: "⚠ Breaking Changes"
@@ -11,3 +13,11 @@ template: |
   ## What’s Changed
 
   $CHANGES
+version-resolver:
+  major:
+    labels:
+      - 'breaking-change'
+  minor:
+    labels:
+      - 'new-feature'
+  default: patch
