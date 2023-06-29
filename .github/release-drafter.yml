@@ -4,11 +4,12 @@ change-template: "- #$NUMBER - $TITLE (@$AUTHOR)"
 categories:
   - title: "⚠ Breaking Changes"
     labels:
-      - "breaking-change"
-  - title: "⬆️ Dependencies"
+      - 'breaking-change'
+  - title: '⬆️ Dependencies'
     collapse-after: 1
     labels:
-      - "dependencies"
+      - 'dependencies'
+      - 'ci'
 template: |
   ## What’s Changed
 
@@ -20,4 +21,5 @@ version-resolver:
   minor:
     labels:
       - 'new-feature'
+      - 'enhancement'
   default: patch
