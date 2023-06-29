@@ -1,6 +1,6 @@
 name-template: '$RESOLVED_VERSION'
 tag-template: '$RESOLVED_VERSION'
-change-template: "- #$NUMBER - $TITLE (@$AUTHOR)"
+change-template: '- #$NUMBER - $TITLE (@$AUTHOR)'
 categories:
   - title: "⚠ Breaking Changes"
     labels:
