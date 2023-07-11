@@ -584,9 +584,9 @@ class MatterDeviceController:
                 node_logger.debug("Unsubscribing from existing subscription.")
                 await self._call_sdk(prev_sub.Shutdown)
 
-        node_logger.debug("Setting up attributes and events subscription.")
         self._attr_subscriptions[node_id] = attr_subscriptions
         async with node_lock:
+            node_logger.debug("Setting up attributes and events subscription.")
             sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
                 nodeid=node_id,
                 # In order to prevent network congestion due to wildcard subscriptions on all nodes,
@@ -844,8 +844,8 @@ class MatterDeviceController:
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         try:
-            LOGGER.info("Attempting to resolve node %s...", node_id)
             async with node_lock, self._resolve_lock:
+                LOGGER.info("Attempting to resolve node %s...", node_id)
                 await self._call_sdk(
                     self.chip_controller.ResolveNode,
                     nodeid=node_id,
