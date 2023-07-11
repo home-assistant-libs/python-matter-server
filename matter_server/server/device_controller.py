@@ -844,7 +844,6 @@ class MatterDeviceController:
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         try:
-            # last attempt allows PASE connection (last resort)
             LOGGER.info("Attempting to resolve node %s...", node_id)
             async with node_lock, self._resolve_lock:
                 await self._call_sdk(
