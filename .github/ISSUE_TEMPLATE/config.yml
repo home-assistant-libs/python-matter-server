@@ -5,4 +5,4 @@ contact_links:
     about: This is the issue tracker for the Matter server library. Unless you are an application developer utilizing this library, please do not post issues directly here. Instead report them at our Home Assistant core project.
   - name: I'm looking for documentation how to setup Matter in Home Assistant
     url: https://www.home-assistant.io/integrations/matter/
-    about: We have extended documentation for Matter on our website.
+    about: We have extensive documentation for Matter on our website.
