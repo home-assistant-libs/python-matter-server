@@ -707,6 +707,7 @@ class MatterDeviceController:
                 # https://github.com/project-chip/connectedhomeip/pull/26718
                 sub.Shutdown()
                 self._subscriptions.pop(node_id)
+                assert self.server.loop
                 self.server.loop.create_task(
                     self._check_interview_and_subscription(node_id, MAX_POLL_INTERVAL)
                 )
