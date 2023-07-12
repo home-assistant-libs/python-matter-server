@@ -808,7 +808,7 @@ class MatterDeviceController:
                 "will retry later in the background.",
                 node_id,
             )
-            # TODO: fix this once OerationalNodeDiscovery is available:
+            # TODO: fix this once OperationalNodeDiscovery is available:
             # https://github.com/project-chip/connectedhomeip/pull/26718
             reschedule()
 
