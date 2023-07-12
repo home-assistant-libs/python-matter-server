@@ -51,6 +51,7 @@ DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
 INTERVIEW_TASK_LIMIT = 5
+MAX_POLL_INTERVAL = 600
 
 # a list of attributes we should always watch on all nodes
 DEFAULT_SUBSCRIBE_ATTRIBUTES: set[tuple[int | str, int | str, int | str]] = {
@@ -698,6 +699,18 @@ class MatterDeviceController:
             if node.available:
                 node.available = False
                 self.server.signal_event(EventType.NODE_UPDATED, node)
+            if nextResubscribeIntervalMsec / 1000 > MAX_POLL_INTERVAL:
+                # workaround to handle devices that are unplugged
+                # from power for a longer period of time
+                # cancel subscription and add this node to our node polling job
+                # TODO: fix this once OerationalNodeDiscovery is available:
+                # https://github.com/project-chip/connectedhomeip/pull/26718
+                sub.Shutdown()
+                self._subscriptions.pop(node_id)
+                assert self.server.loop
+                self.server.loop.create_task(
+                    self._check_interview_and_subscription(node_id, MAX_POLL_INTERVAL)
+                )
 
         def resubscription_succeeded(
             transaction: Attribute.SubscriptionTransaction,
@@ -757,8 +770,9 @@ class MatterDeviceController:
                 asyncio.create_task,
                 self._check_interview_and_subscription(
                     node_id,
-                    # increase interval at each attempt with maximum of 10 minutes
-                    min(reschedule_interval + 10, 600),
+                    # increase interval at each attempt with maximum of
+                    # MAX_POLL_INTERVAL seconds (= 10 minutes)
+                    min(reschedule_interval + 10, MAX_POLL_INTERVAL),
                 ),
             )
 
@@ -794,6 +808,8 @@ class MatterDeviceController:
                 "will retry later in the background.",
                 node_id,
             )
+            # TODO: fix this once OperationalNodeDiscovery is available:
+            # https://github.com/project-chip/connectedhomeip/pull/26718
             reschedule()
 
     @staticmethod
@@ -845,7 +861,7 @@ class MatterDeviceController:
             raise RuntimeError("Device Controller not initialized.")
         try:
             async with node_lock, self._resolve_lock:
-                LOGGER.info("Attempting to resolve node %s...", node_id)
+                LOGGER.debug("Attempting to resolve node %s...", node_id)
                 await self._call_sdk(
                     self.chip_controller.ResolveNode,
                     nodeid=node_id,
