@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: I have an issue or bug regarding using Matter with Home Assistant
+    url: https://github.com/home-assistant/core/issues?q=is:issue+is:open+label:%22integration:+matter%22
+    about: This is the issue tracker for the Matter server library. Unless you are an application developer utilizing this library, please do not post issues directly here. Instead report them at our Home Assistant core project.
+  - name: I'm looking for documentation how to setup Matter in Home Assistant
+    url: https://www.home-assistant.io/integrations/matter/
+    about: We have extensive documentation for Matter on our website.
