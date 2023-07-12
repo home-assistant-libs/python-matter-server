@@ -860,7 +860,7 @@ class MatterDeviceController:
             raise RuntimeError("Device Controller not initialized.")
         try:
             async with node_lock, self._resolve_lock:
-                LOGGER.info("Attempting to resolve node %s...", node_id)
+                LOGGER.debug("Attempting to resolve node %s...", node_id)
                 await self._call_sdk(
                     self.chip_controller.ResolveNode,
                     nodeid=node_id,
