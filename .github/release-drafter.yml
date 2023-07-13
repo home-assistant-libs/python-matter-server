@@ -5,7 +5,7 @@ categories:
   - title: "⚠ Breaking Changes"
     labels:
       - 'breaking-change'
-  - title: '⬆️ Dependencies'
+  - title: '⬆️ Dependencies and CI'
     collapse-after: 1
     labels:
       - 'dependencies'
