@@ -2,7 +2,7 @@ version: "3.8"
 services:
   # python-matter-server
   matter-server:
-    image: matter-server:stable
+    image: ghcr.io/home-assistant-libs/python-matter-server:stable
     container_name: matter-server
     restart: unless-stopped
     # Required for mDNS to work correctly
