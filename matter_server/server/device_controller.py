@@ -762,6 +762,10 @@ class MatterDeviceController:
     ) -> None:
         """Handle interview (if needed) and subscription for known node."""
 
+        if node_id not in self._nodes:
+            # edge case: this may happen if the node was deleted while in retrying state
+            return
+
         def reschedule() -> None:
             """(Re)Schedule interview and/or initial subscription for a node."""
             assert self.server.loop is not None
