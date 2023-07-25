@@ -50,7 +50,6 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
-INTERVIEW_TASK_LIMIT = 5
 MAX_POLL_INTERVAL = 600
 
 # a list of attributes we should always watch on all nodes
@@ -82,9 +81,6 @@ class MatterDeviceController:
         self.wifi_credentials_set: bool = False
         self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
-        self._interview_limit: asyncio.Semaphore = asyncio.Semaphore(
-            INTERVIEW_TASK_LIMIT
-        )
         self._resolve_lock: asyncio.Lock = asyncio.Lock()
         self._node_lock: dict[int, asyncio.Lock] = {}
 
@@ -305,16 +301,15 @@ class MatterDeviceController:
         LOGGER.debug("Interviewing node: %s", node_id)
         try:
             await self._resolve_node(node_id=node_id)
-            async with self._interview_limit:
-                async with self._get_node_lock(node_id):
-                    read_response: Attribute.AsyncReadTransaction.ReadResponse = (
-                        await self.chip_controller.Read(
-                            nodeid=node_id,
-                            attributes="*",
-                            events="*",
-                            fabricFiltered=False,
-                        )
+            async with self._get_node_lock(node_id):
+                read_response: Attribute.AsyncReadTransaction.ReadResponse = (
+                    await self.chip_controller.Read(
+                        nodeid=node_id,
+                        attributes="*",
+                        events="*",
+                        fabricFiltered=False,
                     )
+                )
         except (ChipStackError, NodeNotResolving) as err:
             raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
 
@@ -856,10 +851,16 @@ class MatterDeviceController:
 
     async def _resolve_node(self, node_id: int, retries: int = 3) -> None:
         """Resolve a Node on the network."""
+        if (node := self._nodes.get(node_id)) and node.available:
+            # no need to resolve, the node is already available/connected
+            return
+
         node_lock = self._get_node_lock(node_id)
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         try:
+            # the sdk crashes when multiple resolves happen at the same time
+            # guard simultane resolves with a lock.
             async with node_lock, self._resolve_lock:
                 LOGGER.debug("Attempting to resolve node %s...", node_id)
                 await self._call_sdk(
