@@ -403,7 +403,7 @@ class MatterDeviceController:
                 )
             )
             read_atributes = self._parse_attributes_from_read_result(result.attributes)
-            return read_atributes[attribute_path]
+            return read_atributes.get(attribute_path, None)
 
     @api_command(APICommand.WRITE_ATTRIBUTE)
     async def write_attribute(
