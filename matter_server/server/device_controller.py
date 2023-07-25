@@ -77,7 +77,7 @@ class MatterDeviceController:
         self.event_history: Deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
         self._attr_subscriptions: dict[int, list[tuple[Any, ...]] | str] = {}
-        self._resub_timer: dict[int, asyncio.TimerHandle] = {}
+        self._resub_debounce_timer: dict[int, asyncio.TimerHandle] = {}
         self._nodes: dict[int, MatterNodeData | None] = {}
         self.wifi_credentials_set: bool = False
         self.thread_credentials_set: bool = False
@@ -505,13 +505,15 @@ class MatterDeviceController:
         # this could potentially be called multiple times within a short timeframe
         # so debounce it a bit
         def resubscribe() -> None:
-            self._resub_timer.pop(node_id, None)
+            self._resub_debounce_timer.pop(node_id, None)
             asyncio.create_task(self._subscribe_node(node_id))
 
-        if existing_timer := self._resub_timer.pop(node_id, None):
+        if existing_timer := self._resub_debounce_timer.pop(node_id, None):
             existing_timer.cancel()
         assert self.server.loop is not None
-        self._resub_timer[node_id] = self.server.loop.call_later(5, resubscribe)
+        self._resub_debounce_timer[node_id] = self.server.loop.call_later(
+            5, resubscribe
+        )
 
     async def _subscribe_node(self, node_id: int) -> None:
         """
