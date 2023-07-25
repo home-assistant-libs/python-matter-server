@@ -20,6 +20,7 @@ from ..common.models import (
     EventMessage,
     EventType,
     MatterNodeData,
+    MatterNodeEvent,
     MessageType,
     ResultMessageBase,
     ServerDiagnostics,
@@ -486,6 +487,19 @@ class MatterClient:
             node_id = msg.data["node_id"]
             endpoint_id = msg.data["endpoint_id"]
             self.logger.debug("Endpoint added: %s/%s", node_id, endpoint_id)
+        if msg.event == EventType.NODE_EVENT:
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(
+                    "Node event: %s",
+                    msg.data,
+                )
+            node_event = dataclass_from_dict(MatterNodeEvent, msg.data)
+            self._signal_event(
+                EventType.NODE_EVENT,
+                data=node_event,
+                node_id=node_event.node_id,
+            )
+            return
         # simply forward all other events as-is
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug("Received event: %s", msg)
