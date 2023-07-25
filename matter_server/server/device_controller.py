@@ -588,8 +588,9 @@ class MatterDeviceController:
                 # In order to prevent network congestion due to wildcard subscriptions on all nodes,
                 # we keep a list of attributes we are explicitly interested in.
                 attributes=attr_subscriptions,
-                # simply subscribe to all (urgent and non urgent) device events
-                events=[("*", 1), ("*", 0)],
+                # simply subscribe to urgent device events only (e.g. button press etc.)
+                # non urgent events are disagnostic reports etc. for which we have no usecase (yet).
+                events=[("*", 1)],
                 # Use a report interval of 0, 300 which means we want to receive state changes
                 # as soon as possible (the 0 as floor) but we want to receive a report
                 # at least once every 5 minutes (300 as ceiling).
