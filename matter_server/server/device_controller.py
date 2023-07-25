@@ -306,7 +306,6 @@ class MatterDeviceController:
                     await self.chip_controller.Read(
                         nodeid=node_id,
                         attributes="*",
-                        events="*",
                         fabricFiltered=False,
                     )
                 )
