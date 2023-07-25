@@ -83,6 +83,21 @@ class MatterNodeData:
 
 
 @dataclass
+class MatterNodeEvent:
+    """Representation of a NodeEvent for a Matter node."""
+
+    node_id: int
+    endpoint_id: int
+    cluster_id: int
+    event_id: int
+    event_number: int
+    priority: int
+    timestamp: int
+    timestamp_type: int
+    data: dict[str, Any] | None
+
+
+@dataclass
 class ServerDiagnostics:
     """Full dump of the server information and data."""
 

@@ -35,7 +35,7 @@ from ..common.helpers.util import (
     dataclass_from_dict,
     parse_attribute_path,
 )
-from ..common.models import APICommand, EventType, MatterNodeData
+from ..common.models import APICommand, EventType, MatterNodeData, MatterNodeEvent
 from .const import PAA_ROOT_CERTS_DIR
 from .helpers.paa_certificates import fetch_certificates
 
@@ -668,9 +668,20 @@ class MatterDeviceController:
             node_logger.debug(
                 "Received node event: %s - transaction: %s", data, transaction
             )
-            self.event_history.append(data)
+            node_event = MatterNodeEvent(
+                node_id=node_id,
+                endpoint_id=data.Header.EndpointId,
+                cluster_id=data.Header.ClusterId,
+                event_id=data.Header.EventId,
+                event_number=data.Header.EventNumber,
+                priority=data.Header.Priority,
+                timestamp=data.Header.Timestamp,
+                timestamp_type=data.Header.TimestampType,
+                data=data.Data,
+            )
+            self.event_history.append(node_event)
             self.server.loop.call_soon_threadsafe(
-                self.server.signal_event, EventType.NODE_EVENT, data
+                self.server.signal_event, EventType.NODE_EVENT, node_event
             )
 
         def error_callback(
