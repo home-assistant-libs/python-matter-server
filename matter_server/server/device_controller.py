@@ -78,6 +78,7 @@ class MatterDeviceController:
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
         self._attr_subscriptions: dict[int, list[tuple[Any, ...]] | str] = {}
         self._resub_debounce_timer: dict[int, asyncio.TimerHandle] = {}
+        self._sub_retry_timer: dict[int, asyncio.TimerHandle] = {}
         self._nodes: dict[int, MatterNodeData | None] = {}
         self.wifi_credentials_set: bool = False
         self.thread_credentials_set: bool = False
@@ -440,6 +441,9 @@ class MatterDeviceController:
                 f"Node {node_id} does not exist or has not been interviewed."
             )
 
+        # pop any existing interview/subscription reschedule timer
+        self._sub_retry_timer.pop(node_id, None)
+
         node = self._nodes.pop(node_id)
         self.server.storage.remove(
             DATA_KEY_NODES,
@@ -765,13 +769,15 @@ class MatterDeviceController:
         """Handle interview (if needed) and subscription for known node."""
 
         if node_id not in self._nodes:
-            # edge case: this may happen if the node was deleted while in retrying state
-            return
+            raise NodeNotExists(f"Node {node_id} does not exist.")
+
+        # pop any existing reschedule timer
+        self._sub_retry_timer.pop(node_id, None)
 
         def reschedule() -> None:
             """(Re)Schedule interview and/or initial subscription for a node."""
             assert self.server.loop is not None
-            self.server.loop.call_later(
+            self._sub_retry_timer[node_id] = self.server.loop.call_later(
                 reschedule_interval,
                 asyncio.create_task,
                 self._check_interview_and_subscription(
