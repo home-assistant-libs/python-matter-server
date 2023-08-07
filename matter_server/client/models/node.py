@@ -207,7 +207,7 @@ class MatterEndpoint:
 
     def __repr__(self) -> str:
         """Return the representation."""
-        return f"<MatterEndoint {self.endpoint_id} (node {self.node.node_id})>"
+        return f"<MatterEndpoint {self.endpoint_id} (node {self.node.node_id})>"
 
 
 class MatterNode:
