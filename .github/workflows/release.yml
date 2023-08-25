@@ -11,7 +11,7 @@ jobs:
     outputs:
       version: ${{ steps.vars.outputs.tag }}
     steps:
-      - uses: actions/checkout@v3.5.3
+      - uses: actions/checkout@v3.6.0
       - name: Get tag
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
@@ -50,7 +50,7 @@ jobs:
       packages: write
     needs: build-and-publish-pypi
     steps:
-      - uses: actions/checkout@v3.5.3
+      - uses: actions/checkout@v3.6.0
       - name: Log in to the GitHub container registry
         uses: docker/login-action@v2.2.0
         with:
