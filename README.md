@@ -258,9 +258,11 @@ When the start_listening command is issued, the server will dump all existing no
 
 
 **Send a command**
-Because we use the datamodels of the Matter SDK, this is a little bit more involved. Here is an example of turning on a switch.
+Because we use the datamodels of the Matter SDK, this is a little bit more involved. Here is an example of turning on a switch:
 
-```
+```python
+import json
+
 # Import the CHIP clusters
 from chip.clusters import Objects as clusters
 
@@ -269,15 +271,34 @@ from matter_server.common.helpers.util import dataclass_from_dict,dataclass_to_d
 
 command = clusters.OnOff.Commands.On()
 payload = dataclass_to_dict(command)
-  {
-    "message_id": "device_command",
+
+
+message = {
+    "message_id": "example",
     "command": "device_command",
     "args": {
-      "endpoint": int(self.attribute['endpoint']),
-      "node_id": int(self.attribute['node_id']),
-      "payload": payload
+        "endpoint_id": 1,
+        "node_id": 1, 
+        "payload": payload,
+        "cluster_id": command.cluster_id,
+        "command_name": "On"
     }
+}
+
+print(json.dumps(message, indent=2))
+```
+```json
+{
+  "message_id": "example",
+  "command": "device_command",
+  "args": {
+    "endpoint_id": 1,
+    "node_id": 1,
+    "payload": {},
+    "cluster_id": 6,
+    "command_name": "On"
   }
+}
 ```
 
 You can also provide parameters for the cluster commands. Here's how to change the brightness for example:
