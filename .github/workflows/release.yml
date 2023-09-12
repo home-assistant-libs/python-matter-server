@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4.0.0
       - name: Log in to the GitHub container registry
-        uses: docker/login-action@v2.2.0
+        uses: docker/login-action@v3.0.0
         with:
             registry: ghcr.io
             username: ${{ github.repository_owner }}
