@@ -158,109 +158,111 @@ Besides that it is possible to run Matter firmware on common microcontrollers su
 **Set WiFi credentials**
 Inform the controller about the WiFi credentials it needs to send when commissioning a new device.
 
-```
-  {
-    "message_id": "1",
-    "command": "set_wifi_credentials",
-    "args": {
-      "ssid": "wifi-name-here",
-      "credentials": "wifi-password-here"
-    }
+```json
+{
+  "message_id": "1",
+  "command": "set_wifi_credentials",
+  "args": {
+    "ssid": "wifi-name-here",
+    "credentials": "wifi-password-here"
   }
+}
 ```
 
 **Set Thread dataset**
 Inform the controller about the Thread credentials it needs to use when commissioning a new device.
 
-```
-  {
-    "message_id": "1",
-    "command": "set_thread_dataset",
-    "args": {
-      "dataset": "put-credentials-here"
-    }
+```json
+{
+  "message_id": "1",
+  "command": "set_thread_dataset",
+  "args": {
+    "dataset": "put-credentials-here"
   }
+}
 ```
 
 **Commission with code**
 Commission a new device. For WiFi or Thread based devices, the credentials need to be set upfront, otherwise commisisoning will fail.
 The controller will use bluetooth for the commissioning of wireless devices. If the machine running the Python Matter Server controller lacks bluetooth support, commissioning will only work for devices already connected to the network (by cable or another controller).
 
-```
-  {
-    "message_id": "2",
-    "command": "commission_with_code",
-    "args": {
-      "code": "MT:Y.ABCDEFG123456789"
-    }
+```json
+{
+  "message_id": "2",
+  "command": "commission_with_code",
+  "args": {
+    "code": "MT:Y.ABCDEFG123456789"
   }
+}
 ```
 
 **Commission on Network**
 Commission a device already connected to the network.
 
-```
-  {
-    "message_id": "2",
-    "command": "commission_on_network",
-    "args": {
-      "setup_pin_code": 1234567
-    }
+```json
+{
+  "message_id": "2",
+  "command": "commission_on_network",
+  "args": {
+    "setup_pin_code": 1234567
   }
+}
 ```
 
 **Open Commissioning window**
 Open a commissioning window to commission a device present on this controller to another.
 Returns code to use as discriminator.
 
-```
-  {
-    "message_id": "2",
-    "command": "open_commissioning_window",
-    "args": {
-      "node_id": 1
-    }
+```json
+{
+  "message_id": "2",
+  "command": "open_commissioning_window",
+  "args": {
+    "node_id": 1
   }
+}
 ```
 
 **Get Nodes**
 Get all nodes already commissioned on the controller.
 
-```
-  {
-    "message_id": "2",
-    "command": "get_nodes"
-  }
+```json
+{
+  "message_id": "2",
+  "command": "get_nodes"
+}
 ```
 
 **Get Node**
 Get info of a single Node.
 
-```
-  {
-    "message_id": "2",
-    "command": "get_node",
-    "args": {
-      "node_id": 1
-    }
+```json
+{
+  "message_id": "2",
+  "command": "get_node",
+  "args": {
+    "node_id": 1
   }
+}
 ```
 
 **Start listening**
 When the start_listening command is issued, the server will dump all existing nodes. From that moment on all events (including node attribute changes) will be forwarded.
 
-```
-  {
-    "message_id": "3",
-    "command": "start_listening"
-  }
+```json
+{
+  "message_id": "3",
+  "command": "start_listening"
+}
 ```
 
 
 **Send a command**
-Because we use the datamodels of the Matter SDK, this is a little bit more involved. Here is an example of turning on a switch.
+Because we use the datamodels of the Matter SDK, this is a little bit more involved. Here is an example of turning on a switch:
 
-```
+```python
+import json
+
 # Import the CHIP clusters
 from chip.clusters import Objects as clusters
 
@@ -269,15 +271,34 @@ from matter_server.common.helpers.util import dataclass_from_dict,dataclass_to_d
 
 command = clusters.OnOff.Commands.On()
 payload = dataclass_to_dict(command)
-  {
-    "message_id": "device_command",
+
+
+message = {
+    "message_id": "example",
     "command": "device_command",
     "args": {
-      "endpoint": int(self.attribute['endpoint']),
-      "node_id": int(self.attribute['node_id']),
-      "payload": payload
+        "endpoint_id": 1,
+        "node_id": 1, 
+        "payload": payload,
+        "cluster_id": command.cluster_id,
+        "command_name": "On"
     }
+}
+
+print(json.dumps(message, indent=2))
+```
+```json
+{
+  "message_id": "example",
+  "command": "device_command",
+  "args": {
+    "endpoint_id": 1,
+    "node_id": 1,
+    "payload": {},
+    "cluster_id": 6,
+    "command_name": "On"
   }
+}
 ```
 
 You can also provide parameters for the cluster commands. Here's how to change the brightness for example:
