@@ -37,7 +37,7 @@ def json_encoder_default(obj: Any) -> Any:
         return b64encode(obj).decode("utf-8")
     if isinstance(obj, Exception):
         return str(obj)
-    if type(obj) == type:  # pylint: disable=unidiomatic-typecheck
+    if type(obj) is type:  # pylint: disable=unidiomatic-typecheck
         return f"{obj.__module__}.{obj.__qualname__}"
 
     raise TypeError
