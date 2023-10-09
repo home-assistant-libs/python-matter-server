@@ -28,7 +28,7 @@ def gen_cls_name(name: str):
         if char in ("-", "/"):
             next_upper = True
             continue
-        elif char in ('.'):
+        elif char in ("."):
             continue
         elif next_upper:
             char = char.upper()
