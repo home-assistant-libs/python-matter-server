@@ -580,6 +580,7 @@ class SmokeCoAlarm(DeviceType, device_type=0x0076):
     """Smoke CO Alarm."""
 
     clusters = {
+        all_clusters.Descriptor,
         all_clusters.Identify,
         all_clusters.Groups,
         all_clusters.SmokeCoAlarm,
