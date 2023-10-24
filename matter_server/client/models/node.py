@@ -79,7 +79,9 @@ class MatterEndpoint:
         return self.node.get_compose_parent(self.endpoint_id) is not None
 
     @property
-    def device_info(self) -> Clusters.BasicInformation | Clusters.BridgedDeviceBasic:
+    def device_info(
+        self,
+    ) -> Clusters.BasicInformation | Clusters.BridgedDeviceBasicInformation:
         """
         Return device info.
 
@@ -169,7 +171,7 @@ class MatterEndpoint:
         Do not modify the data directly from a consumer.
         """
         _, cluster_id, attribute_id = parse_attribute_path(attribute_path)
-        cluster_class: Clusters.Cluster = ALL_CLUSTERS[cluster_id]
+        cluster_class: type[Clusters.Cluster] = ALL_CLUSTERS[cluster_id]
         if cluster_id in self.clusters:
             cluster_instance = self.clusters[cluster_id]
         else:
@@ -177,7 +179,7 @@ class MatterEndpoint:
             self.clusters[cluster_id] = cluster_instance
 
         # unpack cluster attribute, using the descriptor
-        attribute_class: Clusters.ClusterAttributeDescriptor = ALL_ATTRIBUTES[
+        attribute_class: type[Clusters.ClusterAttributeDescriptor] = ALL_ATTRIBUTES[
             cluster_id
         ][attribute_id]
         attribute_name, attribute_type = get_object_params(

@@ -363,7 +363,6 @@ class DoorLock(DeviceType, device_type=0x000A):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Binding,
         all_clusters.DoorLock,
     }
 
@@ -558,6 +557,134 @@ class ModeSelect(DeviceType, device_type=0x0027):
         all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.ModeSelect,
+    }
+
+
+class RoomAirConditioner(DeviceType, device_type=0x0072):
+    """Room Air Conditioner."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.OnOff,
+        all_clusters.Descriptor,
+        all_clusters.Groups,
+        all_clusters.Scenes,
+        all_clusters.Thermostat,
+        all_clusters.FanControl,
+        all_clusters.TemperatureMeasurement,
+        all_clusters.RelativeHumidityMeasurement,
+    }
+
+
+class SmokeCoAlarm(DeviceType, device_type=0x0076):
+    """Smoke CO Alarm."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.Identify,
+        all_clusters.Groups,
+        all_clusters.SmokeCoAlarm,
+        all_clusters.RelativeHumidityMeasurement,
+        all_clusters.TemperatureMeasurement,
+        all_clusters.CarbonMonoxideConcentrationMeasurement,
+        all_clusters.PowerSource,
+    }
+
+
+class AirPurifier(DeviceType, device_type=0x002D):
+    """Air Purifier."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.Identify,
+        all_clusters.Groups,
+        all_clusters.FanControl,
+        all_clusters.HepaFilterMonitoring,
+        all_clusters.ActivatedCarbonFilterMonitoring,
+    }
+
+
+class AirQualitySensor(DeviceType, device_type=0x002C):
+    """Air Quality Sensor."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.Identify,
+        all_clusters.AirQuality,
+        all_clusters.TemperatureMeasurement,
+        all_clusters.RelativeHumidityMeasurement,
+        all_clusters.CarbonMonoxideConcentrationMeasurement,
+        all_clusters.CarbonDioxideConcentrationMeasurement,
+        all_clusters.NitrogenDioxideConcentrationMeasurement,
+        all_clusters.OzoneConcentrationMeasurement,
+        all_clusters.FormaldehydeConcentrationMeasurement,
+        all_clusters.Pm1ConcentrationMeasurement,
+        all_clusters.Pm25ConcentrationMeasurement,
+        all_clusters.Pm10ConcentrationMeasurement,
+        all_clusters.RadonConcentrationMeasurement,
+        all_clusters.TotalVolatileOrganicCompoundsConcentrationMeasurement,
+    }
+
+
+class Dishwasher(DeviceType, device_type=0x0075):
+    """Dishwasher."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.OnOff,
+        all_clusters.Descriptor,
+        all_clusters.TemperatureControl,
+        all_clusters.DishwasherMode,
+        all_clusters.DishwasherAlarm,
+        all_clusters.OperationalState,
+    }
+
+
+class Refrigerator(DeviceType, device_type=0x0070):
+    """Refrigerator."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.Descriptor,
+        all_clusters.RefrigeratorAndTemperatureControlledCabinetMode,
+        all_clusters.RefrigeratorAlarm,
+    }
+
+
+class LaundryWasher(DeviceType, device_type=0x0073):
+    """Laundry Washer."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.Descriptor,
+        all_clusters.OnOff,
+        all_clusters.LaundryWasherMode,
+        all_clusters.LaundryWasherControls,
+        all_clusters.TemperatureControl,
+        all_clusters.OperationalState,
+    }
+
+
+class RoboticVacuumCleaner(DeviceType, device_type=0x0074):
+    """Robotic Vacuum Cleaner."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.Descriptor,
+        all_clusters.RvcRunMode,
+        all_clusters.RvcCleanMode,
+        all_clusters.RvcOperationalState,
+    }
+
+
+class TemperatureControlledCabinet(DeviceType, device_type=0x0071):
+    """Temperature Controlled Cabinet."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.TemperatureControl,
+        all_clusters.TemperatureMeasurement,
+        all_clusters.RefrigeratorAndTemperatureControlledCabinetMode,
     }
 
 

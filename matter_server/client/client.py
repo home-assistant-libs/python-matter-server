@@ -175,7 +175,7 @@ class MatterClient:
 
         node = self.get_node(node_id)
         fabrics: list[
-            Clusters.OperationalCredentials.Structs.FabricDescriptor
+            Clusters.OperationalCredentials.Structs.FabricDescriptorStruct
         ] = node.get_attribute_value(
             0, None, Clusters.OperationalCredentials.Attributes.Fabrics
         )
@@ -183,16 +183,16 @@ class MatterClient:
         vendors_map = await self.send_command(
             APICommand.GET_VENDOR_NAMES,
             require_schema=3,
-            filter_vendors=[f.vendorId for f in fabrics],
+            filter_vendors=[f.vendorID for f in fabrics],
         )
 
         return [
             MatterFabricData(
-                fabric_id=f.fabricId,
-                vendor_id=f.vendorId,
+                fabric_id=f.fabricID,
+                vendor_id=f.vendorID,
                 fabric_index=f.fabricIndex,
                 fabric_label=f.label if f.label else None,
-                vendor_name=vendors_map.get(str(f.vendorId)),
+                vendor_name=vendors_map.get(str(f.vendorID)),
             )
             for f in fabrics
         ]
