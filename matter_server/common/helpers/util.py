@@ -35,7 +35,7 @@ CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
 
 
 def create_attribute_path_from_attribute(
-    endpoint_id: int, attribute: ClusterAttributeDescriptor
+    endpoint_id: int, attribute: type[ClusterAttributeDescriptor]
 ) -> str:
     """Create path/identifier for an Attribute."""
     return create_attribute_path(

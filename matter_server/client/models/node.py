@@ -79,7 +79,9 @@ class MatterEndpoint:
         return self.node.get_compose_parent(self.endpoint_id) is not None
 
     @property
-    def device_info(self) -> Clusters.BasicInformation | Clusters.BridgedDeviceBasic:
+    def device_info(
+        self,
+    ) -> Clusters.BasicInformation | Clusters.BridgedDeviceBasicInformation:
         """
         Return device info.
 
