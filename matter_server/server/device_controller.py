@@ -73,7 +73,7 @@ class MatterDeviceController:
         """Initialize the device controller."""
         self.server = server
         # we keep the last events in memory so we can include them in the diagnostics dump
-        self.event_history: Deque[Attribute.EventReadResult] = deque(maxlen=25)
+        self.event_history: deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
         self._attr_subscriptions: dict[int, list[tuple[Any, ...]] | str] = {}
         self._resub_debounce_timer: dict[int, asyncio.TimerHandle] = {}
