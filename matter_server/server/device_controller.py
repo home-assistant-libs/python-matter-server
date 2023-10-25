@@ -595,7 +595,7 @@ class MatterDeviceController:
             # Preferred would be to set the interval as high as possible ( 30 mins or even 1 hour)
             # but that would also mean that detecting that a device is offline would be delayed
             # by that amount of time as the interval ceiling also meant as liveness detection.
-            # for now we settle on (more or less) 10 minutes but we might need to increase this
+            # For now we settle on (more or less) 10 minutes but we might need to increase this
             # even more in the future.
             # see also: https://github.com/project-chip/connectedhomeip/issues/29804
             # NOTE 2: We randomize the interval a bit to prevent all nodes reporting
