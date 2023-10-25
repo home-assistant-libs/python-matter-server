@@ -656,6 +656,14 @@ class MatterDeviceController:
                     )
                 return
 
+            # work out if software version changed
+            if (
+                path.AttributeType == Clusters.BasicInformation.softwareVersion
+                and new_value != old_value
+            ):
+                # schedule a full interview of the node if the software version changed
+                self.server.loop.create_task(self.interview_node(node_id))
+
             # store updated value in node attributes
             node.attributes[attr_path] = new_value
 
@@ -811,8 +819,6 @@ class MatterDeviceController:
             node_data is None
             # re-interview if the schema has changed
             or node_data.interview_version < SCHEMA_VERSION
-            # re-interview every 30 days
-            or (datetime.utcnow() - node_data.last_interview).days > 30
         ):
             try:
                 await self.interview_node(node_id)
