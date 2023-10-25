@@ -568,13 +568,6 @@ class MatterDeviceController:
             # wildcard as soon as we have mor ethan 9 paths to watch for.
             attr_subscriptions = "*"  # type: ignore[assignment]
 
-        if not node.attribute_subscriptions:
-            # temp fix for backwards compatbility with HA releases below 2023.7
-            # fallback to wildcard subscriptions if we have no explicit
-            # node subscriptions defined.
-            # TODO: remove this after HA release 2023.8
-            attr_subscriptions = "*"  # type: ignore[assignment]
-
         # check if we already have an subscription for this node,
         # if so, we need to unsubscribe first because a device can only maintain
         # a very limited amount of concurrent subscriptions.
