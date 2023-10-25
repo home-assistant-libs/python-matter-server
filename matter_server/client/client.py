@@ -122,7 +122,10 @@ class MatterClient:
 
     async def commission_on_network(self, setup_pin_code: int) -> MatterNodeData:
         """
-        Commission a device already connected to the network.
+        Do the routine for OnNetworkCommissioning.
+
+        NOTE: For advanced usecases only, use `commission_with_code`
+        for regular commissioning.
 
         Returns basic MatterNodeData once complete.
         """

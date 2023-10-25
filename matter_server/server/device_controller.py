@@ -187,11 +187,14 @@ class MatterDeviceController:
         filter: Any = None,  # pylint: disable=redefined-builtin
     ) -> MatterNodeData:
         """
-        Commission a device already connected to the network.
+        Do the routine for OnNetworkCommissioning, with a filter for mDNS discovery.
 
-        Does the routine for OnNetworkCommissioning, with a filter for mDNS discovery.
         The filter can be an integer,
         a string or None depending on the actual type of selected filter.
+
+        NOTE: For advanced usecases only, use `commission_with_code`
+        for regular commissioning.
+
         Returns full NodeInfo once complete.
         """
         if self.chip_controller is None:
