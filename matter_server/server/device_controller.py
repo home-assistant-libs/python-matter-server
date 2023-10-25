@@ -586,7 +586,7 @@ class MatterDeviceController:
             node_logger.debug("Setting up attributes and events subscription.")
             # Use a report interval of 0, X which means we want to receive state changes
             # as soon as possible (the 0 as floor) but we want to receive a report
-            # at least once every X seconds,this is also used to detect the node is still alive.
+            # at least once every X seconds, this is also used to detect the node is still alive.
             # A resubscription will be initiated automatically by the sdk
             # if there was no report within the interval.
             # NOTE 1: The report interval ceiling is subject to a lot of discussion
