@@ -566,7 +566,7 @@ class MatterDeviceController:
             # strictly taken a matter device can only handle 9 individual subscriptions
             # (3 subscriptions of 3 paths per fabric)
             # although the device can probably handle more, we play it safe and opt for
-            # wildcard as soon as we have mor ethan 9 paths to watch for.
+            # wildcard as soon as we have more than 9 paths to watch for.
             attr_subscriptions = "*"  # type: ignore[assignment]
 
         # check if we already have an subscription for this node,
