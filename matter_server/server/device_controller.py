@@ -729,7 +729,7 @@ class MatterDeviceController:
                 # https://github.com/project-chip/connectedhomeip/pull/26718
                 # https://github.com/project-chip/connectedhomeip/issues/29663
                 # NOTE 2: We could also just implement zeroconf/mdns ourselves
-                # to listen for the announcements
+                # to listen for the announcements.
                 sub.OverrideLivenessTimeoutMs(MAX_POLL_INTERVAL * 1000)
 
         def resubscription_succeeded(
