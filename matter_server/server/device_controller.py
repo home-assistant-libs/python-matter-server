@@ -721,7 +721,7 @@ class MatterDeviceController:
                 # workaround to handle devices that are unplugged
                 # from power for a longer period of time
                 # where the sdk is extending the poll timeout at every attempt
-                # until even 1,5 hours which is way to long.
+                # until even 1,5 hours which is way too long.
                 # instead a device back alive should be detected using mDNS,
                 # which is not yet implemented in the core sdk.
                 # For now, we just override the timeout.
