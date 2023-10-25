@@ -599,7 +599,7 @@ class MatterDeviceController:
             # even more in the future.
             # see also: https://github.com/project-chip/connectedhomeip/issues/29804
             # NOTE 2: We randomize the interval a bit to prevent all nodes reporting
-            # at the exact same time and that also causing congestion
+            # at the exact same time, causing congestion.
             interval_floor = 0
             interval_ceiling = random.randint(500, 700)
             sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
