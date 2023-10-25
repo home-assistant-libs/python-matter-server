@@ -17,6 +17,8 @@ RUN \
         libnl-route-3-200 \
         unzip \
         gdb \
+        iputils-ping \
+        iproute2 \
     && apt-get purge -y --auto-remove \
     && rm -rf \
         /var/lib/apt/lists/* \
