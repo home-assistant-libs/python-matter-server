@@ -592,7 +592,7 @@ class MatterDeviceController:
             # NOTE 1: The report interval ceiling is subject to a lot of discussion
             # as setting it too low causes a lot of (unneeded) traffic and causes network
             # congestion as well as drains batteries on sleeping devices.
-            # preferred would be to set the interval as high as possible ( 30 mins or even 1 hour)
+            # Preferred would be to set the interval as high as possible ( 30 mins or even 1 hour)
             # but that would also mean that detecting that a device is offline would be delayed
             # by that amount of time as the interval ceiling also meant as liveness detection
             # for now we settle on (more or less) 10 minutes but we might need to increase this
