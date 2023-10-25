@@ -122,7 +122,12 @@ class MatterClient:
 
     async def commission_on_network(self, setup_pin_code: int) -> MatterNodeData:
         """
-        Commission a device already connected to the network.
+        Does the routine for OnNetworkCommissioning, with a filter for mDNS discovery.
+        The filter can be an integer,
+        a string or None depending on the actual type of selected filter.
+
+        NOTE: For advanced usecases only, use `commission_with_code`
+        for regular commissioning.
 
         Returns basic MatterNodeData once complete.
         """
