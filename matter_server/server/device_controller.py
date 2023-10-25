@@ -819,8 +819,6 @@ class MatterDeviceController:
             node_data is None
             # re-interview if the schema has changed
             or node_data.interview_version < SCHEMA_VERSION
-            # re-interview every 30 days
-            or (datetime.utcnow() - node_data.last_interview).days > 30
         ):
             try:
                 await self.interview_node(node_id)
