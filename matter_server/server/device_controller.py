@@ -656,6 +656,14 @@ class MatterDeviceController:
                     )
                 return
 
+            # work out if software version changed
+            if (
+                path.AttributeType == Clusters.BasicInformation.softwareVersion
+                and new_value != old_value
+            ):
+                # schedule a full interview of the node if the software version changed
+                self.server.loop.create_task(self.interview_node(node_id))
+
             # store updated value in node attributes
             node.attributes[attr_path] = new_value
 
