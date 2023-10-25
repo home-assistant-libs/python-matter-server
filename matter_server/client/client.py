@@ -122,7 +122,8 @@ class MatterClient:
 
     async def commission_on_network(self, setup_pin_code: int) -> MatterNodeData:
         """
-        Does the routine for OnNetworkCommissioning, with a filter for mDNS discovery.
+        Do the routine for OnNetworkCommissioning, with a filter for mDNS discovery.
+
         The filter can be an integer,
         a string or None depending on the actual type of selected filter.
 
