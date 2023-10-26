@@ -33,6 +33,9 @@ if TYPE_CHECKING:
 CHIP_CLUSTERS_PKG_NAME = "home-assistant-chip-clusters"
 CHIP_CORE_PKG_NAME = "home-assistant-chip-core"
 
+cached_fields = cache(fields)
+cached_type_hints = cache(get_type_hints)
+
 
 def create_attribute_path_from_attribute(
     endpoint_id: int, attribute: type[ClusterAttributeDescriptor]
@@ -209,13 +212,14 @@ def dataclass_from_dict(cls: type[_T], dict_obj: dict, strict: bool = False) -> 
     Including support for nested structures and common type conversions.
     If strict mode enabled, any additional keys in the provided dict will result in a KeyError.
     """
+    dc_fields = cached_fields(cls)
     if strict:
-        extra_keys = dict_obj.keys() - {f.name for f in fields(cls)}
+        extra_keys = dict_obj.keys() - {f.name for f in dc_fields}
         if extra_keys:
             raise KeyError(
                 f'Extra key(s) {",".join(extra_keys)} not allowed for {str(cls)}'
             )
-    type_hints = get_type_hints(cls)
+    type_hints = cached_type_hints(cls)
     return cls(
         **{
             field.name: parse_value(
@@ -224,7 +228,7 @@ def dataclass_from_dict(cls: type[_T], dict_obj: dict, strict: bool = False) -> 
                 type_hints[field.name],
                 field.default,
             )
-            for field in fields(cls)
+            for field in dc_fields
             if field.init
         }
     )
