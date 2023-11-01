@@ -584,6 +584,13 @@ class MatterDeviceController:
                 node_logger.debug("Unsubscribing from existing subscription.")
                 await self._call_sdk(prev_sub.Shutdown)
 
+        # determine if node is battery powered sleeping device
+        # Endpoint 0, ThreadNetworkDiagnostics Cluster, routingRole attribute
+        battery_powered = (
+            node.attributes.get("0/53/1", 0)
+            == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kSleepyEndDevice
+        )
+
         self._attr_subscriptions[node_id] = attr_subscriptions
         async with node_lock:
             node_logger.debug("Setting up attributes and events subscription.")
@@ -595,16 +602,21 @@ class MatterDeviceController:
             # NOTE 1: The report interval ceiling is subject to a lot of discussion
             # as setting it too low causes a lot of (unneeded) traffic and causes network
             # congestion as well as drains batteries on sleeping devices.
-            # Preferred would be to set the interval as high as possible ( 30 mins or even 1 hour)
+            # Preferred would be to set the interval as high as possible
             # but that would also mean that detecting that a device is offline would be delayed
             # by that amount of time as the interval ceiling also meant as liveness detection.
-            # For now we settle on (more or less) 10 minutes but we might need to increase this
-            # even more in the future.
+            # For now we settle on (more or less) 1 minute for mains powered devices,
+            # and 1 hour for sleepy devices (to prevent draining the battery), awaiting
+            # further discussion about this.
             # see also: https://github.com/project-chip/connectedhomeip/issues/29804
             # NOTE 2: We randomize the interval a bit to prevent all nodes reporting
-            # at the exact same time, causing congestion.
+            # at the exact same time, also causing congestion.
             interval_floor = 0
-            interval_ceiling = random.randint(500, 700)
+            interval_ceiling = (
+                random.randint(3500, 3600)
+                if battery_powered
+                else random.randint(40, 70)
+            )
             sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
                 nodeid=node_id,
                 attributes=attr_subscriptions,
