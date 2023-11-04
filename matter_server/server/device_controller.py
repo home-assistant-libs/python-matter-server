@@ -8,6 +8,7 @@ from datetime import datetime
 from functools import partial
 import logging
 import random
+import time
 from typing import TYPE_CHECKING, Any, Callable, Iterable, Type, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
@@ -731,6 +732,26 @@ class MatterDeviceController:
             nextResubscribeIntervalMsec: int,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
+            cur_timestamp = time.time()
+            if (
+                nextResubscribeIntervalMsec > 30000
+                and (cur_timestamp - node.last_subscription_attempt) < 2
+            ):
+                # Guard for a (possible) bug in the sdk where the resubscription gets into
+                # an endloop loop where this callback is hit multiple times per second.
+                node_logger.error(
+                    "Infinite loop detected in resubscription, "
+                    "start manual resubscription logic."
+                )
+                # cancel subscription and add this node to our node polling job
+                sub.Shutdown()
+                self._subscriptions.pop(node_id)
+                assert self.server.loop
+                self.server.loop.create_task(
+                    self._check_interview_and_subscription(node_id, MAX_POLL_INTERVAL)
+                )
+                return
+            node.last_subscription_attempt = cur_timestamp
             node_logger.info(
                 "Previous subscription failed with Error: %s, re-subscribing in %s ms...",
                 terminationError,

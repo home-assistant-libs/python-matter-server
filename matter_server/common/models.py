@@ -80,6 +80,7 @@ class MatterNodeData:
     attribute_subscriptions: set[tuple[int | str, int | str, int | str]] = field(
         default_factory=set
     )
+    last_subscription_attempt: float = 0
 
 
 @dataclass
