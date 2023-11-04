@@ -740,20 +740,6 @@ class MatterDeviceController:
             if node.available:
                 node.available = False
                 self.server.signal_event(EventType.NODE_UPDATED, node)
-            if nextResubscribeIntervalMsec / 1000 > MAX_POLL_INTERVAL:
-                # workaround to handle devices that are unplugged
-                # from power for a longer period of time
-                # where the sdk is extending the poll timeout at every attempt
-                # until even 1,5 hours which is way too long.
-                # instead a device back alive should be detected using mDNS,
-                # which is not yet implemented in the core sdk.
-                # For now, we just override the timeout.
-                # NOTE 1: fix this once OperationalNodeDiscovery is available:
-                # https://github.com/project-chip/connectedhomeip/pull/26718
-                # https://github.com/project-chip/connectedhomeip/issues/29663
-                # NOTE 2: We could also just implement zeroconf/mdns ourselves
-                # to listen for the announcements.
-                sub.OverrideLivenessTimeoutMs(MAX_POLL_INTERVAL * 1000)
 
         def resubscription_succeeded(
             transaction: Attribute.SubscriptionTransaction,
