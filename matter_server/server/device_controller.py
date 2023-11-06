@@ -758,7 +758,7 @@ class MatterDeviceController:
                 nextResubscribeIntervalMsec,
             )
             # mark node as unavailable and signal consumers
-            if node.available:
+            if nextResubscribeIntervalMsec > 10000 and node.available:
                 node.available = False
                 self.server.signal_event(EventType.NODE_UPDATED, node)
 
