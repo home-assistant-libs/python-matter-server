@@ -3,7 +3,7 @@ import pathlib
 from typing import Final
 
 # The minimum schema version (of a client) the server can support
-MIN_SCHEMA_VERSION = 2
+MIN_SCHEMA_VERSION = 5
 
 # the paa-root-certs path is hardcoded in the sdk at this time
 # and always uses the development subfolder
@@ -15,4 +15,4 @@ PAA_ROOT_CERTS_DIR: Final[pathlib.Path] = (
     .parent.resolve()
     .parent.resolve()
     .joinpath("credentials/development/paa-root-certs")
-)
+)§

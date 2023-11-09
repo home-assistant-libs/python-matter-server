@@ -242,13 +242,25 @@ class MatterClient:
         node_id: int,
         attribute_path: str,
     ) -> Any:
-        """Read a single attribute on a node."""
+        """Read attribute(s) on a node."""
         return await self.send_command(
             APICommand.READ_ATTRIBUTE,
             require_schema=4,
             node_id=node_id,
             attribute_path=attribute_path,
         )
+
+    async def refresh_attribute(
+        self,
+        node_id: int,
+        attribute_path: str,
+    ) -> Any:
+        """Read attribute(s) on a node and store the updated value(s)."""
+        updated_values = await self.read_attribute(node_id, attribute_path)
+        if not isinstance(updated_values, dict):
+            updated_values = {attribute_path: updated_values}
+        for attr_path, value in updated_values.items():
+            self._nodes[node_id].update_attribute(attr_path, value)
 
     async def write_attribute(
         self,
