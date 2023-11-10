@@ -15,4 +15,4 @@ PAA_ROOT_CERTS_DIR: Final[pathlib.Path] = (
     .parent.resolve()
     .parent.resolve()
     .joinpath("credentials/development/paa-root-certs")
-)§
+)
