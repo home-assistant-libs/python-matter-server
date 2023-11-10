@@ -49,6 +49,8 @@ class EveEnergyCluster(Cluster):
     current: float32 | None = None
 
     class Attributes:
+        """Attributes for the EveEnergy Cluster."""
+
         @dataclass
         class Watt(ClusterAttributeDescriptor):
             """Watt Attribute within the EveEnergy Cluster."""
