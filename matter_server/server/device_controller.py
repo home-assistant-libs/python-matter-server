@@ -394,6 +394,7 @@ class MatterDeviceController:
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
         async with node_lock:
             self.chip_controller.CheckIsActive()
+            assert self.server.loop is not None
             future = self.server.loop.create_future()
             device = self.chip_controller.GetConnectedDeviceSync(node_id)
             Attribute.Read(
@@ -414,6 +415,7 @@ class MatterDeviceController:
                 result.tlvAttributes
             )
             # update cached info in node attributes
+            assert self._nodes[node_id] is not None
             self._nodes[node_id].attributes.update(read_atributes)
             if len(read_atributes) > 1:
                 return read_atributes
@@ -615,6 +617,7 @@ class MatterDeviceController:
                 else random.randint(40, 70)
             )
             self.chip_controller.CheckIsActive()
+            assert self.server.loop is not None
             future = self.server.loop.create_future()
             device = self.chip_controller.GetConnectedDeviceSync(node_id)
             Attribute.Read(
@@ -881,7 +884,7 @@ class MatterDeviceController:
 
     @staticmethod
     def _parse_attributes_from_read_result(
-        raw_tlv_attributes: dict[int, dict[int, dict[int, Any]]] | None = None,
+        raw_tlv_attributes: dict[int, dict[int, dict[int, Any]]],
     ) -> dict[str, Any]:
         """Parse attributes from ReadResult's TLV Attributes."""
         result = {}

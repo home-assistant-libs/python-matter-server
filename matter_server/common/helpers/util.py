@@ -90,9 +90,9 @@ def parse_utc_timestamp(datetime_string: str) -> datetime:
     return datetime.fromisoformat(datetime_string.replace("Z", "+00:00"))
 
 
-def _get_descriptor_key(descriptor: ClusterObjectDescriptor, key: Any):
+def _get_descriptor_key(descriptor: ClusterObjectDescriptor, key: str | int) -> str:
     """Return correct Cluster attribute key for a tag id."""
-    if isinstance(key, str) and key.isnumeric():
+    if (isinstance(key, str) and key.isnumeric()) or isinstance(key, int):
         if field := descriptor.GetFieldByTag(int(key)):
             return field.Label
     return key
