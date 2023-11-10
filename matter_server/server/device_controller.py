@@ -795,6 +795,7 @@ class MatterDeviceController:
         node.available = True
         # update attributes with current state from read request
         # NOTE: Make public method upstream for retrieving the attributeTLVCache
+        # pylint: disable=protected-access
         tlv_attributes = sub._readTransaction._cache.attributeTLVCache
         node.attributes.update(self._parse_attributes_from_read_result(tlv_attributes))
         node_logger.info("Subscription succeeded")

@@ -12,6 +12,8 @@ from chip.clusters.ClusterObjects import (
 )
 from chip.tlv import float32
 
+# pylint: disable=invalid-name,arguments-renamed,no-self-argument
+
 
 @dataclass
 class EveEnergyCluster(Cluster):
