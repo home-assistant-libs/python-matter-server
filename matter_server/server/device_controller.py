@@ -14,11 +14,7 @@ from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
 from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
-from chip.clusters.ClusterObjects import (
-    ALL_ATTRIBUTES,
-    ALL_CLUSTERS,
-    Cluster,
-)
+from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
 
 from ..common.const import SCHEMA_VERSION

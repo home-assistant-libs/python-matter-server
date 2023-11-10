@@ -3,13 +3,13 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
+from chip import ChipUtility
 from chip.clusters.ClusterObjects import (
     Cluster,
     ClusterAttributeDescriptor,
     ClusterObjectDescriptor,
     ClusterObjectFieldDescriptor,
 )
-from chip import ChipUtility
 from chip.tlv import float32
 
 

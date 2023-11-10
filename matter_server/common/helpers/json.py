@@ -7,7 +7,6 @@ from chip.clusters.Types import Nullable
 from chip.tlv import float32, uint
 import orjson
 
-
 JSON_ENCODE_EXCEPTIONS = (TypeError, ValueError)
 JSON_DECODE_EXCEPTIONS = (orjson.JSONDecodeError,)
 
