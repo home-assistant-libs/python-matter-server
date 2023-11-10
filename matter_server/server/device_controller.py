@@ -415,8 +415,9 @@ class MatterDeviceController:
                 result.tlvAttributes
             )
             # update cached info in node attributes
-            assert self._nodes[node_id] is not None
-            self._nodes[node_id].attributes.update(read_atributes)
+            self._nodes[node_id].attributes.update(  # type: ignore[union-attr]
+                read_atributes
+            )
             if len(read_atributes) > 1:
                 return read_atributes
             return read_atributes.get(attribute_path, None)
