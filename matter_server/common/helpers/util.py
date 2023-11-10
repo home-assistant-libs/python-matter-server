@@ -16,6 +16,7 @@ from typing import (
     Any,
     TypeVar,
     Union,
+    cast,
     get_args,
     get_origin,
     get_type_hints,
@@ -94,8 +95,8 @@ def _get_descriptor_key(descriptor: ClusterObjectDescriptor, key: str | int) -> 
     """Return correct Cluster attribute key for a tag id."""
     if (isinstance(key, str) and key.isnumeric()) or isinstance(key, int):
         if field := descriptor.GetFieldByTag(int(key)):
-            return field.Label
-    return key
+            return cast(str, field.Label)
+    return cast(str, key)
 
 
 def parse_value(

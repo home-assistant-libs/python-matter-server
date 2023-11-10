@@ -197,6 +197,8 @@ class MatterEndpoint:
             self.clusters[cluster_id] = cluster_instance
 
         # unpack cluster attribute, using the descriptor
+        assert cluster_id is not None
+        assert attribute_id is not None
         attribute_class: type[Clusters.ClusterAttributeDescriptor] = ALL_ATTRIBUTES[
             cluster_id
         ][attribute_id]
