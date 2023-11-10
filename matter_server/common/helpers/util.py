@@ -21,7 +21,10 @@ from typing import (
     get_type_hints,
 )
 
-from chip.clusters.ClusterObjects import ClusterAttributeDescriptor
+from chip.clusters.ClusterObjects import (
+    ClusterAttributeDescriptor,
+    ClusterObjectDescriptor,
+)
 from chip.clusters.Types import Nullable
 from chip.tlv import float32, uint
 
@@ -87,6 +90,14 @@ def parse_utc_timestamp(datetime_string: str) -> datetime:
     return datetime.fromisoformat(datetime_string.replace("Z", "+00:00"))
 
 
+def _get_descriptor_key(descriptor: ClusterObjectDescriptor, key: Any):
+    """Return correct Cluster attribute key for a tag id."""
+    if isinstance(key, str) and key.isnumeric():
+        if field := descriptor.GetFieldByTag(int(key)):
+            return field.Label
+    return key
+
+
 def parse_value(
     name: str,
     value: Any,
@@ -104,13 +115,7 @@ def parse_value(
     if isinstance(value, dict):
         if descriptor := getattr(value_type, "descriptor", None):
             # handle matter TLV dicts where the keys are just tag identifiers
-            def _get_descriptor_key(key: Any):
-                if isinstance(key, str) and key.isnumeric():
-                    if field := descriptor.GetFieldByTag(int(key)):
-                        return field.Label
-                return key
-
-            value = {_get_descriptor_key(x): y for x, y in value.items()}
+            value = {_get_descriptor_key(descriptor, x): y for x, y in value.items()}
         # handle a parse error in the sdk which is returned as:
         # {'TLVValue': None, 'Reason': None} or {'TLVValue': None}
         if value.get("TLVValue", MISSING) is None:
