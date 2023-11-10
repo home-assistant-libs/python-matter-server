@@ -96,7 +96,11 @@ class MatterEndpoint:
         return self.node.device_info
 
     def has_cluster(self, cluster: type[_CLUSTER_T] | int) -> bool:
-        """Check if endpoint has a specific cluster."""
+        """
+        Check if endpoint has a specific cluster.
+
+        Provide the cluster to lookup either as the class/type or the id.
+        """
         if isinstance(cluster, type):
             return cluster.id in self.clusters
         return cluster in self.clusters
@@ -105,6 +109,7 @@ class MatterEndpoint:
         """
         Get a full Cluster object containing all attributes.
 
+        Provide the cluster to lookup either as the class/type or the id.
         Return None if the Cluster is not present on the node.
         """
         if isinstance(cluster, type):
@@ -115,12 +120,12 @@ class MatterEndpoint:
         self,
         cluster: type[_CLUSTER_T] | int | None,
         attribute: int | type[_ATTRIBUTE_T],
-    ) -> type[_ATTRIBUTE_T] | Clusters.ClusterAttributeDescriptor | None:
+    ) -> Any:
         """
         Return Matter Cluster Attribute object for given parameters.
 
-        Send cluster as None to derive it from the Attribute.,
-        you must provide the attribute as type/class in that case.
+        Either supply a cluster id and attribute id or omit cluster
+        and supply the Attribute class/type.
         """
         if cluster is None:
             # allow sending None for Cluster to auto resolve it from the Attribute
@@ -149,7 +154,12 @@ class MatterEndpoint:
         cluster: type[_CLUSTER_T] | int | None,
         attribute: int | type[_ATTRIBUTE_T],
     ) -> bool:
-        """Perform a quick check if the endpoint has a specific attribute."""
+        """
+        Perform a quick check if the endpoint has a specific attribute.
+
+        Either supply a cluster id and attribute id or omit cluster
+        and supply the Attribute class/type.
+        """
         if cluster is None:
             if isinstance(attribute, int):
                 raise TypeError("Attribute can not be integer if Cluster is omitted")
@@ -171,6 +181,15 @@ class MatterEndpoint:
         Do not modify the data directly from a consumer.
         """
         _, cluster_id, attribute_id = parse_attribute_path(attribute_path)
+        if (
+            cluster_id not in ALL_CLUSTERS
+            or cluster_id not in ALL_ATTRIBUTES
+            or attribute_id not in ALL_ATTRIBUTES[cluster_id]
+        ):
+            # guard for unknown/custom clusters/attributes
+            return
+        assert cluster_id is not None  # for mypy
+        assert attribute_id is not None  # for mypy
         cluster_class: type[Clusters.Cluster] = ALL_CLUSTERS[cluster_id]
         if cluster_id in self.clusters:
             cluster_instance = self.clusters[cluster_id]

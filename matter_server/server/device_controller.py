@@ -9,17 +9,12 @@ from functools import partial
 import logging
 import random
 import time
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
-from chip.clusters.ClusterObjects import (
-    ALL_ATTRIBUTES,
-    ALL_CLUSTERS,
-    Cluster,
-    ClusterAttributeDescriptor,
-)
+from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
 
 from ..common.const import SCHEMA_VERSION
@@ -30,7 +25,6 @@ from ..common.errors import (
     NodeNotResolving,
 )
 from ..common.helpers.api import api_command
-from ..common.helpers.json import json_dumps
 from ..common.helpers.util import (
     create_attribute_path,
     create_attribute_path_from_attribute,
@@ -55,11 +49,11 @@ LOGGER = logging.getLogger(__name__)
 MAX_POLL_INTERVAL = 600
 
 # a list of attributes we should always watch on all nodes
-DEFAULT_SUBSCRIBE_ATTRIBUTES: set[tuple[int | str, int | str, int | str]] = {
-    ("*", 0x001D, 0x00000000),  # all endpoints, descriptor cluster, deviceTypeList
-    ("*", 0x001D, 0x00000003),  # all endpoints, descriptor cluster, partsList
-    (0, 0x0028, "*"),  # endpoint 0, BasicInformation cluster, all attributes
-    ("*", 0x0039, "*"),  # BridgedDeviceBasicInformation
+DEFAULT_SUBSCRIBE_ATTRIBUTES: set[tuple[int | None, int | None, int | None]] = {
+    (None, 0x001D, 0x00000000),  # all endpoints, descriptor cluster, deviceTypeList
+    (None, 0x001D, 0x00000003),  # all endpoints, descriptor cluster, partsList
+    (0, 0x0028, None),  # endpoint 0, BasicInformation cluster, all attributes
+    (None, 0x0039, None),  # BridgedDeviceBasicInformation
 }
 
 
@@ -77,7 +71,7 @@ class MatterDeviceController:
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
-        self._attr_subscriptions: dict[int, list[tuple[Any, ...]] | str] = {}
+        self._attr_subscriptions: dict[int, list[Attribute.AttributePath]] = {}
         self._resub_debounce_timer: dict[int, asyncio.TimerHandle] = {}
         self._sub_retry_timer: dict[int, asyncio.TimerHandle] = {}
         self._nodes: dict[int, MatterNodeData | None] = {}
@@ -327,8 +321,9 @@ class MatterDeviceController:
             else datetime.utcnow(),
             last_interview=datetime.utcnow(),
             interview_version=SCHEMA_VERSION,
+            available=True,
             attributes=self._parse_attributes_from_read_result(
-                read_response.attributes
+                read_response.tlvAttributes
             ),
         )
 
@@ -336,7 +331,7 @@ class MatterDeviceController:
             node.attribute_subscriptions = existing_info.attribute_subscriptions
         # work out if the node is a bridge device by looking at the devicetype of endpoint 1
         if attr_data := node.attributes.get("1/29/0"):
-            node.is_bridge = any(x.deviceType == 14 for x in attr_data)
+            node.is_bridge = any(x[0] == 14 for x in attr_data)
 
         # save updated node data
         self._nodes[node_id] = node
@@ -391,24 +386,40 @@ class MatterDeviceController:
         node_id: int,
         attribute_path: str,
     ) -> Any:
-        """Read a single attribute on a node."""
+        """Read a single attribute (or Cluster) on a node."""
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         node_lock = self._get_node_lock(node_id)
         await self._resolve_node(node_id=node_id)
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
-        attribute: Type[ClusterAttributeDescriptor] = ALL_ATTRIBUTES[cluster_id][
-            attribute_id
-        ]
         async with node_lock:
-            result: Attribute.AsyncReadTransaction.ReadResponse = (
-                await self.chip_controller.Read(
-                    nodeid=node_id,
-                    attributes=[(endpoint_id, attribute)],
-                    fabricFiltered=False,
-                )
+            self.chip_controller.CheckIsActive()
+            assert self.server.loop is not None
+            future = self.server.loop.create_future()
+            device = self.chip_controller.GetConnectedDeviceSync(node_id)
+            Attribute.Read(
+                future=future,
+                eventLoop=self.server.loop,
+                device=device.deviceProxy,
+                devCtrl=self.chip_controller,
+                attributes=[
+                    Attribute.AttributePath(
+                        EndpointId=endpoint_id,
+                        ClusterId=cluster_id,
+                        AttributeId=attribute_id,
+                    )
+                ],
+            ).raise_on_error()
+            result: Attribute.AsyncReadTransaction.ReadResponse = await future
+            read_atributes = self._parse_attributes_from_read_result(
+                result.tlvAttributes
             )
-            read_atributes = self._parse_attributes_from_read_result(result.attributes)
+            # update cached info in node attributes
+            self._nodes[node_id].attributes.update(  # type: ignore[union-attr]
+                read_atributes
+            )
+            if len(read_atributes) > 1:
+                return read_atributes
             return read_atributes.get(attribute_path, None)
 
     @api_command(APICommand.WRITE_ATTRIBUTE)
@@ -540,38 +551,26 @@ class MatterDeviceController:
         await self._resolve_node(node_id=node_id)
 
         # work out all (current) attribute subscriptions
-        attr_subscriptions: list[Any] = []
+        attr_subscriptions: list[Attribute.AttributePath] = []
         for (
             endpoint_id,
             cluster_id,
             attribute_id,
         ) in set.union(DEFAULT_SUBSCRIBE_ATTRIBUTES, node.attribute_subscriptions):
-            endpoint: int | None = None if endpoint_id == "*" else int(endpoint_id)
-            cluster: Type[Cluster] = ALL_CLUSTERS[cluster_id]
-            attribute: Type[ClusterAttributeDescriptor] | None = (
-                None
-                if attribute_id == "*"
-                else ALL_ATTRIBUTES[cluster_id][attribute_id]
+            attr_subscriptions.append(
+                Attribute.AttributePath(
+                    EndpointId=endpoint_id,
+                    ClusterId=cluster_id,
+                    AttributeId=attribute_id,
+                )
             )
-            if endpoint and attribute:
-                # Concrete path: specific endpoint, specific clusterattribute
-                attr_subscriptions.append((endpoint, attribute))
-            elif endpoint and cluster:
-                # Specific endpoint, Wildcard attribute id (specific cluster)
-                attr_subscriptions.append((endpoint, cluster))
-            elif attribute:
-                # Wildcard endpoint, specific attribute
-                attr_subscriptions.append(attribute)
-            elif cluster:
-                # Wildcard endpoint, specific cluster
-                attr_subscriptions.append(cluster)
 
         if len(attr_subscriptions) > 9:
             # strictly taken a matter device can only handle 9 individual subscriptions
             # (3 subscriptions of 3 paths per fabric)
             # although the device can probably handle more, we play it safe and opt for
             # wildcard as soon as we have more than 9 paths to watch for.
-            attr_subscriptions = "*"  # type: ignore[assignment]
+            attr_subscriptions = [Attribute.AttributePath()]  # wildcard
 
         # check if we already have an subscription for this node,
         # if so, we need to unsubscribe first because a device can only maintain
@@ -618,17 +617,33 @@ class MatterDeviceController:
                 if battery_powered
                 else random.randint(40, 70)
             )
-            sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
-                nodeid=node_id,
+            self.chip_controller.CheckIsActive()
+            assert self.server.loop is not None
+            future = self.server.loop.create_future()
+            device = self.chip_controller.GetConnectedDeviceSync(node_id)
+            Attribute.Read(
+                future=future,
+                eventLoop=self.server.loop,
+                device=device.deviceProxy,
+                devCtrl=self.chip_controller,
                 attributes=attr_subscriptions,
                 # simply subscribe to urgent device events only (e.g. button press etc.)
                 # non urgent events are diagnostic reports etc. for which we have no usecase (yet).
-                events=[("*", 1)],
-                reportInterval=(interval_floor, interval_ceiling),
+                events=[
+                    Attribute.EventPath(
+                        EndpointId=None, Cluster=None, Event=None, Urgent=1
+                    )
+                ],
+                returnClusterObject=False,
+                subscriptionParameters=Attribute.SubscriptionParameters(
+                    interval_floor, interval_ceiling
+                ),
                 # Use fabricfiltered as False to detect changes made by other controllers
                 # and to be able to provide a list of all fabrics attached to the device
                 fabricFiltered=False,
-            )
+                autoResubscribe=True,
+            ).raise_on_error()
+            sub: Attribute.SubscriptionTransaction = await future
 
         def attribute_updated_callback(
             path: Attribute.TypedAttributePath,
@@ -644,7 +659,7 @@ class MatterDeviceController:
             attr_path = str(path.Path)
             old_value = node.attributes.get(attr_path)
 
-            node_logger.debug(
+            node_logger.info(
                 "Attribute updated: %s - old value: %s - new value: %s",
                 path,
                 old_value,
@@ -782,10 +797,12 @@ class MatterDeviceController:
         # if we reach this point, it means the node could be resolved
         # and the initial subscription succeeded, mark the node available.
         node.available = True
-        node_logger.info("Subscription succeeded")
         # update attributes with current state from read request
-        current_atributes = self._parse_attributes_from_read_result(sub.GetAttributes())
-        node.attributes.update(current_atributes)
+        # NOTE: Make public method upstream for retrieving the attributeTLVCache
+        # pylint: disable=protected-access
+        tlv_attributes = sub._readTransaction._cache.attributeTLVCache
+        node.attributes.update(self._parse_attributes_from_read_result(tlv_attributes))
+        node_logger.info("Subscription succeeded")
         self.server.signal_event(EventType.NODE_UPDATED, node)
 
     def _get_next_node_id(self) -> int:
@@ -868,43 +885,21 @@ class MatterDeviceController:
 
     @staticmethod
     def _parse_attributes_from_read_result(
-        read_result: dict[int, dict[Type, dict[Type, Any]]]
+        raw_tlv_attributes: dict[int, dict[int, dict[int, Any]]],
     ) -> dict[str, Any]:
-        """Parse attributes from ReadResult."""
+        """Parse attributes from ReadResult's TLV Attributes."""
         result = {}
-        for endpoint, cluster_dict in read_result.items():
-            # read result output is in format
-            # {endpoint: {ClusterClass: {AttributeClass: value}}}
-            for cluster_cls, attr_dict in cluster_dict.items():
-                for attr_cls, attr_value in attr_dict.items():
-                    if attr_cls == Attribute.DataVersion:
-                        continue
+        # prefer raw tlv attributes as it requires less parsing back and forth
+        for endpoint_id, clusters in raw_tlv_attributes.items():
+            for cluster_id, attribute in clusters.items():
+                for attribute_id, attr_value in attribute.items():
                     # we are only interested in the raw values and let the client
                     # match back from the id's to the correct cluster/attribute classes
                     # attributes are stored in form of AttributePath:
                     # ENDPOINT/CLUSTER_ID/ATTRIBUTE_ID
                     attribute_path = create_attribute_path(
-                        endpoint, cluster_cls.id, attr_cls.attribute_id
+                        endpoint_id, cluster_id, attribute_id
                     )
-                    # failsafe: ignore ValueDecodeErrors
-                    # these are set by the SDK if parsing the value failed miserably
-                    if isinstance(attr_value, ValueDecodeFailure):
-                        continue
-                    # failsafe: make sure the attribute is serializable
-                    # there is a chance we receive malformed data from the sdk
-                    # due to all magic parsing to/from TLV.
-                    # skip an attribute in that case to prevent serialization issues
-                    # of the whole node.
-                    try:
-                        json_dumps(attr_value)
-                    except TypeError as err:
-                        LOGGER.warning(
-                            "Unserializable data found - "
-                            "skip attribute %s - error details: %s",
-                            attribute_path,
-                            err,
-                        )
-                        continue
                     result[attribute_path] = attr_value
         return result
 

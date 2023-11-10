@@ -76,8 +76,8 @@ class MatterNodeData:
     attributes: dict[str, Any] = field(default_factory=dict)
     # all attribute subscriptions we need to persist for this node,
     # a set of tuples in format (endpoint_id, cluster_id, attribute_id)
-    # where each value can also be a '*' for wildcard
-    attribute_subscriptions: set[tuple[int | str, int | str, int | str]] = field(
+    # where each value can also be a None for wildcard
+    attribute_subscriptions: set[tuple[int | None, int | None, int | None]] = field(
         default_factory=set
     )
     last_subscription_attempt: float = 0

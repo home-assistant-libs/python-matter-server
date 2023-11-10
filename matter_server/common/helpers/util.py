@@ -16,12 +16,16 @@ from typing import (
     Any,
     TypeVar,
     Union,
+    cast,
     get_args,
     get_origin,
     get_type_hints,
 )
 
-from chip.clusters.ClusterObjects import ClusterAttributeDescriptor
+from chip.clusters.ClusterObjects import (
+    ClusterAttributeDescriptor,
+    ClusterObjectDescriptor,
+)
 from chip.clusters.Types import Nullable
 from chip.tlv import float32, uint
 
@@ -46,20 +50,27 @@ def create_attribute_path_from_attribute(
     )
 
 
-def create_attribute_path(endpoint: int, cluster_id: int, attribute_id: int) -> str:
+def create_attribute_path(
+    endpoint: int | None, cluster_id: int | None, attribute_id: int | None
+) -> str:
     """
-    Create path/identifier for an Attribute.
+    Create path/identifier string for an Attribute.
 
-    Returns same output as `Attribute.AttributePath`
+    Returns same output as `Attribute.AttributePath` string representation.
     endpoint/cluster_id/attribute_id
     """
     return f"{endpoint}/{cluster_id}/{attribute_id}"
 
 
-def parse_attribute_path(attribute_path: str) -> tuple[int, int, int]:
-    """Parse AttributePath string into endpoint_id, cluster_id, attribute_id."""
+def parse_attribute_path(
+    attribute_path: str,
+) -> tuple[int | None, int | None, int | None]:
+    """Parse AttributePath string into tuple of endpoint_id, cluster_id, attribute_id."""
     endpoint_id_str, cluster_id_str, attribute_id_str = attribute_path.split("/")
-    return (int(endpoint_id_str), int(cluster_id_str), int(attribute_id_str))
+    endpoint_id = int(endpoint_id_str) if endpoint_id_str.isnumeric() else None
+    cluster_id = int(cluster_id_str) if cluster_id_str.isnumeric() else None
+    attribute_id = int(attribute_id_str) if attribute_id_str.isnumeric() else None
+    return (endpoint_id, cluster_id, attribute_id)
 
 
 def dataclass_to_dict(obj_in: DataclassInstance) -> dict:
@@ -80,7 +91,21 @@ def parse_utc_timestamp(datetime_string: str) -> datetime:
     return datetime.fromisoformat(datetime_string.replace("Z", "+00:00"))
 
 
-def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) -> Any:
+def _get_descriptor_key(descriptor: ClusterObjectDescriptor, key: str | int) -> str:
+    """Return correct Cluster attribute key for a tag id."""
+    if (isinstance(key, str) and key.isnumeric()) or isinstance(key, int):
+        if field := descriptor.GetFieldByTag(int(key)):
+            return cast(str, field.Label)
+    return cast(str, key)
+
+
+def parse_value(
+    name: str,
+    value: Any,
+    value_type: Any,
+    default: Any = MISSING,
+    allow_none: bool = True,
+) -> Any:
     """Try to parse a value from raw (json) data and type annotations."""
     # pylint: disable=too-many-return-statements,too-many-branches
 
@@ -89,9 +114,9 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
         value_type = get_type_hints(value_type, globals(), locals())
 
     if isinstance(value, dict):
-        # always prefer classes that have a from_dict
-        if hasattr(value_type, "from_dict"):
-            return value_type.from_dict(value)
+        if descriptor := getattr(value_type, "descriptor", None):
+            # handle matter TLV dicts where the keys are just tag identifiers
+            value = {_get_descriptor_key(descriptor, x): y for x, y in value.items()}
         # handle a parse error in the sdk which is returned as:
         # {'TLVValue': None, 'Reason': None} or {'TLVValue': None}
         if value.get("TLVValue", MISSING) is None:
@@ -102,6 +127,8 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
     if value is None and not isinstance(default, type(MISSING)):
         return default
     if value is None and value_type is NoneType:
+        return None
+    if value is None and allow_none:
         return None
     if value is None and value_type is Nullable:
         return None
@@ -155,7 +182,7 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
     if value_type is Any:
         return value
     # raise if value is None and the value is required according to annotations
-    if value is None and value_type is not NoneType:
+    if value is None and value_type is not NoneType and not allow_none:
         raise KeyError(f"`{name}` of type `{value_type}` is required.")
 
     try:
@@ -192,7 +219,9 @@ def parse_value(name: str, value: Any, value_type: Any, default: Any = MISSING) 
     ):
         return uint(value)
     if value_type is float32 and (
-        isinstance(value, float) or (isinstance(value, str) and value.isnumeric())
+        isinstance(value, float)
+        or isinstance(value, int)
+        or (isinstance(value, str) and value.isnumeric())
     ):
         return float32(value)
 
