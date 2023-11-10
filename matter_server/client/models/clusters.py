@@ -10,7 +10,7 @@ from chip.clusters.ClusterObjects import (
     ClusterObjectFieldDescriptor,
 )
 from chip import ChipUtility
-from chip.tlv import float32, uint
+from chip.tlv import float32
 
 
 @dataclass
@@ -21,6 +21,7 @@ class EveEnergyCluster(Cluster):
 
     @ChipUtility.classproperty
     def descriptor(cls) -> ClusterObjectDescriptor:
+        """Return descriptor for this cluster."""
         return ClusterObjectDescriptor(
             Fields=[
                 ClusterObjectFieldDescriptor(
@@ -50,80 +51,105 @@ class EveEnergyCluster(Cluster):
     class Attributes:
         @dataclass
         class Watt(ClusterAttributeDescriptor):
+            """Watt Attribute within the EveEnergy Cluster."""
+
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
+                """Return cluster id."""
                 return 0x130AFC01
 
             @ChipUtility.classproperty
             def attribute_id(cls) -> int:
+                """Return attribute id."""
                 return 0x130A000A
 
             @ChipUtility.classproperty
             def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
                 return ClusterObjectFieldDescriptor(Type=float32)
 
             value: float32 = 0
 
         @dataclass
         class WattAccumulated(ClusterAttributeDescriptor):
+            """WattAccumulated Attribute within the EveEnergy Cluster."""
+
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
+                """Return cluster id."""
                 return 0x130AFC01
 
             @ChipUtility.classproperty
             def attribute_id(cls) -> int:
+                """Return attribute id."""
                 return 0x130A000B
 
             @ChipUtility.classproperty
             def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
                 return ClusterObjectFieldDescriptor(Type=float32)
 
             value: float32 = 0
 
         @dataclass
         class wattAccumulatedControlPoint(ClusterAttributeDescriptor):
+            """wattAccumulatedControlPoint Attribute within the EveEnergy Cluster."""
+
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
+                """Return cluster id."""
                 return 0x130AFC01
 
             @ChipUtility.classproperty
             def attribute_id(cls) -> int:
+                """Return attribute id."""
                 return 0x130A000E
 
             @ChipUtility.classproperty
             def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
                 return ClusterObjectFieldDescriptor(Type=float32)
 
             value: float32 = 0
 
         @dataclass
         class Voltage(ClusterAttributeDescriptor):
+            """Voltage Attribute within the EveEnergy Cluster."""
+
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
+                """Return cluster id."""
                 return 0x130AFC01
 
             @ChipUtility.classproperty
             def attribute_id(cls) -> int:
+                """Return attribute id."""
                 return 0x130A0008
 
             @ChipUtility.classproperty
             def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
                 return ClusterObjectFieldDescriptor(Type=float32)
 
             value: float32 = 0
 
         @dataclass
         class Current(ClusterAttributeDescriptor):
+            """Current Attribute within the EveEnergy Cluster."""
+
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
+                """Return cluster id."""
                 return 0x130AFC01
 
             @ChipUtility.classproperty
             def attribute_id(cls) -> int:
+                """Return attribute id."""
                 return 0x130A0009
 
             @ChipUtility.classproperty
             def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
                 return ClusterObjectFieldDescriptor(Type=float32)
 
             value: float32 = 0
