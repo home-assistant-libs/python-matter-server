@@ -434,7 +434,7 @@ class MatterDeviceController:
             raise RuntimeError("Device Controller not initialized.")
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
         attribute = ALL_ATTRIBUTES[cluster_id][attribute_id]()
-        attribute.value = value
+        attribute.value = Clusters.NullValue if value is None else value
         return await self.chip_controller.WriteAttribute(
             nodeid=node_id,
             attributes=[(endpoint_id, attribute)],
