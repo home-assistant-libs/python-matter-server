@@ -265,7 +265,7 @@ message = {
     "command": "device_command",
     "args": {
         "endpoint_id": 1,
-        "node_id": 1, 
+        "node_id": 1,
         "payload": payload,
         "cluster_id": command.cluster_id,
         "command_name": "On"

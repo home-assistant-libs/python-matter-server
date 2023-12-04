@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import asyncio
-import logging
-import random
-import time
 from collections import deque
 from datetime import datetime
 from functools import partial
+import logging
+import random
+import time
 from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
-from chip.clusters import Attribute
-from chip.clusters import Objects as Clusters
+from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
@@ -919,7 +918,9 @@ class MatterDeviceController:
                     result[attribute_path] = attr_value
         return result
 
-    async def _resolve_node(self, node_id: int, retries: int = 5, attempt=1) -> None:
+    async def _resolve_node(
+        self, node_id: int, retries: int = 5, attempt: int = 1
+    ) -> None:
         """Resolve a Node on the network."""
         if (node := self._nodes.get(node_id)) and node.available:
             # no need to resolve, the node is already available/connected
