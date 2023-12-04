@@ -11,7 +11,7 @@ import random
 import time
 from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
 
-from chip.ChipDeviceCtrl import CommissionableNode
+from chip.ChipDeviceCtrl import CommissionableNode, CommissioningParameters
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
@@ -258,7 +258,7 @@ class MatterDeviceController:
         iteration: int = 1000,
         option: int = 1,
         discriminator: int | None = None,
-    ) -> tuple[int, str, str]:
+    ) -> CommissioningParameters:
         """Open a commissioning window to commission a device present on this controller to another.
 
         Returns code to use as discriminator.
