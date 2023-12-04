@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import asyncio
-from collections import deque
-from datetime import datetime
-from functools import partial
 import logging
 import random
 import time
+from collections import deque
+from datetime import datetime
+from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode
-from chip.clusters import Attribute, Objects as Clusters
+from chip.clusters import Attribute
+from chip.clusters import Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
@@ -168,8 +169,23 @@ class MatterDeviceController:
                 f"Commission with code failed for node {node_id}"
             )
 
-        # full interview of the device
-        await self.interview_node(node_id)
+        # perform full (first) interview of the device
+        # we retry the interview max 3 times as it may fail in noisy
+        # RF environments (in case of thread), mdns trouble or just flaky devices.
+        # retryuing both the mdns resolve and (first) interview, increases the chances
+        # of a successful device commission.
+        retries = 3
+        while retries:
+            try:
+                await self.interview_node(node_id)
+            except NodeInterviewFailed as err:
+                if retries <= 0:
+                    raise err
+                retries -= 1
+                await asyncio.sleep(5)
+            else:
+                break
+
         # make sure we start a subscription for this newly added node
         await self._subscribe_node(node_id)
         # return full node object once we're complete
@@ -903,7 +919,7 @@ class MatterDeviceController:
                     result[attribute_path] = attr_value
         return result
 
-    async def _resolve_node(self, node_id: int, retries: int = 3) -> None:
+    async def _resolve_node(self, node_id: int, retries: int = 5, attempt=1) -> None:
         """Resolve a Node on the network."""
         if (node := self._nodes.get(node_id)) and node.available:
             # no need to resolve, the node is already available/connected
@@ -918,15 +934,22 @@ class MatterDeviceController:
             async with node_lock, self._resolve_lock:
                 LOGGER.debug("Attempting to resolve node %s...", node_id)
                 await self._call_sdk(
-                    self.chip_controller.ResolveNode,
+                    self.chip_controller.GetConnectedDeviceSync,
+                    # By default we do not allow PASE and we use the SDK's default timeout.
+                    # Once we keep retrying we try the final attempt(s) with PASE and
+                    # with an extended timeout.
+                    allowPASE=attempt >= 4,
+                    timeoutMs=30000 if attempt >= 3 else None,
                     nodeid=node_id,
                 )
         except (ChipStackError, TimeoutError) as err:
-            if retries <= 1:
+            if attempt >= retries:
                 # when we're out of retries, raise NodeNotResolving
                 raise NodeNotResolving(f"Unable to resolve Node {node_id}") from err
-            await self._resolve_node(node_id=node_id, retries=retries - 1)
-            await asyncio.sleep(2)
+            await self._resolve_node(
+                node_id=node_id, retries=retries, attempt=attempt + 1
+            )
+            await asyncio.sleep(2 + attempt)
 
     def _handle_endpoints_removed(self, node_id: int, endpoints: Iterable[int]) -> None:
         """Handle callback for when bridge endpoint(s) get deleted."""
