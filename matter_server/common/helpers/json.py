@@ -4,6 +4,7 @@ from base64 import b64encode
 from typing import Any
 
 from chip.clusters.Types import Nullable
+from chip.ChipDeviceCtrl import CommissionableNode
 from chip.tlv import float32, uint
 import orjson
 
@@ -30,6 +31,24 @@ def json_encoder_default(obj: Any) -> Any:
         return b64encode(obj).decode("utf-8")
     if isinstance(obj, Exception):
         return str(obj)
+    if isinstance(obj, CommissionableNode):
+        return {
+            "addresses": obj.addresses, 
+            "commissioningMode": obj.commissioningMode,
+            "deviceName": obj.deviceName ,
+            "deviceType": obj.deviceType,
+            "hostName": obj.hostName ,
+            "instanceName": obj.instanceName ,
+            "longDiscriminator": obj.longDiscriminator ,
+            "mrpRetryIntervalActive": obj.mrpRetryIntervalActive ,
+            "mrpRetryIntervalIdle": obj.mrpRetryIntervalIdle ,
+            "pairingHint": obj.pairingHint ,
+            "pairingInstruction": obj.pairingInstruction ,
+            "port": obj.port,
+            "productId": obj.productId,
+            "supportsTcp": obj.supportsTcp,
+            "vendorId": obj.vendorId
+            }        
     if type(obj) is type:  # pylint: disable=unidiomatic-typecheck
         return f"{obj.__module__}.{obj.__qualname__}"
     raise TypeError
