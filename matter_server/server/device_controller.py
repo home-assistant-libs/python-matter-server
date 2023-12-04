@@ -659,7 +659,7 @@ class MatterDeviceController:
             attr_path = str(path.Path)
             old_value = node.attributes.get(attr_path)
 
-            node_logger.info(
+            node_logger.debug(
                 "Attribute updated: %s - old value: %s - new value: %s",
                 path,
                 old_value,
