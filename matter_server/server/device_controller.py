@@ -171,7 +171,7 @@ class MatterDeviceController:
         # perform full (first) interview of the device
         # we retry the interview max 3 times as it may fail in noisy
         # RF environments (in case of thread), mdns trouble or just flaky devices.
-        # retryuing both the mdns resolve and (first) interview, increases the chances
+        # retrying both the mdns resolve and (first) interview, increases the chances
         # of a successful device commission.
         retries = 3
         while retries:
