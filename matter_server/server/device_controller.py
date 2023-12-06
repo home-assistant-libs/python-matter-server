@@ -11,7 +11,7 @@ import random
 import time
 from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
 
-from chip.ChipDeviceCtrl import CommissionableNode
+from chip.ChipDeviceCtrl import CommissionableNode, CommissioningParameters
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
@@ -273,7 +273,7 @@ class MatterDeviceController:
         iteration: int = 1000,
         option: int = 1,
         discriminator: int | None = None,
-    ) -> tuple[int, str]:
+    ) -> CommissioningParameters:
         """Open a commissioning window to commission a device present on this controller to another.
 
         Returns code to use as discriminator.
@@ -284,7 +284,7 @@ class MatterDeviceController:
         if discriminator is None:
             discriminator = 3840  # TODO generate random one
 
-        pin, code = await self._call_sdk(
+        return await self._call_sdk(
             self.chip_controller.OpenCommissioningWindow,
             nodeid=node_id,
             timeout=timeout,
@@ -292,7 +292,6 @@ class MatterDeviceController:
             discriminator=discriminator,
             option=option,
         )
-        return pin, code
 
     @api_command(APICommand.DISCOVER)
     async def discover_commissionable_nodes(
