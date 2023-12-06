@@ -269,7 +269,7 @@ class MatterDeviceController:
         if discriminator is None:
             discriminator = 3840  # TODO generate random one
 
-        result = await self._call_sdk(
+        return await self._call_sdk(
             self.chip_controller.OpenCommissioningWindow,
             nodeid=node_id,
             timeout=timeout,
@@ -277,7 +277,6 @@ class MatterDeviceController:
             discriminator=discriminator,
             option=option,
         )
-        return result
 
     @api_command(APICommand.DISCOVER)
     async def discover_commissionable_nodes(
