@@ -935,7 +935,7 @@ class MatterDeviceController:
                 LOGGER.debug("Attempting to resolve node %s...", node_id)
                 await self._call_sdk(
                     self.chip_controller.GetConnectedDeviceSync,
-                    allowPASE=True,
+                    allowPASE=False,
                     # For the first attempts we use the SDK's default timeout.
                     # Once we keep retrying we try the final attempt(s)
                     # with an extended timeout.
