@@ -932,15 +932,17 @@ class MatterDeviceController:
             # the sdk crashes when multiple resolves happen at the same time
             # guard simultane resolves with a lock.
             async with node_lock, self._resolve_lock:
-                LOGGER.debug("Attempting to resolve node %s...", node_id)
+                LOGGER.debug(
+                    "Attempting to resolve node %s... (attempt %s of %s)",
+                    node_id,
+                    attempt,
+                    retries,
+                )
                 await self._call_sdk(
                     self.chip_controller.GetConnectedDeviceSync,
-                    allowPASE=False,
-                    # For the first attempts we use the SDK's default timeout.
-                    # Once we keep retrying we try the final attempt(s)
-                    # with an extended timeout.
-                    timeoutMs=30000 if attempt >= 3 else None,
                     nodeid=node_id,
+                    allowPASE=False,
+                    timeoutMs=None,
                 )
         except (ChipStackError, TimeoutError) as err:
             if attempt >= retries:
