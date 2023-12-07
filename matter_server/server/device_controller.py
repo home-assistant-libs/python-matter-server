@@ -939,8 +939,10 @@ class MatterDeviceController:
                     retries,
                 )
                 await self._call_sdk(
-                    self.chip_controller.ResolveNode,
+                    self.chip_controller.GetConnectedDeviceSync,
                     nodeid=node_id,
+                    allowPASE=False,
+                    timeoutMs=None,
                 )
         except (ChipStackError, TimeoutError) as err:
             if attempt >= retries:
