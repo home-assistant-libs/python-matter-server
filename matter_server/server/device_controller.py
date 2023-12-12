@@ -810,9 +810,7 @@ class MatterDeviceController:
 
     def _get_next_node_id(self) -> int:
         """Return next node_id."""
-        next_node_id = cast(int, self.server.storage.get(DATA_KEY_LAST_NODE_ID, 0)) + 1
-        self.server.storage.set(DATA_KEY_LAST_NODE_ID, next_node_id, force=True)
-        return next_node_id
+        return cast(int, self.server.storage.get(DATA_KEY_LAST_NODE_ID, 0)) + 1
 
     async def _call_sdk(self, func: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
         """Call function on the SDK in executor and return result."""
