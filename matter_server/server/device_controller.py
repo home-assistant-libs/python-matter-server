@@ -468,6 +468,7 @@ class MatterDeviceController:
             DATA_KEY_NODES,
             subkey=str(node_id),
         )
+        self.server.storage.save(immediate=True)
 
         assert node is not None
 
