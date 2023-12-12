@@ -153,9 +153,6 @@ class MatterDeviceController:
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
 
-        # perform a quick delta sync of certificates to make sure
-        # we have the latest paa root certs
-        await fetch_certificates()
         node_id = self._get_next_node_id()
 
         success = await self._call_sdk(
@@ -210,12 +207,6 @@ class MatterDeviceController:
         """
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
-
-        # perform a quick delta sync of certificates to make sure
-        # we have the latest paa root certs
-        # NOTE: Its not very clear if the newly fetched certificates can be used without
-        # restarting the device controller
-        await fetch_certificates()
 
         node_id = self._get_next_node_id()
 
