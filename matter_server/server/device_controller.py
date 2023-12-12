@@ -627,9 +627,7 @@ class MatterDeviceController:
             # at the exact same time, also causing congestion.
             interval_floor = 0
             interval_ceiling = (
-                random.randint(3500, 3600)
-                if battery_powered
-                else random.randint(40, 70)
+                random.randint(60, 300) if battery_powered else random.randint(20, 60)
             )
             self.chip_controller.CheckIsActive()
             assert self.server.loop is not None
