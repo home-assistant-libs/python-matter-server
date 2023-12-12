@@ -456,6 +456,10 @@ class MatterDeviceController:
                 f"Node {node_id} does not exist or has not been interviewed."
             )
 
+        # shutdown any existing subscriptions
+        if attr_sub := self._subscriptions.pop(node_id, None):
+            await self._call_sdk(attr_sub.Shutdown)
+
         # pop any existing interview/subscription reschedule timer
         self._sub_retry_timer.pop(node_id, None)
 
