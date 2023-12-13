@@ -17,6 +17,8 @@ from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
 
+from matter_server.server.helpers.attributes import parse_attributes_from_read_result
+
 from ..common.const import SCHEMA_VERSION
 from ..common.errors import (
     NodeCommissionFailed,
@@ -355,7 +357,7 @@ class MatterDeviceController:
             last_interview=datetime.utcnow(),
             interview_version=SCHEMA_VERSION,
             available=True,
-            attributes=self._parse_attributes_from_read_result(
+            attributes=parse_attributes_from_read_result(
                 read_response.tlvAttributes
             ),
         )
@@ -444,7 +446,7 @@ class MatterDeviceController:
                 ],
             ).raise_on_error()
             result: Attribute.AsyncReadTransaction.ReadResponse = await future
-            read_atributes = self._parse_attributes_from_read_result(
+            read_atributes = parse_attributes_from_read_result(
                 result.tlvAttributes
             )
             # update cached info in node attributes
@@ -834,7 +836,7 @@ class MatterDeviceController:
         # NOTE: Make public method upstream for retrieving the attributeTLVCache
         # pylint: disable=protected-access
         tlv_attributes = sub._readTransaction._cache.attributeTLVCache
-        node.attributes.update(self._parse_attributes_from_read_result(tlv_attributes))
+        node.attributes.update(parse_attributes_from_read_result(tlv_attributes))
         node_logger.info("Subscription succeeded")
         self.server.signal_event(EventType.NODE_UPDATED, node)
 
@@ -915,26 +917,6 @@ class MatterDeviceController:
             # TODO: fix this once OperationalNodeDiscovery is available:
             # https://github.com/project-chip/connectedhomeip/pull/26718
             reschedule()
-
-    @staticmethod
-    def _parse_attributes_from_read_result(
-        raw_tlv_attributes: dict[int, dict[int, dict[int, Any]]],
-    ) -> dict[str, Any]:
-        """Parse attributes from ReadResult's TLV Attributes."""
-        result = {}
-        # prefer raw tlv attributes as it requires less parsing back and forth
-        for endpoint_id, clusters in raw_tlv_attributes.items():
-            for cluster_id, attribute in clusters.items():
-                for attribute_id, attr_value in attribute.items():
-                    # we are only interested in the raw values and let the client
-                    # match back from the id's to the correct cluster/attribute classes
-                    # attributes are stored in form of AttributePath:
-                    # ENDPOINT/CLUSTER_ID/ATTRIBUTE_ID
-                    attribute_path = create_attribute_path(
-                        endpoint_id, cluster_id, attribute_id
-                    )
-                    result[attribute_path] = attr_value
-        return result
 
     async def _resolve_node(
         self, node_id: int, retries: int = 5, attempt: int = 1
