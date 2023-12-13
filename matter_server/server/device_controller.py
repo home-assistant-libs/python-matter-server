@@ -159,7 +159,9 @@ class MatterDeviceController:
         await fetch_certificates()
         node_id = self._get_next_node_id()
 
-        LOGGER.info("Starting Matter commissioning with code using Node ID %s.", node_id)
+        LOGGER.info(
+            "Starting Matter commissioning with code using Node ID %s.", node_id
+        )
         success = await self._call_sdk(
             self.chip_controller.CommissionWithCode,
             setupPayload=code,
@@ -180,15 +182,15 @@ class MatterDeviceController:
         retries = 3
         while retries:
             try:
-                LOGGER.info("Start interview of newly commissioned Node ID %s.", node_id)
+                LOGGER.info(
+                    "Start interview of newly commissioned Node ID %s.", node_id
+                )
                 await self.interview_node(node_id)
             except NodeInterviewFailed as err:
                 if retries <= 0:
                     raise err
                 retries -= 1
-                LOGGER.warning(
-                    "Unable to interview Node %s: %s", node_id, err
-                )
+                LOGGER.warning("Unable to interview Node %s: %s", node_id, err)
                 await asyncio.sleep(5)
             else:
                 break
@@ -229,7 +231,9 @@ class MatterDeviceController:
 
         node_id = self._get_next_node_id()
 
-        LOGGER.info("Starting Matter commissioning on network using Node ID %s.", node_id)
+        LOGGER.info(
+            "Starting Matter commissioning on network using Node ID %s.", node_id
+        )
         success = await self._call_sdk(
             self.chip_controller.CommissionOnNetwork,
             nodeId=node_id,
