@@ -155,18 +155,22 @@ class MatterDeviceController:
 
         # perform a quick delta sync of certificates to make sure
         # we have the latest paa root certs
+        LOGGER.info("Commissioning new device with code.")
         await fetch_certificates()
         node_id = self._get_next_node_id()
 
+        LOGGER.info("Starting Matter commissioning with code using Node ID %s.", node_id)
         success = await self._call_sdk(
             self.chip_controller.CommissionWithCode,
             setupPayload=code,
             nodeid=node_id,
         )
         if not success:
+            LOGGER.warning("Commission with code failed for node %s", node_id)
             raise NodeCommissionFailed(
                 f"Commission with code failed for node {node_id}"
             )
+        LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
 
         # perform full (first) interview of the device
         # we retry the interview max 3 times as it may fail in noisy
@@ -176,17 +180,22 @@ class MatterDeviceController:
         retries = 3
         while retries:
             try:
+                LOGGER.info("Start interview of newly commissioned Node ID %s.", node_id)
                 await self.interview_node(node_id)
             except NodeInterviewFailed as err:
                 if retries <= 0:
                     raise err
                 retries -= 1
+                LOGGER.warning(
+                    "Unable to interview Node %s: %s", node_id, err
+                )
                 await asyncio.sleep(5)
             else:
                 break
 
         # make sure we start a subscription for this newly added node
         await self._subscribe_node(node_id)
+        LOGGER.info("Commissioning of Node ID %s completed.", node_id)
         # return full node object once we're complete
         return self.get_node(node_id)
 
@@ -215,10 +224,12 @@ class MatterDeviceController:
         # we have the latest paa root certs
         # NOTE: Its not very clear if the newly fetched certificates can be used without
         # restarting the device controller
+        LOGGER.info("Commissioning new device with code.")
         await fetch_certificates()
 
         node_id = self._get_next_node_id()
 
+        LOGGER.info("Starting Matter commissioning on network using Node ID %s.", node_id)
         success = await self._call_sdk(
             self.chip_controller.CommissionOnNetwork,
             nodeId=node_id,
@@ -227,14 +238,18 @@ class MatterDeviceController:
             filter=filter,
         )
         if not success:
+            LOGGER.warning("Commission on network failed for node %s", node_id)
             raise NodeCommissionFailed(
                 f"Commission on network failed for node {node_id}"
             )
+        LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
 
         # full interview of the device
+        LOGGER.info("Start interview of newly commissioned Node ID %s.", node_id)
         await self.interview_node(node_id)
         # make sure we start a subscription for this newly added node
         await self._subscribe_node(node_id)
+        LOGGER.info("Commissioning of Node ID %s completed.", node_id)
         # return full node object once we're complete
         return self.get_node(node_id)
 
