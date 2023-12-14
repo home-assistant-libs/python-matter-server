@@ -17,6 +17,8 @@ from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
 
+from matter_server.server.helpers.attributes import parse_attributes_from_read_result
+
 from ..common.const import SCHEMA_VERSION
 from ..common.errors import (
     NodeCommissionFailed,
@@ -26,7 +28,6 @@ from ..common.errors import (
 )
 from ..common.helpers.api import api_command
 from ..common.helpers.util import (
-    create_attribute_path,
     create_attribute_path_from_attribute,
     dataclass_from_dict,
     parse_attribute_path,
@@ -158,6 +159,9 @@ class MatterDeviceController:
         await fetch_certificates()
         node_id = self._get_next_node_id()
 
+        LOGGER.info(
+            "Starting Matter commissioning with code using Node ID %s.", node_id
+        )
         success = await self._call_sdk(
             self.chip_controller.CommissionWithCode,
             setupPayload=code,
@@ -167,6 +171,7 @@ class MatterDeviceController:
             raise NodeCommissionFailed(
                 f"Commission with code failed for node {node_id}"
             )
+        LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
 
         # perform full (first) interview of the device
         # we retry the interview max 3 times as it may fail in noisy
@@ -181,12 +186,14 @@ class MatterDeviceController:
                 if retries <= 0:
                     raise err
                 retries -= 1
+                LOGGER.warning("Unable to interview Node %s: %s", node_id, err)
                 await asyncio.sleep(5)
             else:
                 break
 
         # make sure we start a subscription for this newly added node
         await self._subscribe_node(node_id)
+        LOGGER.info("Commissioning of Node ID %s completed.", node_id)
         # return full node object once we're complete
         return self.get_node(node_id)
 
@@ -219,6 +226,9 @@ class MatterDeviceController:
 
         node_id = self._get_next_node_id()
 
+        LOGGER.info(
+            "Starting Matter commissioning on network using Node ID %s.", node_id
+        )
         success = await self._call_sdk(
             self.chip_controller.CommissionOnNetwork,
             nodeId=node_id,
@@ -230,11 +240,13 @@ class MatterDeviceController:
             raise NodeCommissionFailed(
                 f"Commission on network failed for node {node_id}"
             )
+        LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
 
         # full interview of the device
         await self.interview_node(node_id)
         # make sure we start a subscription for this newly added node
         await self._subscribe_node(node_id)
+        LOGGER.info("Commissioning of Node ID %s completed.", node_id)
         # return full node object once we're complete
         return self.get_node(node_id)
 
@@ -312,7 +324,7 @@ class MatterDeviceController:
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
 
-        LOGGER.debug("Interviewing node: %s", node_id)
+        LOGGER.info("Interviewing node: %s", node_id)
         try:
             await self._resolve_node(node_id=node_id)
             async with self._get_node_lock(node_id):
@@ -336,9 +348,7 @@ class MatterDeviceController:
             last_interview=datetime.utcnow(),
             interview_version=SCHEMA_VERSION,
             available=True,
-            attributes=self._parse_attributes_from_read_result(
-                read_response.tlvAttributes
-            ),
+            attributes=parse_attributes_from_read_result(read_response.tlvAttributes),
         )
 
         if existing_info:
@@ -425,9 +435,7 @@ class MatterDeviceController:
                 ],
             ).raise_on_error()
             result: Attribute.AsyncReadTransaction.ReadResponse = await future
-            read_atributes = self._parse_attributes_from_read_result(
-                result.tlvAttributes
-            )
+            read_atributes = parse_attributes_from_read_result(result.tlvAttributes)
             # update cached info in node attributes
             self._nodes[node_id].attributes.update(  # type: ignore[union-attr]
                 read_atributes
@@ -815,7 +823,7 @@ class MatterDeviceController:
         # NOTE: Make public method upstream for retrieving the attributeTLVCache
         # pylint: disable=protected-access
         tlv_attributes = sub._readTransaction._cache.attributeTLVCache
-        node.attributes.update(self._parse_attributes_from_read_result(tlv_attributes))
+        node.attributes.update(parse_attributes_from_read_result(tlv_attributes))
         node_logger.info("Subscription succeeded")
         self.server.signal_event(EventType.NODE_UPDATED, node)
 
@@ -896,26 +904,6 @@ class MatterDeviceController:
             # TODO: fix this once OperationalNodeDiscovery is available:
             # https://github.com/project-chip/connectedhomeip/pull/26718
             reschedule()
-
-    @staticmethod
-    def _parse_attributes_from_read_result(
-        raw_tlv_attributes: dict[int, dict[int, dict[int, Any]]],
-    ) -> dict[str, Any]:
-        """Parse attributes from ReadResult's TLV Attributes."""
-        result = {}
-        # prefer raw tlv attributes as it requires less parsing back and forth
-        for endpoint_id, clusters in raw_tlv_attributes.items():
-            for cluster_id, attribute in clusters.items():
-                for attribute_id, attr_value in attribute.items():
-                    # we are only interested in the raw values and let the client
-                    # match back from the id's to the correct cluster/attribute classes
-                    # attributes are stored in form of AttributePath:
-                    # ENDPOINT/CLUSTER_ID/ATTRIBUTE_ID
-                    attribute_path = create_attribute_path(
-                        endpoint_id, cluster_id, attribute_id
-                    )
-                    result[attribute_path] = attr_value
-        return result
 
     async def _resolve_node(
         self, node_id: int, retries: int = 5, attempt: int = 1
