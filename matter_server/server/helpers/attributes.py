@@ -1,6 +1,4 @@
-"""
-Helpers to manage Cluster attributes
-"""
+"""Helpers to manage Cluster attributes."""
 
 from typing import Any
 
