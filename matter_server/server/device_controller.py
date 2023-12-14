@@ -168,7 +168,6 @@ class MatterDeviceController:
             nodeid=node_id,
         )
         if not success:
-            LOGGER.warning("Commission with code failed for node %s", node_id)
             raise NodeCommissionFailed(
                 f"Commission with code failed for node {node_id}"
             )
@@ -238,7 +237,6 @@ class MatterDeviceController:
             filter=filter,
         )
         if not success:
-            LOGGER.warning("Commission on network failed for node %s", node_id)
             raise NodeCommissionFailed(
                 f"Commission on network failed for node {node_id}"
             )
