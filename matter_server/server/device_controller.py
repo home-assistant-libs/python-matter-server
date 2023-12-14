@@ -350,9 +350,7 @@ class MatterDeviceController:
             last_interview=datetime.utcnow(),
             interview_version=SCHEMA_VERSION,
             available=True,
-            attributes=parse_attributes_from_read_result(
-                read_response.tlvAttributes
-            ),
+            attributes=parse_attributes_from_read_result(read_response.tlvAttributes),
         )
 
         if existing_info:
@@ -439,9 +437,7 @@ class MatterDeviceController:
                 ],
             ).raise_on_error()
             result: Attribute.AsyncReadTransaction.ReadResponse = await future
-            read_atributes = parse_attributes_from_read_result(
-                result.tlvAttributes
-            )
+            read_atributes = parse_attributes_from_read_result(result.tlvAttributes)
             # update cached info in node attributes
             self._nodes[node_id].attributes.update(  # type: ignore[union-attr]
                 read_atributes
