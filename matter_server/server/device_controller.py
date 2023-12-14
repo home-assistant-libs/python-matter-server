@@ -28,7 +28,6 @@ from ..common.errors import (
 )
 from ..common.helpers.api import api_command
 from ..common.helpers.util import (
-    create_attribute_path,
     create_attribute_path_from_attribute,
     dataclass_from_dict,
     parse_attribute_path,
