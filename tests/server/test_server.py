@@ -192,7 +192,7 @@ async def test_server_start(
             {"setup_pin_code": 1234},
             strict=True,
         )
-    ) == {"setup_pin_code": 1234, "filter_type": 0, "filter": None}
+    ) == {"setup_pin_code": 1234, "filter_type": 0, "filter": None, "ip_addr": None}
     assert (
         parse_arguments(
             server.command_handlers[APICommand.COMMISSION_ON_NETWORK].signature,
