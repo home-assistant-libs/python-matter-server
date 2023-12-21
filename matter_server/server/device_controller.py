@@ -347,10 +347,10 @@ class MatterDeviceController:
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
 
-        LOGGER.info("Interviewing node: %s", node_id)
         try:
             await self._resolve_node(node_id=node_id)
             async with self._get_node_lock(node_id):
+                LOGGER.info("Interviewing node: %s", node_id)
                 read_response: Attribute.AsyncReadTransaction.ReadResponse = (
                     await self.chip_controller.Read(
                         nodeid=node_id,
