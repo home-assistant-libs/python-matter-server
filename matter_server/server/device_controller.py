@@ -708,7 +708,7 @@ class MatterDeviceController:
         interval_ceiling: int = 60,
         event_subscriptions: list[Attribute.EventPath] | None = None,
     ) -> Attribute.SubscriptionTransaction:
-        """Setup a single Node AttributePath(s) subscription."""
+        """Handle Setup of a single Node AttributePath(s) subscription."""
         node_id = node.node_id
         node_logger = LOGGER.getChild(f"[node {node_id}]")
         assert self.chip_controller is not None
