@@ -708,31 +708,29 @@ class MatterDeviceController:
         """Setup a single Node AttributePath(s) subscription."""
         node_id = node.node_id
         node_logger = LOGGER.getChild(f"[node {node_id}]")
-        node_lock = self._get_node_lock(node_id)
         assert self.chip_controller is not None
-        async with node_lock:
-            node_logger.debug("Setting up attributes and events subscription.")
-            self.chip_controller.CheckIsActive()
-            assert self.server.loop is not None
-            future = self.server.loop.create_future()
-            device = self.chip_controller.GetConnectedDeviceSync(node_id)
-            Attribute.Read(
-                future=future,
-                eventLoop=self.server.loop,
-                device=device.deviceProxy,
-                devCtrl=self.chip_controller,
-                attributes=attr_subscriptions,
-                events=event_subscriptions,
-                returnClusterObject=False,
-                subscriptionParameters=Attribute.SubscriptionParameters(
-                    interval_floor, interval_ceiling
-                ),
-                # Use fabricfiltered as False to detect changes made by other controllers
-                # and to be able to provide a list of all fabrics attached to the device
-                fabricFiltered=False,
-                autoResubscribe=True,
-            ).raise_on_error()
-            sub: Attribute.SubscriptionTransaction = await future
+        node_logger.debug("Setting up attributes and events subscription.")
+        self.chip_controller.CheckIsActive()
+        assert self.server.loop is not None
+        future = self.server.loop.create_future()
+        device = self.chip_controller.GetConnectedDeviceSync(node_id)
+        Attribute.Read(
+            future=future,
+            eventLoop=self.server.loop,
+            device=device.deviceProxy,
+            devCtrl=self.chip_controller,
+            attributes=attr_subscriptions,
+            events=event_subscriptions,
+            returnClusterObject=False,
+            subscriptionParameters=Attribute.SubscriptionParameters(
+                interval_floor, interval_ceiling
+            ),
+            # Use fabricfiltered as False to detect changes made by other controllers
+            # and to be able to provide a list of all fabrics attached to the device
+            fabricFiltered=False,
+            autoResubscribe=True,
+        ).raise_on_error()
+        sub: Attribute.SubscriptionTransaction = await future
 
         def attribute_updated_callback(
             path: Attribute.TypedAttributePath,
