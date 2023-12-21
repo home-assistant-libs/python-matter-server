@@ -946,14 +946,13 @@ class MatterDeviceController:
             # no need to resolve, the node is already available/connected
             return
 
-        node_lock = self._get_node_lock(node_id)
         log_level = logging.DEBUG if attempt == 1 else logging.INFO
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         try:
             # the sdk crashes when multiple resolves happen at the same time
             # guard simultane resolves with a lock.
-            async with node_lock, self._resolve_lock:
+            async with self._resolve_lock:
                 LOGGER.log(
                     log_level,
                     "Attempting to resolve node %s... (attempt %s of %s)",
