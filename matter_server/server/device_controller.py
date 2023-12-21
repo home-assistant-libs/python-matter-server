@@ -444,7 +444,6 @@ class MatterDeviceController:
         await self._resolve_node(node_id=node_id)
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
         async with node_lock:
-            self.chip_controller.CheckIsActive()
             assert self.server.loop is not None
             future = self.server.loop.create_future()
             device = await self._resolve_node(node_id)
@@ -715,7 +714,6 @@ class MatterDeviceController:
         assert self.chip_controller is not None
         node_logger.debug("Setting up attributes and events subscription.")
         self._last_subscription_attempt[node_id] = 0
-        self.chip_controller.CheckIsActive()
         assert self.server.loop is not None
         future = self.server.loop.create_future()
         device = await self._resolve_node(node_id)
