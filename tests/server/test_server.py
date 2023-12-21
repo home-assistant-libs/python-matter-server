@@ -192,7 +192,20 @@ async def test_server_start(
             {"setup_pin_code": 1234},
             strict=True,
         )
-    ) == {"setup_pin_code": 1234, "filter_type": 0, "filter": None}
+    ) == {"setup_pin_code": 1234, "filter_type": 0, "filter": None, "ip_addr": None}
+    assert (
+        parse_arguments(
+            server.command_handlers[APICommand.COMMISSION_ON_NETWORK].signature,
+            server.command_handlers[APICommand.COMMISSION_ON_NETWORK].type_hints,
+            {"setup_pin_code": 1234, "ip_addr": "fd82:c9e9:5cb7:1:2c5c:ed99:ecf:4460"},
+            strict=True,
+        )
+    ) == {
+        "setup_pin_code": 1234,
+        "filter_type": 0,
+        "filter": None,
+        "ip_addr": "fd82:c9e9:5cb7:1:2c5c:ed99:ecf:4460",
+    }
     assert (
         parse_arguments(
             server.command_handlers[APICommand.SET_WIFI_CREDENTIALS].signature,

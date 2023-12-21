@@ -203,6 +203,7 @@ class MatterDeviceController:
         setup_pin_code: int,
         filter_type: int = 0,
         filter: Any = None,  # pylint: disable=redefined-builtin
+        ip_addr: str | None = None,
     ) -> MatterNodeData:
         """
         Do the routine for OnNetworkCommissioning, with a filter for mDNS discovery.
@@ -226,20 +227,36 @@ class MatterDeviceController:
 
         node_id = self._get_next_node_id()
 
-        LOGGER.info(
-            "Starting Matter commissioning on network using Node ID %s.", node_id
-        )
-        success = await self._call_sdk(
-            self.chip_controller.CommissionOnNetwork,
-            nodeId=node_id,
-            setupPinCode=setup_pin_code,
-            filterType=filter_type,
-            filter=filter,
-        )
-        if not success:
-            raise NodeCommissionFailed(
-                f"Commission on network failed for node {node_id}"
+        if ip_addr is None:
+            LOGGER.info(
+                "Starting Matter commissioning on network using Node ID %s.", node_id
             )
+            success = await self._call_sdk(
+                self.chip_controller.CommissionOnNetwork,
+                nodeId=node_id,
+                setupPinCode=setup_pin_code,
+                filterType=filter_type,
+                filter=filter,
+            )
+            if not success:
+                raise NodeCommissionFailed(
+                    f"Commission on network failed for node {node_id}"
+                )
+        else:
+            LOGGER.info(
+                "Starting Matter commissioning with IP using Node ID %s.", node_id
+            )
+            success = await self._call_sdk(
+                self.chip_controller.CommissionIP,
+                nodeid=node_id,
+                setupPinCode=setup_pin_code,
+                ipaddr=ip_addr,
+            )
+            if not success:
+                raise NodeCommissionFailed(
+                    f"Commission using IP failed for node {node_id}"
+                )
+
         LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
 
         # full interview of the device
