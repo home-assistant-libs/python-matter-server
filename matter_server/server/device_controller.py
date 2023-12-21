@@ -1,4 +1,5 @@
 """Controller that Manages Matter devices."""
+# pylint: disable=C0302
 
 from __future__ import annotations
 
