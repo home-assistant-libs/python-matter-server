@@ -72,6 +72,7 @@ def main() -> None:
     coloredlogs.install(level=args.log_level.upper())
     if not logging.getLogger().isEnabledFor(logging.DEBUG):
         logging.getLogger("chip").setLevel(logging.WARNING)
+        logging.getLogger("PersistentStorage").setLevel(logging.WARNING)
 
     # make sure storage path exists
     if not os.path.isdir(args.storage_path):
