@@ -939,7 +939,7 @@ class MatterDeviceController:
             reschedule()
 
     async def _resolve_node(
-        self, node_id: int, retries: int = 5, attempt: int = 1
+        self, node_id: int, retries: int = 2, attempt: int = 1
     ) -> None:
         """Resolve a Node on the network."""
         if (node := self._nodes.get(node_id)) and node.available:
