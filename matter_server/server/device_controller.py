@@ -10,7 +10,11 @@ import logging
 import random
 from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
 
-from chip.ChipDeviceCtrl import CommissionableNode, CommissioningParameters
+from chip.ChipDeviceCtrl import (
+    CommissionableNode,
+    CommissioningParameters,
+    DeviceProxyWrapper,
+)
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
@@ -443,7 +447,7 @@ class MatterDeviceController:
             self.chip_controller.CheckIsActive()
             assert self.server.loop is not None
             future = self.server.loop.create_future()
-            device = self.chip_controller.GetConnectedDeviceSync(node_id)
+            device = await self._resolve_node(node_id)
             Attribute.Read(
                 future=future,
                 eventLoop=self.server.loop,
@@ -714,7 +718,7 @@ class MatterDeviceController:
         self.chip_controller.CheckIsActive()
         assert self.server.loop is not None
         future = self.server.loop.create_future()
-        device = self.chip_controller.GetConnectedDeviceSync(node_id)
+        device = await self._resolve_node(node_id)
         Attribute.Read(
             future=future,
             eventLoop=self.server.loop,
@@ -944,7 +948,7 @@ class MatterDeviceController:
 
     async def _resolve_node(
         self, node_id: int, retries: int = 2, attempt: int = 1
-    ) -> None:
+    ) -> DeviceProxyWrapper:
         """Resolve a Node on the network."""
         if (node := self._nodes.get(node_id)) and node.available:
             # no need to resolve, the node is already available/connected
@@ -964,7 +968,7 @@ class MatterDeviceController:
                     attempt,
                     retries,
                 )
-                await self._call_sdk(
+                return await self._call_sdk(
                     self.chip_controller.GetConnectedDeviceSync,
                     nodeid=node_id,
                     allowPASE=False,
@@ -978,10 +982,6 @@ class MatterDeviceController:
                 node_id=node_id, retries=retries, attempt=attempt + 1
             )
             await asyncio.sleep(2 + attempt)
-        else:
-            LOGGER.log(
-                log_level, "Resolved node %s after %s attempts", node_id, attempt
-            )
 
     def _handle_endpoints_removed(self, node_id: int, endpoints: Iterable[int]) -> None:
         """Handle callback for when bridge endpoint(s) get deleted."""
