@@ -112,7 +112,7 @@ class MatterClient:
         raise NodeNotExists(f"Node {node_id} does not exist or is not yet interviewed")
 
     async def commission_with_code(
-        self, code: str, network_only: bool
+        self, code: str, network_only: bool = False
     ) -> MatterNodeData:
         """
         Commission a device using QRCode or ManualPairingCode.
