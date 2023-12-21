@@ -115,9 +115,12 @@ class MatterClient:
         self, code: str, network_only: bool = False
     ) -> MatterNodeData:
         """
-        Commission a device using QRCode or ManualPairingCode.
+        Commission a device using a QR Code or Manual Pairing Code.
 
-        Returns basic MatterNodeData once complete.
+        :param code: The QR Code or Manual Pairing Code for device commissioning.
+        :param network_only: If True, restricts device discovery to network only.
+
+        :return: The NodeInfo of the commissioned device.
         """
         data = await self.send_command(
             APICommand.COMMISSION_WITH_CODE, code=code, network_only=network_only
