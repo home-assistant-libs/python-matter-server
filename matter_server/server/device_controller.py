@@ -8,7 +8,6 @@ from datetime import datetime
 from functools import partial
 import logging
 import random
-import time
 from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
 
 from chip.ChipDeviceCtrl import CommissionableNode, CommissioningParameters
@@ -86,6 +85,7 @@ class MatterDeviceController:
         self._resub_debounce_timer: dict[int, asyncio.TimerHandle] = {}
         self._sub_retry_timer: dict[int, asyncio.TimerHandle] = {}
         self._nodes: dict[int, MatterNodeData | None] = {}
+        self._last_subscription_attempt: dict[int, int] = {}
         self.wifi_credentials_set: bool = False
         self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
@@ -641,7 +641,7 @@ class MatterDeviceController:
                 node_logger.debug("Re-using existing subscription.")
                 return
             async with node_lock:
-                node_logger.debug("Unsubscribing from existing subscriptions.")
+                node_logger.debug("Unsubscribing from existing subscription.")
                 for prev_sub in prev_subs:
                     await self._call_sdk(prev_sub.Shutdown)
 
@@ -657,32 +657,32 @@ class MatterDeviceController:
 
         async with node_lock:
             node_logger.debug("Setting up attributes and events subscription.")
+            interval_floor = 0
+            interval_ceiling = (
+                random.randint(60, 300) if battery_powered else random.randint(30, 60)
+            )
             # we set-up 2 subscriptions to the node (we may maximum use 3 subs per node)
-            # the first subscription is a base subscription with a rather short interval
-            # (low ceiling) and can be considered as a lifeline to quickly notice if the
+            # the first subscription is a base subscription with the mandatory clusters/attributes
+            # we need to watch and can be considered as a lifeline to quickly notice if the
             # device is online/offline while the second interval actually subscribes to
-            # the attributes and/or events with a rather high ceiling.
+            # the attributes and/or events.
             base_sub = await self._setup_subscription(
                 node,
                 attr_subscriptions=list(BASE_SUBSCRIBE_ATTRIBUTES),
-                interval_floor=0,
-                interval_ceiling=(
-                    random.randint(60, 300)
-                    if battery_powered
-                    else random.randint(30, 60)
-                ),
-            )
-            attr_sub = await self._setup_subscription(
-                node,
-                attr_subscriptions=attr_subscriptions,
-                interval_floor=0,
-                interval_ceiling=random.randint(3500, 3600),
+                interval_floor=interval_floor,
+                interval_ceiling=interval_ceiling,
                 # subscribe to urgent device events only (e.g. button press etc.) only
                 event_subscriptions=[
                     Attribute.EventPath(
                         EndpointId=None, Cluster=None, Event=None, Urgent=1
                     )
                 ],
+            )
+            attr_sub = await self._setup_subscription(
+                node,
+                attr_subscriptions=attr_subscriptions,
+                interval_floor=interval_floor,
+                interval_ceiling=interval_ceiling,
             )
         # if we reach this point, it means the node could be resolved
         # and the initial subscription succeeded, mark the node available.
@@ -710,6 +710,7 @@ class MatterDeviceController:
         node_logger = LOGGER.getChild(f"[node {node_id}]")
         assert self.chip_controller is not None
         node_logger.debug("Setting up attributes and events subscription.")
+        self._last_subscription_attempt[node_id] = 0
         self.chip_controller.CheckIsActive()
         assert self.server.loop is not None
         future = self.server.loop.create_future()
@@ -834,22 +835,25 @@ class MatterDeviceController:
             nextResubscribeIntervalMsec: int,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
-            node.last_subscription_attempt = time.time()
             node_logger.info(
                 "Previous subscription failed with Error: %s, re-subscribing in %s ms...",
                 terminationError,
                 nextResubscribeIntervalMsec,
             )
             # mark node as unavailable and signal consumers
-            if nextResubscribeIntervalMsec > 10000 and node.available:
+            # we debounce it a bit so we only mark the node unavailable
+            # at the second resubscription attempt
+            if node.available and self._last_subscription_attempt[node_id] >= 1:
                 node.available = False
                 self.server.signal_event(EventType.NODE_UPDATED, node)
+            self._last_subscription_attempt[node_id] += 1
 
         def resubscription_succeeded(
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
             node_logger.info("Re-Subscription succeeded")
+            self._last_subscription_attempt[node_id] = 0
             # mark node as available and signal consumers
             if not node.available:
                 node.available = True
