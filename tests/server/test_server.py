@@ -184,7 +184,7 @@ async def test_server_start(
             {"code": "test_code"},
             strict=True,
         )
-    ) == {"code": "test_code"}
+    ) == {"code": "test_code", "network_only": False}
     assert (
         parse_arguments(
             server.command_handlers[APICommand.COMMISSION_ON_NETWORK].signature,

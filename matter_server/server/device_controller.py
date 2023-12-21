@@ -145,7 +145,9 @@ class MatterDeviceController:
         raise NodeNotExists(f"Node {node_id} does not exist or is not yet interviewed")
 
     @api_command(APICommand.COMMISSION_WITH_CODE)
-    async def commission_with_code(self, code: str) -> MatterNodeData:
+    async def commission_with_code(
+        self, code: str, network_only: bool = False
+    ) -> MatterNodeData:
         """
         Commission a device using QRCode or ManualPairingCode.
 
@@ -166,6 +168,7 @@ class MatterDeviceController:
             self.chip_controller.CommissionWithCode,
             setupPayload=code,
             nodeid=node_id,
+            networkOnly=network_only,
         )
         if not success:
             raise NodeCommissionFailed(
