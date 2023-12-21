@@ -1,4 +1,5 @@
 """Controller that Manages Matter devices."""
+# pylint: disable=too-many-lines
 
 from __future__ import annotations
 
@@ -145,11 +146,16 @@ class MatterDeviceController:
         raise NodeNotExists(f"Node {node_id} does not exist or is not yet interviewed")
 
     @api_command(APICommand.COMMISSION_WITH_CODE)
-    async def commission_with_code(self, code: str) -> MatterNodeData:
+    async def commission_with_code(
+        self, code: str, network_only: bool = False
+    ) -> MatterNodeData:
         """
-        Commission a device using QRCode or ManualPairingCode.
+        Commission a device using a QR Code or Manual Pairing Code.
 
-        Returns full NodeInfo once complete.
+        :param code: The QR Code or Manual Pairing Code for device commissioning.
+        :param network_only: If True, restricts device discovery to network only.
+
+        :return: The NodeInfo of the commissioned device.
         """
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
@@ -166,6 +172,7 @@ class MatterDeviceController:
             self.chip_controller.CommissionWithCode,
             setupPayload=code,
             nodeid=node_id,
+            networkOnly=network_only,
         )
         if not success:
             raise NodeCommissionFailed(
