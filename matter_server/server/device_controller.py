@@ -366,7 +366,8 @@ class MatterDeviceController:
             raise RuntimeError("Device Controller not initialized.")
 
         try:
-            await self._resolve_node(node_id=node_id)
+            if not (node := self._nodes.get(node_id)) or not node.available:
+                await self._resolve_node(node_id=node_id)
             async with self._get_node_lock(node_id):
                 LOGGER.info("Interviewing node: %s", node_id)
                 read_response: Attribute.AsyncReadTransaction.ReadResponse = (
@@ -455,7 +456,6 @@ class MatterDeviceController:
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         node_lock = self._get_node_lock(node_id)
-        await self._resolve_node(node_id=node_id)
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
         async with node_lock:
             assert self.server.loop is not None
@@ -616,7 +616,6 @@ class MatterDeviceController:
         node_logger = LOGGER.getChild(f"[node {node_id}]")
         node_lock = self._get_node_lock(node_id)
         node = cast(MatterNodeData, self._nodes[node_id])
-        await self._resolve_node(node_id=node_id)
 
         # work out all (current) attribute subscriptions
         attr_subscriptions: list[Attribute.AttributePath] = []
@@ -973,10 +972,6 @@ class MatterDeviceController:
         self, node_id: int, retries: int = 2, attempt: int = 1
     ) -> DeviceProxyWrapper:
         """Resolve a Node on the network."""
-        if (node := self._nodes.get(node_id)) and node.available:
-            # no need to resolve, the node is already available/connected
-            return
-
         log_level = logging.DEBUG if attempt == 1 else logging.INFO
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
@@ -1001,10 +996,11 @@ class MatterDeviceController:
             if attempt >= retries:
                 # when we're out of retries, raise NodeNotResolving
                 raise NodeNotResolving(f"Unable to resolve Node {node_id}") from err
-            await self._resolve_node(
+            await asyncio.sleep(2 + attempt)
+            # retry the resolve
+            return await self._resolve_node(
                 node_id=node_id, retries=retries, attempt=attempt + 1
             )
-            await asyncio.sleep(2 + attempt)
 
     def _handle_endpoints_removed(self, node_id: int, endpoints: Iterable[int]) -> None:
         """Handle callback for when bridge endpoint(s) get deleted."""
