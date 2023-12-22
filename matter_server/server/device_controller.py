@@ -714,12 +714,12 @@ class MatterDeviceController:
         assert self.chip_controller is not None
         node_logger.debug("Setting up attributes and events subscription.")
         self._last_subscription_attempt[node_id] = 0
-        assert self.server.loop is not None
-        future = self.server.loop.create_future()
+        loop = cast(asyncio.AbstractEventLoop, self.server.loop)
+        future = loop.create_future()
         device = await self._resolve_node(node_id)
         Attribute.Read(
             future=future,
-            eventLoop=self.server.loop,
+            eventLoop=loop,
             device=device.deviceProxy,
             devCtrl=self.chip_controller,
             attributes=attr_subscriptions,
@@ -739,7 +739,7 @@ class MatterDeviceController:
             path: Attribute.TypedAttributePath,
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
-            assert self.server.loop is not None
+            assert loop is not None
             new_value = transaction.GetAttribute(path)
             # failsafe: ignore ValueDecodeErrors
             # these are set by the SDK if parsing the value failed miserably
@@ -765,11 +765,11 @@ class MatterDeviceController:
                 endpoints_removed = set(old_value or []) - set(new_value)
                 endpoints_added = set(new_value) - set(old_value or [])
                 if endpoints_removed:
-                    self.server.loop.call_soon_threadsafe(
+                    loop.call_soon_threadsafe(
                         self._handle_endpoints_removed, node_id, endpoints_removed
                     )
                 if endpoints_added:
-                    self.server.loop.create_task(
+                    loop.create_task(
                         self._handle_endpoints_added(node_id, endpoints_added)
                     )
                 return
@@ -780,7 +780,7 @@ class MatterDeviceController:
                 and new_value != old_value
             ):
                 # schedule a full interview of the node if the software version changed
-                self.server.loop.create_task(self.interview_node(node_id))
+                loop.create_task(self.interview_node(node_id))
 
             # store updated value in node attributes
             node.attributes[attr_path] = new_value
@@ -793,7 +793,7 @@ class MatterDeviceController:
             )
 
             # This callback is running in the CHIP stack thread
-            self.server.loop.call_soon_threadsafe(
+            loop.call_soon_threadsafe(
                 self.server.signal_event,
                 EventType.ATTRIBUTE_UPDATED,
                 # send data as tuple[node_id, attribute_path, new_value]
@@ -805,7 +805,7 @@ class MatterDeviceController:
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
             # pylint: disable=unused-argument
-            assert self.server.loop is not None
+            assert loop is not None
             node_logger.debug(
                 "Received node event: %s - transaction: %s", data, transaction
             )
@@ -821,7 +821,7 @@ class MatterDeviceController:
                 data=data.Data,
             )
             self.event_history.append(node_event)
-            self.server.loop.call_soon_threadsafe(
+            loop.call_soon_threadsafe(
                 self.server.signal_event, EventType.NODE_EVENT, node_event
             )
 
