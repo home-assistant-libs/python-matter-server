@@ -952,8 +952,9 @@ class MatterDeviceController:
     def _schedule_interview(self, node_id: int, delay: int) -> None:
         """(Re)Schedule interview and/or initial subscription for a node."""
         assert self.server.loop is not None
-        # pop any existing (re)schedule timer
-        self._sub_retry_timer.pop(node_id, None)
+        # cancel any existing (re)schedule timer
+        if existing := self._sub_retry_timer.pop(node_id, None):
+            existing.cancel()
 
         def create_interview_task() -> None:
             asyncio.create_task(
@@ -961,6 +962,8 @@ class MatterDeviceController:
                     node_id,
                 )
             )
+            # the handle to the timer can now be removed
+            self._sub_retry_timer.pop(node_id, None)
 
         self._sub_retry_timer[node_id] = self.server.loop.call_later(
             delay, create_interview_task
