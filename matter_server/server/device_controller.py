@@ -954,12 +954,16 @@ class MatterDeviceController:
         assert self.server.loop is not None
         # pop any existing (re)schedule timer
         self._sub_retry_timer.pop(node_id, None)
+
+        def create_interview_task() -> None:
+            asyncio.create_task(
+                self._check_interview_and_subscription(
+                    node_id,
+                )
+            )
+
         self._sub_retry_timer[node_id] = self.server.loop.call_later(
-            delay,
-            asyncio.create_task,
-            self._check_interview_and_subscription(
-                node_id,
-            ),
+            delay, create_interview_task
         )
 
     async def _resolve_node(
