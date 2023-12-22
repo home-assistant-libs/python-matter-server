@@ -123,7 +123,10 @@ class MatterClient:
         :return: The NodeInfo of the commissioned device.
         """
         data = await self.send_command(
-            APICommand.COMMISSION_WITH_CODE, code=code, network_only=network_only
+            APICommand.COMMISSION_WITH_CODE,
+            require_schema=6 if network_only else None,
+            code=code,
+            network_only=network_only,
         )
         return dataclass_from_dict(MatterNodeData, data)
 
