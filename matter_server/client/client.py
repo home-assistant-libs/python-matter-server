@@ -122,8 +122,16 @@ class MatterClient:
 
         :return: The NodeInfo of the commissioned device.
         """
+        if self.server_info and self.server_info.schema_version < 6 and network_only:
+            self.logger.warning(
+                "Server schema version does not support network_only commisisoning, "
+                "the parameter will be ignored."
+            )
+
         data = await self.send_command(
-            APICommand.COMMISSION_WITH_CODE, code=code, network_only=network_only
+            APICommand.COMMISSION_WITH_CODE,
+            code=code,
+            network_only=network_only,
         )
         return dataclass_from_dict(MatterNodeData, data)
 
