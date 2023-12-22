@@ -131,8 +131,21 @@ class MatterDeviceController:
             self._nodes[node_id] = node
             # setup subscription and (re)interview as task in the background
             # as we do not want it to block our startup
-            asyncio.create_task(self._check_interview_and_subscription(node_id))
-        LOGGER.debug("Loaded %s nodes", len(self._nodes))
+            if not node_dict.get("available"):
+                # if the node was not available last time we will delay
+                # the first attempt to initialize so that we prioritize nodes
+                # that are probably available so they are back online as soon as
+                # possible and we're not stuck trying to initialize nodes that are offline
+                assert self.server.loop
+                self.server.loop.call_later(
+                    5,
+                    asyncio.create_task,
+                    self._check_interview_and_subscription(node_id),
+                )
+
+            else:
+                asyncio.create_task(self._check_interview_and_subscription(node_id))
+        LOGGER.info("Loaded %s nodes from stored configuration", len(self._nodes))
 
     async def stop(self) -> None:
         """Handle logic on server stop."""
@@ -659,7 +672,7 @@ class MatterDeviceController:
         )
 
         async with node_lock:
-            node_logger.debug("Setting up attributes and events subscription.")
+            node_logger.info("Setting up attributes and events subscription.")
             interval_floor = 0
             interval_ceiling = (
                 random.randint(60, 300) if battery_powered else random.randint(30, 60)
