@@ -143,6 +143,7 @@ class MatterClient:
         """
         data = await self.send_command(
             APICommand.COMMISSION_ON_NETWORK,
+            require_schema=6 if ip_addr is not None else None,
             setup_pin_code=setup_pin_code,
             ip_addr=ip_addr,
         )
