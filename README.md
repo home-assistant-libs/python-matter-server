@@ -4,7 +4,7 @@ This project implements a Matter Controller Server over WebSockets using the
 [official Matter (formerly CHIP) SDK](https://github.com/project-chip/connectedhomeip)
 as a base and provides both a server and client implementation.
 
-The goal of this project is primary to have Matter support in Home Assistant
+The goal of this project is primarily to have Matter support in Home Assistant
 but its universal approach makes it suitable to be used in other projects too.
 
 ## Support
@@ -25,11 +25,11 @@ issue is related to the Matter Server component.
 
 ## Installation
 
-We strongly recommend to use Home Assistant OS along with the official Matter
+We strongly recommend using Home Assistant OS along with the official Matter
 Server add-on to use Matter with Home Assistant. The Matter integration
 automatically installs the Python Matter Server add-on. Please refer to the
 [Home Assistant documentation](https://www.home-assistant.io/integrations/matter/).
-Home Assistant OS has been tested and tuned to be used with Matter and Thead,
+Home Assistant OS has been tested and tuned to be used with Matter and Thread,
 which makes this combination the best tested and largely worry free
 environment.
 
@@ -41,7 +41,7 @@ relies on the networking managed by your operating system.
 
 ### Requirements to communicate with Wi-Fi/Ethernet based Thread devices
 
-Make sure your you run the container on the host network. The host network
+Make sure you run the container on the host network. The host network
 interface needs to be in the same network as the Android/iPhone device
 you are using for commissioning. Matter uses link-local multicast protocols
 which do not work across different LANs or VLANs.
@@ -55,7 +55,7 @@ host as the Matter Controller server to work, IPv6 routing needs to be properly
 working. IPv6 routing is largely setup automatically through the IPv6 Neighbor
 Discovery Protocol, specifically the Route Information Options (RIO). However,
 if IPv6 Neighbor Discovery RIO's are processed, and processed correctly depends on the network
-management software your system is using. There may be bugs and cavats in
+management software your system is using. There may be bugs and caveats in
 processing this Route Information Options.
 
 In general, make sure the kernel option `CONFIG_IPV6_ROUTER_PREF` is enabled and
@@ -149,7 +149,7 @@ The server runs a Matter Controller and includes all logic for storing node info
 
 Now that the Matter Specification is officially released in its 1.0 version, devices will be available in stores from 2023 that actually have Matter support or least manufacturers run a beta program which you can join to run Matter firmware on your device. Please refer to the documentation of your device if its already Matter enabled out of the box or you need to enable some special firmware(mode).
 
-Besides that it is possible to run Matter firmware on common microcontrollers such as the ESP32 and there is even a whole device emulator available which runs on a regular desktop OS. To make things easier we've prepared a [special page](https://nabucasa.github.io/matter-example-apps) where you can quickly try out running the Matter example apps on ESP32.
+Besides that, it is possible to run Matter firmware on common microcontrollers such as the ESP32 and there is even a whole device emulator available which runs on a regular desktop OS. To make things easier we've prepared a [special page](https://nabucasa.github.io/matter-example-apps) where you can quickly try out running the Matter example apps on ESP32.
 
 ### Websocket commands
 
@@ -183,8 +183,8 @@ Inform the controller about the Thread credentials it needs to use when commissi
 ```
 
 **Commission with code**
-Commission a new device. For WiFi or Thread based devices, the credentials need to be set upfront, otherwise commissioning will fail. Supports both QR-code syntax (MT:...) and manual pairing code as string.
-The controller will use bluetooth for the commissioning of wireless devices. If the machine running the Python Matter Server controller lacks bluetooth support, commissioning will only work for devices already connected to the network (by cable or another controller).
+Commission a new device. For WiFi or Thread based devices, the credentials need to be set upfront, otherwise, commissioning will fail. Supports both QR-code syntax (MT:...) and manual pairing code as string.
+The controller will use bluetooth for the commissioning of wireless devices. If the machine running the Python Matter Server controller lacks Bluetooth support, commissioning will only work for devices already connected to the network (by cable or another controller).
 
 ```json
 {
@@ -299,11 +299,11 @@ command = clusters.LevelControl.Commands.MoveToLevelWithOnOff(
 
 ## Development
 
-Want to help out with development, testing and/or documentation ? Great! As both this project and Matter keeps evolving and devices will hit the market with actual Matter support, there will be a lot to improve. See our [project board](https://github.com/orgs/home-assistant-libs/projects/1) for status updates and maybe something you'd like to help out with development and/or testing.
+Want to help out with development, testing, and/or documentation? Great! As both this project and Matter keeps evolving and devices will hit the market with actual Matter support, there will be a lot to improve. See our [project board](https://github.com/orgs/home-assistant-libs/projects/1) for status updates and maybe something you'd like to help out with development and/or testing.
 
 ### Setting up your development environment
 
-Please note that development is only possible on Linux and MacOS, no Windows support.
+Please note that development is only possible on Linux and MacOS, with no Windows support.
 
 - Download/clone the repo to your local machine.
 - Create a Python virtual environment.
