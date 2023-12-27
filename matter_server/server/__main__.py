@@ -73,9 +73,9 @@ def main() -> None:
     if not logging.getLogger().isEnabledFor(logging.DEBUG):
         logging.getLogger("chip").setLevel(logging.WARNING)
         logging.getLogger("PersistentStorage").setLevel(logging.WARNING)
-        # temporary disable the logger of chip.clusters.Attribute because it now logs
-        # an error on every custom attribute that couldn't be parsed which confuses people
-        # we can restore the default log level again when we patched the device controller
+        # Temporary disable the logger of chip.clusters.Attribute because it now logs
+        # an error on every custom attribute that couldn't be parsed which confuses people.
+        # We can restore the default log level again when we've patched the device controller
         # to handle the raw attribute data to deal with custom clusters.
         logging.getLogger("chip.clusters.Attribute").setLevel(logging.CRITICAL)
 
