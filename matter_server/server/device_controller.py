@@ -452,7 +452,6 @@ class MatterDeviceController:
             raise RuntimeError("Device Controller not initialized.")
         node_lock = self._get_node_lock(node_id)
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
-        LOGGER.getChild(f"[node {node_id}]")
         async with node_lock:
             assert self.server.loop is not None
             future = self.server.loop.create_future()
