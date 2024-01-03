@@ -91,7 +91,6 @@ class MatterDeviceController:
         self.wifi_credentials_set: bool = False
         self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
-        self._resolve_lock: asyncio.Lock = asyncio.Lock()
         self._node_lock: dict[int, asyncio.Lock] = {}
 
     async def initialize(self) -> None:
@@ -938,22 +937,19 @@ class MatterDeviceController:
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         try:
-            # the sdk crashes when multiple resolves happen at the same time
-            # guard simultane resolves with a lock.
-            async with self._resolve_lock:
-                LOGGER.log(
-                    log_level,
-                    "Attempting to resolve node %s... (attempt %s of %s)",
-                    node_id,
-                    attempt,
-                    retries,
-                )
-                return await self._call_sdk(
-                    self.chip_controller.GetConnectedDeviceSync,
-                    nodeid=node_id,
-                    allowPASE=False,
-                    timeoutMs=None,
-                )
+            LOGGER.log(
+                log_level,
+                "Attempting to resolve node %s... (attempt %s of %s)",
+                node_id,
+                attempt,
+                retries,
+            )
+            return await self._call_sdk(
+                self.chip_controller.GetConnectedDeviceSync,
+                nodeid=node_id,
+                allowPASE=False,
+                timeoutMs=None,
+            )
         except (ChipStackError, TimeoutError) as err:
             if attempt >= retries:
                 # when we're out of retries, raise NodeNotResolving
