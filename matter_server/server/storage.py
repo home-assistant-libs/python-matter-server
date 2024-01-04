@@ -23,6 +23,7 @@ class StorageController:
         self.server = server
         self._data: Dict[str, Any] = {}
         self._timer_handle: asyncio.TimerHandle | None = None
+        self._save_lock: asyncio.Lock = asyncio.Lock()
 
     @property
     def filename(self) -> str:
@@ -156,4 +157,5 @@ class StorageController:
                 _file.write(json_dumps(self._data))
             LOGGER.debug("Saved data to persistent storage")
 
-        await self.server.loop.run_in_executor(None, do_save)
+        async with self._save_lock:
+            await self.server.loop.run_in_executor(None, do_save)
