@@ -66,7 +66,7 @@ BASE_SUBSCRIBE_ATTRIBUTES: tuple[Attribute.AttributePath, Attribute.AttributePat
     ),
 )
 
-# pylint: disable=too-many-lines,too-many-locals,too-many-statements
+# pylint: disable=too-many-lines,too-many-locals,too-many-statements,too-many-branches
 
 
 class MatterDeviceController:
@@ -296,8 +296,23 @@ class MatterDeviceController:
 
         LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
 
-        # full interview of the device
-        await self.interview_node(node_id)
+        # perform full (first) interview of the device
+        # we retry the interview max 3 times as it may fail in noisy
+        # RF environments (in case of thread), mdns trouble or just flaky devices.
+        # retrying both the mdns resolve and (first) interview, increases the chances
+        # of a successful device commission.
+        retries = 3
+        while retries:
+            try:
+                await self.interview_node(node_id)
+            except NodeInterviewFailed as err:
+                if retries <= 0:
+                    raise err
+                retries -= 1
+                LOGGER.warning("Unable to interview Node %s: %s", node_id, err)
+                await asyncio.sleep(5)
+            else:
+                break
         # make sure we start a subscription for this newly added node
         await self._subscribe_node(node_id)
         LOGGER.info("Commissioning of Node ID %s completed.", node_id)
