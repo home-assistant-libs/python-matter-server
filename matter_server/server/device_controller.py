@@ -52,6 +52,7 @@ DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
 MAX_POLL_INTERVAL = 600
+MAX_COMMISSION_RETRIES = 3
 
 BASE_SUBSCRIBE_ATTRIBUTES: tuple[Attribute.AttributePath, Attribute.AttributePath] = (
     # all endpoints, BasicInformation cluster
@@ -183,11 +184,17 @@ class MatterDeviceController:
 
         node_id = self._get_next_node_id()
 
-        LOGGER.info(
-            "Starting Matter commissioning with code using Node ID %s.", node_id
-        )
-        retries = 3
-        while retries:
+        attempts = 0
+        # we retry commissioning a few times as we've seen devices in the wild
+        # that are a bit unstable.
+        # by retrying, we increase the chances of a successful commisssion
+        while attempts <= MAX_COMMISSION_RETRIES:
+            LOGGER.info(
+                "Starting Matter commissioning with code using Node ID %s (attempt %s/%s).",
+                node_id,
+                attempts,
+                MAX_COMMISSION_RETRIES,
+            )
             success = await self._call_sdk(
                 self.chip_controller.CommissionWithCode,
                 setupPayload=code,
@@ -196,12 +203,12 @@ class MatterDeviceController:
             )
             if success:
                 break
-            if not success and not retries:
+            if not success and attempts >= MAX_COMMISSION_RETRIES:
                 raise NodeCommissionFailed(
-                    f"Commission with code failed for node {node_id}"
+                    f"Commission with code failed for node {node_id}."
                 )
             await asyncio.sleep(5)
-            retries -= 1
+            attempts += 1
         LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
 
         # perform full (first) interview of the device
@@ -252,12 +259,19 @@ class MatterDeviceController:
 
         node_id = self._get_next_node_id()
 
-        if ip_addr is None:
-            LOGGER.info(
-                "Starting Matter commissioning on network using Node ID %s.", node_id
-            )
-            retries = 3
-            while retries:
+        attempts = 0
+        # we retry commissioning a few times as we've seen devices in the wild
+        # that are a bit unstable.
+        # by retrying, we increase the chances of a successful commisssion
+        while attempts <= MAX_COMMISSION_RETRIES:
+            if ip_addr is None:
+                # regular CommissionOnNetwork if no IP address provided
+                LOGGER.info(
+                    "Starting Matter commissioning on network using Node ID %s (attempt %s/%s).",
+                    node_id,
+                    attempts,
+                    MAX_COMMISSION_RETRIES,
+                )
                 success = await self._call_sdk(
                     self.chip_controller.CommissionOnNetwork,
                     nodeId=node_id,
@@ -265,34 +279,26 @@ class MatterDeviceController:
                     filterType=filter_type,
                     filter=filter,
                 )
-                if success:
-                    break
-                if not success and not retries:
-                    raise NodeCommissionFailed(
-                        f"Commission on network failed for node {node_id}"
-                    )
-                await asyncio.sleep(5)
-                retries -= 1
-        else:
-            LOGGER.info(
-                "Starting Matter commissioning with IP using Node ID %s.", node_id
-            )
-            retries = 3
-            while retries:
+            else:
+                # Ip-adress provided, use CommissionIP method
+                LOGGER.info(
+                    "Starting Matter commissioning with IP using Node ID %s (attempt %s/%s).",
+                    node_id,
+                    attempts,
+                    MAX_COMMISSION_RETRIES,
+                )
                 success = await self._call_sdk(
                     self.chip_controller.CommissionIP,
                     nodeid=node_id,
                     setupPinCode=setup_pin_code,
                     ipaddr=ip_addr,
                 )
-                if success:
-                    break
-                if not success and not retries:
-                    raise NodeCommissionFailed(
-                        f"Commission using IP failed for node {node_id}"
-                    )
-                await asyncio.sleep(5)
-                retries -= 1
+            if success:
+                break
+            if not success and attempts >= MAX_COMMISSION_RETRIES:
+                raise NodeCommissionFailed(f"Commissioning failed for node {node_id}.")
+            await asyncio.sleep(5)
+            attempts += 1
 
         LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
 
