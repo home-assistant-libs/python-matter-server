@@ -186,16 +186,22 @@ class MatterDeviceController:
         LOGGER.info(
             "Starting Matter commissioning with code using Node ID %s.", node_id
         )
-        success = await self._call_sdk(
-            self.chip_controller.CommissionWithCode,
-            setupPayload=code,
-            nodeid=node_id,
-            networkOnly=network_only,
-        )
-        if not success:
-            raise NodeCommissionFailed(
-                f"Commission with code failed for node {node_id}"
+        retries = 3
+        while retries:
+            success = await self._call_sdk(
+                self.chip_controller.CommissionWithCode,
+                setupPayload=code,
+                nodeid=node_id,
+                networkOnly=network_only,
             )
+            if success:
+                break
+            if not success and not retries:
+                raise NodeCommissionFailed(
+                    f"Commission with code failed for node {node_id}"
+                )
+            await asyncio.sleep(5)
+            retries -= 1
         LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
 
         # perform full (first) interview of the device
