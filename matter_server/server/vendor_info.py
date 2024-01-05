@@ -52,7 +52,7 @@ class VendorInfo:
                 while page_token is not None:
                     async with session.get(
                         f"{PRODUCTION_URL}/dcl/vendorinfo/vendors",
-                        params={"pagination.key": page_token}
+                        params={"pagination.key": page_token},
                     ) as response:
                         data = await response.json()
                         for vendorinfo in data["vendorInfo"]:
@@ -60,8 +60,12 @@ class VendorInfo:
                                 vendor_id=vendorinfo["vendorID"],
                                 vendor_name=vendorinfo["vendorName"],
                                 company_legal_name=vendorinfo["companyLegalName"],
-                                company_preferred_name=vendorinfo["companyPreferredName"],
-                                vendor_landing_page_url=vendorinfo["vendorLandingPageURL"],
+                                company_preferred_name=vendorinfo[
+                                    "companyPreferredName"
+                                ],
+                                vendor_landing_page_url=vendorinfo[
+                                    "vendorLandingPageURL"
+                                ],
                                 creator=vendorinfo["creator"],
                             )
                     page_token = data.get("pagination", {}).get("next_key", None)
