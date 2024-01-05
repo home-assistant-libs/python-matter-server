@@ -19,6 +19,7 @@ from chip.ChipDeviceCtrl import (
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
+from chip.discovery import CommissionableNode as CommissionableNodeData
 from chip.exceptions import ChipStackError
 
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
@@ -383,7 +384,7 @@ class MatterDeviceController:
     @api_command(APICommand.DISCOVER)
     async def discover_commissionable_nodes(
         self,
-    ) -> CommissionableNode | list[CommissionableNode] | None:
+    ) -> CommissionableNodeData | list[CommissionableNodeData] | None:
         """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
@@ -391,7 +392,17 @@ class MatterDeviceController:
         result = await self._call_sdk(
             self.chip_controller.DiscoverCommissionableNodes,
         )
-        return result
+
+        def convert(cn: CommissionableNode) -> CommissionableNodeData:
+            cnd = CommissionableNodeData()
+            # pylint: disable=no-member
+            for field in CommissionableNodeData.__dataclass_fields__:
+                setattr(cnd, field, getattr(cn, field))
+            return cnd
+
+        if isinstance(result, list):
+            return [convert(c) for c in result]
+        return convert(result)
 
     @api_command(APICommand.INTERVIEW_NODE)
     async def interview_node(self, node_id: int) -> None:
