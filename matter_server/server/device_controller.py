@@ -16,10 +16,10 @@ from chip.ChipDeviceCtrl import (
     CommissioningParameters,
     DeviceProxyWrapper,
 )
-from chip.discovery import CommissionableNode as CommissionableNodeData
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
+from chip.discovery import CommissionableNode as CommissionableNodeData
 from chip.exceptions import ChipStackError
 
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
