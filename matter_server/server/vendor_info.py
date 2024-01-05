@@ -48,7 +48,7 @@ class VendorInfo:
         vendors: dict[int, VendorInfoModel] = {}
         try:
             async with ClientSession(raise_for_status=True) as session:
-                page_token = ""
+                page_token: str | None = ""
                 while page_token is not None:
                     async with session.get(
                         f"{PRODUCTION_URL}/dcl/vendorinfo/vendors",
