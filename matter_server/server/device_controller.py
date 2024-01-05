@@ -395,6 +395,7 @@ class MatterDeviceController:
 
         def convert(cn: CommissionableNode) -> CommissionableNodeData:
             cnd = CommissionableNodeData()
+            # pylint: disable=no-member
             for field in CommissionableNodeData.__dataclass_fields__:
                 setattr(cnd, field, getattr(cn, field))
             return cnd
