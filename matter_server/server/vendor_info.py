@@ -48,19 +48,23 @@ class VendorInfo:
         vendors: dict[int, VendorInfoModel] = {}
         try:
             async with ClientSession(raise_for_status=True) as session:
-                async with session.get(
-                    f"{PRODUCTION_URL}/dcl/vendorinfo/vendors"
-                ) as response:
-                    data = await response.json()
-                    for vendorinfo in data["vendorInfo"]:
-                        vendors[vendorinfo["vendorID"]] = VendorInfoModel(
-                            vendor_id=vendorinfo["vendorID"],
-                            vendor_name=vendorinfo["vendorName"],
-                            company_legal_name=vendorinfo["companyLegalName"],
-                            company_preferred_name=vendorinfo["companyPreferredName"],
-                            vendor_landing_page_url=vendorinfo["vendorLandingPageURL"],
-                            creator=vendorinfo["creator"],
-                        )
+                page_token = ""
+                while page_token is not None:
+                    async with session.get(
+                        f"{PRODUCTION_URL}/dcl/vendorinfo/vendors",
+                        params={"pagination.key": page_token}
+                    ) as response:
+                        data = await response.json()
+                        for vendorinfo in data["vendorInfo"]:
+                            vendors[vendorinfo["vendorID"]] = VendorInfoModel(
+                                vendor_id=vendorinfo["vendorID"],
+                                vendor_name=vendorinfo["vendorName"],
+                                company_legal_name=vendorinfo["companyLegalName"],
+                                company_preferred_name=vendorinfo["companyPreferredName"],
+                                vendor_landing_page_url=vendorinfo["vendorLandingPageURL"],
+                                creator=vendorinfo["creator"],
+                            )
+                    page_token = data.get("pagination", {}).get("next_key", None)
         except ClientError as err:
             LOGGER.error("Unable to fetch vendor info from DCL: %s", err)
         else:
