@@ -58,6 +58,12 @@ parser.add_argument(
     default=None,
     help="Log file to write to (optional).",
 )
+parser.add_argument(
+    "--primary-interface",
+    type=str,
+    default=None,
+    help="Primary network interface for link-local addresses (optional).",
+)
 
 args = parser.parse_args()
 
@@ -85,7 +91,8 @@ def main() -> None:
 
     # Init server
     server = MatterServer(
-        args.storage_path, int(args.vendorid), int(args.fabricid), int(args.port)
+        args.storage_path, int(args.vendorid), int(args.fabricid), int(args.port),
+        args.primary_interface
     )
 
     async def handle_stop(loop: asyncio.AbstractEventLoop) -> None:

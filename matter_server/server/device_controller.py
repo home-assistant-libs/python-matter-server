@@ -281,10 +281,11 @@ class MatterDeviceController:
                     filter=filter,
                 )
             else:
-                # Ip-adress provided, use CommissionIP method
+                ip_addr = self.server.scope_ipv6_lla(ip_addr)
                 LOGGER.info(
-                    "Starting Matter commissioning with IP using Node ID %s (attempt %s/%s).",
+                    "Starting Matter commissioning with IP using Node ID %s via IP address %s  (attempt %s/%s).",
                     node_id,
+                    ip_addr,
                     attempts,
                     MAX_COMMISSION_RETRIES,
                 )

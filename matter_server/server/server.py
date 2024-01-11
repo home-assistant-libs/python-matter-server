@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
 from typing import Any, Callable, Set
 import weakref
@@ -61,12 +62,14 @@ class MatterServer:
         vendor_id: int,
         fabric_id: int,
         port: int,
+        primary_interface: str | None,
     ) -> None:
         """Initialize the Matter Server."""
         self.storage_path = storage_path
         self.vendor_id = vendor_id
         self.fabric_id = fabric_id
         self.port = port
+        self.primary_interface = primary_interface
         self.logger = logging.getLogger(__name__)
         self.app = web.Application()
         self.loop: asyncio.AbstractEventLoop | None = None
@@ -165,6 +168,32 @@ class MatterServer:
                 asyncio.create_task(callback(evt, data))
             else:
                 callback(evt, data)
+
+    def scope_ipv6_lla(self, ip_addr: str) -> str:
+        """Scope IPv6 link-local addresses to primary interface.
+
+        IPv6 link-local addresses received through the websocket might have no
+        scope_id or a scope_id which isn't valid on this device. Just assume the
+        device is connected on the primary interface.
+        """
+        ip_addr_parsed = ipaddress.ip_address(ip_addr)
+        if not ip_addr_parsed.is_link_local:
+            return ip_addr
+
+        if ip_addr_parsed.scope_id is not None:
+            # This type of IPv6 manipulation is not supported by the ipaddress lib
+            ip_addr = ip_addr.split("%")[0]
+
+        # Rely on host OS routing table
+        if self.primary_interface is None:
+            return ip_addr
+
+        self.logger.debug(
+            "Setting scope of link-local IP address %s to %s",
+            ip_addr,
+            self.primary_interface,
+        )
+        return ip_addr + "%" + self.primary_interface
 
     def register_api_command(
         self,
