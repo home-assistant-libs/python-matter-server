@@ -91,8 +91,11 @@ def main() -> None:
 
     # Init server
     server = MatterServer(
-        args.storage_path, int(args.vendorid), int(args.fabricid), int(args.port),
-        args.primary_interface
+        args.storage_path,
+        int(args.vendorid),
+        int(args.fabricid),
+        int(args.port),
+        args.primary_interface,
     )
 
     async def handle_stop(loop: asyncio.AbstractEventLoop) -> None:
