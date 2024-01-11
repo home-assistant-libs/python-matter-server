@@ -602,7 +602,7 @@ class MatterDeviceController:
             LOGGER.info("Successfully removed Home Assistant fabric from device.")
         else:
             LOGGER.warning(
-                "Removing Home Assistant fabric from device failed with status code %d.",
+                "Removing current fabric from device failed with status code %d.",
                 result.statusCode,
             )
 
