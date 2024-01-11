@@ -578,6 +578,8 @@ class MatterDeviceController:
         self.server.storage.save(immediate=True)
         LOGGER.info("Node ID %s successfully removed from Matter server.", node_id)
 
+        self.server.signal_event(EventType.NODE_REMOVED, node_id)
+
         assert node is not None
 
         attribute_path = create_attribute_path_from_attribute(
@@ -586,15 +588,25 @@ class MatterDeviceController:
         )
         fabric_index = node.attributes[attribute_path]
 
-        self.server.signal_event(EventType.NODE_REMOVED, node_id)
-
-        await self.chip_controller.SendCommand(
-            nodeid=node_id,
-            endpoint=0,
-            payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
-                fabricIndex=fabric_index,
-            ),
+        result: Clusters.OperationalCredentials.Commands.NOCResponse = (
+            await self.chip_controller.SendCommand(
+                nodeid=node_id,
+                endpoint=0,
+                payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
+                    fabricIndex=fabric_index,
+                ),
+            )
         )
+        if (
+            result.statusCode
+            == Clusters.OperationalCredentials.Enums.NodeOperationalCertStatusEnum.kOk
+        ):
+            LOGGER.info("Successfully removed Home Assistant fabric from device.")
+        else:
+            LOGGER.warning(
+                "Removing current fabric from device failed with status code %d.",
+                result.statusCode,
+            )
 
     @api_command(APICommand.SUBSCRIBE_ATTRIBUTE)
     async def subscribe_attribute(
