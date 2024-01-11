@@ -99,7 +99,7 @@ def fetch_certificates_fixture() -> Generator[MagicMock, None, None]:
 @pytest.fixture(name="server")
 async def server_fixture() -> AsyncGenerator[MatterServer, None]:
     """Yield a server."""
-    server = MatterServer("test_storage_path", 1234, 5678, 5580)
+    server = MatterServer("test_storage_path", 1234, 5678, 5580, None)
     await server.start()
     yield server
     await server.stop()
