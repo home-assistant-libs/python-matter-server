@@ -188,6 +188,7 @@ class WebsocketClientHandler:
                 result = await result
             self._send_message(SuccessResultMessage(msg.message_id, result))
         except ChipStackError as err:
+            self._logger.exception("SDK Error during handling message: %s", msg)
             self._send_message(
                 ErrorResultMessage(msg.message_id, SDKStackError.error_code, str(err))
             )
