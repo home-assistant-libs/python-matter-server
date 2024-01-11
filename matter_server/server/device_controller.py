@@ -508,12 +508,15 @@ class MatterDeviceController:
                 f"Node {node_id} does not exist or has not been interviewed."
             )
 
+        LOGGER.info("Removing Node ID %s.", node_id)
+
+        # Remove and cancel any existing interview/subscription reschedule timer
+        if existing := self._sub_retry_timer.pop(node_id, None):
+            existing.cancel()
+
         # shutdown any existing subscriptions
         if sub := self._subscriptions.pop(node_id, None):
             await self._call_sdk(sub.Shutdown)
-
-        # pop any existing interview/subscription reschedule timer
-        self._sub_retry_timer.pop(node_id, None)
 
         node = self._nodes.pop(node_id)
         self.server.storage.remove(
@@ -521,6 +524,7 @@ class MatterDeviceController:
             subkey=str(node_id),
         )
         self.server.storage.save(immediate=True)
+        LOGGER.info("Node ID %s successfully removed from Matter server.", node_id)
 
         assert node is not None
 
