@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import logging
-from typing import Any, Callable, Set
+from typing import Any, Callable, Set, cast
 import weakref
 
 from aiohttp import web
@@ -177,8 +177,10 @@ class MatterServer:
         device is connected on the primary interface.
         """
         ip_addr_parsed = ipaddress.ip_address(ip_addr)
-        if not ip_addr_parsed.is_link_local:
+        if not ip_addr_parsed.is_link_local or ip_addr_parsed.version != 6:
             return ip_addr
+
+        ip_addr_parsed = cast(ipaddress.IPv6Address, ip_addr_parsed)
 
         if ip_addr_parsed.scope_id is not None:
             # This type of IPv6 manipulation is not supported by the ipaddress lib
