@@ -259,6 +259,8 @@ class MatterDeviceController:
             raise RuntimeError("Device Controller not initialized.")
 
         node_id = self._get_next_node_id()
+        if ip_addr is not None:
+            ip_addr = self.server.scope_ipv6_lla(ip_addr)
 
         attempts = 0
         # we retry commissioning a few times as we've seen devices in the wild
@@ -281,9 +283,8 @@ class MatterDeviceController:
                     filter=filter,
                 )
             else:
-                ip_addr = self.server.scope_ipv6_lla(ip_addr)
                 LOGGER.info(
-                    "Starting Matter commissioning with IP using Node ID %s via IP address %s  (attempt %s/%s).",
+                    "Starting Matter commissioning using Node ID %s and IP %s (attempt %s/%s).",
                     node_id,
                     ip_addr,
                     attempts,
