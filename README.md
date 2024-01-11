@@ -39,7 +39,7 @@ communication issues with Matter devices, especially Thread based devices.
 This is mostly because the container installation uses host networking, and
 relies on the networking managed by your operating system.
 
-### Requirements to communicate with Wi-Fi/Ethernet based Thread devices
+### Requirements to communicate with Wi-Fi/Ethernet based matter devices
 
 Make sure you run the container on the host network. The host network
 interface needs to be in the same network as the Android/iPhone device
