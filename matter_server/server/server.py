@@ -195,7 +195,7 @@ class MatterServer:
             ip_addr,
             self.primary_interface,
         )
-        return ip_addr + "%" + self.primary_interface
+        return f"{ip_addr}%{self.primary_interface}"
 
     def register_api_command(
         self,
