@@ -587,8 +587,7 @@ class MatterDeviceController:
             Clusters.OperationalCredentials.Attributes.CurrentFabricIndex,
         )
         fabric_index = node.attributes[attribute_path]
-
-        result: Clusters.OperationalCredentials.Commands.NOCResponse = (
+        try:
             await self.chip_controller.SendCommand(
                 nodeid=node_id,
                 endpoint=0,
@@ -596,17 +595,10 @@ class MatterDeviceController:
                     fabricIndex=fabric_index,
                 ),
             )
-        )
-        if (
-            result.statusCode
-            == Clusters.OperationalCredentials.Enums.NodeOperationalCertStatusEnum.kOk
-        ):
-            LOGGER.info("Successfully removed Home Assistant fabric from device.")
+        except ChipStackError as err:
+            LOGGER.warning("Removing current fabric from device failed.", exc_info=err)
         else:
-            LOGGER.warning(
-                "Removing current fabric from device failed with status code %d.",
-                result.statusCode,
-            )
+            LOGGER.info("Successfully removed Home Assistant fabric from device.")
 
     @api_command(APICommand.SUBSCRIBE_ATTRIBUTE)
     async def subscribe_attribute(
