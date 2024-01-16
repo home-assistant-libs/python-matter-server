@@ -601,7 +601,7 @@ class MatterDeviceController:
             return
         if (
             result is None
-            or result
+            or result.statusCode
             == Clusters.OperationalCredentials.Enums.NodeOperationalCertStatusEnum.kOk
         ):
             LOGGER.info("Successfully removed Home Assistant fabric from device.")
