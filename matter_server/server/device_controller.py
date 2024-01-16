@@ -598,6 +598,7 @@ class MatterDeviceController:
             )
         except ChipStackError as err:
             LOGGER.warning("Removing current fabric from device failed.", exc_info=err)
+            return
         if (
             result is None
             or result
