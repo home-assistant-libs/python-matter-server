@@ -746,7 +746,7 @@ class MatterDeviceController:
         attribute = Clusters.OperationalCredentials.Attributes.Fabrics
         attr_path = f"0/{attribute.cluster_id}/{attribute.attribute_id}"
         if node.available:
-            # try to refresh the GOperationalCredentials.Fabric attribute
+            # try to refresh the OperationalCredentials.Fabric attribute
             # so we have the most accurate information
             try:
                 await self.read_attribute(node_id, attr_path)
