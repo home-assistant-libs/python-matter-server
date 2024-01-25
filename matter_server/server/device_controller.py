@@ -697,9 +697,15 @@ class MatterDeviceController:
             except (NodeNotResolving, ChipStackError) as err:
                 LOGGER.exception(err)
 
+        battery_powered = (
+            node.attributes.get("0/53/1", 0)
+            == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kSleepyEndDevice
+        )
+
         async def _do_ping(ip_address: str) -> None:
             """Ping IP and add to result."""
-            result[ip_address] = await ping_ip(ip_address)
+            timeout = 10 if battery_powered else 2
+            result[ip_address] = await ping_ip(ip_address, timeout)
 
         # The network interfaces attribute contains a list of network interfaces.
         # For regular nodes this is just a single interface but we iterate them all anyway.
@@ -723,6 +729,7 @@ class MatterDeviceController:
                 Clusters.GeneralDiagnostics.Enums.InterfaceTypeEnum.kUnknownEnumValue,
             ):
                 continue
+
             # enumerate ipv4 and ipv6 addresses
             for ipv4_address_hex in network_interface.IPv4Addresses:
                 ipv4_address = convert_ip_address(ipv4_address_hex)
@@ -781,8 +788,7 @@ class MatterDeviceController:
         # grab some details from the first (operational) network interface
         attribute = Clusters.GeneralDiagnostics.Attributes.NetworkInterfaces
         attr_path = f"0/{attribute.cluster_id}/{attribute.attribute_id}"
-        attr_data = node.attributes.get(attr_path)
-        attr_data = cast(list[dict[str, Any]], node.attributes.get(attr_path))
+        attr_data = cast(list[dict[str, Any]], node.attributes[attr_path])
         for network_interface_data in attr_data:
             network_interface: Clusters.GeneralDiagnostics.Structs.NetworkInterface = (
                 parse_value(
