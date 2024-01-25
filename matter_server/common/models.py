@@ -140,7 +140,7 @@ class NetworkType(Enum):
 
     @classmethod
     def from_matter_interface_type(cls: Type, interface: int) -> NetworkType:
-        """Parse NetworkType  from Matter InterfaceType integer."""
+        """Parse NetworkType from Matter InterfaceType integer."""
         if interface == 1:
             return NetworkType.WIFI
         if interface == 2:
