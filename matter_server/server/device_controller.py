@@ -701,15 +701,15 @@ class MatterDeviceController:
             """Ping IP and add to result."""
             result[ip_address] = await ping_ip(ip_address)
 
-        # the network interfaces attribute contains a list of network interfaces
-        # for regular nodes this is just a single interface but we iterate them all anyway
-        # create a list of tasks so we can do multiple pings simultanuous
-        # NOTE: upgrade this to TaskGroup once we bump to our minimal python version
+        # The network interfaces attribute contains a list of network interfaces.
+        # For regular nodes this is just a single interface but we iterate them all anyway.
+        # Create a list of tasks so we can do multiple pings simultanuous.
+        # NOTE: Upgrade this to a TaskGroup once we bump our minimal python version.
         attr_data = cast(list[dict[str, Any]], node.attributes.get(attr_path))
         tasks: list[Awaitable] = []
         for network_interface_data in attr_data:
             network_interface: Clusters.GeneralDiagnostics.Structs.NetworkInterface = (
-                parse_value(  # noqa: E501 # pylint: disable=line-too-long
+                parse_value(
                     "network_interface",
                     network_interface_data,
                     Clusters.GeneralDiagnostics.Structs.NetworkInterface,
