@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Type
+from typing import Any, Callable
 
 # Enums and constants
 
@@ -44,8 +44,6 @@ class APICommand(str, Enum):
     READ_ATTRIBUTE = "read_attribute"
     WRITE_ATTRIBUTE = "write_attribute"
     PING_NODE = "ping_node"
-    NODE_FABRICS = "node_fabrics"
-    NODE_DIAGNOSTICS = "node_diagnostics"
 
 
 EventCallBackType = Callable[[EventType, Any], None]
@@ -109,72 +107,7 @@ class ServerDiagnostics:
     events: list[dict]
 
 
-class NodeType(Enum):
-    """Enum with Matter node types."""
-
-    END_DEVICE = "end_device"
-    SLEEPY_END_DEVICE = "sleepy_end_device"
-    ROUTING_END_DEVICE = "routing_end_device"
-    BRIDGE = "bridge"
-    UNKNOWN = "unknown"
-
-    @classmethod
-    def from_matter_routing_role(cls: Type, role: int) -> NodeType:
-        """Parse NetworkType from Matter RoutingRole integer."""
-        if role in (5, 6):
-            return NodeType.ROUTING_END_DEVICE
-        if role == 2:
-            return NodeType.SLEEPY_END_DEVICE
-        if role == 3:
-            return NodeType.END_DEVICE
-        return NodeType.UNKNOWN
-
-
-class NetworkType(Enum):
-    """Enum with Matter network types."""
-
-    THREAD = "thread"
-    WIFI = "wifi"
-    ETHERNET = "ethernet"
-    UNKNOWN = "unknown"
-
-    @classmethod
-    def from_matter_interface_type(cls: Type, interface: int) -> NetworkType:
-        """Parse NetworkType from Matter InterfaceType integer."""
-        if interface == 1:
-            return NetworkType.WIFI
-        if interface == 2:
-            return NetworkType.ETHERNET
-        if interface == 4:
-            return NetworkType.THREAD
-        return NetworkType.UNKNOWN
-
-
 NodePingResult = dict[str, bool]
-
-
-@dataclass
-class ActiveFabric:
-    """Representation of a ActiveFabric message."""
-
-    fabric_index: int
-    vendor_id: int
-    fabric_id: int
-    name: str
-
-
-@dataclass
-class NodeDiagnostics:
-    """Representation of a Node diagnostics message."""
-
-    node_id: int
-    network_type: NetworkType
-    node_type: NodeType
-    network_name: str | None  # WiFi SSID or Thread network name
-    ip_adresses: list[str]
-    mac_address: str | None
-    reachable: bool
-    active_fabrics: list[ActiveFabric]
 
 
 # API message models

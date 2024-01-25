@@ -1,31 +1,9 @@
 """Utils for Matter server."""
 
 import asyncio
-import base64
 import platform
-import socket
 
 PLATFORM_MAC = platform.system() == "Darwin"
-
-
-def convert_mac_address(hex_mac: str | bytes) -> str:
-    """Convert hexadecimal MAC received from the sdk to a regular mac-address string."""
-    if isinstance(hex_mac, str):
-        # note that the bytes string can be optionally base64 encoded
-        hex_mac = base64.b64decode(hex_mac)
-
-    return ":".join("{:02x}".format(byte) for byte in hex_mac)  # pylint: disable=C0209
-
-
-def convert_ip_address(hex_ip: str | bytes, ipv6: bool = False) -> str:
-    """Convert hexadecimal IP received from the sdk to a regular IP string."""
-    if isinstance(hex_ip, str):
-        # note that the bytes string can be optionally base64 encoded
-        hex_ip = base64.b64decode(hex_ip)
-    if ipv6:
-        hex_str = "".join(f"{byte:02x}" for byte in hex_ip)
-        return ":".join(hex_str[i : i + 4] for i in range(0, len(hex_str), 4))
-    return socket.inet_ntoa(hex_ip)
 
 
 async def ping_ip(ip_address: str, timeout: int = 2) -> bool:

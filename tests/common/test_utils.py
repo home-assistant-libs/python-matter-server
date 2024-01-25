@@ -1,10 +1,6 @@
 """Test the util functions."""
 
-from matter_server.server.helpers.utils import (
-    convert_ip_address,
-    convert_mac_address,
-    ping_ip,
-)
+from matter_server.common.helpers.util import convert_ip_address, convert_mac_address
 
 
 def test_convert_functions() -> None:
@@ -17,15 +13,3 @@ def test_convert_functions() -> None:
     assert convert_mac_address("ji4yiD/r91c=") == "8e:2e:32:88:3f:eb:f7:57"
 
     b"\xfe\x80\x00\x00\x00\x00\x00\x00\x04P\x1dB]@\x8eE"
-
-
-async def test_ping() -> None:
-    """Test ping ip util."""
-    # test valid ipv4
-    assert await ping_ip("127.0.0.1") is True
-    # test invalid ipv4
-    assert await ping_ip("192.5.2.7") is False
-    # test valid ipv6
-    assert await ping_ip("::1") is True
-    # test invalid ipv6
-    assert await ping_ip("232::344::33") is False

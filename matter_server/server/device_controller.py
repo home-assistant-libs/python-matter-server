@@ -22,12 +22,9 @@ from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.discovery import CommissionableNode as CommissionableNodeData
 from chip.exceptions import ChipStackError
 
+from matter_server.common.helpers.util import convert_ip_address
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
-from matter_server.server.helpers.utils import (
-    convert_ip_address,
-    convert_mac_address,
-    ping_ip,
-)
+from matter_server.server.helpers.utils import ping_ip
 
 from ..common.const import SCHEMA_VERSION
 from ..common.errors import (
@@ -44,15 +41,11 @@ from ..common.helpers.util import (
     parse_value,
 )
 from ..common.models import (
-    ActiveFabric,
     APICommand,
     EventType,
     MatterNodeData,
     MatterNodeEvent,
-    NetworkType,
-    NodeDiagnostics,
     NodePingResult,
-    NodeType,
 )
 from .const import PAA_ROOT_CERTS_DIR
 from .helpers.paa_certificates import fetch_certificates
@@ -739,114 +732,6 @@ class MatterDeviceController:
                 tasks.append(_do_ping(ipv6_address))
         await asyncio.gather(*tasks)
         return result
-
-    @api_command(APICommand.NODE_FABRICS)
-    async def node_fabrics(self, node_id: int) -> list[ActiveFabric]:
-        """Return list of fabrics currentkly active on a node."""
-        node = self._nodes.get(node_id)
-        if node is None:
-            raise NodeNotExists(
-                f"Node {node_id} does not exist or is not yet interviewed"
-            )
-        active_fabrics = []
-        vendor_names = await self.server.vendor_info.get_vendor_names()
-        attribute = Clusters.OperationalCredentials.Attributes.Fabrics
-        attr_path = f"0/{attribute.cluster_id}/{attribute.attribute_id}"
-        if node.available:
-            # try to refresh the OperationalCredentials.Fabric attribute
-            # so we have the most accurate information
-            try:
-                await self.read_attribute(node_id, attr_path)
-            except (NodeNotResolving, ChipStackError) as err:
-                LOGGER.exception(err)
-        if fabrics_data := node.attributes.get(attr_path):
-            for fabric_data in fabrics_data:
-                fabric: Clusters.OperationalCredentials.Structs.FabricDescriptorStruct = parse_value(  # noqa: E501 # pylint: disable=line-too-long
-                    "fabric",
-                    fabric_data,
-                    Clusters.OperationalCredentials.Structs.FabricDescriptorStruct,
-                )
-                fabric_name = vendor_names.get(fabric.vendorID, str(fabric.vendorID))
-                if fabric.label:
-                    fabric_name += f" ({fabric.label})"
-                active_fabrics.append(
-                    ActiveFabric(
-                        fabric_index=fabric.fabricIndex,
-                        vendor_id=fabric.vendorID,
-                        fabric_id=fabric.fabricID,
-                        name=fabric_name,
-                    )
-                )
-        return active_fabrics
-
-    @api_command(APICommand.NODE_DIAGNOSTICS)
-    async def node_diagnostics(self, node_id: int) -> NodeDiagnostics:
-        """Return diagnostics for the given node."""
-        node = self.get_node(node_id)
-        # ping all interfaces (will also refresh data)
-        ping_result = await self.ping_node(node_id)
-        # grab some details from the first (operational) network interface
-        attribute = Clusters.GeneralDiagnostics.Attributes.NetworkInterfaces
-        attr_path = f"0/{attribute.cluster_id}/{attribute.attribute_id}"
-        attr_data = cast(list[dict[str, Any]], node.attributes[attr_path])
-        for network_interface_data in attr_data:
-            network_interface: Clusters.GeneralDiagnostics.Structs.NetworkInterface = (
-                parse_value(
-                    "network_interface",
-                    network_interface_data,
-                    Clusters.GeneralDiagnostics.Structs.NetworkInterface,
-                )
-            )
-            # ignore invalid/non-operational interfaces
-            if not network_interface.isOperational:
-                continue
-            if network_interface.type in (
-                Clusters.GeneralDiagnostics.Enums.InterfaceTypeEnum.kUnspecified,
-                Clusters.GeneralDiagnostics.Enums.InterfaceTypeEnum.kUnknownEnumValue,
-            ):
-                continue
-            network_type = NetworkType.from_matter_interface_type(
-                network_interface.type
-            )
-            mac_address = convert_mac_address(network_interface.hardwareAddress)
-            break
-        else:
-            # should not happen, but just in case
-            network_type = NetworkType.UNKNOWN
-            mac_address = None
-
-        # get thread/wifi specific info
-        node_type = NodeType.UNKNOWN
-        if network_type == NetworkType.THREAD:
-            attribute = Clusters.ThreadNetworkDiagnostics.Attributes.NetworkName
-            attr_path = f"0/{attribute.cluster_id}/{attribute.attribute_id}"
-            network_name = node.attributes.get(attr_path)
-            attribute = Clusters.ThreadNetworkDiagnostics.Attributes.RoutingRole
-            attr_path = f"0/{attribute.cluster_id}/{attribute.attribute_id}"
-            node_type = NodeType.from_matter_routing_role(
-                cast(int, node.attributes.get(attr_path, 0))
-            )
-        elif network_type == NetworkType.WIFI:
-            attribute = Clusters.WiFiNetworkDiagnostics.Attributes.Bssid
-            attr_path = f"0/{attribute.cluster_id}/{attribute.attribute_id}"
-            network_name = node.attributes.get(attr_path)
-        else:
-            network_name = None
-        # determine node type
-        if node.is_bridge:
-            node_type = NodeType.BRIDGE
-        # get active fabrics for this node
-        active_fabrics = await self.node_fabrics(node_id)
-        return NodeDiagnostics(
-            node_id=node_id,
-            network_type=network_type,
-            node_type=node_type,
-            network_name=network_name,
-            ip_adresses=list(ping_result),
-            mac_address=mac_address,
-            reachable=any(ping_result.values()),
-            active_fabrics=active_fabrics,
-        )
 
     async def _subscribe_node(self, node_id: int) -> None:
         """
