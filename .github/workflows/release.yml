@@ -71,7 +71,7 @@ jobs:
         uses: docker/build-push-action@v5.1.0
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64, linux/arm/v7, linux/arm/v6, linux/386
           file: Dockerfile
           tags: |-
             ghcr.io/${{ github.repository_owner }}/python-matter-server:${{ steps.tags.outputs.patch }},
