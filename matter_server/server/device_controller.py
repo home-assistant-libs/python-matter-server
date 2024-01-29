@@ -452,7 +452,7 @@ class MatterDeviceController:
             DATA_KEY_NODES,
             subkey=str(node_id),
             value=node,
-            force=not existing_info,
+            force=True,
         )
         if is_new_node:
             # new node - first interview
