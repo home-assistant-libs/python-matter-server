@@ -497,7 +497,8 @@ class MatterDeviceController:
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
         command_cls = getattr(cluster_cls.Commands, command_name)
         command = dataclass_from_dict(command_cls, payload)
-        async with self._get_node_lock(node_id):
+        node_lock = self._get_node_lock(node_id)
+        async with node_lock:
             return await self.chip_controller.SendCommand(
                 nodeid=node_id,
                 endpoint=endpoint_id,
@@ -514,12 +515,12 @@ class MatterDeviceController:
         """Read a single attribute (or Cluster) on a node."""
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
-        node_lock = self._get_node_lock(node_id)
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
+        assert self.server.loop is not None
+        future = self.server.loop.create_future()
+        device = await self._resolve_node(node_id)
+        node_lock = self._get_node_lock(node_id)
         async with node_lock:
-            assert self.server.loop is not None
-            future = self.server.loop.create_future()
-            device = await self._resolve_node(node_id)
             Attribute.Read(
                 future=future,
                 eventLoop=self.server.loop,
@@ -938,15 +939,15 @@ class MatterDeviceController:
                 node.available = True
                 self.server.signal_event(EventType.NODE_UPDATED, node)
 
+        node_logger.info("Setting up attributes and events subscription.")
+        interval_floor = 0
+        interval_ceiling = (
+            random.randint(60, 300) if battery_powered else random.randint(30, 120)
+        )
+        self._last_subscription_attempt[node_id] = 0
+        future = loop.create_future()
+        device = await self._resolve_node(node_id)
         async with node_lock:
-            node_logger.info("Setting up attributes and events subscription.")
-            interval_floor = 0
-            interval_ceiling = (
-                random.randint(60, 300) if battery_powered else random.randint(30, 120)
-            )
-            self._last_subscription_attempt[node_id] = 0
-            future = loop.create_future()
-            device = await self._resolve_node(node_id)
             Attribute.Read(
                 future=future,
                 eventLoop=loop,
@@ -967,13 +968,13 @@ class MatterDeviceController:
                 fabricFiltered=False,
                 autoResubscribe=True,
             ).raise_on_error()
-            sub: Attribute.SubscriptionTransaction = await future
+        sub: Attribute.SubscriptionTransaction = await future
 
-            sub.SetAttributeUpdateCallback(attribute_updated_callback)
-            sub.SetEventUpdateCallback(event_callback)
-            sub.SetErrorCallback(error_callback)
-            sub.SetResubscriptionAttemptedCallback(resubscription_attempted)
-            sub.SetResubscriptionSucceededCallback(resubscription_succeeded)
+        sub.SetAttributeUpdateCallback(attribute_updated_callback)
+        sub.SetEventUpdateCallback(event_callback)
+        sub.SetErrorCallback(error_callback)
+        sub.SetResubscriptionAttemptedCallback(resubscription_attempted)
+        sub.SetResubscriptionSucceededCallback(resubscription_succeeded)
 
         # if we reach this point, it means the node could be resolved
         # and the initial subscription succeeded, mark the node available.
