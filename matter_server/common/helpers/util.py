@@ -1,6 +1,7 @@
 """Utils for Matter server (and client)."""
 from __future__ import annotations
 
+import base64
 from base64 import b64decode
 import binascii
 from dataclasses import MISSING, asdict, fields, is_dataclass
@@ -10,6 +11,7 @@ from functools import cache
 from importlib.metadata import PackageNotFoundError, version as pkg_version
 import logging
 import platform
+import socket
 from types import NoneType, UnionType
 from typing import (
     TYPE_CHECKING,
@@ -219,8 +221,7 @@ def parse_value(
     ):
         return uint(value)
     if value_type is float32 and (
-        isinstance(value, float)
-        or isinstance(value, int)
+        isinstance(value, (float, int))
         or (isinstance(value, str) and value.isnumeric())
     ):
         return float32(value)
@@ -291,3 +292,30 @@ def chip_core_version() -> str:
         # TODO: Fix this once we can install our own wheels on macos.
         return chip_clusters_version()
     return package_version(CHIP_CORE_PKG_NAME)
+
+
+def convert_hex_string(hex_str: str | bytes) -> str:
+    """Convert (Base64 encoded) byte array received from the sdk to a regular (unicode) string."""
+    if isinstance(hex_str, str):
+        # note that the bytes string can be optionally base64 encoded
+        # when we send it back and forth over our api
+        hex_str = base64.b64decode(hex_str)
+
+    return "".join(f"{byte:02x}" for byte in hex_str)
+
+
+def convert_mac_address(hex_mac: str | bytes) -> str:
+    """Convert (Base64 encoded) byte array MAC received from the sdk to a regular mac-address."""
+    if isinstance(hex_mac, str):
+        # note that the bytes string can be optionally base64 encoded
+        hex_mac = base64.b64decode(hex_mac)
+
+    return ":".join("{:02x}".format(byte) for byte in hex_mac)  # pylint: disable=C0209
+
+
+def convert_ip_address(hex_ip: str | bytes, ipv6: bool = False) -> str:
+    """Convert (Base64 encoded) byte array IP received from the Matter SDK to a regular IP."""
+    if isinstance(hex_ip, str):
+        # note that the bytes string can be optionally base64 encoded
+        hex_ip = base64.b64decode(hex_ip)
+    return socket.inet_ntop(socket.AF_INET6 if ipv6 else socket.AF_INET, hex_ip)

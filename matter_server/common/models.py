@@ -43,6 +43,7 @@ class APICommand(str, Enum):
     SUBSCRIBE_ATTRIBUTE = "subscribe_attribute"
     READ_ATTRIBUTE = "read_attribute"
     WRITE_ATTRIBUTE = "write_attribute"
+    PING_NODE = "ping_node"
 
 
 EventCallBackType = Callable[[EventType, Any], None]
@@ -104,6 +105,9 @@ class ServerDiagnostics:
     info: ServerInfoMessage
     nodes: list[MatterNodeData]
     events: list[dict]
+
+
+NodePingResult = dict[str, bool]
 
 
 # API message models

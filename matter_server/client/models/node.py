@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 import logging
 from typing import Any, TypeVar, cast
 
@@ -363,3 +364,41 @@ class MatterNode:
     def __repr__(self) -> str:
         """Return the representation."""
         return f"<MatterNode {self.node_id}>"
+
+
+class NodeType(Enum):
+    """Custom Enum with Matter node types, used for diagnostics."""
+
+    END_DEVICE = "end_device"
+    SLEEPY_END_DEVICE = "sleepy_end_device"
+    ROUTING_END_DEVICE = "routing_end_device"
+    BRIDGE = "bridge"
+    UNKNOWN = "unknown"
+
+
+class NetworkType(Enum):
+    """Custom Enum with Matter network types used for diagnostics.."""
+
+    THREAD = "thread"
+    WIFI = "wifi"
+    ETHERNET = "ethernet"
+    UNKNOWN = "unknown"
+
+
+@dataclass
+class NodeDiagnostics:
+    """
+    Representation of a Node diagnostics message.
+
+    This a custom model intended to be (easily) consumed by Home Assistant
+    and constructed from various cluster attribute values.
+    """
+
+    node_id: int
+    network_type: NetworkType
+    node_type: NodeType
+    network_name: str | None  # WiFi SSID or Thread network name
+    ip_adresses: list[str]
+    mac_address: str | None
+    reachable: bool
+    active_fabrics: list[MatterFabricData]
