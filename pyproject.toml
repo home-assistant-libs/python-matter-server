@@ -34,7 +34,7 @@ dependencies = [
 [project.optional-dependencies]
 server = [
   "home-assistant-chip-core==2024.1.0",
-  "cryptography==41.0.7"
+  "cryptography==42.0.1"
 ]
 test = [
   "black==23.12.1",
