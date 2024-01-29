@@ -107,7 +107,7 @@ class MatterDeviceController:
         self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
         self._node_lock: dict[int, asyncio.Lock] = {}
-        self._resolve_lock: asyncio.Lock = asyncio.Lock()
+        self._resolve_lock = asyncio.Lock()
 
     async def initialize(self) -> None:
         """Async initialize of controller."""
