@@ -318,7 +318,4 @@ def convert_ip_address(hex_ip: str | bytes, ipv6: bool = False) -> str:
     if isinstance(hex_ip, str):
         # note that the bytes string can be optionally base64 encoded
         hex_ip = base64.b64decode(hex_ip)
-    if ipv6:
-        hex_str = "".join(f"{byte:02x}" for byte in hex_ip)
-        return ":".join(hex_str[i : i + 4] for i in range(0, len(hex_str), 4))
-    return socket.inet_ntoa(hex_ip)
+    return socket.inet_ntop(socket.AF_INET6 if ipv6 else socket.AF_INET, hex_ip)
