@@ -35,6 +35,7 @@ from ..common.helpers.api import api_command
 from ..common.helpers.util import (
     create_attribute_path_from_attribute,
     dataclass_from_dict,
+    dataclass_to_dict,
     parse_attribute_path,
 )
 from ..common.models import APICommand, EventType, MatterNodeData, MatterNodeEvent
@@ -88,7 +89,7 @@ class MatterDeviceController:
         self._attr_subscriptions: dict[int, list[Attribute.AttributePath]] = {}
         self._resub_debounce_timer: dict[int, asyncio.TimerHandle] = {}
         self._sub_retry_timer: dict[int, asyncio.TimerHandle] = {}
-        self._nodes: dict[int, MatterNodeData | None] = {}
+        self._nodes: dict[int, MatterNodeData] = {}
         self._last_subscription_attempt: dict[int, int] = {}
         self.wifi_credentials_set: bool = False
         self.thread_credentials_set: bool = False
@@ -120,13 +121,12 @@ class MatterDeviceController:
                 # from failed commissioning attempts
                 continue
             if node_dict.get("interview_version") != SCHEMA_VERSION:
-                # invalidate node data if schema mismatch,
+                # invalidate node attributes data if schema mismatch,
                 # the node will automatically be scheduled for re-interview
-                node = None
-            else:
-                node = dataclass_from_dict(MatterNodeData, node_dict)
-                # always mark node as unavailable at startup until subscriptions are ready
-                node.available = False
+                node_dict["attributes"] = {}
+            node = dataclass_from_dict(MatterNodeData, node_dict)
+            # always mark node as unavailable at startup until subscriptions are ready
+            node.available = False
             self._nodes[node_id] = node
             # setup subscription and (re)interview as task in the background
             # as we do not want it to block our startup
@@ -448,12 +448,7 @@ class MatterDeviceController:
 
         # save updated node data
         self._nodes[node_id] = node
-        self.server.storage.set(
-            DATA_KEY_NODES,
-            subkey=str(node_id),
-            value=node,
-            force=True,
-        )
+        self._write_node_state(node_id, True)
         if is_new_node:
             # new node - first interview
             self.server.signal_event(EventType.NODE_ADDED, node)
@@ -524,9 +519,8 @@ class MatterDeviceController:
             result: Attribute.AsyncReadTransaction.ReadResponse = await future
             read_atributes = parse_attributes_from_read_result(result.tlvAttributes)
             # update cached info in node attributes
-            self._nodes[node_id].attributes.update(  # type: ignore[union-attr]
-                read_atributes
-            )
+            self._nodes[node_id].attributes.update(read_atributes)
+            self._write_node_state(node_id)
             if len(read_atributes) > 1:
                 return read_atributes
             return read_atributes.get(attribute_path, None)
@@ -679,7 +673,7 @@ class MatterDeviceController:
 
         node_logger = LOGGER.getChild(f"[node {node_id}]")
         node_lock = self._get_node_lock(node_id)
-        node = cast(MatterNodeData, self._nodes[node_id])
+        node = self._nodes[node_id]
 
         # work out all (current) attribute subscriptions
         attr_subscriptions: list[Attribute.AttributePath] = list(
@@ -790,11 +784,7 @@ class MatterDeviceController:
             node.attributes[attr_path] = new_value
 
             # schedule save to persistent storage
-            self.server.storage.set(
-                DATA_KEY_NODES,
-                subkey=str(node_id),
-                value=node,
-            )
+            self._write_node_state(node_id)
 
             # This callback is running in the CHIP stack thread
             loop.call_soon_threadsafe(
@@ -1036,7 +1026,7 @@ class MatterDeviceController:
 
     def _handle_endpoints_removed(self, node_id: int, endpoints: Iterable[int]) -> None:
         """Handle callback for when bridge endpoint(s) get deleted."""
-        node = cast(MatterNodeData, self._nodes[node_id])
+        node = self._nodes[node_id]
         for endpoint_id in endpoints:
             node.attributes = {
                 key: value
@@ -1072,3 +1062,13 @@ class MatterDeviceController:
         if node_id not in self._node_lock:
             self._node_lock[node_id] = asyncio.Lock()
         return self._node_lock[node_id]
+
+    def _write_node_state(self, node_id: int, force: bool = False) -> None:
+        """Schedule the write of the current node state to persistent storage."""
+        node = self._nodes[node_id]
+        self.server.storage.set(
+            DATA_KEY_NODES,
+            value=dataclass_to_dict(node),
+            subkey=str(node_id),
+            force=force,
+        )
