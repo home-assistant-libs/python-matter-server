@@ -9,7 +9,7 @@ from datetime import datetime
 from functools import partial
 import logging
 import random
-from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, cast
 
 from chip.ChipDeviceCtrl import (
     CommissionableNode,
@@ -22,7 +22,9 @@ from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.discovery import CommissionableNode as CommissionableNodeData
 from chip.exceptions import ChipStackError
 
+from matter_server.common.helpers.util import convert_ip_address
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
+from matter_server.server.helpers.utils import ping_ip
 
 from ..common.const import SCHEMA_VERSION
 from ..common.errors import (
@@ -36,8 +38,15 @@ from ..common.helpers.util import (
     create_attribute_path_from_attribute,
     dataclass_from_dict,
     parse_attribute_path,
+    parse_value,
 )
-from ..common.models import APICommand, EventType, MatterNodeData, MatterNodeEvent
+from ..common.models import (
+    APICommand,
+    EventType,
+    MatterNodeData,
+    MatterNodeEvent,
+    NodePingResult,
+)
 from .const import PAA_ROOT_CERTS_DIR
 from .helpers.paa_certificates import fetch_certificates
 
@@ -54,6 +63,10 @@ DATA_KEY_LAST_NODE_ID = "last_node_id"
 LOGGER = logging.getLogger(__name__)
 MAX_POLL_INTERVAL = 600
 MAX_COMMISSION_RETRIES = 3
+
+ROUTING_ROLE_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
+    0, Clusters.ThreadNetworkDiagnostics.Attributes.RoutingRole
+)
 
 BASE_SUBSCRIBE_ATTRIBUTES: tuple[Attribute.AttributePath, Attribute.AttributePath] = (
     # all endpoints, BasicInformation cluster
@@ -495,9 +508,7 @@ class MatterDeviceController:
 
     @api_command(APICommand.READ_ATTRIBUTE)
     async def read_attribute(
-        self,
-        node_id: int,
-        attribute_path: str,
+        self, node_id: int, attribute_path: str, fabric_filtered: bool = False
     ) -> Any:
         """Read a single attribute (or Cluster) on a node."""
         if self.chip_controller is None:
@@ -520,6 +531,7 @@ class MatterDeviceController:
                         AttributeId=attribute_id,
                     )
                 ],
+                fabricFiltered=fabric_filtered,
             ).raise_on_error()
             result: Attribute.AsyncReadTransaction.ReadResponse = await future
             read_atributes = parse_attributes_from_read_result(result.tlvAttributes)
@@ -662,6 +674,69 @@ class MatterDeviceController:
             5, resubscribe
         )
 
+    @api_command(APICommand.PING_NODE)
+    async def ping_node(self, node_id: int) -> NodePingResult:
+        """Ping node on the currently known IP-adress(es)."""
+        result: NodePingResult = {}
+        # the node's ip addresses are stored in the GeneralDiagnostics cluster
+        attribute = Clusters.GeneralDiagnostics.Attributes.NetworkInterfaces
+        attr_path = f"0/{attribute.cluster_id}/{attribute.attribute_id}"
+        node = self._nodes.get(node_id)
+        if node is None:
+            raise NodeNotExists(
+                f"Node {node_id} does not exist or is not yet interviewed"
+            )
+        if node.available:
+            # try to refresh the GeneralDiagnostics.NetworkInterface attribute
+            # so we have the most accurate information before pinging
+            try:
+                await self.read_attribute(node_id, attr_path)
+            except (NodeNotResolving, ChipStackError) as err:
+                LOGGER.exception(err)
+
+        battery_powered = (
+            node.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH, 0)
+            == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kSleepyEndDevice
+        )
+
+        async def _do_ping(ip_address: str) -> None:
+            """Ping IP and add to result."""
+            timeout = 10 if battery_powered else 2
+            result[ip_address] = await ping_ip(ip_address, timeout)
+
+        # The network interfaces attribute contains a list of network interfaces.
+        # For regular nodes this is just a single interface but we iterate them all anyway.
+        # Create a list of tasks so we can do multiple pings simultanuous.
+        # NOTE: Upgrade this to a TaskGroup once we bump our minimal python version.
+        attr_data = cast(list[dict[str, Any]], node.attributes.get(attr_path))
+        tasks: list[Awaitable] = []
+        for network_interface_data in attr_data:
+            network_interface: Clusters.GeneralDiagnostics.Structs.NetworkInterface = (
+                parse_value(
+                    "network_interface",
+                    network_interface_data,
+                    Clusters.GeneralDiagnostics.Structs.NetworkInterface,
+                )
+            )
+            # ignore invalid/non-operational interfaces
+            if not network_interface.isOperational:
+                continue
+            if network_interface.type in (
+                Clusters.GeneralDiagnostics.Enums.InterfaceTypeEnum.kUnspecified,
+                Clusters.GeneralDiagnostics.Enums.InterfaceTypeEnum.kUnknownEnumValue,
+            ):
+                continue
+
+            # enumerate ipv4 and ipv6 addresses
+            for ipv4_address_hex in network_interface.IPv4Addresses:
+                ipv4_address = convert_ip_address(ipv4_address_hex)
+                tasks.append(_do_ping(ipv4_address))
+            for ipv6_address_hex in network_interface.IPv6Addresses:
+                ipv6_address = convert_ip_address(ipv6_address_hex, True)
+                tasks.append(_do_ping(ipv6_address))
+        await asyncio.gather(*tasks)
+        return result
+
     async def _subscribe_node(self, node_id: int) -> None:
         """
         Subscribe to all node state changes/events for an individual node.
@@ -728,7 +803,7 @@ class MatterDeviceController:
         # determine if node is battery powered sleeping device
         # Endpoint 0, ThreadNetworkDiagnostics Cluster, routingRole attribute
         battery_powered = (
-            node.attributes.get("0/53/1", 0)
+            node.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH, 0)
             == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kSleepyEndDevice
         )
 

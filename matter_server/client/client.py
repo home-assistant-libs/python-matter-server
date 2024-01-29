@@ -10,9 +10,15 @@ import uuid
 from aiohttp import ClientSession
 from chip.clusters import Objects as Clusters
 
-from matter_server.common.errors import ERROR_MAP, NodeNotExists
+from matter_server.common.errors import ERROR_MAP, MatterError, NodeNotExists
 
-from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
+from ..common.helpers.util import (
+    convert_hex_string,
+    convert_mac_address,
+    create_attribute_path_from_attribute,
+    dataclass_from_dict,
+    dataclass_to_dict,
+)
 from ..common.models import (
     APICommand,
     CommandMessage,
@@ -22,6 +28,7 @@ from ..common.models import (
     MatterNodeData,
     MatterNodeEvent,
     MessageType,
+    NodePingResult,
     ResultMessageBase,
     ServerDiagnostics,
     ServerInfoMessage,
@@ -29,7 +36,13 @@ from ..common.models import (
 )
 from .connection import MatterClientConnection
 from .exceptions import ConnectionClosed, InvalidServerVersion, InvalidState
-from .models.node import MatterFabricData, MatterNode
+from .models.node import (
+    MatterFabricData,
+    MatterNode,
+    NetworkType,
+    NodeDiagnostics,
+    NodeType,
+)
 
 if TYPE_CHECKING:
     from chip.clusters.Objects import ClusterCommand
@@ -192,6 +205,17 @@ class MatterClient:
         """
 
         node = self.get_node(node_id)
+        if node.available:
+            # try to refresh the OperationalCredentials.Fabric attribute
+            # so we have the most accurate information
+            attr_path = create_attribute_path_from_attribute(
+                0, Clusters.OperationalCredentials.Attributes.Fabrics
+            )
+            try:
+                await self.refresh_attribute(node_id, attr_path)
+            except MatterError as err:
+                self.logger.exception(err)
+
         fabrics: list[
             Clusters.OperationalCredentials.Structs.FabricDescriptorStruct
         ] = node.get_attribute_value(
@@ -223,6 +247,97 @@ class MatterClient:
             Clusters.OperationalCredentials.Commands.RemoveFabric(
                 fabricIndex=fabric_index,
             ),
+        )
+
+    async def ping_node(self, node_id: int) -> NodePingResult:
+        """Ping node on the currently known IP-adress(es)."""
+        return cast(
+            NodePingResult,
+            await self.send_command(APICommand.PING_NODE, node_id=node_id),
+        )
+
+    async def node_diagnostics(self, node_id: int) -> NodeDiagnostics:
+        """Gather diagnostics for the given node."""
+        node = self.get_node(node_id)
+        # ping the node (will also refresh NetworkInterfaces data)
+        ping_result = await self.ping_node(node_id)
+        # grab some details from the first (operational) network interface
+        network_type = NetworkType.UNKNOWN
+        mac_address = None
+        attribute = Clusters.GeneralDiagnostics.Attributes.NetworkInterfaces
+        network_interface: Clusters.GeneralDiagnostics.Structs.NetworkInterface
+        for network_interface in node.get_attribute_value(
+            0, cluster=None, attribute=attribute
+        ):
+            # ignore invalid/non-operational interfaces
+            if not network_interface.isOperational:
+                continue
+            if (
+                network_interface.type
+                == Clusters.GeneralDiagnostics.Enums.InterfaceTypeEnum.kThread
+            ):
+                network_type = NetworkType.THREAD
+            elif (
+                network_interface.type
+                == Clusters.GeneralDiagnostics.Enums.InterfaceTypeEnum.kWiFi
+            ):
+                network_type = NetworkType.WIFI
+            elif (
+                network_interface.type
+                == Clusters.GeneralDiagnostics.Enums.InterfaceTypeEnum.kEthernet
+            ):
+                network_type = NetworkType.ETHERNET
+            else:
+                # unknown interface: ignore
+                continue
+            mac_address = convert_mac_address(network_interface.hardwareAddress)
+            break
+        # get thread/wifi specific info
+        node_type = NodeType.UNKNOWN
+        network_name = None
+        if network_type == NetworkType.THREAD:
+            cluster: Clusters.ThreadNetworkDiagnostics = node.get_cluster(
+                0, Clusters.ThreadNetworkDiagnostics
+            )
+            network_name = convert_hex_string(cluster.networkName)
+            # parse routing role to (diagnostics) node type
+            if (
+                cluster.routingRole
+                == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kSleepyEndDevice
+            ):
+                node_type = NodeType.SLEEPY_END_DEVICE
+            if cluster.routingRole in (
+                Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kLeader,
+                Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kRouter,
+            ):
+                node_type = NodeType.ROUTING_END_DEVICE
+            elif (
+                cluster.routingRole
+                == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kEndDevice
+            ):
+                node_type = NodeType.END_DEVICE
+        elif network_type == NetworkType.WIFI:
+            attr_value: bytes = node.get_attribute_value(
+                0,
+                cluster=None,
+                attribute=Clusters.WiFiNetworkDiagnostics.Attributes.Bssid,
+            )
+            network_name = convert_hex_string(attr_value)
+            node_type = NodeType.END_DEVICE
+        # override node type if node is a bridge
+        if node.node_data.is_bridge:
+            node_type = NodeType.BRIDGE
+        # get active fabrics for this node
+        active_fabrics = await self.get_matter_fabrics(node_id)
+        return NodeDiagnostics(
+            node_id=node_id,
+            network_type=network_type,
+            node_type=node_type,
+            network_name=network_name,
+            ip_adresses=list(ping_result),
+            mac_address=mac_address,
+            reachable=any(ping_result.values()),
+            active_fabrics=active_fabrics,
         )
 
     async def send_device_command(

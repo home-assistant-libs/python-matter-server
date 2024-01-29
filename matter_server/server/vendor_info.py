@@ -18,12 +18,35 @@ PRODUCTION_URL = "https://on.dcl.csa-iot.org"
 DATA_KEY_VENDOR_INFO = "vendor_info"
 
 
+TEST_VENDOR = VendorInfoModel(
+    vendor_id=65521,
+    vendor_name="Test",
+    company_legal_name="Test",
+    company_preferred_name="Test",
+    vendor_landing_page_url="https://csa-iot.org",
+    creator="",
+)
+NABUCASA_VENDOR = VendorInfoModel(
+    vendor_id=4939,
+    vendor_name="Nabu Casa",
+    company_legal_name="Nabu Casa Inc.",
+    company_preferred_name="Nabu Casa",
+    vendor_landing_page_url="https://nabucasa.com/",
+    creator="",
+)
+
+
 class VendorInfo:
     """Fetches vendor info from the CSA and handles api calls to get it."""
 
     def __init__(self, server: MatterServer):
         """Initialize the vendor info."""
-        self._data: dict[int, VendorInfoModel] = {}
+        self._data: dict[int, VendorInfoModel] = {
+            # add test vendor ID
+            TEST_VENDOR.vendor_id: TEST_VENDOR,
+            # add nabucasa vendor while we're not yet certified
+            NABUCASA_VENDOR.vendor_id: NABUCASA_VENDOR,
+        }
         self._server = server
 
     async def start(self) -> None:
