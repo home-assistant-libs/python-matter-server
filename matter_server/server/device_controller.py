@@ -131,13 +131,14 @@ class MatterDeviceController:
         for node_id_str, node_dict in nodes.items():
             node_id = int(node_id_str)
             if node_dict is None:
-                # Non-initialized (left-over) node a from failed commissioning attempt.
-                # This can be removed in a future version as this can no longer happen.
+                # Non-initialized (left-over) node from a failed commissioning attempt.
+                # NOTE: This code can be removed in a future version
+                # as this can no longer happen.
                 orphaned_nodes.add(node_id_str)
                 continue
             if node_dict.get("interview_version") != SCHEMA_VERSION:
-                # invalidate node attributes data if schema mismatch,
-                # the node will automatically be scheduled for re-interview
+                # Invalidate node attributes data if schema mismatch,
+                # the node will automatically be scheduled for re-interview.
                 node_dict["attributes"] = {}
             node = dataclass_from_dict(MatterNodeData, node_dict)
             # always mark node as unavailable at startup until subscriptions are ready
