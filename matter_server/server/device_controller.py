@@ -64,6 +64,10 @@ LOGGER = logging.getLogger(__name__)
 MAX_POLL_INTERVAL = 600
 MAX_COMMISSION_RETRIES = 3
 
+ROUTING_ROLE_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
+    0, Clusters.ThreadNetworkDiagnostics.Attributes.RoutingRole
+)
+
 BASE_SUBSCRIBE_ATTRIBUTES: tuple[Attribute.AttributePath, Attribute.AttributePath] = (
     # all endpoints, BasicInformation cluster
     Attribute.AttributePath(
@@ -691,7 +695,7 @@ class MatterDeviceController:
                 LOGGER.exception(err)
 
         battery_powered = (
-            node.attributes.get("0/53/1", 0)
+            node.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH, 0)
             == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kSleepyEndDevice
         )
 
@@ -799,7 +803,7 @@ class MatterDeviceController:
         # determine if node is battery powered sleeping device
         # Endpoint 0, ThreadNetworkDiagnostics Cluster, routingRole attribute
         battery_powered = (
-            node.attributes.get("0/53/1", 0)
+            node.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH, 0)
             == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kSleepyEndDevice
         )
 
