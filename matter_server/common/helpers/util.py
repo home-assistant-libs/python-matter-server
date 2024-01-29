@@ -295,7 +295,7 @@ def chip_core_version() -> str:
 
 
 def convert_hex_string(hex_str: str | bytes) -> str:
-    """Convert hex string received from the sdk to a regular (unicode) string."""
+    """Convert (Base64 encoded) byte array received from the sdk to a regular (unicode) string."""
     if isinstance(hex_str, str):
         # note that the bytes string can be optionally base64 encoded
         # when we send it back and forth over our api
@@ -305,7 +305,7 @@ def convert_hex_string(hex_str: str | bytes) -> str:
 
 
 def convert_mac_address(hex_mac: str | bytes) -> str:
-    """Convert hexadecimal MAC received from the sdk to a regular mac-address string."""
+    """Convert (Base64 encoded) byte array MAC received from the sdk to a regular mac-address."""
     if isinstance(hex_mac, str):
         # note that the bytes string can be optionally base64 encoded
         hex_mac = base64.b64decode(hex_mac)
@@ -314,7 +314,7 @@ def convert_mac_address(hex_mac: str | bytes) -> str:
 
 
 def convert_ip_address(hex_ip: str | bytes, ipv6: bool = False) -> str:
-    """Convert hexadecimal IP received from the sdk to a regular IP string."""
+    """Convert (Base64 encoded) byte array IP received from the Matter SDK to a regular IP."""
     if isinstance(hex_ip, str):
         # note that the bytes string can be optionally base64 encoded
         hex_ip = base64.b64decode(hex_ip)
