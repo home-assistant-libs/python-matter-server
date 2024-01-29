@@ -750,6 +750,10 @@ class MatterDeviceController:
             attr_path = str(path.Path)
             old_value = node.attributes.get(attr_path)
 
+            # return early if the value did not actually change at all
+            if old_value == new_value:
+                return
+
             node_logger.debug(
                 "Attribute updated: %s - old value: %s - new value: %s",
                 path,
