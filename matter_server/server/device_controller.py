@@ -127,11 +127,13 @@ class MatterDeviceController:
         """Handle logic on controller start."""
         # load nodes from persistent storage
         nodes: dict[str, dict | None] = self.server.storage.get(DATA_KEY_NODES, {})
+        orphaned_nodes: set[str] = set()
         for node_id_str, node_dict in nodes.items():
             node_id = int(node_id_str)
             if node_dict is None:
-                # ignore non-initialized (left-over) nodes
-                # from failed commissioning attempts
+                # Non-initialized (left-over) node a from failed commissioning attempt.
+                # This can be removed in a future version as this can no longer happen.
+                orphaned_nodes.add(node_id_str)
                 continue
             if node_dict.get("interview_version") != SCHEMA_VERSION:
                 # invalidate node attributes data if schema mismatch,
@@ -148,9 +150,12 @@ class MatterDeviceController:
                 # the first attempt to initialize so that we prioritize nodes
                 # that are probably available so they are back online as soon as
                 # possible and we're not stuck trying to initialize nodes that are offline
-                self._schedule_interview(node_id, 5)
+                self._schedule_interview(node_id, 30)
             else:
                 asyncio.create_task(self._check_interview_and_subscription(node_id))
+        # cleanup orhpaned nodes from storage
+        for node_id_str in orphaned_nodes:
+            self.server.storage.remove(DATA_KEY_NODES, node_id_str)
         LOGGER.info("Loaded %s nodes from stored configuration", len(self._nodes))
 
     async def stop(self) -> None:
@@ -647,11 +652,7 @@ class MatterDeviceController:
         if prev_subs == node.attribute_subscriptions:
             return  # nothing to do
         # save updated node data
-        self.server.storage.set(
-            DATA_KEY_NODES,
-            subkey=str(node_id),
-            value=node,
-        )
+        self._write_node_state(node_id)
 
         # (re)setup node subscription
         # this could potentially be called multiple times within a short timeframe
@@ -1113,11 +1114,7 @@ class MatterDeviceController:
                 {"node_id": node_id, "endpoint_id": endpoint_id},
             )
         # schedule save to persistent storage
-        self.server.storage.set(
-            DATA_KEY_NODES,
-            subkey=str(node_id),
-            value=node,
-        )
+        self._write_node_state(node_id)
 
     async def _handle_endpoints_added(
         self, node_id: int, endpoints: Iterable[int]
