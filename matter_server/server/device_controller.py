@@ -575,7 +575,6 @@ class MatterDeviceController:
             DATA_KEY_NODES,
             subkey=str(node_id),
         )
-        self.server.storage.save(immediate=True)
         LOGGER.info("Node ID %s successfully removed from Matter server.", node_id)
 
         self.server.signal_event(EventType.NODE_REMOVED, node_id)
