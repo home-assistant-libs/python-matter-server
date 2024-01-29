@@ -43,6 +43,12 @@ parser.add_argument(
     default="info",
     help="Provide logging level. Example --log-level debug, default=info, possible=(critical, error, warning, info, debug)",
 )
+parser.add_argument(
+    "--primary-interface",
+    type=str,
+    default=None,
+    help="Primary network interface for link-local addresses (optional).",
+)
 
 args = parser.parse_args()
 
@@ -58,7 +64,11 @@ if __name__ == "__main__":
 
     # Init server
     server = MatterServer(
-        args.storage_path, DEFAULT_VENDOR_ID, DEFAULT_FABRIC_ID, int(args.port)
+        args.storage_path,
+        DEFAULT_VENDOR_ID,
+        DEFAULT_FABRIC_ID,
+        int(args.port),
+        args.primary_interface,
     )
 
     async def run_matter():
@@ -71,7 +81,19 @@ if __name__ == "__main__":
         async with aiohttp.ClientSession() as session:
             async with MatterClient(url, session) as client:
                 # start listening
-                await client.start_listening()
+                asyncio.create_task(client.start_listening())
+                # allow the client to initialize
+                await asyncio.sleep(10)
+                # dump full node info on random (available) node
+                for node in client.get_nodes():
+                    if not node.available:
+                        continue
+                    print()
+                    print(node)
+                    res = await client.node_diagnostics(node.node_id)
+                    print(res)
+                    print()
+                    break
 
     async def handle_stop(loop: asyncio.AbstractEventLoop):
         """Handle server stop."""
