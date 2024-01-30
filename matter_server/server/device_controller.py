@@ -690,14 +690,6 @@ class MatterDeviceController:
                 f"Node {node_id} does not exist or is not yet interviewed"
             )
 
-        if node.available:
-            # try to refresh the GeneralDiagnostics.NetworkInterface attribute
-            # so we have the most accurate information before pinging
-            try:
-                await self.read_attribute(node_id, attr_path)
-            except (NodeNotResolving, ChipStackError) as err:
-                LOGGER.exception(err)
-
         battery_powered = (
             node.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH, 0)
             == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kSleepyEndDevice
