@@ -22,6 +22,7 @@ from ..common.helpers.util import (
 from ..common.models import (
     APICommand,
     CommandMessage,
+    CommissionableNodeData,
     CommissioningParameters,
     ErrorResultMessage,
     EventMessage,
@@ -197,6 +198,15 @@ class MatterClient:
                 discriminator=discriminator,
             ),
         )
+
+    async def discover_commissionable_nodes(
+        self,
+    ) -> list[CommissionableNodeData]:
+        """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
+        return [
+            dataclass_from_dict(CommissionableNodeData, x)
+            for x in await self.send_command(APICommand.DISCOVER, require_schema=7)
+        ]
 
     async def get_matter_fabrics(self, node_id: int) -> list[MatterFabricData]:
         """

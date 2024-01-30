@@ -175,13 +175,31 @@ MessageType = (
 
 
 @dataclass
+class CommissionableNodeData:
+    """Object that is returned on the 'discover_commissionable_nodes' command."""
+
+    instance_name: str | None = None
+    host_name: str | None = None
+    port: int | None = None
+    long_discriminator: int | None = None
+    vendor_id: int | None = None
+    product_id: int | None = None
+    commissioning_mode: int | None = None
+    device_type: int | None = None
+    device_name: str | None = None
+    pairing_instruction: str | None = None
+    pairing_hint: int | None = None
+    mrp_retry_interval_idle: int | None = None
+    mrp_retry_interval_active: int | None = None
+    supports_tcp: bool | None = None
+    addresses: list[str] | None = None
+    rotating_id: str | None = None
+
+
+@dataclass
 class CommissioningParameters:
-    """
-    Object that is returned on the 'open_commisisoning_window' command.
+    """Object that is returned on the 'open_commisisoning_window' command."""
 
-    NOTE: This is just a copy of the dataclass specified in chip.ChipDeviceCtrl
-    """
-
-    setupPinCode: int  # pylint: disable=invalid-name
-    setupManualCode: str  # pylint: disable=invalid-name
-    setupQRCode: str  # pylint: disable=invalid-name
+    setup_pin_code: int
+    setup_manual_code: str
+    setup_qr_code: str

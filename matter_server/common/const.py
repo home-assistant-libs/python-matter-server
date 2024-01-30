@@ -2,4 +2,4 @@
 
 # schema version is used to determine compatibility between server and client
 # bump schema if we add new features and/or make other (breaking) changes
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
