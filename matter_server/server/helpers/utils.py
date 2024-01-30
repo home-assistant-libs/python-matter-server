@@ -3,6 +3,8 @@
 import asyncio
 import platform
 
+import async_timeout
+
 PLATFORM_MAC = platform.system() == "Darwin"
 
 
@@ -16,7 +18,13 @@ async def ping_ip(ip_address: str, timeout: int = 2) -> bool:
         cmd = f"ping6 -c 1 -W {timeout} {ip_address}"
     else:
         cmd = f"ping -c 1 -W {timeout} {ip_address}"
-    return (await check_output(cmd))[0] == 0
+    try:
+        # we add an additional timeout here as safeguard and to account for the fact
+        # that macos does not seem to have timeout on ping6
+        async with async_timeout.timeout(timeout + 2):
+            return (await check_output(cmd))[0] == 0
+    except (asyncio.TimeoutError, asyncio.CancelledError):
+        return False
 
 
 async def check_output(shell_cmd: str) -> tuple[int | None, bytes]:
