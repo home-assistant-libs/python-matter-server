@@ -23,7 +23,7 @@ async def ping_ip(ip_address: str, timeout: int = 2) -> bool:
         # that macos does not seem to have timeout on ping6
         async with async_timeout.timeout(timeout + 2):
             return (await check_output(cmd))[0] == 0
-    except (asyncio.TimeoutError, asyncio.CancelledError):
+    except asyncio.TimeoutError:
         return False
 
 
@@ -34,5 +34,10 @@ async def check_output(shell_cmd: str) -> tuple[int | None, bytes]:
         stderr=asyncio.subprocess.STDOUT,
         stdout=asyncio.subprocess.PIPE,
     )
-    stdout, _ = await proc.communicate()
+    try:
+        stdout, _ = await proc.communicate()
+    except asyncio.CancelledError:
+        proc.terminate()
+        await proc.communicate()
+        raise
     return (proc.returncode, stdout)
