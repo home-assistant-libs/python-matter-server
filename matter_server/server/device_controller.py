@@ -407,7 +407,7 @@ class MatterDeviceController:
     @api_command(APICommand.DISCOVER)
     async def discover_commissionable_nodes(
         self,
-    ) -> list[CommissionableNodeData] | None:
+    ) -> list[CommissionableNodeData]:
         """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
