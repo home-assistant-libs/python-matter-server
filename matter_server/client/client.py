@@ -10,12 +10,11 @@ import uuid
 from aiohttp import ClientSession
 from chip.clusters import Objects as Clusters
 
-from matter_server.common.errors import ERROR_MAP, MatterError, NodeNotExists
+from matter_server.common.errors import ERROR_MAP, NodeNotExists
 
 from ..common.helpers.util import (
-    convert_hex_string,
+    convert_ip_address,
     convert_mac_address,
-    create_attribute_path_from_attribute,
     dataclass_from_dict,
     dataclass_to_dict,
 )
@@ -51,7 +50,7 @@ if TYPE_CHECKING:
 
 SUB_WILDCARD: Final = "*"
 
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,too-many-locals,too-many-branches
 
 
 class MatterClient:
@@ -216,17 +215,6 @@ class MatterClient:
         """
 
         node = self.get_node(node_id)
-        if node.available:
-            # try to refresh the OperationalCredentials.Fabric attribute
-            # so we have the most accurate information
-            attr_path = create_attribute_path_from_attribute(
-                0, Clusters.OperationalCredentials.Attributes.Fabrics
-            )
-            try:
-                await self.refresh_attribute(node_id, attr_path)
-            except MatterError as err:
-                self.logger.exception(err)
-
         fabrics: list[
             Clusters.OperationalCredentials.Structs.FabricDescriptorStruct
         ] = node.get_attribute_value(
@@ -270,13 +258,12 @@ class MatterClient:
     async def node_diagnostics(self, node_id: int) -> NodeDiagnostics:
         """Gather diagnostics for the given node."""
         node = self.get_node(node_id)
-        # ping the node (will also refresh NetworkInterfaces data)
-        ping_result = await self.ping_node(node_id)
         # grab some details from the first (operational) network interface
         network_type = NetworkType.UNKNOWN
         mac_address = None
         attribute = Clusters.GeneralDiagnostics.Attributes.NetworkInterfaces
         network_interface: Clusters.GeneralDiagnostics.Structs.NetworkInterface
+        ip_addresses: list[str] = []
         for network_interface in node.get_attribute_value(
             0, cluster=None, attribute=attribute
         ):
@@ -302,38 +289,44 @@ class MatterClient:
                 # unknown interface: ignore
                 continue
             mac_address = convert_mac_address(network_interface.hardwareAddress)
+            # enumerate ipv4 and ipv6 addresses
+            for ipv4_address_hex in network_interface.IPv4Addresses:
+                ipv4_address = convert_ip_address(ipv4_address_hex)
+                ip_addresses.append(ipv4_address)
+            for ipv6_address_hex in network_interface.IPv6Addresses:
+                ipv6_address = convert_ip_address(ipv6_address_hex, True)
+                ip_addresses.append(ipv6_address)
             break
         # get thread/wifi specific info
         node_type = NodeType.UNKNOWN
         network_name = None
         if network_type == NetworkType.THREAD:
-            cluster: Clusters.ThreadNetworkDiagnostics = node.get_cluster(
+            thread_cluster: Clusters.ThreadNetworkDiagnostics = node.get_cluster(
                 0, Clusters.ThreadNetworkDiagnostics
             )
-            network_name = convert_hex_string(cluster.networkName)
+            network_name = thread_cluster.networkName
             # parse routing role to (diagnostics) node type
             if (
-                cluster.routingRole
+                thread_cluster.routingRole
                 == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kSleepyEndDevice
             ):
                 node_type = NodeType.SLEEPY_END_DEVICE
-            if cluster.routingRole in (
+            if thread_cluster.routingRole in (
                 Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kLeader,
                 Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kRouter,
             ):
                 node_type = NodeType.ROUTING_END_DEVICE
             elif (
-                cluster.routingRole
+                thread_cluster.routingRole
                 == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kEndDevice
             ):
                 node_type = NodeType.END_DEVICE
         elif network_type == NetworkType.WIFI:
-            attr_value: bytes = node.get_attribute_value(
-                0,
-                cluster=None,
-                attribute=Clusters.WiFiNetworkDiagnostics.Attributes.Bssid,
+            wifi_cluster: Clusters.WiFiNetworkDiagnostics = node.get_cluster(
+                0, Clusters.WiFiNetworkDiagnostics
             )
-            network_name = convert_hex_string(attr_value)
+            if wifi_cluster and wifi_cluster.bssid:
+                network_name = wifi_cluster.bssid
             node_type = NodeType.END_DEVICE
         # override node type if node is a bridge
         if node.node_data.is_bridge:
@@ -345,9 +338,9 @@ class MatterClient:
             network_type=network_type,
             node_type=node_type,
             network_name=network_name,
-            ip_adresses=list(ping_result),
+            ip_adresses=ip_addresses,
             mac_address=mac_address,
-            reachable=any(ping_result.values()),
+            available=node.available,
             active_fabrics=active_fabrics,
         )
 

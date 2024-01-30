@@ -65,7 +65,7 @@ ROUTING_ROLE_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
     0, Clusters.ThreadNetworkDiagnostics.Attributes.RoutingRole
 )
 
-BASE_SUBSCRIBE_ATTRIBUTES: tuple[Attribute.AttributePath, Attribute.AttributePath] = (
+BASE_SUBSCRIBE_ATTRIBUTES: tuple[Attribute.AttributePath, ...] = (
     # all endpoints, BasicInformation cluster
     Attribute.AttributePath(
         EndpointId=None, ClusterId=Clusters.BasicInformation.id, Attribute=None
@@ -75,6 +75,15 @@ BASE_SUBSCRIBE_ATTRIBUTES: tuple[Attribute.AttributePath, Attribute.AttributePat
         EndpointId=None,
         ClusterId=Clusters.BridgedDeviceBasicInformation.id,
         Attribute=None,
+    ),
+    # networkinterfaces attribute on general diagnostics cluster,
+    # so we have the most accurate IP addresses for ping/diagnostics
+    Attribute.AttributePath(
+        EndpointId=0, Attribute=Clusters.GeneralDiagnostics.Attributes.NetworkInterfaces
+    ),
+    # active fabrics attribute - to speedup node diagnostics
+    Attribute.AttributePath(
+        EndpointId=0, Attribute=Clusters.OperationalCredentials.Attributes.Fabrics
     ),
 )
 
@@ -699,13 +708,6 @@ class MatterDeviceController:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or is not yet interviewed"
             )
-        if node.available:
-            # try to refresh the GeneralDiagnostics.NetworkInterface attribute
-            # so we have the most accurate information before pinging
-            try:
-                await self.read_attribute(node_id, attr_path)
-            except (NodeNotResolving, ChipStackError) as err:
-                LOGGER.exception(err)
 
         battery_powered = (
             node.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH, 0)
