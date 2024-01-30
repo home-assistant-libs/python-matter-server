@@ -400,5 +400,5 @@ class NodeDiagnostics:
     network_name: str | None  # WiFi SSID or Thread network name
     ip_adresses: list[str]
     mac_address: str | None
-    reachable: bool
+    available: bool
     active_fabrics: list[MatterFabricData]
