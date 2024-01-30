@@ -411,6 +411,10 @@ class MatterClient:
         """Remove a Matter node/device from the fabric."""
         await self.send_command(APICommand.REMOVE_NODE, node_id=node_id)
 
+    async def interview_node(self, node_id: int) -> None:
+        """Interview a node."""
+        await self.send_command(APICommand.INTERVIEW_NODE, node_id=node_id)
+
     async def subscribe_attribute(
         self, node_id: int, attribute_path: str | list[str]
     ) -> None:
