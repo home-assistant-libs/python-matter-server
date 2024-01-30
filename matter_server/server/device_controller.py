@@ -11,11 +11,7 @@ import logging
 import random
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, cast
 
-from chip.ChipDeviceCtrl import (
-    CommissionableNode,
-    CommissioningParameters,
-    DeviceProxyWrapper,
-)
+from chip.ChipDeviceCtrl import CommissionableNode, DeviceProxyWrapper
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
@@ -23,6 +19,7 @@ from chip.discovery import CommissionableNode as CommissionableNodeData
 from chip.exceptions import ChipStackError
 
 from matter_server.common.helpers.util import convert_ip_address
+from matter_server.common.models import CommissioningParameters
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
 

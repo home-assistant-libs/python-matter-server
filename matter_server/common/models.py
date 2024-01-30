@@ -172,3 +172,16 @@ MessageType = (
     | ErrorResultMessage
     | ServerInfoMessage
 )
+
+
+@dataclass
+class CommissioningParameters:
+    """
+    Object that is returned on the 'open_commisisoning_window' command.
+
+    NOTE: This is just a copy of the dataclass specified in chip.ChipDeviceCtrl
+    """
+
+    setupPinCode: int  # pylint: disable=invalid-name
+    setupManualCode: str  # pylint: disable=invalid-name
+    setupQRCode: str  # pylint: disable=invalid-name
