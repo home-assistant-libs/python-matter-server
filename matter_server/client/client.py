@@ -260,9 +260,6 @@ class MatterClient:
             # ignore invalid/non-operational interfaces
             if not network_interface.isOperational:
                 continue
-            # ignore invalid/non-operational interfaces
-            if not network_interface.isOperational:
-                continue
             if (
                 network_interface.type
                 == Clusters.GeneralDiagnostics.Enums.InterfaceTypeEnum.kThread
