@@ -11,15 +11,14 @@ import logging
 import random
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, cast
 
-from chip.ChipDeviceCtrl import CommissionableNode, DeviceProxyWrapper
+from chip.ChipDeviceCtrl import DeviceProxyWrapper
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
-from chip.discovery import CommissionableNode as CommissionableNodeData
 from chip.exceptions import ChipStackError
 
 from matter_server.common.helpers.util import convert_ip_address
-from matter_server.common.models import CommissioningParameters
+from matter_server.common.models import CommissionableNodeData, CommissioningParameters
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
 
@@ -391,7 +390,7 @@ class MatterDeviceController:
         if discriminator is None:
             discriminator = 3840  # TODO generate random one
 
-        return await self._call_sdk(
+        sdk_result = await self._call_sdk(
             self.chip_controller.OpenCommissioningWindow,
             nodeid=node_id,
             timeout=timeout,
@@ -399,29 +398,49 @@ class MatterDeviceController:
             discriminator=discriminator,
             option=option,
         )
+        return CommissioningParameters(
+            setup_pin_code=sdk_result.setupPinCode,
+            setup_manual_code=sdk_result.setupManualCode,
+            setup_qr_code=sdk_result.setupQRCode,
+        )
 
     @api_command(APICommand.DISCOVER)
     async def discover_commissionable_nodes(
         self,
-    ) -> CommissionableNodeData | list[CommissionableNodeData] | None:
+    ) -> list[CommissionableNodeData] | None:
         """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
 
-        result = await self._call_sdk(
+        sdk_result = await self._call_sdk(
             self.chip_controller.DiscoverCommissionableNodes,
         )
-
-        def convert(cn: CommissionableNode) -> CommissionableNodeData:
-            cnd = CommissionableNodeData()
-            # pylint: disable=no-member
-            for field in CommissionableNodeData.__dataclass_fields__:
-                setattr(cnd, field, getattr(cn, field))
-            return cnd
-
-        if isinstance(result, list):
-            return [convert(c) for c in result]
-        return convert(result)
+        if sdk_result is None:
+            return []
+        # ensure list
+        if not isinstance(sdk_result, list):
+            sdk_result = [sdk_result]
+        return [
+            CommissionableNodeData(
+                instance_name=x.instanceName,
+                host_name=x.hostName,
+                port=x.port,
+                long_discriminator=x.longDiscriminator,
+                vendor_id=x.vendorId,
+                product_id=x.productId,
+                commissioning_mode=x.commissioningMode,
+                device_type=x.deviceType,
+                device_name=x.deviceName,
+                pairing_instruction=x.pairingInstruction,
+                pairing_hint=x.pairingHint,
+                mrp_retry_interval_idle=x.mrpRetryIntervalIdle,
+                mrp_retry_interval_active=x.mrpRetryIntervalActive,
+                supports_tcp=x.supportsTcp,
+                addresses=x.addresses,
+                rotating_id=x.rotatingId,
+            )
+            for x in sdk_result
+        ]
 
     @api_command(APICommand.INTERVIEW_NODE)
     async def interview_node(self, node_id: int) -> None:
