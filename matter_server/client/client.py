@@ -22,6 +22,7 @@ from ..common.helpers.util import (
 from ..common.models import (
     APICommand,
     CommandMessage,
+    CommissioningParameters,
     ErrorResultMessage,
     EventMessage,
     EventType,
@@ -179,14 +180,14 @@ class MatterClient:
         iteration: int = 1000,
         option: int = 1,
         discriminator: Optional[int] = None,
-    ) -> tuple[int, str]:
+    ) -> CommissioningParameters:
         """
         Open a commissioning window to commission a device present on this controller to another.
 
         Returns code to use as discriminator.
         """
-        return cast(
-            tuple[int, str],
+        return dataclass_from_dict(
+            CommissioningParameters,
             await self.send_command(
                 APICommand.OPEN_COMMISSIONING_WINDOW,
                 node_id=node_id,
