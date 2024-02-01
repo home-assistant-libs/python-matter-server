@@ -304,7 +304,10 @@ class MatterClient:
             thread_cluster: Clusters.ThreadNetworkDiagnostics = node.get_cluster(
                 0, Clusters.ThreadNetworkDiagnostics
             )
-            network_name = thread_cluster.networkName
+            if isinstance(thread_cluster.networkName, bytes):
+                network_name = thread_cluster.networkName.decode("utf-8")
+            else:
+                network_name = thread_cluster.networkName
             # parse routing role to (diagnostics) node type
             if (
                 thread_cluster.routingRole
@@ -322,12 +325,21 @@ class MatterClient:
             ):
                 node_type = NodeType.END_DEVICE
         elif network_type == NetworkType.WIFI:
-            wifi_cluster: Clusters.WiFiNetworkDiagnostics = node.get_cluster(
-                0, Clusters.WiFiNetworkDiagnostics
-            )
-            if wifi_cluster and wifi_cluster.bssid:
-                network_name = wifi_cluster.bssid
             node_type = NodeType.END_DEVICE
+        # use lastNetworkID from NetworkCommissioning cluster as fallback to get the network name
+        # this allows getting the SSID as the wifi diagnostics cluster only has the BSSID
+        last_network_id: bytes | str | None
+        if not network_name and (
+            last_network_id := node.get_attribute_value(
+                0,
+                cluster=None,
+                attribute=Clusters.NetworkCommissioning.Attributes.LastNetworkID,
+            )
+        ):
+            if isinstance(last_network_id, bytes):
+                network_name = last_network_id.decode("utf-8")
+            else:
+                network_name = last_network_id
         # override node type if node is a bridge
         if node.node_data.is_bridge:
             node_type = NodeType.BRIDGE
