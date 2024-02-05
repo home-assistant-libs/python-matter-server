@@ -70,4 +70,5 @@ class MatterStack:
         """Stop/Shutdown Matter Stack."""
         self.logger.info("Shutting down the Matter stack...")
         # NOTE that this will abruptly end the python process!
+        self.certificate_authority_manager.Shutdown()
         self._chip_stack.Shutdown()
