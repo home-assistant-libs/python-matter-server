@@ -104,7 +104,9 @@ class MatterServer:
         self.app.router.add_route("GET", "/", self._handle_info)
         self._runner = web.AppRunner(self.app, access_log=None)
         await self._runner.setup()
-        self._http = web.TCPSite(self._runner, host=self._listen_addresses, port=self._port)
+        self._http = web.TCPSite(
+            self._runner, host=self._listen_addresses, port=self._port
+        )
         await self._http.start()
         self.logger.debug("Webserver initialized.")
 
