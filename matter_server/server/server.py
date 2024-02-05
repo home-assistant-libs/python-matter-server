@@ -62,8 +62,8 @@ class MatterServer:
         vendor_id: int,
         fabric_id: int,
         port: int,
-        listen_addresses: list[str],
-        primary_interface: str | None,
+        listen_addresses: list[str] | None = None,
+        primary_interface: str | None = None,
     ) -> None:
         """Initialize the Matter Server."""
         self.storage_path = storage_path
