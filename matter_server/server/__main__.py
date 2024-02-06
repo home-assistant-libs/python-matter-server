@@ -52,7 +52,7 @@ parser.add_argument(
     type=str,
     action="append",
     default=DEFAULT_LISTEN_ADDRESS,
-    help="IP address to bind the websocket server to, defaults to listen on any interface (IPv4 and IPv6).",
+    help="IP address to bind the websocket server to, defaults to any IPv4 and IPv6 address.",
 )
 parser.add_argument(
     "--log-level",
