@@ -118,7 +118,7 @@ NOTE: Both Matter and this implementation are in early (v1) state and features a
 
 ## Running the development server
 
-**For enabling Matter support within Home Assistant, please refer to the Home Assistant documentation. These instructions are for development/advanced scenarios only!**
+**For enabling Matter support within Home Assistant, please refer to the Home Assistant documentation. These instructions are for development only!**
 
 To install the server (including client): `pip install python-matter-server[server]`
 To only install the client part: `pip install python-matter-server`
@@ -145,15 +145,10 @@ Optional arguments:
 
 The server runs a Matter Controller and includes all logic for storing node information, interviews and subscriptions. To interact with this controller we've created a small Websockets API with an RPC-like interface. The library contains a client as reference implementation which in turn is used by Home Assistant. Splitting the server from the client allows the scenario where multiple consumers can communicate to the same Matter fabric and the Matter fabric can keep running while the consumer (e.g. Home Assistant is down).
 
-### Test devices
-
-Now that the Matter Specification is officially released in its 1.0 version, devices will be available in stores from 2023 that actually have Matter support or least manufacturers run a beta program which you can join to run Matter firmware on your device. Please refer to the documentation of your device if its already Matter enabled out of the box or you need to enable some special firmware(mode).
-
-Besides that, it is possible to run Matter firmware on common microcontrollers such as the ESP32 and there is even a whole device emulator available which runs on a regular desktop OS. To make things easier we've prepared a [special page](https://nabucasa.github.io/matter-example-apps) where you can quickly try out running the Matter example apps on ESP32.
 
 ### Websocket commands
 
-(for a complete oversight see the client implementation)
+This list is not intended to be complete, for a complete oversight see the client implementation.
 
 **Set WiFi credentials**
 Inform the controller about the WiFi credentials it needs to send when commissioning a new device.
@@ -299,7 +294,7 @@ command = clusters.LevelControl.Commands.MoveToLevelWithOnOff(
 
 ## Development
 
-Want to help out with development, testing, and/or documentation? Great! As both this project and Matter keeps evolving and devices will hit the market with actual Matter support, there will be a lot to improve. See our [project board](https://github.com/orgs/home-assistant-libs/projects/1) for status updates and maybe something you'd like to help out with development and/or testing.
+Want to help out with development, testing, and/or documentation? Great! As both this project and Matter keeps evolving and devices will hit the market with actual Matter support, there will be a lot to improve. Reach out to us on discord if you want to help out.
 
 ### Setting up your development environment
 
