@@ -13,6 +13,8 @@ from .server import MatterServer
 DEFAULT_VENDOR_ID = 0xFFF1
 DEFAULT_FABRIC_ID = 1
 DEFAULT_PORT = 5580
+# Default to None to bind to all addresses on both IPv4 and IPv6
+DEFAULT_LISTEN_ADDRESS = None
 DEFAULT_STORAGE_PATH = os.path.join(Path.home(), ".matter_server")
 
 # Get parsed passed in arguments.
@@ -44,6 +46,13 @@ parser.add_argument(
     type=int,
     default=DEFAULT_PORT,
     help=f"TCP Port to run the websocket server, defaults to {DEFAULT_PORT}",
+)
+parser.add_argument(
+    "--listen-address",
+    type=str,
+    action="append",
+    default=DEFAULT_LISTEN_ADDRESS,
+    help="IP address to bind the websocket server to, defaults to any IPv4 and IPv6 address.",
 )
 parser.add_argument(
     "--log-level",
@@ -95,6 +104,7 @@ def main() -> None:
         int(args.vendorid),
         int(args.fabricid),
         int(args.port),
+        args.listen_address,
         args.primary_interface,
     )
 

@@ -13,7 +13,7 @@ from matter_server.server.server import MatterServer
 pytestmark = pytest.mark.usefixtures(
     "application",
     "app_runner",
-    "tcp_site",
+    "multi_host_tcp_site",
     "chip_native",
     "chip_logging",
     "chip_stack",
@@ -38,11 +38,11 @@ def app_runner_fixture() -> Generator[MagicMock, None, None]:
         yield app_runner
 
 
-@pytest.fixture(name="tcp_site")
-def tcp_site_fixture() -> Generator[MagicMock, None, None]:
+@pytest.fixture(name="multi_host_tcp_site")
+def multi_host_tcp_site_fixture() -> Generator[MagicMock, None, None]:
     """Return a mocked tcp site."""
-    with patch("matter_server.server.server.web.TCPSite", autospec=True) as tcp_site:
-        yield tcp_site
+    with patch("matter_server.server.server.MultiHostTCPSite", autospec=True) as multi_host_tcp_site:
+        yield multi_host_tcp_site
 
 
 @pytest.fixture(name="chip_native")
@@ -108,7 +108,7 @@ async def server_fixture() -> AsyncGenerator[MatterServer, None]:
 async def test_server_start(
     application: MagicMock,
     app_runner: MagicMock,
-    tcp_site: MagicMock,
+    multi_host_tcp_site: MagicMock,
     server: MatterServer,
     storage_controller: MagicMock,
 ) -> None:
@@ -123,13 +123,14 @@ async def test_server_start(
     assert add_route.call_args_list[1][0][1] == "/"
     assert app_runner.call_count == 1
     assert app_runner.return_value.setup.call_count == 1
-    assert tcp_site.call_count == 1
-    assert tcp_site.return_value.start.call_count == 1
+    assert multi_host_tcp_site.call_count == 1
+    assert multi_host_tcp_site.return_value.start.call_count == 1
     assert storage_controller.return_value.start.call_count == 1
     assert server.storage_path == "test_storage_path"
     assert server.vendor_id == 1234
     assert server.fabric_id == 5678
     assert server.port == 5580
+    assert server.listen_addresses == None
     assert APICommand.SERVER_INFO in server.command_handlers
     assert APICommand.SERVER_DIAGNOSTICS in server.command_handlers
     assert APICommand.GET_NODES in server.command_handlers

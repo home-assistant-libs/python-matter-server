@@ -9,6 +9,8 @@ import weakref
 
 from aiohttp import web
 
+from matter_server.server.helpers.custom_web_runner import MultiHostTCPSite
+
 from ..common.const import SCHEMA_VERSION
 from ..common.errors import VersionMismatch
 from ..common.helpers.api import APICommandHandler, api_command
@@ -54,7 +56,7 @@ class MatterServer:
     """Serve Matter stack over WebSockets."""
 
     _runner: web.AppRunner | None = None
-    _http: web.TCPSite | None = None
+    _http: MultiHostTCPSite | None = None
 
     def __init__(
         self,
@@ -62,13 +64,15 @@ class MatterServer:
         vendor_id: int,
         fabric_id: int,
         port: int,
-        primary_interface: str | None,
+        listen_addresses: list[str] | None = None,
+        primary_interface: str | None = None,
     ) -> None:
         """Initialize the Matter Server."""
         self.storage_path = storage_path
         self.vendor_id = vendor_id
         self.fabric_id = fabric_id
         self.port = port
+        self.listen_addresses = listen_addresses
         self.primary_interface = primary_interface
         self.logger = logging.getLogger(__name__)
         self.app = web.Application()
@@ -102,8 +106,9 @@ class MatterServer:
         self.app.router.add_route("GET", "/", self._handle_info)
         self._runner = web.AppRunner(self.app, access_log=None)
         await self._runner.setup()
-        # set host to None to bind to all addresses on both IPv4 and IPv6
-        self._http = web.TCPSite(self._runner, host=None, port=self.port)
+        self._http = MultiHostTCPSite(
+            self._runner, host=self.listen_addresses, port=self.port
+        )
         await self._http.start()
         self.logger.debug("Webserver initialized.")
 
