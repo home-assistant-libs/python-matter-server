@@ -56,7 +56,7 @@ class MatterServer:
     """Serve Matter stack over WebSockets."""
 
     _runner: web.AppRunner | None = None
-    _http: web.TCPSite | None = None
+    _http: MultiHostTCPSite | None = None
 
     def __init__(
         self,
