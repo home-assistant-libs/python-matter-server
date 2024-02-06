@@ -9,6 +9,8 @@ import weakref
 
 from aiohttp import web
 
+from matter_server.server.helpers.custom_web_runner import MultiHostTCPSite
+
 from ..common.const import SCHEMA_VERSION
 from ..common.errors import VersionMismatch
 from ..common.helpers.api import APICommandHandler, api_command
@@ -104,7 +106,7 @@ class MatterServer:
         self.app.router.add_route("GET", "/", self._handle_info)
         self._runner = web.AppRunner(self.app, access_log=None)
         await self._runner.setup()
-        self._http = web.TCPSite(
+        self._http = MultiHostTCPSite(
             self._runner, host=self.listen_addresses, port=self.port
         )
         await self._http.start()
