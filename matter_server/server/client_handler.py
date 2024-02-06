@@ -1,4 +1,5 @@
 """Logic to handle a client connected over WebSockets."""
+
 from __future__ import annotations
 
 import asyncio
@@ -67,7 +68,7 @@ class WebsocketClientHandler:
 
     async def handle_client(self) -> web.WebSocketResponse:
         """Handle a websocket response."""
-        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-branches,too-many-statements
         request = self.request
         wsock = self.wsock
         try:
@@ -91,12 +92,16 @@ class WebsocketClientHandler:
             while not wsock.closed:
                 msg = await wsock.receive()
 
-                if msg.type in (WSMsgType.CLOSE, WSMsgType.CLOSING):
+                if msg.type in (WSMsgType.CLOSED, WSMsgType.CLOSE, WSMsgType.CLOSING):
+                    break
+
+                if msg.type == WSMsgType.ERROR:
+                    disconnect_warn = f"Received error message: {msg.data}"
                     break
 
                 if msg.type != WSMsgType.TEXT:
-                    disconnect_warn = "Received non-Text message."
-                    break
+                    self._logger.warning("Received non-Text message: %s", msg.data)
+                    continue
 
                 self._logger.debug("Received: %s", msg.data)
 
