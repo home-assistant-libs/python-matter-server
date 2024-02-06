@@ -16,8 +16,6 @@ class MultiHostTCPSite(web.TCPSite):
     explicitly), we would like to pass an array of strings.
     """
 
-    __slots__ = ("_host", "_port", "_reuse_address", "_reuse_port", "_hosturl")
-
     def __init__(
         self,
         runner: web.BaseRunner,
