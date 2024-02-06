@@ -1,4 +1,5 @@
 """Logic to manage the WebSocket connection to the Matter server."""
+
 from __future__ import annotations
 
 import asyncio
@@ -121,7 +122,9 @@ class MatterClientConnection:
             raise ConnectionFailed()
 
         if ws_msg.type != WSMsgType.TEXT:
-            raise InvalidMessage(f"Received non-Text message: {ws_msg.type}")
+            raise InvalidMessage(
+                f"Received non-Text message: {ws_msg.type}: {ws_msg.data}"
+            )
 
         try:
             msg = parse_message(json_loads(ws_msg.data))
