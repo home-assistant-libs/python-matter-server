@@ -100,7 +100,7 @@ class WebsocketClientHandler:
                     break
 
                 if msg.type != WSMsgType.TEXT:
-                    self._logger.debug("Received non-Text message: %s", msg.data)
+                    self._logger.warning("Received non-Text message: %s", msg.data)
                     continue
 
                 self._logger.debug("Received: %s", msg.data)
