@@ -41,7 +41,7 @@ def app_runner_fixture() -> Generator[MagicMock, None, None]:
 @pytest.fixture(name="multi_host_tcp_site")
 def multi_host_tcp_site_fixture() -> Generator[MagicMock, None, None]:
     """Return a mocked tcp site."""
-    with patch("matter_server.server.server.helpers.custom_web_runner.MultiHostTCPSite", autospec=True) as multi_host_tcp_site:
+    with patch("matter_server.server.server.MultiHostTCPSite", autospec=True) as multi_host_tcp_site:
         yield multi_host_tcp_site
 
 
