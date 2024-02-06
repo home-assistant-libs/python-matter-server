@@ -1,4 +1,4 @@
-"""MultiHost capable aiohttp Site."""
+"""Multiple host capable aiohttp Site."""
 from __future__ import annotations
 
 import asyncio
@@ -9,7 +9,7 @@ from yarl import URL
 
 
 class MultiHostTCPSite(web.BaseSite):
-    """MultiHost capable aiohttp Site.
+    """Multiple host capable aiohttp Site.
 
     Vanilla TCPSite accepts only str as host. However, the underlying asyncio's
     create_server() implementation does take a list of strings to bind to multiple
