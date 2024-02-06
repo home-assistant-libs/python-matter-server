@@ -1,7 +1,6 @@
 """MultiHost capable aiohttp Site."""
 from __future__ import annotations
 
-import asyncio
 from ssl import SSLContext
 
 from aiohttp import web
