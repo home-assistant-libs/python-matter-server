@@ -69,8 +69,8 @@ class MatterServer:
         self.storage_path = storage_path
         self.vendor_id = vendor_id
         self.fabric_id = fabric_id
-        self._port = port
-        self._listen_addresses = listen_addresses
+        self.port = port
+        self.listen_addresses = listen_addresses
         self.primary_interface = primary_interface
         self.logger = logging.getLogger(__name__)
         self.app = web.Application()
@@ -105,7 +105,7 @@ class MatterServer:
         self._runner = web.AppRunner(self.app, access_log=None)
         await self._runner.setup()
         self._http = web.TCPSite(
-            self._runner, host=self._listen_addresses, port=self._port
+            self._runner, host=self.listen_addresses, port=self.port
         )
         await self._http.start()
         self.logger.debug("Webserver initialized.")
