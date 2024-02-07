@@ -1212,7 +1212,7 @@ class MatterDeviceController:
     async def _process_mdns_queue(
         self, name: str, queue: asyncio.Queue[ServiceStateChange]
     ) -> None:
-        """ "Process the incoming MDNS messages of an (operational) Matter node."""
+        """Process the incoming MDNS messages of an (operational) Matter node."""
         # the mdns name is constructed as [fabricid]-[nodeid]._matter._tcp.local.
         # extract the node id from the name
         node_id = int(name.split("-")[1].split(".")[0], 16)
