@@ -228,6 +228,7 @@ class MatterDeviceController:
         # that are a bit unstable.
         # by retrying, we increase the chances of a successful commisssion
         while attempts <= MAX_COMMISSION_RETRIES:
+            attempts += 1
             LOGGER.info(
                 "Starting Matter commissioning with code using Node ID %s (attempt %s/%s).",
                 node_id,
@@ -247,7 +248,7 @@ class MatterDeviceController:
                     f"Commission with code failed for node {node_id}."
                 )
             await asyncio.sleep(5)
-            attempts += 1
+
         LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
 
         # perform full (first) interview of the device
@@ -305,6 +306,7 @@ class MatterDeviceController:
         # that are a bit unstable.
         # by retrying, we increase the chances of a successful commisssion
         while attempts <= MAX_COMMISSION_RETRIES:
+            attempts += 1
             if ip_addr is None:
                 # regular CommissionOnNetwork if no IP address provided
                 LOGGER.info(
@@ -339,7 +341,6 @@ class MatterDeviceController:
             if not success and attempts >= MAX_COMMISSION_RETRIES:
                 raise NodeCommissionFailed(f"Commissioning failed for node {node_id}.")
             await asyncio.sleep(5)
-            attempts += 1
 
         LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
 
