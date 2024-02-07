@@ -958,10 +958,9 @@ class MatterDeviceController:
             # we debounce it a bit so we only mark the node unavailable
             # at the second resubscription attempt
             if node.available and self._last_subscription_attempt[node_id] >= 1:
-                node.available = False
                 # NOTE: if the node is (re)discovered by mdns, that callback will
                 # take care of resubscribing to the node
-                self.server.signal_event(EventType.NODE_UPDATED, node)
+                asyncio.create_task(self._node_offline(node_id))
             self._last_subscription_attempt[node_id] += 1
 
         def resubscription_succeeded(
@@ -1219,15 +1218,7 @@ class MatterDeviceController:
                 if not node.available:
                     return  # node is already offline, nothing to do
                 LOGGER.info("Node %s vanished according to MDNS", node_id)
-                # Remove and cancel any existing interview/subscription reschedule timer
-                if existing := self._sub_retry_timer.pop(node_id, None):
-                    existing.cancel()
-                # shutdown existing subscriptions
-                if sub := self._subscriptions.pop(node_id, None):
-                    await self._call_sdk(sub.Shutdown)
-                # mark node as unavailable
-                node.available = False
-                self.server.signal_event(EventType.NODE_UPDATED, node_id)
+                await self._node_offline(node_id)
         finally:
             self._mdns_inprogress.remove(node_id)
 
@@ -1256,3 +1247,18 @@ class MatterDeviceController:
             subkey=str(node_id),
             force=force,
         )
+
+    async def _node_offline(self, node_id: int) -> None:
+        """Mark node as offline."""
+        # Remove and cancel any existing interview/subscription reschedule timer
+        if existing := self._sub_retry_timer.pop(node_id, None):
+            existing.cancel()
+        # shutdown existing subscriptions
+        if sub := self._subscriptions.pop(node_id, None):
+            await self._call_sdk(sub.Shutdown)
+        # mark node as unavailable
+        node = self._nodes[node_id]
+        if not node.available:
+            return
+        node.available = False
+        self.server.signal_event(EventType.NODE_UPDATED, node)
