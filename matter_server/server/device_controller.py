@@ -24,7 +24,6 @@ from matter_server.common.models import CommissionableNodeData, CommissioningPar
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
 
-from ..common.const import SCHEMA_VERSION
 from ..common.errors import (
     NodeCommissionFailed,
     NodeInterviewFailed,
@@ -156,11 +155,23 @@ class MatterDeviceController:
                 # as this can no longer happen.
                 orphaned_nodes.add(node_id_str)
                 continue
-            if node_dict.get("interview_version") != SCHEMA_VERSION:
-                # Invalidate node attributes data if schema mismatch,
-                # the node will automatically be scheduled for re-interview.
-                node_dict["attributes"] = {}
-            node = dataclass_from_dict(MatterNodeData, node_dict)
+            try:
+                node = dataclass_from_dict(MatterNodeData, node_dict, strict=True)
+            except (KeyError, ValueError):
+                # constructing MatterNodeData from the cached dict is not possible,
+                # revert to a fallback object and the node will be re-interviewed
+                node = MatterNodeData(
+                    node_id=node_id,
+                    date_commissioned=node_dict.get(
+                        "date_commissioned",
+                        datetime(1970, 1, 1),
+                    ),
+                    last_interview=node_dict.get(
+                        "last_interview",
+                        datetime(1970, 1, 1),
+                    ),
+                    interview_version=0,
+                )
             # always mark node as unavailable at startup until subscriptions are ready
             node.available = False
             self._nodes[node_id] = node

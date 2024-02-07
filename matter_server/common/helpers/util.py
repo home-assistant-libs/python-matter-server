@@ -1,4 +1,5 @@
 """Utils for Matter server (and client)."""
+
 from __future__ import annotations
 
 import base64
@@ -257,6 +258,7 @@ def dataclass_from_dict(cls: type[_T], dict_obj: dict, strict: bool = False) -> 
                 dict_obj.get(field.name),
                 type_hints[field.name],
                 field.default,
+                allow_none=not strict,
             )
             for field in dc_fields
             if field.init
