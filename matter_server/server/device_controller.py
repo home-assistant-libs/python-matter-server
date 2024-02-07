@@ -976,7 +976,7 @@ class MatterDeviceController:
 
         node_logger.info("Setting up attributes and events subscription.")
         interval_floor = 0
-        interval_ceiling = 3600 if battery_powered else 30
+        interval_ceiling = 300 if battery_powered else 30
         self._last_subscription_attempt[node_id] = 0
         future = loop.create_future()
         device = await self._resolve_node(node_id)
@@ -1259,6 +1259,7 @@ class MatterDeviceController:
         # mark node as unavailable
         node = self._nodes[node_id]
         if not node.available:
-            return
+            return  # nothing to do to
         node.available = False
         self.server.signal_event(EventType.NODE_UPDATED, node)
+        LOGGER.info("Marked node %s as offline", node_id)
