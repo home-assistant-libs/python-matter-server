@@ -47,7 +47,7 @@ from ..common.models import (
     MatterNodeEvent,
     NodePingResult,
 )
-from .const import PAA_ROOT_CERTS_DIR
+from .const import DATA_MODEL_SCHEMA_VERSION, PAA_ROOT_CERTS_DIR
 from .helpers.paa_certificates import fetch_certificates
 
 if TYPE_CHECKING:
@@ -501,7 +501,7 @@ class MatterDeviceController:
                 existing_info.date_commissioned if existing_info else datetime.utcnow()
             ),
             last_interview=datetime.utcnow(),
-            interview_version=SCHEMA_VERSION,
+            interview_version=DATA_MODEL_SCHEMA_VERSION,
             available=True,
             attributes=parse_attributes_from_read_result(read_response.tlvAttributes),
         )
@@ -1061,7 +1061,7 @@ class MatterDeviceController:
             # re-interview if we dont have any node attributes (empty node)
             not node_data.attributes
             # re-interview if the schema has changed
-            or node_data.interview_version < SCHEMA_VERSION
+            or node_data.interview_version < DATA_MODEL_SCHEMA_VERSION
             # re-interview if the last interview was too long ago
             or (datetime.utcnow() - node_data.last_interview) > timedelta(days=90)
         ):
