@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import deque
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import partial
 import logging
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, cast
@@ -1060,10 +1060,8 @@ class MatterDeviceController:
         if (
             # re-interview if we dont have any node attributes (empty node)
             not node_data.attributes
-            # re-interview if the schema has changed
+            # re-interview if the data model schema has changed
             or node_data.interview_version < DATA_MODEL_SCHEMA_VERSION
-            # re-interview if the last interview was too long ago
-            or (datetime.utcnow() - node_data.last_interview) > timedelta(days=90)
         ):
             try:
                 await self.interview_node(node_id)
