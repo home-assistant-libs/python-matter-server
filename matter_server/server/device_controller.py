@@ -1183,9 +1183,6 @@ class MatterDeviceController:
         name: str,
         state_change: ServiceStateChange,
     ) -> None:
-        if state_change not in (ServiceStateChange.Added, ServiceStateChange.Removed):
-            # we're not interested in update messages so return early
-            return
         if service_type == MDNS_TYPE_COMMISSIONABLE_NODE:
             asyncio.create_task(
                 self._on_mdns_commissionable_node_state(name, state_change)
@@ -1211,7 +1208,7 @@ class MatterDeviceController:
         try:
             self._mdns_inprogress.add(node_id)
             node = self._nodes[node_id]
-            if state_change == ServiceStateChange.Added:
+            if state_change in (ServiceStateChange.Added, ServiceStateChange.Updated):
                 if node.available:
                     return  # node is already set-up, no action needed
                 LOGGER.info("Node %s discovered on MDNS", node_id)
