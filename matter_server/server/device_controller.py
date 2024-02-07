@@ -1051,8 +1051,7 @@ class MatterDeviceController:
         )
 
     async def _setup_node(self, node_id: int) -> None:
-        """Setup subscriptions and interview (if needed) for known/discovered node."""
-
+        """Handle set-up of subscriptions and interview (if needed) for known/discovered node."""
         if node_id not in self._nodes:
             raise NodeNotExists(f"Node {node_id} does not exist.")
 
