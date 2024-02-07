@@ -354,6 +354,8 @@ class MatterClient:
             )
         ):
             for network in networks:
+                if not network.connected:
+                    continue
                 if isinstance(network.networkID, bytes):
                     network_name = network.networkID.decode("utf-8")
                     break
