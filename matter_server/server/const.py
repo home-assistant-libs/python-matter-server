@@ -9,7 +9,7 @@ MIN_SCHEMA_VERSION = 5
 # schema version of our data model
 # only bump if the format of the data in MatterNodeData changed
 # and a full re-interview is mandatory
-DATA_MODEL_SCHEMA_VERSION = 6
+DATA_MODEL_SCHEMA_VERSION = 6  # NOTE: next time bump to 8!
 
 # the paa-root-certs path is hardcoded in the sdk at this time
 # and always uses the development subfolder

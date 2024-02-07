@@ -1061,7 +1061,7 @@ class MatterDeviceController:
             # re-interview if we dont have any node attributes (empty node)
             not node_data.attributes
             # re-interview if the data model schema has changed
-            or node_data.interview_version < DATA_MODEL_SCHEMA_VERSION
+            or node_data.interview_version != DATA_MODEL_SCHEMA_VERSION
         ):
             try:
                 await self.interview_node(node_id)
