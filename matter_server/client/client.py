@@ -1,4 +1,5 @@
 """Matter Client implementation."""
+
 from __future__ import annotations
 
 import asyncio
@@ -345,6 +346,10 @@ class MatterClient:
             node_type = NodeType.BRIDGE
         # get active fabrics for this node
         active_fabrics = await self.get_matter_fabrics(node_id)
+        # get active fabric index
+        fabric_index = node.get_attribute_value(
+            0, None, Clusters.OperationalCredentials.Attributes.CurrentFabricIndex
+        )
         return NodeDiagnostics(
             node_id=node_id,
             network_type=network_type,
@@ -354,6 +359,7 @@ class MatterClient:
             mac_address=mac_address,
             available=node.available,
             active_fabrics=active_fabrics,
+            active_fabric_index=fabric_index,
         )
 
     async def send_device_command(
