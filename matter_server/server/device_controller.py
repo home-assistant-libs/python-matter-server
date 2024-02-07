@@ -137,10 +137,10 @@ class MatterDeviceController:
         self.chip_controller = self.server.stack.fabric_admin.NewController(
             paaTrustStorePath=str(PAA_ROOT_CERTS_DIR)
         )
-        self.compressed_fabric_id = await self._call_sdk(
-            self.chip_controller.GetCompressedFabricId
+        self.compressed_fabric_id = cast(
+            int, await self._call_sdk(self.chip_controller.GetCompressedFabricId)
         )
-        self.fabric_id_hex = hex(cast(int, self.compressed_fabric_id))[2:]
+        self.fabric_id_hex = hex(self.compressed_fabric_id)[2:]
         LOGGER.debug("CHIP Device Controller Initialized")
 
     async def start(self) -> None:
