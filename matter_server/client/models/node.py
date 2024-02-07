@@ -1,4 +1,5 @@
 """Matter node."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -402,3 +403,4 @@ class NodeDiagnostics:
     mac_address: str | None
     available: bool
     active_fabrics: list[MatterFabricData]
+    active_fabric_index: int
