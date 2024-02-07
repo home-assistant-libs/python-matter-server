@@ -1218,27 +1218,23 @@ class MatterDeviceController:
         node_id = int(name.split("-")[1].split(".")[0], 16)
         while True:
             state_change = await queue.get()
-            try:
-                if node_id not in self._nodes:
-                    continue  # this should not happen, but just in case
-                node = self._nodes[node_id]
-                if state_change in (
-                    ServiceStateChange.Added,
-                    ServiceStateChange.Updated,
-                ):
-                    if node.available:
-                        continue  # node is already set-up, no action needed
-                    LOGGER.info("Node %s discovered on MDNS", node_id)
-                    # setup the node
-                    await self._check_interview_and_subscription(node_id)
-                elif state_change == ServiceStateChange.Removed:
-                    if not node.available:
-                        continue  # node is already offline, nothing to do
-                    LOGGER.info("Node %s vanished according to MDNS", node_id)
-                    await self._node_offline(node_id)
-            except Exception as err:  # pylint: disable=broad-except
-                # we do not want to blowup our mdns processing so we log and continue
-                LOGGER.exception(err)
+            if node_id not in self._nodes:
+                continue  # this should not happen, but just in case
+            node = self._nodes[node_id]
+            if state_change in (
+                ServiceStateChange.Added,
+                ServiceStateChange.Updated,
+            ):
+                if node.available:
+                    continue  # node is already set-up, no action needed
+                LOGGER.info("Node %s discovered on MDNS", node_id)
+                # setup the node
+                await self._check_interview_and_subscription(node_id)
+            elif state_change == ServiceStateChange.Removed:
+                if not node.available:
+                    continue  # node is already offline, nothing to do
+                LOGGER.info("Node %s vanished according to MDNS", node_id)
+                await self._node_offline(node_id)
 
     async def _on_mdns_commissionable_node_state(
         self, name: str, state_change: ServiceStateChange
