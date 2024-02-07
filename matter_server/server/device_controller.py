@@ -140,7 +140,7 @@ class MatterDeviceController:
         self.compressed_fabric_id = await self._call_sdk(
             self.chip_controller.GetCompressedFabricId
         )
-        self.fabric_id_hex = f"{self.compressed_fabric_id:016X}"
+        self.fabric_id_hex = hex(cast(int, self.compressed_fabric_id))[2:]
         LOGGER.debug("CHIP Device Controller Initialized")
 
     async def start(self) -> None:
@@ -1196,6 +1196,7 @@ class MatterDeviceController:
             )
             return
         if service_type == MDNS_TYPE_OPERATIONAL_NODE:
+            name = name.lower()
             if not name.startswith(self.fabric_id_hex):
                 # filter out messages that are not for our fabric
                 return
