@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import partial
 import logging
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, cast
@@ -1050,48 +1050,31 @@ class MatterDeviceController:
             ),
         )
 
-    async def _check_interview_and_subscription(
-        self, node_id: int, reschedule_interval: int = 30
-    ) -> None:
-        """Handle interview (if needed) and subscription for known node."""
+    async def _setup_node(self, node_id: int) -> None:
+        """Set-up subscriptions and interview (if needed) for known/discovered node."""
 
         if node_id not in self._nodes:
             raise NodeNotExists(f"Node {node_id} does not exist.")
 
         # (re)interview node (only) if needed
-        node_data = self._nodes.get(node_id)
+        node_data = self._nodes[node_id]
         if (
-            node_data is None
+            # re-interview if we dont have any node attributes (empty node)
+            not node_data.attributes
             # re-interview if the schema has changed
             or node_data.interview_version < SCHEMA_VERSION
+            # re-interview if the last interview was too long ago
+            or (datetime.utcnow() - node_data.last_interview) > timedelta(days=90)
         ):
             try:
                 await self.interview_node(node_id)
-            except NodeNotResolving:
-                LOGGER.warning(
-                    "Unable to interview Node %s as it is unavailable",
-                    node_id,
-                )
-            # NOTE: the node will be picked up by mdns discovery automatically
-            # when it becomes available again.
-            except NodeInterviewFailed:
-                LOGGER.warning(
-                    "Unable to interview Node %s, will retry later in the background.",
-                    node_id,
-                )
-                # reschedule interview on error
-                # increase interval at each attempt with maximum of
-                # MAX_POLL_INTERVAL seconds (= 10 minutes)
-                self._schedule_interview(
-                    node_id,
-                    min(reschedule_interval + 10, MAX_POLL_INTERVAL),
-                )
+            except (NodeNotResolving, NodeInterviewFailed) as err:
+                LOGGER.warning("Unable to interview Node %s", exc_info=err)
+                # NOTE: the node will be picked up by mdns discovery automatically
+                # when it comes available again.
                 return
 
         # setup subscriptions for the node
-        if node_id in self._subscriptions:
-            return
-
         try:
             await self._subscribe_node(node_id)
         except NodeNotResolving:
@@ -1101,26 +1084,6 @@ class MatterDeviceController:
             )
             # NOTE: the node will be picked up by mdns discovery automatically
             # when it becomes available again.
-
-    def _schedule_interview(self, node_id: int, delay: int) -> None:
-        """(Re)Schedule interview and/or initial subscription for a node."""
-        assert self.server.loop is not None
-        # cancel any existing (re)schedule timer
-        if existing := self._sub_retry_timer.pop(node_id, None):
-            existing.cancel()
-
-        def create_interview_task() -> None:
-            asyncio.create_task(
-                self._check_interview_and_subscription(
-                    node_id,
-                )
-            )
-            # the handle to the timer can now be removed
-            self._sub_retry_timer.pop(node_id, None)
-
-        self._sub_retry_timer[node_id] = self.server.loop.call_later(
-            delay, create_interview_task
-        )
 
     async def _resolve_node(
         self, node_id: int, retries: int = 2, attempt: int = 1
@@ -1230,7 +1193,7 @@ class MatterDeviceController:
                     continue  # node is already set-up, no action needed
                 LOGGER.info("Node %s discovered on MDNS", node_id)
                 # setup the node
-                await self._check_interview_and_subscription(node_id)
+                await self._setup_node(node_id)
             elif state_change == ServiceStateChange.Removed:
                 if not node.available:
                     continue  # node is already offline, nothing to do
