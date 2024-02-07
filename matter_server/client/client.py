@@ -339,7 +339,6 @@ class MatterClient:
                 attribute=Clusters.NetworkCommissioning.Attributes.LastNetworkID,
             )
         ):
-            node.get_cluster(0, Clusters.NetworkCommissioning)
             if isinstance(last_network_id, bytes):
                 network_name = last_network_id.decode("utf-8")
             elif last_network_id != NullValue:
