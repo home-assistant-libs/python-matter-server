@@ -959,7 +959,7 @@ class MatterDeviceController:
             # at the second resubscription attempt
             if node.available and self._last_subscription_attempt[node_id] >= 1:
                 node.available = False
-                # NOTE: if the node is (re)discovered bt mdns, that callback will
+                # NOTE: if the node is (re)discovered by mdns, that callback will
                 # take care of resubscribing to the node
                 self.server.signal_event(EventType.NODE_UPDATED, node)
             self._last_subscription_attempt[node_id] += 1
