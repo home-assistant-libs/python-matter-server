@@ -1,51 +1,60 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
-  - repo: https://github.com/psf/black
-    rev: 23.1.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.2.1
     hooks:
-      - id: black
+      - id: ruff
         args:
-           - --quiet
-        files: ^(matter_server|scripts)/.+\.py$
+          - --fix
+      - id: ruff-format
+        files: ^((matter_server|scripts|tests)/.+)?[^/]+\.py$
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.4
+    rev: v2.2.2
     hooks:
       - id: codespell
-        args: []
+        args:
+          - --ignore-words-list=pase,hass
+          - --skip="./.*,*.csv,*.json,*.ambr"
+          - --quiet-level=2
         exclude_types: [csv, json]
         exclude: ^tests/fixtures/
-        additional_dependencies:
-          - tomli
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
-    hooks:
-      - id: flake8
-        files: ^(matter_server|scripts)/.+\.py$
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-        files: ^(matter_server|scripts)/.+\.py$
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
+      - id: check-executables-have-shebangs
+        stages: [manual]
+      - id: check-json
+        exclude: (.vscode|.devcontainer)
       - id: no-commit-to-branch
         args:
           - --branch=main
-      - id: trailing-whitespace
+  - repo: https://github.com/cdce8p/python-typing-update
+    rev: v0.6.0
+    hooks:
+      # Run `python-typing-update` hook manually from time to time
+      # to update python typing syntax.
+      # Will require manual work, before submitting changes!
+      # pre-commit run --hook-stage manual python-typing-update --all-files
+      - id: python-typing-update
+        stages: [manual]
+        args:
+          - --py311-plus
+          - --force
+          - --keep-updates
+        files: ^(matter_server|tests|scripts)/.+\.py$
   - repo: local
     hooks:
       - id: mypy
         name: mypy
         entry: scripts/run-in-env.sh mypy
-        types: [python]
         language: script
-        files: ^(matter_server)/.+\.py$
-
+        types: [python]
+        require_serial: true
+        files: ^(matter_server|pylint)/.+\.py$
       - id: pylint
         name: pylint
         entry: scripts/run-in-env.sh pylint -j 0
-        types: [python]
         language: script
-        files: ^(matter_server)/.+\.py$
+        types: [python]
+        files: ^matter_server/.+\.py$
