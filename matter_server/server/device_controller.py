@@ -1171,6 +1171,14 @@ class MatterDeviceController:
             if not name.startswith(self.fabric_id_hex):
                 # filter out messages that are not for our fabric
                 return
+            LOGGER.debug("Received %s MDNS event for %s", state_change, name)
+            if state_change not in (
+                ServiceStateChange.Added,
+                ServiceStateChange.Updated,
+            ):
+                # we're not interested in removals as this is already
+                # handled in the subscription logic
+                return
             if existing := self._mdns_queues.get(name):
                 queue = existing[0]
             else:
@@ -1193,20 +1201,18 @@ class MatterDeviceController:
             if node_id not in self._nodes:
                 continue  # this should not happen, but just in case
             node = self._nodes[node_id]
-            if state_change in (
+            if state_change not in (
                 ServiceStateChange.Added,
                 ServiceStateChange.Updated,
             ):
-                if node.available:
-                    continue  # node is already set-up, no action needed
-                LOGGER.info("Node %s discovered on MDNS", node_id)
-                # setup the node
-                await self._setup_node(node_id)
-            elif state_change == ServiceStateChange.Removed:
-                if not node.available:
-                    continue  # node is already offline, nothing to do
-                LOGGER.info("Node %s vanished according to MDNS", node_id)
-                await self._node_offline(node_id)
+                # this should be already filtered out, but just in case
+                continue
+            if node.available:
+                # if the node is already set-up, no action is needed
+                continue
+            LOGGER.info("Node %s discovered on MDNS", node_id)
+            # setup the node
+            await self._setup_node(node_id)
 
     async def _on_mdns_commissionable_node_state(
         self, name: str, state_change: ServiceStateChange
