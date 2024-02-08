@@ -131,7 +131,7 @@ disable = [
 ignore-imports = true
 
 [tool.pylint.FORMAT]
-max-line-length = 88
+max-line-length = 100
 
 [tool.pytest.ini_options]
 addopts = "--cov"
@@ -145,6 +145,7 @@ ignore = [
   "D213", # Conflicts with other rules
   "D417", # False positives in some occasions
   "PLR2004", # Just annoying, not really useful
+  "S101", # assert is often used to satisfy type checking
 
   # Conflicts with the Ruff formatter
   "COM812",
