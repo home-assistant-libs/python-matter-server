@@ -513,7 +513,7 @@ class MatterDeviceController:
             ),
             last_interview=datetime.utcnow(),
             interview_version=DATA_MODEL_SCHEMA_VERSION,
-            available=True,
+            available=existing_info.available if existing_info else False,
             attributes=parse_attributes_from_read_result(read_response.tlvAttributes),
         )
 
@@ -1244,8 +1244,6 @@ class MatterDeviceController:
             await self._call_sdk(sub.Shutdown)
         # mark node as unavailable
         node = self._nodes[node_id]
-        if not node.available:
-            return  # nothing to do to
         node.available = False
         self.server.signal_event(EventType.NODE_UPDATED, node)
         LOGGER.info("Marked node %s as offline", node_id)
