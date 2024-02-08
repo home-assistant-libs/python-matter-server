@@ -65,7 +65,7 @@ include = ["matter_server*"]
 
 
 [tool.pylint.MAIN]
-py-version = "3.11"
+py-version = "3.10"
 ignore = [
     "tests",
 ]
@@ -85,23 +85,10 @@ init-hook = """\
 load-plugins = [
     "pylint.extensions.code_style",
     "pylint.extensions.typing",
-    "hass_enforce_coordinator_module",
-    "hass_enforce_sorted_platforms",
-    "hass_enforce_super_call",
-    "hass_enforce_type_hints",
-    "hass_inheritance",
-    "hass_imports",
-    "hass_logger",
-    "pylint_per_file_ignores",
 ]
 persistent = false
 extension-pkg-allow-list = [
-    "av.audio.stream",
-    "av.logging",
-    "av.stream",
-    "ciso8601",
     "orjson",
-    "cv2",
 ]
 fail-on = [
     "I",
@@ -360,6 +347,7 @@ disable = [
     "used-before-assignment",
     "using-final-decorator-in-unsupported-version",
     "wrong-exception-operation",
+    "fixme" # we're still beta
 ]
 enable = [
     #"useless-suppression",  # temporarily every now and then to clean them up
@@ -390,12 +378,6 @@ runtime-typing = false
 
 [tool.pylint.CODE_STYLE]
 max-line-length-suggestions = 72
-
-[tool.pylint-per-file-ignores]
-# hass-component-root-import: Tests test non-public APIs
-# protected-access: Tests do often test internals a lot
-# redefined-outer-name: Tests reference fixtures in the test function
-"/tests/"="hass-component-root-import,protected-access,redefined-outer-name"
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -674,6 +656,9 @@ split-on-trailing-comma = false
 [tool.ruff.lint.mccabe]
 max-complexity = 25
 
+[tool.ruff.lint.pydocstyle]
+# Use Google-style docstrings.
+convention = "pep257"
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
