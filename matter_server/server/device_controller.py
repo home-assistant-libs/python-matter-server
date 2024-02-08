@@ -513,7 +513,7 @@ class MatterDeviceController:
             ),
             last_interview=datetime.utcnow(),
             interview_version=DATA_MODEL_SCHEMA_VERSION,
-            available=True,
+            available=existing_info.available if existing_info else False,
             attributes=parse_attributes_from_read_result(read_response.tlvAttributes),
         )
 
