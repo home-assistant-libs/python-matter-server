@@ -28,7 +28,7 @@ dependencies = [
   "coloredlogs",
   "dacite",
   "orjson",
-  "home-assistant-chip-clusters==2024.1.0"
+  "home-assistant-chip-clusters==2024.1.0",
   "requests>=2.26.0,<3.0.0"  
 ]
 
