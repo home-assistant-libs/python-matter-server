@@ -141,6 +141,11 @@ class MatterDeviceController:
         )
         self.fabric_id_hex = hex(self.compressed_fabric_id)[2:]
         LOGGER.debug("CHIP Device Controller Initialized")
+        LOGGER.info(
+            "Compressed Fabric ID: %s - HEX: %s",
+            self.compressed_fabric_id,
+            self.fabric_id_hex,
+        )
 
     async def start(self) -> None:
         """Handle logic on controller start."""
@@ -180,6 +185,7 @@ class MatterDeviceController:
             self.server.storage.remove(DATA_KEY_NODES, node_id_str)
         LOGGER.info("Loaded %s nodes from stored configuration", len(self._nodes))
         # set-up mdns browser
+        LOGGER.info("Starting mdns discovery....")
         self._aiozc = AsyncZeroconf(ip_version=IPVersion.All)
         services = [MDNS_TYPE_OPERATIONAL_NODE, MDNS_TYPE_COMMISSIONABLE_NODE]
         self._aiobrowser = AsyncServiceBrowser(
@@ -187,6 +193,7 @@ class MatterDeviceController:
             services,
             handlers=[self._on_mdns_service_state_change],
         )
+        LOGGER.info("Mdns discovery initialized....")
 
     async def stop(self) -> None:
         """Handle logic on server stop."""
@@ -1168,10 +1175,14 @@ class MatterDeviceController:
             return
         if service_type == MDNS_TYPE_OPERATIONAL_NODE:
             name = name.lower()
+            LOGGER.info("Received %s MDNS event for %s", state_change, name)
             if not name.startswith(self.fabric_id_hex):
                 # filter out messages that are not for our fabric
+                LOGGER.warning(
+                    "Ignore MDNS event for %s due to a fabric mismatch", name
+                )
                 return
-            LOGGER.debug("Received %s MDNS event for %s", state_change, name)
+
             if state_change not in (
                 ServiceStateChange.Added,
                 ServiceStateChange.Updated,
