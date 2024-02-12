@@ -19,15 +19,18 @@ from cryptography.hazmat.primitives import serialization
 
 from matter_server.server.const import PAA_ROOT_CERTS_DIR
 
-LOGGER = logging.getLogger(__name__)
-PRODUCTION_URL = "https://on.dcl.csa-iot.org"
-TEST_URL = "https://on.test-net.dcl.csa-iot.org"
-GIT_URL = "https://github.com/project-chip/connectedhomeip/raw/master/credentials/development/paa-root-certs"  # pylint: disable=line-too-long
-
 # Git repo details
 OWNER = "project-chip"
 REPO = "connectedhomeip"
 PATH = "credentials/development/paa-root-certs"
+
+LOGGER = logging.getLogger(__name__)
+PRODUCTION_URL = "https://on.dcl.csa-iot.org"
+TEST_URL = "https://on.test-net.dcl.csa-iot.org"
+GIT_URL = f"https://raw.githubusercontent.com/{OWNER}/{REPO}/master/{PATH}"
+
+
+LAST_CERT_IDS: set[str] = set()
 
 
 async def get_directory_contents(owner: str, repo: str, path: str) -> List[str]:
@@ -53,28 +56,6 @@ async def get_directory_contents(owner: str, repo: str, path: str) -> List[str]:
                 "Failed to fetch directory contents. Status code: %s", response.status
             )
             return []
-
-
-async def get_git_file_list() -> List[str]:
-    """
-    Retrieve a list of unique file names from a Git repository.
-
-    This function fetches the list of file names from a specified path in a Git repository,
-    filters out the file extensions, and returns a list of unique file names.
-
-    Returns:
-        List[str]: A list of unique file names.
-    """
-    file_list = await get_directory_contents(OWNER, REPO, PATH)
-    # Filter out extension and remove duplicates
-    unique_file_names = list({file.split(".")[0] for file in file_list})
-    return unique_file_names
-
-
-GIT_CERTS = asyncio.run(get_git_file_list())
-
-
-LAST_CERT_IDS: set[str] = set()
 
 
 async def write_paa_root_cert(certificate: str, subject: str) -> None:
@@ -170,12 +151,14 @@ async def fetch_git_certificates() -> int:
     """Fetch Git PAA Certificates."""
     fetch_count = 0
     LOGGER.info("Fetching the latest PAA root certificates from Git.")
+    file_list = await get_directory_contents(OWNER, REPO, PATH)
+    # Filter out extension and remove duplicates
+    git_certs = list({file.split(".")[0] for file in file_list})
     try:
         async with ClientSession(raise_for_status=True) as http_session:
-            for cert in GIT_CERTS:
+            for cert in git_certs:
                 if cert in LAST_CERT_IDS:
                     continue
-
                 async with http_session.get(f"{GIT_URL}/{cert}.pem") as response:
                     certificate = await response.text()
                 await write_paa_root_cert(certificate, cert)
