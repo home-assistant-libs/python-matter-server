@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import pprint
-from typing import Any, Callable, Dict, Final, cast
+from typing import Final, cast
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
 
@@ -18,7 +17,6 @@ from ..common.models import (
     CommandMessage,
     ErrorResultMessage,
     EventMessage,
-    EventType,
     MessageType,
     ServerInfoMessage,
     SuccessResultMessage,
@@ -32,7 +30,6 @@ from .exceptions import (
     InvalidState,
     NotConnected,
 )
-from .models.node import MatterNode
 
 LOGGER = logging.getLogger(f"{__package__}.connection")
 VERBOSE_LOGGER = os.environ.get("MATTER_VERBOSE_LOGGING")
