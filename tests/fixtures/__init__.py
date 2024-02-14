@@ -1,3 +1,5 @@
+"""Text fixtures for Matter server tests."""
+
 import pathlib
 
 FIXTURES_ROOT = pathlib.Path(__file__).parent
