@@ -99,7 +99,7 @@ warn_unused_configs = true
 warn_unused_ignores = true
 
 [tool.pylint.MAIN]
-extension-pkg-whitelist = [
+extension-pkg-allow-list = [
   "chip.*",
   "orjson",
 ]
