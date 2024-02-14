@@ -26,6 +26,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgirepository1.0-dev
           python -m pip install --upgrade pip
+          pip install -e .[server]
           pip install -e .[test]
       - name: Lint/test with pre-commit
         run: pre-commit run --all-files
@@ -52,6 +53,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgirepository1.0-dev
           python -m pip install --upgrade pip
-          pip install -e .[server] -r requirements-test.txt
+          pip install -e .[server]
+          pip install -e .[test]
       - name: Pytest
         run: pytest --durations 10 --cov-report term-missing --cov=matter_server --cov-report=xml tests/server/
