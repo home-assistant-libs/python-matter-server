@@ -3,9 +3,9 @@
 from base64 import b64encode
 from typing import Any
 
+import orjson
 from chip.clusters.Types import Nullable
 from chip.tlv import float32, uint
-import orjson
 
 JSON_ENCODE_EXCEPTIONS = (TypeError, ValueError)
 JSON_DECODE_EXCEPTIONS = (orjson.JSONDecodeError,)
@@ -16,6 +16,7 @@ def json_encoder_default(obj: Any) -> Any:
 
     Hand other objects to the original method.
     """
+    # pylint: disable=too-many-return-statements
     if getattr(obj, "do_not_serialize", None):
         return None
     if isinstance(obj, (set, tuple)):

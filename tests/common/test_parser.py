@@ -1,15 +1,18 @@
 """Test parser functions that converts the incoming json from API into dataclass models."""
+
 import datetime
 from dataclasses import dataclass
+from enum import Enum, IntEnum
 from typing import Optional
-from enum import IntEnum, Enum
 
 import pytest
 
 from matter_server.common.helpers.util import dataclass_from_dict
 
+
 class MatterIntEnum(IntEnum):
     """Basic Matter Test IntEnum"""
+
     A = 0
     B = 1
     C = 2
@@ -17,6 +20,7 @@ class MatterIntEnum(IntEnum):
 
 class MatterEnum(Enum):
     """Basic Matter Test Enum"""
+
     A = "a"
     B = "b"
     C = "c"
@@ -57,7 +61,7 @@ def test_dataclass_from_dict():
         "e": {"a": 2, "b": "test", "c": "test", "d": None},
         "f": "2022-12-09T06:58:00Z",
         "g": "a",
-        "h": 2
+        "h": 2,
     }
     res = dataclass_from_dict(BasicModel, raw)
     # test the basic values
@@ -95,7 +99,7 @@ def test_dataclass_from_dict():
     with pytest.raises(KeyError):
         raw2 = {**raw}
         del raw2["a"]
-        dataclass_from_dict(BasicModel, raw2)
+        dataclass_from_dict(BasicModel, raw2, strict=True)
     # test extra keys silently ignored in non-strict mode
     raw2 = {**raw}
     raw2["extrakey"] = "something"

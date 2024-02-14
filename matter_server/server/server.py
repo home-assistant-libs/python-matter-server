@@ -1,11 +1,12 @@
 """Implementation of a Websocket-based server to proxy Matter support (using CHIP SDK)."""
+
 from __future__ import annotations
 
 import asyncio
 import ipaddress
 import logging
-from typing import Any, Callable, Set, cast
 import weakref
+from typing import Any, Callable, Set, cast
 
 from aiohttp import web
 
@@ -54,6 +55,8 @@ def mount_websocket(server: MatterServer, path: str) -> None:
 
 class MatterServer:
     """Serve Matter stack over WebSockets."""
+
+    # pylint: disable=too-many-instance-attributes
 
     _runner: web.AppRunner | None = None
     _http: MultiHostTCPSite | None = None

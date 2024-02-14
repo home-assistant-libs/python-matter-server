@@ -1,4 +1,5 @@
 """Test the server."""
+
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator, Generator
@@ -41,7 +42,9 @@ def app_runner_fixture() -> Generator[MagicMock, None, None]:
 @pytest.fixture(name="multi_host_tcp_site")
 def multi_host_tcp_site_fixture() -> Generator[MagicMock, None, None]:
     """Return a mocked tcp site."""
-    with patch("matter_server.server.server.MultiHostTCPSite", autospec=True) as multi_host_tcp_site:
+    with patch(
+        "matter_server.server.server.MultiHostTCPSite", autospec=True
+    ) as multi_host_tcp_site:
         yield multi_host_tcp_site
 
 
@@ -130,7 +133,7 @@ async def test_server_start(
     assert server.vendor_id == 1234
     assert server.fabric_id == 5678
     assert server.port == 5580
-    assert server.listen_addresses == None
+    assert server.listen_addresses is None
     assert APICommand.SERVER_INFO in server.command_handlers
     assert APICommand.SERVER_DIAGNOSTICS in server.command_handlers
     assert APICommand.GET_NODES in server.command_handlers

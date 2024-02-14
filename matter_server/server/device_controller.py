@@ -5,14 +5,15 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections import deque
 from datetime import datetime
 from functools import partial
-import logging
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, cast
 
 from chip.ChipDeviceCtrl import DeviceProxyWrapper
-from chip.clusters import Attribute, Objects as Clusters
+from chip.clusters import Attribute
+from chip.clusters import Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
@@ -93,7 +94,7 @@ BASE_SUBSCRIBE_ATTRIBUTES: tuple[Attribute.AttributePath, ...] = (
     ),
 )
 
-# pylint: disable=too-many-lines,too-many-locals,too-many-statements,too-many-branches
+# pylint: disable=too-many-lines,too-many-locals,too-many-statements,too-many-branches,too-many-instance-attributes
 
 
 class MatterDeviceController:
@@ -244,7 +245,7 @@ class MatterDeviceController:
         attempts = 0
         # we retry commissioning a few times as we've seen devices in the wild
         # that are a bit unstable.
-        # by retrying, we increase the chances of a successful commisssion
+        # by retrying, we increase the chances of a successful commission
         while attempts <= MAX_COMMISSION_RETRIES:
             attempts += 1
             LOGGER.info(
@@ -322,7 +323,7 @@ class MatterDeviceController:
         attempts = 0
         # we retry commissioning a few times as we've seen devices in the wild
         # that are a bit unstable.
-        # by retrying, we increase the chances of a successful commisssion
+        # by retrying, we increase the chances of a successful commission
         while attempts <= MAX_COMMISSION_RETRIES:
             attempts += 1
             if ip_addr is None:
