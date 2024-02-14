@@ -1,4 +1,5 @@
 """Generate device types from matter-devices.xml."""
+
 import pathlib
 
 import black
@@ -87,14 +88,12 @@ class DeviceType:
 
         name = name[len("Matter ") :]
 
-
         clusters = device["clusters"]["include"]
         if not isinstance(clusters, list):
             clusters = [clusters]
 
         for _cluster in clusters:
             pass
-
 
         if not clusters:
             output_clusters = "set()"
