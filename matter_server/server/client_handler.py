@@ -3,22 +3,20 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from concurrent import futures
 from contextlib import suppress
-import logging
-from typing import TYPE_CHECKING, Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Final
 
-from aiohttp import WSMsgType, web
 import async_timeout
+from aiohttp import WSMsgType, web
 from chip.exceptions import ChipStackError
 
+from matter_server.common.errors import InvalidArguments, InvalidCommand, MatterError, SDKStackError
+from matter_server.common.helpers.api import parse_arguments
 from matter_server.common.helpers.json import json_dumps, json_loads
-from matter_server.common.models import EventType
-
-from ..common.errors import InvalidArguments, InvalidCommand, MatterError, SDKStackError
-from ..common.helpers.api import parse_arguments
-from ..common.helpers.util import dataclass_from_dict
-from ..common.models import (
+from matter_server.common.helpers.util import dataclass_from_dict
+from matter_server.common.models import (
     APICommand,
     CommandMessage,
     ErrorResultMessage,
@@ -28,7 +26,11 @@ from ..common.models import (
 )
 
 if TYPE_CHECKING:
-    from ..common.helpers.api import APICommandHandler
+    from collections.abc import Callable
+
+    from matter_server.common.helpers.api import APICommandHandler
+    from matter_server.common.models import EventType
+
     from .server import MatterServer
 
 MAX_PENDING_MSG = 512
@@ -74,7 +76,7 @@ class WebsocketClientHandler:
         try:
             async with async_timeout.timeout(10):
                 await wsock.prepare(request)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._logger.warning("Timeout preparing request from %s", request.remote)
             return wsock
 
@@ -187,7 +189,7 @@ class WebsocketClientHandler:
             try:
                 args = parse_arguments(handler.signature, handler.type_hints, msg.args)
             except (TypeError, KeyError, ValueError) as err:
-                raise InvalidArguments() from err
+                raise InvalidArguments from err
             result = handler.target(**args)
             if asyncio.iscoroutine(result):
                 result = await result
@@ -229,7 +231,7 @@ class WebsocketClientHandler:
         try:
             self._to_write.put_nowait(_message)
         except asyncio.QueueFull:
-            self._logger.error(
+            self._logger.exception(
                 "Client exceeded max pending messages: %s", MAX_PENDING_MSG
             )
 

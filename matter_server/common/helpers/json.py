@@ -3,9 +3,9 @@
 from base64 import b64encode
 from typing import Any
 
+import orjson
 from chip.clusters.Types import Nullable
 from chip.tlv import float32, uint
-import orjson
 
 JSON_ENCODE_EXCEPTIONS = (TypeError, ValueError)
 JSON_DECODE_EXCEPTIONS = (orjson.JSONDecodeError,)
@@ -18,7 +18,7 @@ def json_encoder_default(obj: Any) -> Any:
     """
     if getattr(obj, "do_not_serialize", None):
         return None
-    if isinstance(obj, (set, tuple)):
+    if isinstance(obj, set | tuple):
         return list(obj)
     if isinstance(obj, float32):
         return float(obj)

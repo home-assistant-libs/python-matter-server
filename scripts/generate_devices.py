@@ -39,7 +39,7 @@ def gen_cls_name(name: str):
     return "".join(new_name)
 
 
-def main():
+def main() -> None:
     """Generate device types from matter-devices.xml."""
     data = xmltodict.parse(DEVICE_XML.read_text())
     output = [
@@ -83,21 +83,18 @@ class DeviceType:
         name = device["typeName"]
 
         if not name.startswith("Matter "):
-            print("Unexpected: device doesn't start with Matter. Skipping")
             continue
 
         name = name[len("Matter ") :]
 
-        print(name, device["deviceId"]["#text"])
 
         clusters = device["clusters"]["include"]
         if not isinstance(clusters, list):
             clusters = [clusters]
 
-        for cluster in clusters:
-            print(cluster["@cluster"])
+        for _cluster in clusters:
+            pass
 
-        print()
 
         if not clusters:
             output_clusters = "set()"

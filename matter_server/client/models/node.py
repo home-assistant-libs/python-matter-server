@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from enum import Enum
-import logging
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from chip.clusters import Objects as Clusters
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS
@@ -15,15 +15,19 @@ from matter_server.common.helpers.util import (
     parse_attribute_path,
     parse_value,
 )
-from matter_server.common.models import MatterNodeData
 
 from .device_types import (
     ALL_TYPES as DEVICE_TYPES,
+)
+from .device_types import (
     Aggregator,
     BridgedDevice,
     DeviceType,
     RootNode,
 )
+
+if TYPE_CHECKING:
+    from matter_server.common.models import MatterNodeData
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,7 +44,8 @@ def get_object_params(
     for desc in descriptor.Fields:
         if desc.Tag == object_id:
             return (desc.Label, desc.Type)
-    raise KeyError(f"No descriptor found for object {object_id}")
+    msg = f"No descriptor found for object {object_id}"
+    raise KeyError(msg)
 
 
 @dataclass
@@ -132,7 +137,8 @@ class MatterEndpoint:
         if cluster is None:
             # allow sending None for Cluster to auto resolve it from the Attribute
             if isinstance(attribute, int):
-                raise TypeError("Attribute can not be integer if Cluster is omitted")
+                msg = "Attribute can not be integer if Cluster is omitted"
+                raise TypeError(msg)
             cluster = attribute.cluster_id
         # get cluster first, grab value from cluster instance next
         if cluster_obj := self.get_cluster(cluster):
@@ -164,7 +170,8 @@ class MatterEndpoint:
         """
         if cluster is None:
             if isinstance(attribute, int):
-                raise TypeError("Attribute can not be integer if Cluster is omitted")
+                msg = "Attribute can not be integer if Cluster is omitted"
+                raise TypeError(msg)
             # allow sending None for Cluster to auto resolve it from the Attribute
             cluster = attribute.cluster_id
         cluster_id = cluster if isinstance(cluster, int) else cluster.id

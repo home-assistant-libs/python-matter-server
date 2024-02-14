@@ -4,23 +4,20 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from types import TracebackType
-from typing import TYPE_CHECKING, Any, Callable, Dict, Final, Optional, cast
 import uuid
+from typing import TYPE_CHECKING, Any, Final, cast
 
-from aiohttp import ClientSession
 from chip.clusters import Objects as Clusters
 from chip.clusters.Types import NullValue
 
 from matter_server.common.errors import ERROR_MAP, NodeNotExists
-
-from ..common.helpers.util import (
+from matter_server.common.helpers.util import (
     convert_ip_address,
     convert_mac_address,
     dataclass_from_dict,
     dataclass_to_dict,
 )
-from ..common.models import (
+from matter_server.common.models import (
     APICommand,
     CommandMessage,
     CommissionableNodeData,
@@ -37,6 +34,7 @@ from ..common.models import (
     ServerInfoMessage,
     SuccessResultMessage,
 )
+
 from .connection import MatterClientConnection
 from .exceptions import ConnectionClosed, InvalidServerVersion, InvalidState
 from .models.node import (
@@ -48,6 +46,10 @@ from .models.node import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from types import TracebackType
+
+    from aiohttp import ClientSession
     from chip.clusters.Objects import ClusterCommand
 
 SUB_WILDCARD: Final = "*"
@@ -58,12 +60,12 @@ SUB_WILDCARD: Final = "*"
 class MatterClient:
     """Manage a Matter server over WebSockets."""
 
-    def __init__(self, ws_server_url: str, aiohttp_session: ClientSession):
+    def __init__(self, ws_server_url: str, aiohttp_session: ClientSession) -> None:
         """Initialize the Client class."""
         self.connection = MatterClientConnection(ws_server_url, aiohttp_session)
         self.logger = logging.getLogger(__package__)
-        self._nodes: Dict[int, MatterNode] = {}
-        self._result_futures: Dict[str, asyncio.Future] = {}
+        self._nodes: dict[int, MatterNode] = {}
+        self._result_futures: dict[str, asyncio.Future] = {}
         self._subscribers: dict[str, list[Callable[[EventType, Any], None]]] = {}
         self._stop_called: bool = False
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -76,9 +78,9 @@ class MatterClient:
     def subscribe_events(
         self,
         callback: Callable[[EventType, Any], None],
-        event_filter: Optional[EventType] = None,
-        node_filter: Optional[int] = None,
-        attr_path_filter: Optional[str] = None,
+        event_filter: EventType | None = None,
+        node_filter: int | None = None,
+        attr_path_filter: str | None = None,
     ) -> Callable[[], None]:
         """
         Subscribe to node and server events.
@@ -94,16 +96,10 @@ class MatterClient:
         # for fast lookups we create a key based on the filters, allowing
         # a "catch all" with a wildcard (*).
         _event_filter: str
-        if event_filter is None:
-            _event_filter = SUB_WILDCARD
-        else:
-            _event_filter = event_filter.value
+        _event_filter = SUB_WILDCARD if event_filter is None else event_filter.value
 
         _node_filter: str
-        if node_filter is None:
-            _node_filter = SUB_WILDCARD
-        else:
-            _node_filter = str(node_filter)
+        _node_filter = SUB_WILDCARD if node_filter is None else str(node_filter)
 
         if attr_path_filter is None:
             attr_path_filter = SUB_WILDCARD
@@ -125,7 +121,8 @@ class MatterClient:
         """Return Matter node by id or None if no node exists by that id."""
         if node := self._nodes.get(node_id):
             return node
-        raise NodeNotExists(f"Node {node_id} does not exist or is not yet interviewed")
+        msg = f"Node {node_id} does not exist or is not yet interviewed"
+        raise NodeNotExists(msg)
 
     async def commission_with_code(
         self, code: str, network_only: bool = False
@@ -181,7 +178,7 @@ class MatterClient:
         timeout: int = 300,
         iteration: int = 1000,
         option: int = 1,
-        discriminator: Optional[int] = None,
+        discriminator: int | None = None,
     ) -> CommissioningParameters:
         """
         Open a commissioning window to commission a device present on this controller to another.
@@ -215,7 +212,6 @@ class MatterClient:
 
         Returns a list of MatterFabricData objects.
         """
-
         node = self.get_node(node_id)
         fabrics: list[
             Clusters.OperationalCredentials.Structs.FabricDescriptorStruct
@@ -483,16 +479,20 @@ class MatterClient:
     ) -> Any:
         """Send a command and get a response."""
         if not self.connection.connected or not self._loop:
-            raise InvalidState("Not connected")
+            msg = "Not connected"
+            raise InvalidState(msg)
 
         if (
             require_schema is not None
             and self.server_info is not None
             and require_schema > self.server_info.schema_version
         ):
-            raise InvalidServerVersion(
+            msg = (
                 "Command not available due to incompatible server version. Update the Matter "
                 f"Server to a version that supports at least api schema {require_schema}."
+            )
+            raise InvalidServerVersion(
+                msg
             )
 
         message = CommandMessage(
@@ -516,15 +516,19 @@ class MatterClient:
     ) -> None:
         """Send a command without waiting for the response."""
         if not self.server_info:
-            raise InvalidState("Not connected")
+            msg = "Not connected"
+            raise InvalidState(msg)
 
         if (
             require_schema is not None
             and require_schema > self.server_info.schema_version
         ):
-            raise InvalidServerVersion(
+            msg = (
                 "Command not available due to incompatible server version. Update the Matter "
                 f"Server to a version that supports at least api schema {require_schema}."
+            )
+            raise InvalidServerVersion(
+                msg
             )
         message = CommandMessage(
             message_id=uuid.uuid4().hex,
@@ -701,8 +705,8 @@ class MatterClient:
         self,
         event: EventType,
         data: Any = None,
-        node_id: Optional[int] = None,
-        attribute_path: Optional[str] = None,
+        node_id: int | None = None,
+        attribute_path: str | None = None,
     ) -> None:
         """Signal event to all subscribers."""
         # instead of iterating all subscribers we iterate over subscription keys
@@ -718,7 +722,7 @@ class MatterClient:
                     for callback in self._subscribers.get(key, []):
                         callback(event, data)
 
-    async def __aenter__(self) -> "MatterClient":
+    async def __aenter__(self) -> MatterClient:
         """Initialize and connect the Matter Websocket client."""
         await self.connect()
         return self

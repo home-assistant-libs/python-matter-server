@@ -4,31 +4,34 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import logging
-from typing import Any, Callable, Set, cast
 import weakref
+from typing import TYPE_CHECKING, Any, cast
 
 from aiohttp import web
 
-from matter_server.server.helpers.custom_web_runner import MultiHostTCPSite
-
-from ..common.const import SCHEMA_VERSION
-from ..common.errors import VersionMismatch
-from ..common.helpers.api import APICommandHandler, api_command
-from ..common.helpers.json import json_dumps
-from ..common.helpers.util import chip_clusters_version, chip_core_version
-from ..common.models import (
+from matter_server.common.const import SCHEMA_VERSION
+from matter_server.common.errors import VersionMismatch
+from matter_server.common.helpers.api import APICommandHandler, api_command
+from matter_server.common.helpers.json import json_dumps
+from matter_server.common.helpers.util import chip_clusters_version, chip_core_version
+from matter_server.common.models import (
     APICommand,
     EventCallBackType,
     EventType,
     ServerDiagnostics,
     ServerInfoMessage,
 )
-from ..server.client_handler import WebsocketClientHandler
+from matter_server.server.client_handler import WebsocketClientHandler
+from matter_server.server.helpers.custom_web_runner import MultiHostTCPSite
+
 from .const import MIN_SCHEMA_VERSION
 from .device_controller import MatterDeviceController
 from .stack import MatterStack
 from .storage import StorageController
 from .vendor_info import VendorInfo
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def mount_websocket(server: MatterServer, path: str) -> None:
@@ -86,7 +89,7 @@ class MatterServer:
         self.vendor_info = VendorInfo(self)
         # we dynamically register command handlers
         self.command_handlers: dict[str, APICommandHandler] = {}
-        self._subscribers: Set[EventCallBackType] = set()
+        self._subscribers: set[EventCallBackType] = set()
         self._register_api_commands()
 
     async def start(self) -> None:
@@ -94,8 +97,9 @@ class MatterServer:
         self.logger.info("Starting the Matter Server...")
         # safety shield: make sure we use same clusters and core packages!
         if chip_clusters_version() != chip_core_version():
+            msg = "CHIP Core version does not match CHIP Clusters version."
             raise VersionMismatch(
-                "CHIP Core version does not match CHIP Clusters version."
+                msg
             )
         self.loop = asyncio.get_running_loop()
         await self.device_controller.initialize()
@@ -116,7 +120,8 @@ class MatterServer:
         """Stop running the server."""
         self.logger.info("Stopping the Matter Server...")
         if self._http is None or self._runner is None:
-            raise RuntimeError("Server not started.")
+            msg = "Server not started."
+            raise RuntimeError(msg)
 
         self.signal_event(EventType.SERVER_SHUTDOWN)
         await self._http.stop()

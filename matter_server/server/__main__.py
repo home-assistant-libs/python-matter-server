@@ -5,8 +5,8 @@ import logging
 import os
 from pathlib import Path
 
-from aiorun import run
 import coloredlogs
+from aiorun import run
 
 from .server import MatterServer
 

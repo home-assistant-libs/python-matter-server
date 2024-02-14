@@ -4,9 +4,9 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-from chip.ChipStack import ChipStack
 import chip.logging
 import chip.native
+from chip.ChipStack import ChipStack
 
 if TYPE_CHECKING:
     from chip.CertificateAuthority import CertificateAuthorityManager

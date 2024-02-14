@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from ...common.helpers.util import create_attribute_path
+from matter_server.common.helpers.util import create_attribute_path
 
 
 def parse_attributes_from_read_result(

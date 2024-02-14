@@ -9,11 +9,10 @@ from typing import Final, cast
 
 from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType, client_exceptions
 
+from matter_server.common.const import SCHEMA_VERSION
+from matter_server.common.helpers.json import json_dumps, json_loads
 from matter_server.common.helpers.util import dataclass_from_dict
-
-from ..common.const import SCHEMA_VERSION
-from ..common.helpers.json import json_dumps, json_loads
-from ..common.models import (
+from matter_server.common.models import (
     CommandMessage,
     ErrorResultMessage,
     EventMessage,
@@ -21,6 +20,7 @@ from ..common.models import (
     ServerInfoMessage,
     SuccessResultMessage,
 )
+
 from .exceptions import (
     CannotConnect,
     ConnectionClosed,
@@ -43,7 +43,7 @@ class MatterClientConnection:
         self,
         ws_server_url: str,
         aiohttp_session: ClientSession,
-    ):
+    ) -> None:
         """Initialize the Client class."""
         self.ws_server_url = ws_server_url
         # server info is retrieved on connect
@@ -59,7 +59,8 @@ class MatterClientConnection:
     async def connect(self) -> None:
         """Connect to the websocket server."""
         if self._ws_client is not None:
-            raise InvalidState("Already connected")
+            msg = "Already connected"
+            raise InvalidState(msg)
 
         LOGGER.debug("Trying to connect")
         try:
@@ -83,10 +84,13 @@ class MatterClientConnection:
         if info.min_supported_schema_version > SCHEMA_VERSION:
             # our schema version is too low and can't be handled by the server anymore.
             await self._ws_client.close()
-            raise InvalidServerVersion(
+            msg = (
                 f"Matter schema version is incompatible: {info.schema_version}, "
                 f"the server requires at least {info.min_supported_schema_version} "
                 " - update the Matter client to a more recent version or downgrade the server."
+            )
+            raise InvalidServerVersion(
+                msg
             )
 
         LOGGER.info(
@@ -110,22 +114,26 @@ class MatterClientConnection:
         ws_msg = await self._ws_client.receive()
 
         if ws_msg.type in (WSMsgType.CLOSE, WSMsgType.CLOSED, WSMsgType.CLOSING):
-            raise ConnectionClosed("Connection was closed.")
+            msg = "Connection was closed."
+            raise ConnectionClosed(msg)
 
         if ws_msg.type == WSMsgType.ERROR:
-            raise ConnectionFailed()
+            raise ConnectionFailed
 
         if ws_msg.type != WSMsgType.TEXT:
+            msg = f"Received non-Text message: {ws_msg.type}: {ws_msg.data}"
             raise InvalidMessage(
-                f"Received non-Text message: {ws_msg.type}: {ws_msg.data}"
+                msg
             )
 
         try:
             msg = parse_message(json_loads(ws_msg.data))
         except TypeError as err:
-            raise InvalidMessage(f"Received unsupported JSON: {err}") from err
+            msg = f"Received unsupported JSON: {err}"
+            raise InvalidMessage(msg) from err
         except ValueError as err:
-            raise InvalidMessage("Received invalid JSON.") from err
+            msg = "Received invalid JSON."
+            raise InvalidMessage(msg) from err
 
         if VERBOSE_LOGGER and LOGGER.isEnabledFor(logging.DEBUG):
             LOGGER.debug("Received message:\n%s\n", pprint.pformat(ws_msg))

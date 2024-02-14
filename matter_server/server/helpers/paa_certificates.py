@@ -9,8 +9,8 @@ All rights reserved.
 
 import asyncio
 import logging
-from os import makedirs
 import re
+from os import makedirs
 
 from aiohttp import ClientError, ClientSession
 from cryptography import x509
@@ -143,7 +143,6 @@ async def fetch_certificates(
     fetch_production_certificates: bool = True,
 ) -> int:
     """Fetch PAA Certificates."""
-
     fetch_count = await fetch_dcl_certificates(
         fetch_test_certificates=fetch_test_certificates,
         fetch_production_certificates=fetch_production_certificates,

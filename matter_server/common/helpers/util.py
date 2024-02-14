@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import base64
-from base64 import b64decode
 import binascii
+import logging
+import platform
+import socket
+from base64 import b64decode
 from dataclasses import MISSING, asdict, fields, is_dataclass
 from datetime import datetime
 from enum import Enum
 from functools import cache
-from importlib.metadata import PackageNotFoundError, version as pkg_version
-import logging
-import platform
-import socket
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as pkg_version
 from types import NoneType, UnionType
 from typing import (
     TYPE_CHECKING,
@@ -25,15 +26,15 @@ from typing import (
     get_type_hints,
 )
 
-from chip.clusters.ClusterObjects import (
-    ClusterAttributeDescriptor,
-    ClusterObjectDescriptor,
-)
 from chip.clusters.Types import Nullable
 from chip.tlv import float32, uint
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
+    from chip.clusters.ClusterObjects import (
+        ClusterAttributeDescriptor,
+        ClusterObjectDescriptor,
+    )
 
     _T = TypeVar("_T", bound=DataclassInstance)
 
@@ -78,7 +79,6 @@ def parse_attribute_path(
 
 def dataclass_to_dict(obj_in: DataclassInstance) -> dict:
     """Convert dataclass instance to dict."""
-
     return asdict(
         obj_in,
         dict_factory=lambda x: {
@@ -139,7 +139,7 @@ def parse_value(
         return dataclass_from_dict(value_type, value)
     # get origin value type and inspect one-by-one
     origin: Any = get_origin(value_type)
-    if origin in (list, tuple, set) and isinstance(value, (list, tuple, set)):
+    if origin in (list, tuple, set) and isinstance(value, list | tuple | set):
         return origin(
             parse_value(name, subvalue, get_args(value_type)[0])
             for subvalue in value
@@ -186,7 +186,8 @@ def parse_value(
         return value
     # raise if value is None and the value is required according to annotations
     if value is None and value_type is not NoneType and not allow_none:
-        raise KeyError(f"`{name}` of type `{value_type}` is required.")
+        msg = f"`{name}` of type `{value_type}` is required."
+        raise KeyError(msg)
 
     try:
         if issubclass(value_type, Enum):
@@ -222,16 +223,19 @@ def parse_value(
     ):
         return uint(value)
     if value_type is float32 and (
-        isinstance(value, (float, int))
+        isinstance(value, float | int)
         or (isinstance(value, str) and value.isnumeric())
     ):
         return float32(value)
 
     # If we reach this point, we could not match the value with the type and we raise
     if not isinstance(value, value_type):
-        raise TypeError(
+        msg = (
             f"Value {value} of type {type(value)} is invalid for {name}, "
             f"expected value of type {value_type}"
+        )
+        raise TypeError(
+            msg
         )
     return value
 
@@ -247,8 +251,9 @@ def dataclass_from_dict(cls: type[_T], dict_obj: dict, strict: bool = False) -> 
     if strict:
         extra_keys = dict_obj.keys() - {f.name for f in dc_fields}
         if extra_keys:
+            msg = f'Extra key(s) {",".join(extra_keys)} not allowed for {cls!s}'
             raise KeyError(
-                f'Extra key(s) {",".join(extra_keys)} not allowed for {str(cls)}'
+                msg
             )
     type_hints = cached_type_hints(cls)
     return cls(
@@ -312,7 +317,7 @@ def convert_mac_address(hex_mac: str | bytes) -> str:
         # note that the bytes string can be optionally base64 encoded
         hex_mac = base64.b64decode(hex_mac)
 
-    return ":".join("{:02x}".format(byte) for byte in hex_mac)  # pylint: disable=C0209
+    return ":".join(f"{byte:02x}" for byte in hex_mac)  # pylint: disable=C0209
 
 
 def convert_ip_address(hex_ip: str | bytes, ipv6: bool = False) -> str:

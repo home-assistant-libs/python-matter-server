@@ -7,8 +7,8 @@ import os
 from pathlib import Path
 
 import aiohttp
-from aiorun import run
 import coloredlogs
+from aiorun import run
 
 from matter_server.client.client import MatterClient
 from matter_server.server.server import MatterServer
@@ -71,31 +71,26 @@ if __name__ == "__main__":
         args.primary_interface,
     )
 
-    async def run_matter():
+    async def run_matter() -> None:
         """Run the Matter server and client."""
         # start Matter Server
         await server.start()
 
         # run the client
         url = f"http://127.0.0.1:{args.port}/ws"
-        async with aiohttp.ClientSession() as session:
-            async with MatterClient(url, session) as client:
-                # start listening
-                asyncio.create_task(client.start_listening())
-                # allow the client to initialize
-                await asyncio.sleep(10)
-                # dump full node info on random (available) node
-                for node in client.get_nodes():
-                    if not node.available:
-                        continue
-                    print()
-                    print(node)
-                    res = await client.node_diagnostics(node.node_id)
-                    print(res)
-                    print()
-                    break
+        async with aiohttp.ClientSession() as session, MatterClient(url, session) as client:
+            # start listening
+            asyncio.create_task(client.start_listening())
+            # allow the client to initialize
+            await asyncio.sleep(10)
+            # dump full node info on random (available) node
+            for node in client.get_nodes():
+                if not node.available:
+                    continue
+                await client.node_diagnostics(node.node_id)
+                break
 
-    async def handle_stop(loop: asyncio.AbstractEventLoop):
+    async def handle_stop(loop: asyncio.AbstractEventLoop) -> None:
         """Handle server stop."""
         await server.stop()
 

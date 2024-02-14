@@ -4,9 +4,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Dict, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_dumps, json_loads
+from matter_server.common.helpers.json import JSON_DECODE_EXCEPTIONS, json_dumps, json_loads
 
 if TYPE_CHECKING:
     from .server import MatterServer
@@ -18,10 +18,10 @@ DEFAULT_SAVE_DELAY = 120
 class StorageController:
     """Controller that handles storage of persistent data."""
 
-    def __init__(self, server: "MatterServer") -> None:
+    def __init__(self, server: MatterServer) -> None:
         """Initialize storage controller."""
         self.server = server
-        self._data: Dict[str, Any] = {}
+        self._data: dict[str, Any] = {}
         self._timer_handle: asyncio.TimerHandle | None = None
         self._save_lock: asyncio.Lock = asyncio.Lock()
 
@@ -103,12 +103,12 @@ class StorageController:
                 LOGGER.debug("Loading persistent settings from %s", filename)
                 try:
                     _filename = os.path.join(self.server.storage_path, filename)
-                    with open(_filename, "r", encoding="utf-8") as _file:
+                    with open(_filename, encoding="utf-8") as _file:
                         return cast(dict, json_loads(_file.read()))
                 except FileNotFoundError:
                     pass
                 except JSON_DECODE_EXCEPTIONS:  # pylint: disable=catching-non-exception
-                    LOGGER.error(
+                    LOGGER.exception(
                         "Error while reading persistent storage file %s", filename
                     )
 

@@ -10,7 +10,7 @@ import typing
 
 from chip.clusters import Objects as all_clusters
 
-ALL_TYPES: dict[int, type["DeviceType"]] = {}
+ALL_TYPES: dict[int, type[DeviceType]] = {}
 
 
 class DeviceType:

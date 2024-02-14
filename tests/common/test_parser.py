@@ -1,22 +1,24 @@
 """Test parser functions that converts the incoming json from API into dataclass models."""
 import datetime
 from dataclasses import dataclass
-from typing import Optional
-from enum import IntEnum, Enum
+from enum import Enum, IntEnum
 
 import pytest
 
 from matter_server.common.helpers.util import dataclass_from_dict
 
+
 class MatterIntEnum(IntEnum):
-    """Basic Matter Test IntEnum"""
+    """Basic Matter Test IntEnum."""
+
     A = 0
     B = 1
     C = 2
 
 
 class MatterEnum(Enum):
-    """Basic Matter Test Enum"""
+    """Basic Matter Test Enum."""
+
     A = "a"
     B = "b"
     C = "c"
@@ -29,7 +31,7 @@ class BasicModelChild:
     a: int
     b: str
     c: str
-    d: Optional[int]
+    d: int | None
 
 
 @dataclass
@@ -39,7 +41,7 @@ class BasicModel:
     a: int
     b: float
     c: str
-    d: Optional[int]
+    d: int | None
     e: BasicModelChild
     f: datetime.datetime
     g: MatterEnum
@@ -47,7 +49,7 @@ class BasicModel:
     i: str = "default"
 
 
-def test_dataclass_from_dict():
+def test_dataclass_from_dict() -> None:
     """Test dataclass from dict parsing."""
     raw = {
         "a": 1,

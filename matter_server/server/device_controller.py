@@ -5,52 +5,55 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections import deque
 from datetime import datetime
 from functools import partial
-import logging
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
-from chip.ChipDeviceCtrl import DeviceProxyWrapper
-from chip.clusters import Attribute, Objects as Clusters
+from chip.clusters import Attribute
+from chip.clusters import Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
 from zeroconf import IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
-from matter_server.common.helpers.util import convert_ip_address
-from matter_server.common.models import CommissionableNodeData, CommissioningParameters
-from matter_server.server.helpers.attributes import parse_attributes_from_read_result
-from matter_server.server.helpers.utils import ping_ip
-
-from ..common.errors import (
+from matter_server.common.errors import (
     NodeCommissionFailed,
     NodeInterviewFailed,
     NodeNotExists,
     NodeNotReady,
     NodeNotResolving,
 )
-from ..common.helpers.api import api_command
-from ..common.helpers.util import (
+from matter_server.common.helpers.api import api_command
+from matter_server.common.helpers.util import (
+    convert_ip_address,
     create_attribute_path_from_attribute,
     dataclass_from_dict,
     dataclass_to_dict,
     parse_attribute_path,
     parse_value,
 )
-from ..common.models import (
+from matter_server.common.models import (
     APICommand,
+    CommissionableNodeData,
+    CommissioningParameters,
     EventType,
     MatterNodeData,
     MatterNodeEvent,
     NodePingResult,
 )
+from matter_server.server.helpers.attributes import parse_attributes_from_read_result
+from matter_server.server.helpers.utils import ping_ip
+
 from .const import DATA_MODEL_SCHEMA_VERSION, PAA_ROOT_CERTS_DIR
 from .helpers.paa_certificates import fetch_certificates
 
 if TYPE_CHECKING:
-    from chip.ChipDeviceCtrl import ChipDeviceController
+    from collections.abc import Awaitable, Callable, Iterable
+
+    from chip.ChipDeviceCtrl import ChipDeviceController, DeviceProxyWrapper
 
     from .server import MatterServer
 
@@ -105,7 +108,7 @@ class MatterDeviceController:
     def __init__(
         self,
         server: MatterServer,
-    ):
+    ) -> None:
         """Initialize the device controller."""
         self.server = server
         # we keep the last events in memory so we can include them in the diagnostics dump
@@ -191,7 +194,8 @@ class MatterDeviceController:
     async def stop(self) -> None:
         """Handle logic on server stop."""
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
         # unsubscribe all node subscriptions
         for sub in self._subscriptions.values():
             await self._call_sdk(sub.Shutdown)
@@ -222,7 +226,8 @@ class MatterDeviceController:
         """Return info of a single Node."""
         if node := self._nodes.get(node_id):
             return node
-        raise NodeNotExists(f"Node {node_id} does not exist or is not yet interviewed")
+        msg = f"Node {node_id} does not exist or is not yet interviewed"
+        raise NodeNotExists(msg)
 
     @api_command(APICommand.COMMISSION_WITH_CODE)
     async def commission_with_code(
@@ -237,7 +242,8 @@ class MatterDeviceController:
         :return: The NodeInfo of the commissioned device.
         """
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
 
         node_id = self._get_next_node_id()
 
@@ -262,8 +268,9 @@ class MatterDeviceController:
             if success:
                 break
             if not success and attempts >= MAX_COMMISSION_RETRIES:
+                msg = f"Commission with code failed for node {node_id}."
                 raise NodeCommissionFailed(
-                    f"Commission with code failed for node {node_id}."
+                    msg
                 )
             await asyncio.sleep(5)
 
@@ -280,7 +287,7 @@ class MatterDeviceController:
                 await self.interview_node(node_id)
             except (NodeNotResolving, NodeInterviewFailed) as err:
                 if retries <= 0:
-                    raise err
+                    raise
                 retries -= 1
                 LOGGER.warning("Unable to interview Node %s: %s", node_id, err)
                 await asyncio.sleep(5)
@@ -313,7 +320,8 @@ class MatterDeviceController:
         Returns full NodeInfo once complete.
         """
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
 
         node_id = self._get_next_node_id()
         if ip_addr is not None:
@@ -357,7 +365,8 @@ class MatterDeviceController:
             if success:
                 break
             if not success and attempts >= MAX_COMMISSION_RETRIES:
-                raise NodeCommissionFailed(f"Commissioning failed for node {node_id}.")
+                msg = f"Commissioning failed for node {node_id}."
+                raise NodeCommissionFailed(msg)
             await asyncio.sleep(5)
 
         LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
@@ -373,7 +382,7 @@ class MatterDeviceController:
                 await self.interview_node(node_id)
             except NodeInterviewFailed as err:
                 if retries <= 0:
-                    raise err
+                    raise
                 retries -= 1
                 LOGGER.warning("Unable to interview Node %s: %s", node_id, err)
                 await asyncio.sleep(5)
@@ -389,7 +398,8 @@ class MatterDeviceController:
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
         """Set WiFi credentials for commissioning to a (new) device."""
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
 
         await self._call_sdk(
             self.chip_controller.SetWiFiCredentials,
@@ -403,7 +413,8 @@ class MatterDeviceController:
     async def set_thread_operational_dataset(self, dataset: str) -> None:
         """Set Thread Operational dataset in the stack."""
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
 
         await self._call_sdk(
             self.chip_controller.SetThreadOperationalDataset,
@@ -426,7 +437,8 @@ class MatterDeviceController:
         Returns code to use as discriminator.
         """
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
 
         if discriminator is None:
             discriminator = 3840  # TODO generate random one
@@ -451,7 +463,8 @@ class MatterDeviceController:
     ) -> list[CommissionableNodeData]:
         """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
 
         sdk_result = await self._call_sdk(
             self.chip_controller.DiscoverCommissionableNodes,
@@ -487,7 +500,8 @@ class MatterDeviceController:
     async def interview_node(self, node_id: int) -> None:
         """Interview a node."""
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
 
         try:
             if not (node := self._nodes.get(node_id)) or not node.available:
@@ -502,7 +516,8 @@ class MatterDeviceController:
                     )
                 )
         except ChipStackError as err:
-            raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
+            msg = f"Failed to interview node {node_id}"
+            raise NodeInterviewFailed(msg) from err
 
         is_new_node = node_id not in self._nodes
         existing_info = self._nodes.get(node_id)
@@ -550,9 +565,11 @@ class MatterDeviceController:
     ) -> Any:
         """Send a command to a Matter node/device."""
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
         if (node := self._nodes.get(node_id)) is None or not node.available:
-            raise NodeNotReady(f"Node {node_id} is not (yet) available.")
+            msg = f"Node {node_id} is not (yet) available."
+            raise NodeNotReady(msg)
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
         command_cls = getattr(cluster_cls.Commands, command_name)
         command = dataclass_from_dict(command_cls, payload)
@@ -573,9 +590,11 @@ class MatterDeviceController:
     ) -> Any:
         """Read a single attribute (or Cluster) on a node."""
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
         if (node := self._nodes.get(node_id)) is None or not node.available:
-            raise NodeNotReady(f"Node {node_id} is not (yet) available.")
+            msg = f"Node {node_id} is not (yet) available."
+            raise NodeNotReady(msg)
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
         assert self.server.loop is not None
         future = self.server.loop.create_future()
@@ -614,9 +633,11 @@ class MatterDeviceController:
     ) -> Any:
         """Write an attribute(value) on a target node."""
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
         if (node := self._nodes.get(node_id)) is None or not node.available:
-            raise NodeNotReady(f"Node {node_id} is not (yet) available.")
+            msg = f"Node {node_id} is not (yet) available."
+            raise NodeNotReady(msg)
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
         attribute = ALL_ATTRIBUTES[cluster_id][attribute_id]()
         attribute.value = Clusters.NullValue if value is None else value
@@ -629,11 +650,13 @@ class MatterDeviceController:
     async def remove_node(self, node_id: int) -> None:
         """Remove a Matter node/device from the fabric."""
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
 
         if node_id not in self._nodes:
+            msg = f"Node {node_id} does not exist or has not been interviewed."
             raise NodeNotExists(
-                f"Node {node_id} does not exist or has not been interviewed."
+                msg
             )
 
         LOGGER.info("Removing Node ID %s.", node_id)
@@ -700,11 +723,13 @@ class MatterDeviceController:
         are watched for the given node. This is persistent over restarts.
         """
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
 
         if node_id not in self._nodes:
+            msg = f"Node {node_id} does not exist or has not been interviewed."
             raise NodeNotExists(
-                f"Node {node_id} does not exist or has not been interviewed."
+                msg
             )
 
         node = self._nodes[node_id]
@@ -744,8 +769,9 @@ class MatterDeviceController:
         attr_path = f"0/{attribute.cluster_id}/{attribute.attribute_id}"
         node = self._nodes.get(node_id)
         if node is None:
+            msg = f"Node {node_id} does not exist or is not yet interviewed"
             raise NodeNotExists(
-                f"Node {node_id} does not exist or is not yet interviewed"
+                msg
             )
 
         battery_powered = (
@@ -800,11 +826,13 @@ class MatterDeviceController:
         """
         # pylint: disable=too-many-locals,too-many-statements
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
 
         if self._nodes.get(node_id) is None:
+            msg = f"Node {node_id} does not exist or has not been interviewed."
             raise NodeNotExists(
-                f"Node {node_id} does not exist or has not been interviewed."
+                msg
             )
 
         node_logger = LOGGER.getChild(f"[node {node_id}]")
@@ -1051,7 +1079,8 @@ class MatterDeviceController:
     async def _call_sdk(self, func: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
         """Call function on the SDK in executor and return result."""
         if self.server.loop is None:
-            raise RuntimeError("Server not started.")
+            msg = "Server not started."
+            raise RuntimeError(msg)
 
         return cast(
             _T,
@@ -1064,7 +1093,8 @@ class MatterDeviceController:
     async def _setup_node(self, node_id: int) -> None:
         """Handle set-up of subscriptions and interview (if needed) for known/discovered node."""
         if node_id not in self._nodes:
-            raise NodeNotExists(f"Node {node_id} does not exist.")
+            msg = f"Node {node_id} does not exist."
+            raise NodeNotExists(msg)
 
         # (re)interview node (only) if needed
         node_data = self._nodes[node_id]
@@ -1099,7 +1129,8 @@ class MatterDeviceController:
         """Resolve a Node on the network."""
         log_level = logging.DEBUG if attempt == 1 else logging.INFO
         if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
+            msg = "Device Controller not initialized."
+            raise RuntimeError(msg)
         try:
             LOGGER.log(
                 log_level,
@@ -1118,7 +1149,8 @@ class MatterDeviceController:
         except (ChipStackError, TimeoutError) as err:
             if attempt >= retries:
                 # when we're out of retries, raise NodeNotResolving
-                raise NodeNotResolving(f"Unable to resolve Node {node_id}") from err
+                msg = f"Unable to resolve Node {node_id}"
+                raise NodeNotResolving(msg) from err
             await asyncio.sleep(2 + attempt)
             # retry the resolve
             return await self._resolve_node(

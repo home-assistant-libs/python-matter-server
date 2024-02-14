@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING
 
 from aiohttp import ClientError, ClientSession
 
-from ..common.helpers.api import api_command
-from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
-from ..common.models import APICommand, VendorInfo as VendorInfoModel
+from matter_server.common.helpers.api import api_command
+from matter_server.common.helpers.util import dataclass_from_dict, dataclass_to_dict
+from matter_server.common.models import APICommand
+from matter_server.common.models import VendorInfo as VendorInfoModel
 
 if TYPE_CHECKING:
     from .server import MatterServer
@@ -39,7 +40,7 @@ NABUCASA_VENDOR = VendorInfoModel(
 class VendorInfo:
     """Fetches vendor info from the CSA and handles api calls to get it."""
 
-    def __init__(self, server: MatterServer):
+    def __init__(self, server: MatterServer) -> None:
         """Initialize the vendor info."""
         self._data: dict[int, VendorInfoModel] = {
             # add test vendor ID
@@ -93,7 +94,7 @@ class VendorInfo:
                             )
                     page_token = data.get("pagination", {}).get("next_key", None)
         except ClientError as err:
-            LOGGER.error("Unable to fetch vendor info from DCL: %s", err)
+            LOGGER.exception("Unable to fetch vendor info from DCL: %s", err)
         else:
             LOGGER.info("Fetched %s vendors from DCL.", len(vendors))
 
