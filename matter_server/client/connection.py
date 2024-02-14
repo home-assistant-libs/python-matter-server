@@ -53,9 +53,6 @@ class MatterClientConnection:
         self.server_info: ServerInfoMessage | None = None
         self._aiohttp_session = aiohttp_session
         self._ws_client: ClientWebSocketResponse | None = None
-        self._nodes: Dict[int, MatterNode] = {}
-        self._result_futures: Dict[str, asyncio.Future] = {}
-        self._subscribers: dict[str, list[Callable[[EventType, Any], None]]] = {}
 
     @property
     def connected(self) -> bool:

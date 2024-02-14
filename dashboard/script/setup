@@ -1,0 +1,9 @@
+#!/bin/bash -i
+
+# Stop on errors
+set -e
+
+cd "$(dirname "$0")/.."
+
+# Install node modules
+npm install
