@@ -1,4 +1,5 @@
 """Models that are (serializeable) shared between server and client."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -177,6 +178,8 @@ MessageType = (
 @dataclass
 class CommissionableNodeData:
     """Object that is returned on the 'discover_commissionable_nodes' command."""
+
+    # pylint: disable=too-many-instance-attributes
 
     instance_name: str | None = None
     host_name: str | None = None

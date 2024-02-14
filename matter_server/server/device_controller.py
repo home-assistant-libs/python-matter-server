@@ -5,14 +5,15 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections import deque
 from datetime import datetime
 from functools import partial
-import logging
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, cast
 
 from chip.ChipDeviceCtrl import DeviceProxyWrapper
-from chip.clusters import Attribute, Objects as Clusters
+from chip.clusters import Attribute
+from chip.clusters import Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
@@ -93,7 +94,7 @@ BASE_SUBSCRIBE_ATTRIBUTES: tuple[Attribute.AttributePath, ...] = (
     ),
 )
 
-# pylint: disable=too-many-lines,too-many-locals,too-many-statements,too-many-branches
+# pylint: disable=too-many-lines,too-many-locals,too-many-statements,too-many-branches,too-many-instance-attributes
 
 
 class MatterDeviceController:
