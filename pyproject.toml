@@ -1,17 +1,10 @@
 [build-system]
-requires = ["setuptools>=62.3"]
 build-backend = "setuptools.build_meta"
+requires = ["setuptools>=62.3"]
 
 [project]
-name = "python-matter-server"
-# The version is set by GH action on release
-version = "0.0.0"
-license     = {text = "Apache-2.0"}
-description = "Python Matter WebSocket Server"
-readme = "README.md"
-requires-python = ">=3.10"
 authors = [
-    {name = "The Home Assistant Authors", email = "hello@home-assistant.io"}
+  {name = "The Home Assistant Authors", email = "hello@home-assistant.io"},
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -19,6 +12,7 @@ classifiers = [
   "Environment :: Console",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Topic :: Home Automation",
 ]
 dependencies = [
@@ -28,14 +22,21 @@ dependencies = [
   "coloredlogs",
   "dacite",
   "orjson",
-  "home-assistant-chip-clusters==2024.1.0"
+  "home-assistant-chip-clusters==2024.1.0",
 ]
+description = "Python Matter WebSocket Server"
+license = {text = "Apache-2.0"}
+name = "python-matter-server"
+readme = "README.md"
+requires-python = ">=3.10"
+# The version is set by GH action on release!
+version = "0.0.0"
 
 [project.optional-dependencies]
 server = [
   "home-assistant-chip-core==2024.1.0",
   "cryptography==42.0.2",
-  "zeroconf==0.131.0"
+  "zeroconf==0.131.0",
 ]
 test = [
   "black==23.12.1",
@@ -50,16 +51,16 @@ test = [
   "pytest==7.4.4",
   "pytest-aiohttp==1.0.5",
   "ruff==0.2.1",
-  "safety==3.0.1"
+  "safety==3.0.1",
 ]
 
 [project.scripts]
 matter-server = "matter_server.server.__main__:main"
 
 [tool.setuptools]
-platforms = ["any"]
-zip-safe  = false
 include-package-data = true
+platforms = ["any"]
+zip-safe = false
 
 [tool.setuptools.package-data]
 matter_server = ["py.typed"]
@@ -68,16 +69,6 @@ matter_server = ["py.typed"]
 include = ["matter_server*"]
 
 [tool.mypy]
-platform = "linux"
-python_version = "3.11"
-
-# show error messages from unrelated files
-follow_imports = "normal"
-
-# suppress errors about unsatisfied imports
-ignore_missing_imports = true
-
-# be strict
 check_untyped_defs = true
 disallow_any_generics = true
 disallow_incomplete_defs = true
@@ -85,18 +76,24 @@ disallow_subclassing_any = true
 disallow_untyped_calls = true
 disallow_untyped_decorators = true
 disallow_untyped_defs = true
+follow_imports = "normal"
+ignore_missing_imports = true
 no_implicit_optional = true
 no_implicit_reexport = true
+platform = "linux"
+python_version = "3.11"
 strict_optional = true
 warn_incomplete_stub = true
 warn_no_return = true
 warn_redundant_casts = true
 warn_return_any = true
+warn_unreachable = true
 warn_unused_configs = true
 warn_unused_ignores = true
 
 [tool.pylint.MASTER]
 extension-pkg-whitelist = [
+  "chip",
   "orjson",
 ]
 ignore = [
@@ -106,14 +103,6 @@ ignore = [
 [tool.pylint.BASIC]
 good-names = [
   "_",
-  "ex",
-  "fp",
-  "i",
-  "id",
-  "j",
-  "k",
-  "on",
-  "Run",
   "T",
 ]
 
@@ -145,9 +134,7 @@ ignore = [
   "D213", # Conflicts with other rules
   "D417", # False positives in some occasions
   "PLR2004", # Just annoying, not really useful
-  "S101", # assert is often used to satisfy type checking
-
-  # Conflicts with the Ruff formatter
+  "S101", # assert is often used to satisfy type checking  # Conflicts with the Ruff formatter
   "COM812",
   "ISC001",
 ]

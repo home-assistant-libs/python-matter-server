@@ -81,12 +81,6 @@ repos:
         always_run: true
         args:
           - --branch=main
-      - id: prettier
-        name: 💄 Ensuring files are prettier
-        language: system
-        types: [yaml, json, markdown]
-        entry: npm run prettier
-        pass_filenames: false
       - id: pylint
         name: 🌟 Starring code with pylint
         language: system
