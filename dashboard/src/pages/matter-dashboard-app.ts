@@ -67,13 +67,7 @@ class MatterDashboardApp extends LitElement {
     if (this._state === "error") {
       return html`
         <p>Error: ${this._error}</p>
-        ${location.hostname === "localhost"
-          ? html`
-              <button @click=${this._clearLocalStorage}>
-                Clear stored URL
-              </button>
-            `
-          : ""}
+        <button @click=${this._clearLocalStorage}>Clear stored URL</button>
       `;
     }
     if (this._route.prefix === "node") {
