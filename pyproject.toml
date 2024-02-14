@@ -98,7 +98,7 @@ warn_unreachable = true
 warn_unused_configs = true
 warn_unused_ignores = true
 
-[tool.pylint.MASTER]
+[tool.pylint.MAIN]
 extension-pkg-whitelist = [
   "chip.*",
   "orjson",
