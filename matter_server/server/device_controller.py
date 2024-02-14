@@ -245,7 +245,7 @@ class MatterDeviceController:
         attempts = 0
         # we retry commissioning a few times as we've seen devices in the wild
         # that are a bit unstable.
-        # by retrying, we increase the chances of a successful commisssion
+        # by retrying, we increase the chances of a successful commission
         while attempts <= MAX_COMMISSION_RETRIES:
             attempts += 1
             LOGGER.info(
@@ -323,7 +323,7 @@ class MatterDeviceController:
         attempts = 0
         # we retry commissioning a few times as we've seen devices in the wild
         # that are a bit unstable.
-        # by retrying, we increase the chances of a successful commisssion
+        # by retrying, we increase the chances of a successful commission
         while attempts <= MAX_COMMISSION_RETRIES:
             attempts += 1
             if ip_addr is None:

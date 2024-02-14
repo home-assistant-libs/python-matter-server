@@ -1,4 +1,5 @@
 """Test the server."""
+
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator, Generator
@@ -132,7 +133,7 @@ async def test_server_start(
     assert server.vendor_id == 1234
     assert server.fabric_id == 5678
     assert server.port == 5580
-    assert server.listen_addresses == None
+    assert server.listen_addresses is None
     assert APICommand.SERVER_INFO in server.command_handlers
     assert APICommand.SERVER_DIAGNOSTICS in server.command_handlers
     assert APICommand.GET_NODES in server.command_handlers

@@ -52,10 +52,15 @@ test = [
   "pytest-aiohttp==1.0.5",
   "ruff==0.2.1",
   "safety==3.0.1",
+  "tomli==2.0.1",
 ]
 
 [project.scripts]
 matter-server = "matter_server.server.__main__:main"
+
+[tool.codespell]
+ignore-words-list = "requestor"
+skip = "dashboard/package-lock.json,tests/fixtures/nodes/lighting-example-app.json"
 
 [tool.setuptools]
 include-package-data = true
@@ -96,8 +101,9 @@ extension-pkg-whitelist = [
   "chip.*",
   "orjson",
 ]
-ignore = [
-  "tests",
+ignore-paths = [
+  "scripts/beautify_diagnostics.py", # TEMPORARY DISABLED
+  "scripts/generate_devices.py", # TEMPORARY DISABLED
 ]
 
 [tool.pylint.BASIC]
