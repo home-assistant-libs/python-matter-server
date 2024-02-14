@@ -56,4 +56,4 @@ jobs:
           pip install -e .[server]
           pip install -e .[test]
       - name: Pytest
-        run: pytest --durations 10 --cov-report term-missing --cov=matter_server --cov-report=xml tests/server/
+        run: pytest --durations 10 --cov-report term-missing --cov=matter_server --cov-report=xml tests/

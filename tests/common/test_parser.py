@@ -1,8 +1,9 @@
 """Test parser functions that converts the incoming json from API into dataclass models."""
+
 import datetime
 from dataclasses import dataclass
+from enum import Enum, IntEnum
 from typing import Optional
-from enum import IntEnum, Enum
 
 import pytest
 
@@ -98,7 +99,7 @@ def test_dataclass_from_dict():
     with pytest.raises(KeyError):
         raw2 = {**raw}
         del raw2["a"]
-        dataclass_from_dict(BasicModel, raw2)
+        dataclass_from_dict(BasicModel, raw2, strict=True)
     # test extra keys silently ignored in non-strict mode
     raw2 = {**raw}
     raw2["extrakey"] = "something"
