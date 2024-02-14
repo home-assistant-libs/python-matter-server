@@ -126,7 +126,7 @@ disable = [
 ignore-imports = true
 
 [tool.pylint.FORMAT]
-max-line-length = 100
+max-line-length = 88
 
 [tool.pytest.ini_options]
 addopts = "--cov"
@@ -134,7 +134,7 @@ asyncio_mode = "auto"
 
 [tool.ruff]
 fix = true
-line-length = 100
+line-length = 88
 show-fixes = true
 target-version = "py311"
 
