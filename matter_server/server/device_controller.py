@@ -513,7 +513,7 @@ class MatterDeviceController:
             ),
             last_interview=datetime.utcnow(),
             interview_version=DATA_MODEL_SCHEMA_VERSION,
-            available=True,
+            available=existing_info.available if existing_info else False,
             attributes=parse_attributes_from_read_result(read_response.tlvAttributes),
         )
 
@@ -1168,7 +1168,7 @@ class MatterDeviceController:
             return
         if service_type == MDNS_TYPE_OPERATIONAL_NODE:
             name = name.lower()
-            if not name.startswith(self.fabric_id_hex):
+            if self.fabric_id_hex not in name:
                 # filter out messages that are not for our fabric
                 return
             LOGGER.debug("Received %s MDNS event for %s", state_change, name)
