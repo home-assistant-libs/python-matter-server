@@ -11,7 +11,6 @@ import asyncio
 import logging
 from os import makedirs
 import re
-from typing import List
 
 from aiohttp import ClientError, ClientSession
 from cryptography import x509
@@ -31,31 +30,6 @@ GIT_URL = f"https://raw.githubusercontent.com/{OWNER}/{REPO}/master/{PATH}"
 
 
 LAST_CERT_IDS: set[str] = set()
-
-
-async def get_directory_contents(owner: str, repo: str, path: str) -> List[str]:
-    """
-    Fetch directory contents from a GitHub repository.
-
-    Args:
-        owner (str): The owner of the GitHub repository.
-        repo (str): The name of the GitHub repository.
-        path (str): The path within the repository.
-
-    Returns:
-        list: A list of file names in the specified directory.
-    """
-    api_url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
-    async with ClientSession() as session:
-        async with session.get(api_url, timeout=20) as response:
-            if response.status == 200:
-                contents = await response.json()
-                return [item["name"] for item in contents]
-
-            LOGGER.error(
-                "Failed to fetch directory contents. Status code: %s", response.status
-            )
-            return []
 
 
 async def write_paa_root_cert(certificate: str, subject: str) -> None:
@@ -151,11 +125,23 @@ async def fetch_git_certificates() -> int:
     """Fetch Git PAA Certificates."""
     fetch_count = 0
     LOGGER.info("Fetching the latest PAA root certificates from Git.")
-    file_list = await get_directory_contents(OWNER, REPO, PATH)
-    # Filter out extension and remove duplicates
-    git_certs = list({file.split(".")[0] for file in file_list})
+
     try:
         async with ClientSession(raise_for_status=True) as http_session:
+            # Fetch directory contents and filter out extension
+            api_url = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/{PATH}"
+            async with http_session.get(api_url, timeout=20) as response:
+                if response.status == 200:
+                    contents = await response.json()
+                    git_certs = list({item["name"].split(".")[0] for item in contents})
+                else:
+                    LOGGER.error(
+                        "Failed to fetch directory contents. Status code: %s",
+                        response.status,
+                    )
+                    git_certs = []
+
+            # Fetch certificates
             for cert in git_certs:
                 if cert in LAST_CERT_IDS:
                     continue
