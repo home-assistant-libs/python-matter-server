@@ -131,16 +131,8 @@ async def fetch_git_certificates() -> int:
             # Fetch directory contents and filter out extension
             api_url = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/{PATH}"
             async with http_session.get(api_url, timeout=20) as response:
-                if response.status == 200:
-                    contents = await response.json()
-                    git_certs = list({item["name"].split(".")[0] for item in contents})
-                else:
-                    LOGGER.error(
-                        "Failed to fetch directory contents. Status code: %s",
-                        response.status,
-                    )
-                    git_certs = []
-
+                contents = await response.json()
+                git_certs = {item["name"].split(".")[0] for item in contents}
             # Fetch certificates
             for cert in git_certs:
                 if cert in LAST_CERT_IDS:
