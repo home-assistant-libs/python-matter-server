@@ -83,6 +83,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+
 def _setup_logging() -> None:
     custom_level_style = {
         **coloredlogs.DEFAULT_LEVEL_STYLES,

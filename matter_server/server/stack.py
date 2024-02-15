@@ -7,8 +7,12 @@ from typing import TYPE_CHECKING
 import chip.logging
 import chip.native
 from chip.ChipStack import ChipStack
-from chip.logging import (ERROR_CATEGORY_DETAIL, ERROR_CATEGORY_ERROR,
-                          ERROR_CATEGORY_NONE, ERROR_CATEGORY_PROGRESS)
+from chip.logging import (
+    ERROR_CATEGORY_DETAIL,
+    ERROR_CATEGORY_ERROR,
+    ERROR_CATEGORY_NONE,
+    ERROR_CATEGORY_PROGRESS,
+)
 from chip.logging.library_handle import _GetLoggingLibraryHandle
 from chip.logging.types import LogRedirectCallback_t
 
@@ -24,12 +28,15 @@ CHIP_PROGRESS = logging.INFO - 1
 CHIP_DETAIL = logging.DEBUG - 1
 CHIP_AUTOMATION = logging.DEBUG - 2
 
-@LogRedirectCallback_t
-def _redirect_to_python_logging(category, module, message) -> None:
-    module = module.decode("utf-8")
-    message = message.decode("utf-8")
 
-    logger = logging.getLogger("chip.native.%s" % module)
+@LogRedirectCallback_t  # type: ignore[misc]
+def _redirect_to_python_logging(
+    category: int, raw_module: bytes, raw_message: bytes
+) -> None:
+    module = raw_module.decode("utf-8")
+    message = raw_message.decode("utf-8")
+
+    logger = logging.getLogger(f"chip.native.{module}")
 
     # All logs are expected to have some reasonable category. This treats
     # unknown/None as critical.
@@ -41,13 +48,13 @@ def _redirect_to_python_logging(category, module, message) -> None:
         level = CHIP_PROGRESS
     elif category == ERROR_CATEGORY_DETAIL:
         level = CHIP_DETAIL
-    elif category == 4: # TODO: Add automation level to upstream Python bindings
+    elif category == 4:  # TODO: Add automation level to upstream Python bindings
         level = CHIP_AUTOMATION
 
     logger.log(level, "%s", message)
 
 
-def init_logging(category: str):
+def init_logging(category: str) -> None:
     """Initialize Matter SDK logging. Filter by category."""
 
     _LOGGER.info("Initializing CHIP/Matter Logging...")
