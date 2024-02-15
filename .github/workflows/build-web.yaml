@@ -21,7 +21,7 @@ jobs:
       - name: Run Build
         run: dashboard/script/build
       - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v2.0.0
+        uses: actions/upload-pages-artifact@v3.0.1
         with:
           path: dashboard/dist/web
 
