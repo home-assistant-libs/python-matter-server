@@ -9,7 +9,8 @@ import logging
 from collections import deque
 from datetime import datetime
 from functools import partial
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, cast
+from typing import (TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar,
+                    cast)
 
 from chip.ChipDeviceCtrl import DeviceProxyWrapper
 from chip.clusters import Attribute
@@ -18,35 +19,24 @@ from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
 from zeroconf import IPVersion, ServiceStateChange, Zeroconf
-from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
+from zeroconf.asyncio import (AsyncServiceBrowser, AsyncServiceInfo,
+                              AsyncZeroconf)
 
 from matter_server.common.helpers.util import convert_ip_address
-from matter_server.common.models import CommissionableNodeData, CommissioningParameters
-from matter_server.server.helpers.attributes import parse_attributes_from_read_result
+from matter_server.common.models import (CommissionableNodeData,
+                                         CommissioningParameters)
+from matter_server.server.helpers.attributes import \
+    parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
 
-from ..common.errors import (
-    NodeCommissionFailed,
-    NodeInterviewFailed,
-    NodeNotExists,
-    NodeNotReady,
-    NodeNotResolving,
-)
+from ..common.errors import (NodeCommissionFailed, NodeInterviewFailed,
+                             NodeNotExists, NodeNotReady, NodeNotResolving)
 from ..common.helpers.api import api_command
-from ..common.helpers.util import (
-    create_attribute_path_from_attribute,
-    dataclass_from_dict,
-    dataclass_to_dict,
-    parse_attribute_path,
-    parse_value,
-)
-from ..common.models import (
-    APICommand,
-    EventType,
-    MatterNodeData,
-    MatterNodeEvent,
-    NodePingResult,
-)
+from ..common.helpers.util import (create_attribute_path_from_attribute,
+                                   dataclass_from_dict, dataclass_to_dict,
+                                   parse_attribute_path, parse_value)
+from ..common.models import (APICommand, EventType, MatterNodeData,
+                             MatterNodeEvent, NodePingResult)
 from .const import DATA_MODEL_SCHEMA_VERSION, PAA_ROOT_CERTS_DIR
 from .helpers.paa_certificates import fetch_certificates
 
