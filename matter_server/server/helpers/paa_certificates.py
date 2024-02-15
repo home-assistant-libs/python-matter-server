@@ -18,14 +18,17 @@ from cryptography.hazmat.primitives import serialization
 
 from matter_server.server.const import PAA_ROOT_CERTS_DIR
 
+# Git repo details
+OWNER = "project-chip"
+REPO = "connectedhomeip"
+PATH = "credentials/development/paa-root-certs"
+
 LOGGER = logging.getLogger(__name__)
 PRODUCTION_URL = "https://on.dcl.csa-iot.org"
 TEST_URL = "https://on.test-net.dcl.csa-iot.org"
-GIT_URL = "https://github.com/project-chip/connectedhomeip/raw/master/credentials/development/paa-root-certs"  # pylint: disable=line-too-long
-GIT_CERTS = [
-    "Chip-Test-PAA-FFF1-Cert",
-    "Chip-Test-PAA-NoVID-Cert",
-]
+GIT_URL = f"https://raw.githubusercontent.com/{OWNER}/{REPO}/master/{PATH}"
+
+
 LAST_CERT_IDS: set[str] = set()
 
 
@@ -66,13 +69,13 @@ async def fetch_dcl_certificates(
     base_urls = set()
     # determine which url's need to be queried.
     # if we're going to fetch both prod and test, do test first
-    # so any duplicates will be overwritten/preferred by the production version
+    # so any duplicates will be overwritten/preferred by the production version.
+
     # NOTE: While Matter is in BETA we fetch the test certificates by default
     if fetch_test_certificates:
         base_urls.add(TEST_URL)
     if fetch_production_certificates:
         base_urls.add(PRODUCTION_URL)
-
     try:
         async with ClientSession(raise_for_status=True) as http_session:
             for url_base in base_urls:
@@ -113,16 +116,27 @@ async def fetch_dcl_certificates(
     return fetch_count
 
 
+# Manufacturers release test certificates through the SDK (Git) as a part
+# of their standard product release workflow. This will ensure those certs
+# are correctly captured
+
+
 async def fetch_git_certificates() -> int:
     """Fetch Git PAA Certificates."""
     fetch_count = 0
     LOGGER.info("Fetching the latest PAA root certificates from Git.")
+
     try:
         async with ClientSession(raise_for_status=True) as http_session:
-            for cert in GIT_CERTS:
+            # Fetch directory contents and filter out extension
+            api_url = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/{PATH}"
+            async with http_session.get(api_url, timeout=20) as response:
+                contents = await response.json()
+                git_certs = {item["name"].split(".")[0] for item in contents}
+            # Fetch certificates
+            for cert in git_certs:
                 if cert in LAST_CERT_IDS:
                     continue
-
                 async with http_session.get(f"{GIT_URL}/{cert}.pem") as response:
                     certificate = await response.text()
                 await write_paa_root_cert(certificate, cert)
