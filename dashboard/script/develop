@@ -13,7 +13,7 @@ cp -r public/* dist/web
 trap "kill 0" EXIT
 
 # Run tsc once as rollup expects those files
-tsc || true
+npm exec -- tsc || true
 
 npm exec -- serve -p 5010 dist/web &
 npm exec -- tsc --watch &
