@@ -34,7 +34,7 @@ version = "0.0.0"
 
 [project.optional-dependencies]
 server = [
-  "home-assistant-chip-core==2024.1.0",
+  "home-assistant-chip-core==2024.2.0",
   "cryptography==42.0.3",
   "zeroconf==0.131.0",
 ]
