@@ -4,14 +4,81 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-from chip.ChipStack import ChipStack
 import chip.logging
 import chip.native
+from chip.ChipStack import ChipStack
+from chip.logging import (
+    ERROR_CATEGORY_DETAIL,
+    ERROR_CATEGORY_ERROR,
+    ERROR_CATEGORY_NONE,
+    ERROR_CATEGORY_PROGRESS,
+)
+from chip.logging.library_handle import _GetLoggingLibraryHandle
+from chip.logging.types import LogRedirectCallback_t
 
 if TYPE_CHECKING:
     from chip.CertificateAuthority import CertificateAuthorityManager
 
     from .server import MatterServer
+
+_LOGGER = logging.getLogger(__name__)
+
+CHIP_ERROR = logging.ERROR - 1
+CHIP_PROGRESS = logging.INFO - 1
+CHIP_DETAIL = logging.DEBUG - 1
+CHIP_AUTOMATION = logging.DEBUG - 2
+
+
+@LogRedirectCallback_t  # type: ignore[misc]
+def _redirect_to_python_logging(
+    category: int, raw_module: bytes, raw_message: bytes
+) -> None:
+    module = raw_module.decode("utf-8")
+    message = raw_message.decode("utf-8")
+
+    logger = logging.getLogger(f"chip.native.{module}")
+
+    # All logs are expected to have some reasonable category. This treats
+    # unknown/None as critical.
+    level = logging.CRITICAL
+
+    if category == ERROR_CATEGORY_ERROR:
+        level = CHIP_ERROR
+    elif category == ERROR_CATEGORY_PROGRESS:
+        level = CHIP_PROGRESS
+    elif category == ERROR_CATEGORY_DETAIL:
+        level = CHIP_DETAIL
+    elif category == 4:  # TODO: Add automation level to upstream Python bindings
+        level = CHIP_AUTOMATION
+
+    logger.log(level, "%s", message)
+
+
+def init_logging(category: str) -> None:
+    """Initialize Matter SDK logging. Filter by category."""
+
+    _LOGGER.info("Initializing CHIP/Matter Logging...")
+    category_num = ERROR_CATEGORY_NONE
+    if category == "ERROR":
+        category_num = ERROR_CATEGORY_ERROR
+    elif category == "PROGRESS":
+        category_num = ERROR_CATEGORY_PROGRESS
+    elif category == "DETAIL":
+        category_num = ERROR_CATEGORY_DETAIL
+    elif category == "AUTOMATION":
+        category_num = 4
+
+    logging.addLevelName(CHIP_ERROR, "CHIP_ERROR")
+    logging.addLevelName(CHIP_PROGRESS, "CHIP_PROGRESS")
+    logging.addLevelName(CHIP_DETAIL, "CHIP_DETAIL")
+    logging.addLevelName(CHIP_AUTOMATION, "CHIP_AUTOMATION")
+    logging.getLogger("chip.native").setLevel(CHIP_AUTOMATION)
+
+    handle = _GetLoggingLibraryHandle()
+    handle.pychip_logging_set_callback(_redirect_to_python_logging)
+
+    # Handle log level selection on SDK level
+    chip.logging.SetLogFilter(category_num)
 
 
 class MatterStack:
@@ -27,7 +94,6 @@ class MatterStack:
         storage_file = os.path.join(server.storage_path, "chip.json")
         self.logger.debug("Using storage file: %s", storage_file)
         chip.native.Init()
-        chip.logging.RedirectToPythonLogging()
 
         self._chip_stack = ChipStack(
             persistentStoragePath=storage_file,
