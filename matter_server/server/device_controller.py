@@ -983,8 +983,8 @@ class MatterDeviceController:
             # Mark node as unavailable and signal consumers.
             # We debounce it a bit so we only mark the node unavailable
             # after some resubscription attempts and we shutdown the subscription
-            # if the resubscription interval exceeds 30 minutes (TTL of mdns)
-            # the node will be auto picked up by mdns if its alive again
+            # if the resubscription interval exceeds 30 minutes (TTL of mdns).
+            # The node will be auto picked up by mdns if it's alive again.
             if (
                 node.available
                 and resubscription_attempt >= NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE
