@@ -980,8 +980,8 @@ class MatterDeviceController:
             )
             resubscription_attempt = self._last_subscription_attempt[node_id] + 1
             self._last_subscription_attempt[node_id] = resubscription_attempt
-            # mark node as unavailable and signal consumers
-            # we debounce it a bit so we only mark the node unavailable
+            # Mark node as unavailable and signal consumers.
+            # We debounce it a bit so we only mark the node unavailable
             # after some resubscription attempts and we shutdown the subscription
             # if the resubscription interval exceeds 30 minutes (TTL of mdns)
             # the node will be auto picked up by mdns if its alive again
