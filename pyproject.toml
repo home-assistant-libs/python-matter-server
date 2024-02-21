@@ -251,6 +251,7 @@ fixture-parentheses = false
 mark-parentheses = false
 
 [tool.ruff.lint.isort]
+combine-as-imports = true
 force-sort-within-sections = true
 known-first-party = ["matter_server"]
 
