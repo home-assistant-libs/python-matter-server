@@ -19,6 +19,8 @@ from matter_server.common.models import MatterNodeData
 
 from .device_types import (
     ALL_TYPES as DEVICE_TYPES,
+)
+from .device_types import (
     Aggregator,
     BridgedDevice,
     DeviceType,

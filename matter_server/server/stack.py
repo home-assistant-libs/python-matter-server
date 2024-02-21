@@ -4,9 +4,8 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-import chip.logging
-import chip.native
 from chip.ChipStack import ChipStack
+import chip.logging
 from chip.logging import (
     ERROR_CATEGORY_DETAIL,
     ERROR_CATEGORY_ERROR,
@@ -15,6 +14,7 @@ from chip.logging import (
 )
 from chip.logging.library_handle import _GetLoggingLibraryHandle
 from chip.logging.types import LogRedirectCallback_t
+import chip.native
 
 if TYPE_CHECKING:
     from chip.CertificateAuthority import CertificateAuthorityManager

@@ -5,10 +5,10 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from collections import deque
 from datetime import datetime
 from functools import partial
+import logging
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, cast
 
 from chip.ChipDeviceCtrl import DeviceProxyWrapper

@@ -5,8 +5,8 @@ import logging
 import os
 from pathlib import Path
 
-import coloredlogs
 from aiorun import run
+import coloredlogs
 
 from matter_server.server import stack
 
