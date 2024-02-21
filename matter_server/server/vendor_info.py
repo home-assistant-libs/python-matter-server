@@ -8,8 +8,7 @@ from aiohttp import ClientError, ClientSession
 
 from ..common.helpers.api import api_command
 from ..common.helpers.util import dataclass_from_dict, dataclass_to_dict
-from ..common.models import APICommand
-from ..common.models import VendorInfo as VendorInfoModel
+from ..common.models import APICommand, VendorInfo as VendorInfoModel
 
 if TYPE_CHECKING:
     from .server import MatterServer
