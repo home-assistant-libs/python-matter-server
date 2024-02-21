@@ -63,6 +63,8 @@ DATA_KEY_LAST_NODE_ID = "last_node_id"
 LOGGER = logging.getLogger(__name__)
 MAX_POLL_INTERVAL = 600
 MAX_COMMISSION_RETRIES = 3
+NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE = 3
+NODE_RESUBSCRIBE_TIMEOUT_OFFLINE = 30 * 60 * 1000
 
 MDNS_TYPE_OPERATIONAL_NODE = "_matter._tcp.local."
 MDNS_TYPE_COMMISSIONABLE_NODE = "_matterc._udp.local."
@@ -851,7 +853,7 @@ class MatterDeviceController:
                 node_logger.debug("Re-using existing subscription.")
                 return
             async with node_lock:
-                node_logger.debug("Unsubscribing from existing subscription.")
+                node_logger.info("Unsubscribing from existing subscription.")
                 await self._call_sdk(prev_sub.Shutdown)
                 del self._subscriptions[node_id]
 
@@ -976,14 +978,25 @@ class MatterDeviceController:
                 terminationError,
                 nextResubscribeIntervalMsec,
             )
+            resubscription_attempt = self._last_subscription_attempt[node_id] + 1
+            self._last_subscription_attempt[node_id] = resubscription_attempt
             # mark node as unavailable and signal consumers
             # we debounce it a bit so we only mark the node unavailable
-            # at the second resubscription attempt
-            if node.available and self._last_subscription_attempt[node_id] >= 1:
-                # NOTE: if the node is (re)discovered by mdns, that callback will
-                # take care of resubscribing to the node
+            # after some resubscription attempts and we shutdown the subscription
+            # if the resubscription interval exceeds 30 minutes (TTL of mdns)
+            # the node will be auto picked up by mdns if its alive again
+            if (
+                node.available
+                and resubscription_attempt >= NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE
+            ):
+                node.available = False
+                self.server.signal_event(EventType.NODE_UPDATED, node)
+                LOGGER.info("Marked node %s as unavailable", node_id)
+            if (
+                not node.available
+                and nextResubscribeIntervalMsec > NODE_RESUBSCRIBE_TIMEOUT_OFFLINE
+            ):
                 asyncio.create_task(self._node_offline(node_id))
-            self._last_subscription_attempt[node_id] += 1
 
         def resubscription_succeeded(
             transaction: Attribute.SubscriptionTransaction,
@@ -1249,7 +1262,7 @@ class MatterDeviceController:
         # shutdown existing subscriptions
         if sub := self._subscriptions.pop(node_id, None):
             await self._call_sdk(sub.Shutdown)
-        # mark node as unavailable
+        # mark node as unavailable (if it wasn't already)
         node = self._nodes[node_id]
         if not node.available:
             return  # nothing to do to
