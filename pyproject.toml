@@ -252,6 +252,7 @@ fixture-parentheses = false
 mark-parentheses = false
 
 [tool.ruff.lint.isort]
+force-sort-within-sections = true
 known-first-party = ["matter_server"]
 
 [tool.ruff.lint.mccabe]
