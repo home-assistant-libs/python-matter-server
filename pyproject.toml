@@ -156,9 +156,12 @@ ignore = [
   "D203", # Conflicts with other rules
   "D213", # Conflicts with other rules
   "D417", # False positives in some occasions
+  "EM102", # Just annoying, not really useful
   "FIX002", # Just annoying, not really useful
   "PLR2004", # Just annoying, not really useful
   "PD011", # Just annoying, not really useful
+  "TCH001", # Just annoying, not really useful
+  "TCH003", # Just annoying, not really useful
   "S101", # assert is often used to satisfy type checking
   "TD002", # Just annoying, not really useful
   "TD003", # Just annoying, not really useful
