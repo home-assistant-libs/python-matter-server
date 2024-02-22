@@ -94,8 +94,6 @@ class MatterDeviceController:
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
-        self._attr_subscriptions: dict[int, list[Attribute.AttributePath]] = {}
-        self._resub_debounce_timer: dict[int, asyncio.TimerHandle] = {}
         self._nodes_in_setup: set[int] = set()
         self._mdns_last_seen: dict[int, float] = {}
         self._nodes: dict[int, MatterNodeData] = {}
