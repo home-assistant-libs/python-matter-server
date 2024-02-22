@@ -829,39 +829,15 @@ class MatterDeviceController:
             )
             if attr_path in attr_subscriptions:
                 continue
-            # filter attribute paths that do not exist on the node
-            if (
-                endpoint_id is not None
-                and cluster_id is not None
-                and attribute_id is not None
-                and str(attr_path) not in node.attributes
-            ):
-                # node has no attribute with this specific path
-                continue
-            if (
-                endpoint_id is not None
-                and cluster_id is not None
-                and not any(
-                    x
-                    for x in node.attributes
-                    if x.startswith(f"{endpoint_id}/{cluster_id}/")
-                )
-            ):
-                # node has no attribute from this specific cluster
-                continue
-            if endpoint_id is not None and not any(
-                x for x in node.attributes if x.startswith(f"{endpoint_id}/")
-            ):
-                # node has no attribute from this specific endpoint
-                continue
             attr_subscriptions.append(attr_path)
 
-        if node.is_bridge or len(attr_subscriptions) > 3:
+        if node.is_bridge or len(attr_subscriptions) > 9:
             # A matter device can officially only handle 3 attribute paths per subscription
             # and a maximum of 3 concurrent subscriptions per fabric.
-            # If we have more than 3 paths to watch for a node,
+            # We cheat a bit here and use one single subscription for up to 9 paths,
+            # because in our experience that is more stable than multiple subscriptions
+            # to the same device. If we have more than 9 paths to watch for a node,
             # we switch to a wildcard subscription.
-            # NOTE: we may want to use multiple subscriptions per node to avoid wildcard subs ?
             attr_subscriptions = [Attribute.AttributePath()]  # wildcard
 
         # check if we already have setup subscriptions for this node,
