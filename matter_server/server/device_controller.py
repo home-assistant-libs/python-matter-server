@@ -1010,7 +1010,7 @@ class MatterDeviceController:
 
         node_logger.info("Setting up attributes and events subscription.")
         interval_floor = 0
-        interval_ceiling = 300 if battery_powered else 30
+        interval_ceiling = 600 if battery_powered else 120
         self._last_subscription_attempt[node_id] = 0
         future = loop.create_future()
         device = await self._resolve_node(node_id)
