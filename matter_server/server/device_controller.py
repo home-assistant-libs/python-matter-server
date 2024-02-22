@@ -117,6 +117,7 @@ class MatterDeviceController:
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
         self._attr_subscriptions: dict[int, list[Attribute.AttributePath]] = {}
         self._resub_debounce_timer: dict[int, asyncio.TimerHandle] = {}
+        self._nodes_in_setup: set[int] = set()
         self._mdns_last_seen: dict[int, float] = {}
         self._sub_retry_timer: dict[int, asyncio.TimerHandle] = {}
         self._nodes: dict[int, MatterNodeData] = {}
@@ -287,7 +288,7 @@ class MatterDeviceController:
                 break
 
         # make sure we start a subscription for this newly added node
-        await self._subscribe_node(node_id)
+        await self._setup_node(node_id)
         LOGGER.info("Commissioning of Node ID %s completed.", node_id)
         # return full node object once we're complete
         return self.get_node(node_id)
@@ -379,7 +380,7 @@ class MatterDeviceController:
             else:
                 break
         # make sure we start a subscription for this newly added node
-        await self._subscribe_node(node_id)
+        await self._setup_node(node_id)
         LOGGER.info("Commissioning of Node ID %s completed.", node_id)
         # return full node object once we're complete
         return self.get_node(node_id)
@@ -1074,33 +1075,39 @@ class MatterDeviceController:
         """Handle set-up of subscriptions and interview (if needed) for known/discovered node."""
         if node_id not in self._nodes:
             raise NodeNotExists(f"Node {node_id} does not exist.")
-
-        # (re)interview node (only) if needed
-        node_data = self._nodes[node_id]
-        if (
-            # re-interview if we dont have any node attributes (empty node)
-            not node_data.attributes
-            # re-interview if the data model schema has changed
-            or node_data.interview_version != DATA_MODEL_SCHEMA_VERSION
-        ):
-            try:
-                await self.interview_node(node_id)
-            except (NodeNotResolving, NodeInterviewFailed) as err:
-                LOGGER.warning("Unable to interview Node %s", exc_info=err)
-                # NOTE: the node will be picked up by mdns discovery automatically
-                # when it comes available again.
-                return
-
-        # setup subscriptions for the node
+        if node_id in self._nodes_in_setup:
+            # prevent duplicate setup actions
+            return
+        self._nodes_in_setup.add(node_id)
         try:
-            await self._subscribe_node(node_id)
-        except NodeNotResolving:
-            LOGGER.warning(
-                "Unable to subscribe to Node %s as it is unavailable",
-                node_id,
-            )
-            # NOTE: the node will be picked up by mdns discovery automatically
-            # when it becomes available again.
+            # (re)interview node (only) if needed
+            node_data = self._nodes[node_id]
+            if (
+                # re-interview if we dont have any node attributes (empty node)
+                not node_data.attributes
+                # re-interview if the data model schema has changed
+                or node_data.interview_version != DATA_MODEL_SCHEMA_VERSION
+            ):
+                try:
+                    await self.interview_node(node_id)
+                except (NodeNotResolving, NodeInterviewFailed) as err:
+                    LOGGER.warning("Unable to interview Node %s", exc_info=err)
+                    # NOTE: the node will be picked up by mdns discovery automatically
+                    # when it comes available again.
+                    return
+
+            # setup subscriptions for the node
+            try:
+                await self._subscribe_node(node_id)
+            except NodeNotResolving:
+                LOGGER.warning(
+                    "Unable to subscribe to Node %s as it is unavailable",
+                    node_id,
+                )
+                # NOTE: the node will be picked up by mdns discovery automatically
+                # when it becomes available again.
+        finally:
+            self._nodes_in_setup.discard(node_id)
 
     async def _resolve_node(
         self, node_id: int, retries: int = 2, attempt: int = 1
