@@ -9,6 +9,7 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
+import time
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, cast
 
 from chip.ChipDeviceCtrl import DeviceProxyWrapper
@@ -60,7 +61,8 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
-MAX_POLL_INTERVAL = 600
+NODE_SUBSCRIPTION_CEILING = 30
+NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 1800
 MAX_COMMISSION_RETRIES = 3
 NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE = 3
 NODE_RESUBSCRIBE_TIMEOUT_OFFLINE = 30 * 60 * 1000
@@ -92,6 +94,8 @@ class MatterDeviceController:
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
+        self._nodes_in_setup: set[int] = set()
+        self._mdns_last_seen: dict[int, float] = {}
         self._nodes: dict[int, MatterNodeData] = {}
         self._last_subscription_attempt: dict[int, int] = {}
         self.wifi_credentials_set: bool = False
@@ -101,9 +105,6 @@ class MatterDeviceController:
         self._resolve_lock = asyncio.Lock()
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
-        self._mdns_queues: dict[
-            str, tuple[asyncio.Queue[ServiceStateChange], asyncio.Task]
-        ] = {}
 
     async def initialize(self) -> None:
         """Async initialize of controller."""
@@ -175,9 +176,6 @@ class MatterDeviceController:
             await self._call_sdk(sub.Shutdown)
         self._subscriptions = {}
         # shutdown (and cleanup) mdns browser
-        for key in tuple(self._mdns_queues.keys()):
-            _, mdns_task = self._mdns_queues.pop(key)
-            mdns_task.cancel()
         if self._aiobrowser:
             await self._aiobrowser.async_cancel()
         if self._aiozc:
@@ -266,7 +264,7 @@ class MatterDeviceController:
                 break
 
         # make sure we start a subscription for this newly added node
-        await self._subscribe_node(node_id)
+        await self._setup_node(node_id)
         LOGGER.info("Commissioning of Node ID %s completed.", node_id)
         # return full node object once we're complete
         return self.get_node(node_id)
@@ -358,7 +356,7 @@ class MatterDeviceController:
             else:
                 break
         # make sure we start a subscription for this newly added node
-        await self._subscribe_node(node_id)
+        await self._setup_node(node_id)
         LOGGER.info("Commissioning of Node ID %s completed.", node_id)
         # return full node object once we're complete
         return self.get_node(node_id)
@@ -755,11 +753,10 @@ class MatterDeviceController:
         node = self._nodes[node_id]
 
         # check if we already have setup subscriptions for this node,
-        # if so, we need to unsubscribe first unless nothing changed
-        # in the attribute paths we want to subscribe.
+        # if so, we need to unsubscribe
         if prev_sub := self._subscriptions.get(node_id, None):
             async with node_lock:
-                node_logger.info("Unsubscribing from existing subscription.")
+                node_logger.debug("Unsubscribing from existing subscription.")
                 await self._call_sdk(prev_sub.Shutdown)
                 del self._subscriptions[node_id]
 
@@ -778,6 +775,7 @@ class MatterDeviceController:
             path: Attribute.TypedAttributePath,
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
+            self._mdns_last_seen[node_id] = time.time()
             assert loop is not None
             new_value = transaction.GetAttribute(path)
             # failsafe: ignore ValueDecodeErrors
@@ -905,6 +903,7 @@ class MatterDeviceController:
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
+            self._mdns_last_seen[node_id] = time.time()
             node_logger.info("Re-Subscription succeeded")
             self._last_subscription_attempt[node_id] = 0
             # mark node as available and signal consumers
@@ -914,7 +913,11 @@ class MatterDeviceController:
 
         node_logger.info("Setting up attributes and events subscription.")
         interval_floor = 0
-        interval_ceiling = 300 if battery_powered else 30
+        interval_ceiling = (
+            NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED
+            if battery_powered
+            else NODE_SUBSCRIPTION_CEILING
+        )
         self._last_subscription_attempt[node_id] = 0
         future = loop.create_future()
         device = await self._resolve_node(node_id)
@@ -957,6 +960,7 @@ class MatterDeviceController:
         tlv_attributes = sub._readTransaction._cache.attributeTLVCache
         node.attributes.update(parse_attributes_from_read_result(tlv_attributes))
         node_logger.info("Subscription succeeded")
+        self._mdns_last_seen[node_id] = time.time()
         self.server.signal_event(EventType.NODE_UPDATED, node)
 
     def _get_next_node_id(self) -> int:
@@ -982,33 +986,39 @@ class MatterDeviceController:
         """Handle set-up of subscriptions and interview (if needed) for known/discovered node."""
         if node_id not in self._nodes:
             raise NodeNotExists(f"Node {node_id} does not exist.")
-
-        # (re)interview node (only) if needed
-        node_data = self._nodes[node_id]
-        if (
-            # re-interview if we dont have any node attributes (empty node)
-            not node_data.attributes
-            # re-interview if the data model schema has changed
-            or node_data.interview_version != DATA_MODEL_SCHEMA_VERSION
-        ):
-            try:
-                await self.interview_node(node_id)
-            except (NodeNotResolving, NodeInterviewFailed) as err:
-                LOGGER.warning("Unable to interview Node %s", exc_info=err)
-                # NOTE: the node will be picked up by mdns discovery automatically
-                # when it comes available again.
-                return
-
-        # setup subscriptions for the node
+        if node_id in self._nodes_in_setup:
+            # prevent duplicate setup actions
+            return
+        self._nodes_in_setup.add(node_id)
         try:
-            await self._subscribe_node(node_id)
-        except NodeNotResolving:
-            LOGGER.warning(
-                "Unable to subscribe to Node %s as it is unavailable",
-                node_id,
-            )
-            # NOTE: the node will be picked up by mdns discovery automatically
-            # when it becomes available again.
+            # (re)interview node (only) if needed
+            node_data = self._nodes[node_id]
+            if (
+                # re-interview if we dont have any node attributes (empty node)
+                not node_data.attributes
+                # re-interview if the data model schema has changed
+                or node_data.interview_version != DATA_MODEL_SCHEMA_VERSION
+            ):
+                try:
+                    await self.interview_node(node_id)
+                except (NodeNotResolving, NodeInterviewFailed) as err:
+                    LOGGER.warning("Unable to interview Node %s", exc_info=err)
+                    # NOTE: the node will be picked up by mdns discovery automatically
+                    # when it comes available again.
+                    return
+
+            # setup subscriptions for the node
+            try:
+                await self._subscribe_node(node_id)
+            except NodeNotResolving:
+                LOGGER.warning(
+                    "Unable to subscribe to Node %s as it is unavailable",
+                    node_id,
+                )
+                # NOTE: the node will be picked up by mdns discovery automatically
+                # when it becomes available again.
+        finally:
+            self._nodes_in_setup.discard(node_id)
 
     async def _resolve_node(
         self, node_id: int, retries: int = 2, attempt: int = 1
@@ -1078,58 +1088,54 @@ class MatterDeviceController:
         name: str,
         state_change: ServiceStateChange,
     ) -> None:
+        LOGGER.debug("Received %s MDNS event for %s", state_change, name)
         if service_type == MDNS_TYPE_COMMISSIONABLE_NODE:
             asyncio.create_task(
                 self._on_mdns_commissionable_node_state(name, state_change)
             )
             return
         if service_type == MDNS_TYPE_OPERATIONAL_NODE:
-            name = name.lower()
-            if self.fabric_id_hex not in name:
-                # filter out messages that are not for our fabric
-                return
-            LOGGER.debug("Received %s MDNS event for %s", state_change, name)
-            if state_change not in (
-                ServiceStateChange.Added,
-                ServiceStateChange.Updated,
-            ):
-                # we're not interested in removals as this is already
-                # handled in the subscription logic
-                return
-            if existing := self._mdns_queues.get(name):
-                queue = existing[0]
-            else:
-                # we want mdns messages to be processes sequentially PER NODE but in
-                # PARALLEL overall, hence we create a node specific mdns queue per mdns name.
-                queue = asyncio.Queue()
-                task = asyncio.create_task(self._process_mdns_queue(name, queue))
-                self._mdns_queues[name] = (queue, task)
-            queue.put_nowait(state_change)
+            self._on_mdns_operational_node_state(name, state_change)
 
-    async def _process_mdns_queue(
-        self, name: str, queue: asyncio.Queue[ServiceStateChange]
+    def _on_mdns_operational_node_state(
+        self, name: str, state_change: ServiceStateChange
     ) -> None:
-        """Process the incoming MDNS messages of an (operational) Matter node."""
+        """Handle a (operational) Matter node MDNS state change."""
+        name = name.lower()
+        if self.fabric_id_hex not in name:
+            # filter out messages that are not for our fabric
+            return
+
+        if state_change == ServiceStateChange.Removed:
+            # we're not interested in removals as this is already
+            # handled in the subscription logic
+            return
+
         # the mdns name is constructed as [fabricid]-[nodeid]._matter._tcp.local.
         # extract the node id from the name
         node_id = int(name.split("-")[1].split(".")[0], 16)
-        while True:
-            state_change = await queue.get()
-            if node_id not in self._nodes:
-                continue  # this should not happen, but just in case
-            node = self._nodes[node_id]
-            if state_change not in (
-                ServiceStateChange.Added,
-                ServiceStateChange.Updated,
-            ):
-                # this should be already filtered out, but just in case
-                continue
-            if node.available:
-                # if the node is already set-up, no action is needed
-                continue
-            LOGGER.info("Node %s discovered on MDNS", node_id)
-            # setup the node
-            await self._setup_node(node_id)
+
+        if not (node := self._nodes.get(node_id)):
+            return  # this should not happen, but guard just in case
+
+        # mdns events for matter devices arrive in bursts of (duplicate) messages
+        # so we debounce this as we only use the mdns messages for operational node discovery
+        # and we have other logic in place to determine node aliveness
+
+        now = time.time()
+        last_seen = self._mdns_last_seen.get(node_id, 0)
+        self._mdns_last_seen[node_id] = now
+        if now - last_seen < NODE_SUBSCRIPTION_CEILING:
+            return
+
+        # we treat UPDATE state changes as ADD if the node is marked as
+        # unavailable to ensure we catch a node being operational
+        if node.available and state_change == ServiceStateChange.Updated:
+            return
+
+        LOGGER.info("Node %s (re)discovered on MDNS", node_id)
+        # setup the node - this will (re) setup the subscriptions etc.
+        asyncio.create_task(self._setup_node(node_id))
 
     async def _on_mdns_commissionable_node_state(
         self, name: str, state_change: ServiceStateChange
