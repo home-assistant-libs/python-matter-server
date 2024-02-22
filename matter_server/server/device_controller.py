@@ -73,27 +73,6 @@ ROUTING_ROLE_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
     0, Clusters.ThreadNetworkDiagnostics.Attributes.RoutingRole
 )
 
-BASE_SUBSCRIBE_ATTRIBUTES: tuple[Attribute.AttributePath, ...] = (
-    # all endpoints, BasicInformation cluster
-    Attribute.AttributePath(
-        EndpointId=None, ClusterId=Clusters.BasicInformation.id, Attribute=None
-    ),
-    # all endpoints, BridgedDeviceBasicInformation (bridges only)
-    Attribute.AttributePath(
-        EndpointId=None,
-        ClusterId=Clusters.BridgedDeviceBasicInformation.id,
-        Attribute=None,
-    ),
-    # networkinterfaces attribute on general diagnostics cluster,
-    # so we have the most accurate IP addresses for ping/diagnostics
-    Attribute.AttributePath(
-        EndpointId=0, Attribute=Clusters.GeneralDiagnostics.Attributes.NetworkInterfaces
-    ),
-    # active fabrics attribute - to speedup node diagnostics
-    Attribute.AttributePath(
-        EndpointId=0, Attribute=Clusters.OperationalCredentials.Attributes.Fabrics
-    ),
-)
 
 # pylint: disable=too-many-lines,too-many-locals,too-many-statements,too-many-branches,too-many-instance-attributes
 
@@ -113,9 +92,6 @@ class MatterDeviceController:
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
-        self._attr_subscriptions: dict[int, list[Attribute.AttributePath]] = {}
-        self._resub_debounce_timer: dict[int, asyncio.TimerHandle] = {}
-        self._sub_retry_timer: dict[int, asyncio.TimerHandle] = {}
         self._nodes: dict[int, MatterNodeData] = {}
         self._last_subscription_attempt: dict[int, int] = {}
         self.wifi_credentials_set: bool = False
@@ -640,10 +616,6 @@ class MatterDeviceController:
 
         LOGGER.info("Removing Node ID %s.", node_id)
 
-        # Remove and cancel any existing interview/subscription reschedule timer
-        if existing := self._sub_retry_timer.pop(node_id, None):
-            existing.cancel()
-
         # shutdown any existing subscriptions
         if sub := self._subscriptions.pop(node_id, None):
             await self._call_sdk(sub.Shutdown)
@@ -701,40 +673,9 @@ class MatterDeviceController:
         The given attribute path(s) will be added to the list of attributes that
         are watched for the given node. This is persistent over restarts.
         """
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
-
-        if node_id not in self._nodes:
-            raise NodeNotExists(
-                f"Node {node_id} does not exist or has not been interviewed."
-            )
-
-        node = self._nodes[node_id]
-        assert node is not None
-
-        # work out added subscriptions
-        if not isinstance(attribute_path, list):
-            attribute_path = [attribute_path]
-        attribute_paths = {parse_attribute_path(x) for x in attribute_path}
-        prev_subs = set(node.attribute_subscriptions)
-        node.attribute_subscriptions.update(attribute_paths)
-        if prev_subs == node.attribute_subscriptions:
-            return  # nothing to do
-        # save updated node data
-        self._write_node_state(node_id)
-
-        # (re)setup node subscription
-        # this could potentially be called multiple times within a short timeframe
-        # so debounce it a bit
-        def resubscribe() -> None:
-            self._resub_debounce_timer.pop(node_id, None)
-            asyncio.create_task(self._subscribe_node(node_id))
-
-        if existing_timer := self._resub_debounce_timer.pop(node_id, None):
-            existing_timer.cancel()
-        assert self.server.loop is not None
-        self._resub_debounce_timer[node_id] = self.server.loop.call_later(
-            5, resubscribe
+        LOGGER.warning(
+            "The subscribe_attribute command has been deprecated and will be removed from"
+            " a future version. You no longer need to call this to subscribe to attribute changes."
         )
 
     @api_command(APICommand.PING_NODE)
@@ -813,51 +754,14 @@ class MatterDeviceController:
         node_lock = self._get_node_lock(node_id)
         node = self._nodes[node_id]
 
-        # work out all (current) attribute subscriptions
-        attr_subscriptions: list[Attribute.AttributePath] = list(
-            BASE_SUBSCRIBE_ATTRIBUTES
-        )
-        for (
-            endpoint_id,
-            cluster_id,
-            attribute_id,
-        ) in node.attribute_subscriptions:
-            attr_path = Attribute.AttributePath(
-                EndpointId=endpoint_id,
-                ClusterId=cluster_id,
-                AttributeId=attribute_id,
-            )
-            if attr_path in attr_subscriptions:
-                continue
-            attr_subscriptions.append(attr_path)
-
-        if node.is_bridge or len(attr_subscriptions) > 9:
-            # A matter device can officially only handle 3 attribute paths per subscription
-            # and a maximum of 3 concurrent subscriptions per fabric.
-            # We cheat a bit here and use one single subscription for up to 9 paths,
-            # because in our experience that is more stable than multiple subscriptions
-            # to the same device. If we have more than 9 paths to watch for a node,
-            # we switch to a wildcard subscription.
-            attr_subscriptions = [Attribute.AttributePath()]  # wildcard
-
         # check if we already have setup subscriptions for this node,
         # if so, we need to unsubscribe first unless nothing changed
         # in the attribute paths we want to subscribe.
         if prev_sub := self._subscriptions.get(node_id, None):
-            if (
-                node.available
-                and self._attr_subscriptions.get(node_id) == attr_subscriptions
-            ):
-                # the current subscription already matches, no need to re-setup
-                node_logger.debug("Re-using existing subscription.")
-                return
             async with node_lock:
                 node_logger.info("Unsubscribing from existing subscription.")
                 await self._call_sdk(prev_sub.Shutdown)
                 del self._subscriptions[node_id]
-
-        # store our list of subscriptions for this node
-        self._attr_subscriptions[node_id] = attr_subscriptions
 
         # determine if node is battery powered sleeping device
         # Endpoint 0, ThreadNetworkDiagnostics Cluster, routingRole attribute
@@ -1020,7 +924,7 @@ class MatterDeviceController:
                 eventLoop=loop,
                 device=device.deviceProxy,
                 devCtrl=self.chip_controller,
-                attributes=attr_subscriptions,
+                attributes=[Attribute.AttributePath()],  # wildcard
                 events=[
                     Attribute.EventPath(
                         EndpointId=None, Cluster=None, Event=None, Urgent=1
@@ -1255,9 +1159,6 @@ class MatterDeviceController:
 
     async def _node_offline(self, node_id: int) -> None:
         """Mark node as offline."""
-        # Remove and cancel any existing interview/subscription reschedule timer
-        if existing := self._sub_retry_timer.pop(node_id, None):
-            existing.cancel()
         # shutdown existing subscriptions
         if sub := self._subscriptions.pop(node_id, None):
             await self._call_sdk(sub.Shutdown)
