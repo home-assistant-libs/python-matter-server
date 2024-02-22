@@ -56,6 +56,8 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
+      - name: Wait for PyPI
+        run: sleep 60
   build-and-push-container-image:
     name: Builds and pushes the Matter Server container to ghcr.io
     runs-on: ubuntu-latest
