@@ -73,6 +73,7 @@ ROUTING_ROLE_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
     0, Clusters.ThreadNetworkDiagnostics.Attributes.RoutingRole
 )
 
+
 BASE_SUBSCRIBE_ATTRIBUTES: tuple[Attribute.AttributePath, ...] = (
     # all endpoints, BasicInformation cluster
     Attribute.AttributePath(
@@ -115,7 +116,6 @@ class MatterDeviceController:
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
         self._attr_subscriptions: dict[int, list[Attribute.AttributePath]] = {}
         self._resub_debounce_timer: dict[int, asyncio.TimerHandle] = {}
-        self._sub_retry_timer: dict[int, asyncio.TimerHandle] = {}
         self._nodes: dict[int, MatterNodeData] = {}
         self._last_subscription_attempt: dict[int, int] = {}
         self.wifi_credentials_set: bool = False
@@ -639,10 +639,6 @@ class MatterDeviceController:
             )
 
         LOGGER.info("Removing Node ID %s.", node_id)
-
-        # Remove and cancel any existing interview/subscription reschedule timer
-        if existing := self._sub_retry_timer.pop(node_id, None):
-            existing.cancel()
 
         # shutdown any existing subscriptions
         if sub := self._subscriptions.pop(node_id, None):
@@ -1255,9 +1251,6 @@ class MatterDeviceController:
 
     async def _node_offline(self, node_id: int) -> None:
         """Mark node as offline."""
-        # Remove and cancel any existing interview/subscription reschedule timer
-        if existing := self._sub_retry_timer.pop(node_id, None):
-            existing.cancel()
         # shutdown existing subscriptions
         if sub := self._subscriptions.pop(node_id, None):
             await self._call_sdk(sub.Shutdown)
