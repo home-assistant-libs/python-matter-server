@@ -1211,7 +1211,7 @@ class MatterDeviceController:
             return
 
         # we treat UPDATE state changes as ADD if the node is marked as
-        # unavailabl to ensure we catch a node being operational
+        # unavailable to ensure we catch a node being operational
         if node.available and state_change == ServiceStateChange.Updated:
             return
 
