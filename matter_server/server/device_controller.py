@@ -671,7 +671,7 @@ class MatterDeviceController:
         The given attribute path(s) will be added to the list of attributes that
         are watched for the given node. This is persistent over restarts.
         """
-        LOGGER.warning(
+        LOGGER.debug(
             "The subscribe_attribute command has been deprecated and will be removed from"
             " a future version. You no longer need to call this to subscribe to attribute changes."
         )
