@@ -102,7 +102,6 @@ class MatterDeviceController:
         self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
         self._node_lock: dict[int, asyncio.Lock] = {}
-        self._resolve_lock = asyncio.Lock()
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
 
@@ -1035,13 +1034,12 @@ class MatterDeviceController:
                 attempt,
                 retries,
             )
-            async with self._resolve_lock:
-                return await self._call_sdk(
-                    self.chip_controller.GetConnectedDeviceSync,
-                    nodeid=node_id,
-                    allowPASE=False,
-                    timeoutMs=None,
-                )
+            return await self._call_sdk(
+                self.chip_controller.GetConnectedDeviceSync,
+                nodeid=node_id,
+                allowPASE=False,
+                timeoutMs=None,
+            )
         except (ChipStackError, TimeoutError) as err:
             if attempt >= retries:
                 # when we're out of retries, raise NodeNotResolving
