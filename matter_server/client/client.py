@@ -257,16 +257,54 @@ class MatterClient:
             await self.send_command(APICommand.PING_NODE, node_id=node_id),
         )
 
+    async def get_node_ip_addresses(
+        self, node_id: int, prefer_cache: bool = True, scoped: bool = False
+    ) -> list[str]:
+        """Return the currently known (scoped) IP-adress(es)."""
+        if TYPE_CHECKING:
+            assert self.server_info is not None
+        if self.server_info.schema_version >= 8:
+            return cast(
+                list[str],
+                await self.send_command(
+                    APICommand.GET_NODE_IP_ADRESSES,
+                    require_schema=8,
+                    node_id=node_id,
+                    prefer_cache=prefer_cache,
+                    scoped=scoped,
+                ),
+            )
+        # alternative method of fetching ip addresses by enumerating NetworkInterfaces
+        node = self.get_node(node_id)
+        attribute = Clusters.GeneralDiagnostics.Attributes.NetworkInterfaces
+        network_interface: Clusters.GeneralDiagnostics.Structs.NetworkInterface
+        ip_addresses: list[str] = []
+        for network_interface in node.get_attribute_value(
+            0, cluster=None, attribute=attribute
+        ):
+            # ignore invalid/non-operational interfaces
+            if not network_interface.isOperational:
+                continue
+            # enumerate ipv4 and ipv6 addresses
+            for ipv4_address_hex in network_interface.IPv4Addresses:
+                ipv4_address = convert_ip_address(ipv4_address_hex)
+                ip_addresses.append(ipv4_address)
+            for ipv6_address_hex in network_interface.IPv6Addresses:
+                ipv6_address = convert_ip_address(ipv6_address_hex, True)
+                ip_addresses.append(ipv6_address)
+            break
+        return ip_addresses
+
     async def node_diagnostics(self, node_id: int) -> NodeDiagnostics:
         """Gather diagnostics for the given node."""
         # pylint: disable=too-many-statements
         node = self.get_node(node_id)
+        ip_addresses = await self.get_node_ip_addresses(node_id)
         # grab some details from the first (operational) network interface
         network_type = NetworkType.UNKNOWN
         mac_address = None
         attribute = Clusters.GeneralDiagnostics.Attributes.NetworkInterfaces
         network_interface: Clusters.GeneralDiagnostics.Structs.NetworkInterface
-        ip_addresses: list[str] = []
         for network_interface in node.get_attribute_value(
             0, cluster=None, attribute=attribute
         ):
@@ -292,13 +330,6 @@ class MatterClient:
                 # unknown interface: ignore
                 continue
             mac_address = convert_mac_address(network_interface.hardwareAddress)
-            # enumerate ipv4 and ipv6 addresses
-            for ipv4_address_hex in network_interface.IPv4Addresses:
-                ipv4_address = convert_ip_address(ipv4_address_hex)
-                ip_addresses.append(ipv4_address)
-            for ipv6_address_hex in network_interface.IPv6Addresses:
-                ipv6_address = convert_ip_address(ipv6_address_hex, True)
-                ip_addresses.append(ipv6_address)
             break
         # get thread/wifi specific info
         node_type = NodeType.UNKNOWN
