@@ -693,7 +693,6 @@ class MatterDeviceController:
         async def _do_ping(ip_address: str) -> None:
             """Ping IP and add to result."""
             timeout = 10 if battery_powered else 2
-            clean_ip = ip_address.split("%")[0]
             if "%" in ip_address:
                 # ip address contains an interface index
                 clean_ip, interface_idx = ip_address.split("%", 1)
