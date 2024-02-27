@@ -9,6 +9,7 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
+from random import randint
 import time
 from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
 
@@ -410,7 +411,7 @@ class MatterDeviceController:
             return self._known_commissioning_params[node_id]
 
         if discriminator is None:
-            discriminator = 3840  # TODO generate random one
+            discriminator = randint(1000, 4096)  # noqa: S311
 
         sdk_result = await self._call_sdk(
             self.chip_controller.OpenCommissioningWindow,
