@@ -694,7 +694,15 @@ class MatterDeviceController:
             """Ping IP and add to result."""
             timeout = 10 if battery_powered else 2
             clean_ip = ip_address.split("%")[0]
-            node_logger.debug("Pinging address %s", clean_ip)
+            if "%" in ip_address:
+                # ip address contains an interface index
+                clean_ip, interface_idx = ip_address.split("%", 1)
+                node_logger.debug(
+                    "Pinging address %s (using interface %s)", clean_ip, interface_idx
+                )
+            else:
+                clean_ip = ip_address
+                node_logger.debug("Pinging address %s", clean_ip)
             result[clean_ip] = await ping_ip(ip_address, timeout)
 
         ip_addresses = await self.get_node_ip_addresses(
