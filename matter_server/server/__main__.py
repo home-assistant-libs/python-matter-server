@@ -1,4 +1,5 @@
 """Script entry point to run the Matter Server."""
+
 import argparse
 import asyncio
 import logging
@@ -110,6 +111,10 @@ def _setup_logging() -> None:
         # We can restore the default log level again when we've patched the device controller
         # to handle the raw attribute data to deal with custom clusters.
         logging.getLogger("chip.clusters.Attribute").setLevel(logging.CRITICAL)
+    if not logging.getLogger().isEnabledFor(logging.DEBUG):
+        # (temporary) raise the log level of zeroconf as its a logs an annoying
+        # warning at startup while trying to bind to a loopback IPv6 interface
+        logging.getLogger("zeroconf").setLevel(logging.ERROR)
 
 
 def main() -> None:
