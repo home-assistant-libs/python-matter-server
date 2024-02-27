@@ -37,6 +37,7 @@ from ..common.helpers.util import (
     dataclass_from_dict,
     dataclass_to_dict,
     parse_attribute_path,
+    parse_value,
 )
 from ..common.models import (
     APICommand,
@@ -529,7 +530,7 @@ class MatterDeviceController:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
         command_cls = getattr(cluster_cls.Commands, command_name)
-        command = dataclass_from_dict(command_cls, payload)
+        command = dataclass_from_dict(command_cls, payload, allow_sdk_types=True)
         node_lock = self._get_node_lock(node_id)
         async with node_lock:
             return await self.chip_controller.SendCommand(
@@ -592,8 +593,16 @@ class MatterDeviceController:
         if (node := self._nodes.get(node_id)) is None or not node.available:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
-        attribute = ALL_ATTRIBUTES[cluster_id][attribute_id]()
-        attribute.value = Clusters.NullValue if value is None else value
+        attribute = cast(
+            Clusters.ClusterAttributeDescriptor,
+            ALL_ATTRIBUTES[cluster_id][attribute_id](),
+        )
+        attribute.value = parse_value(
+            name=attribute_path,
+            value=value,
+            value_type=attribute.attribute_type.Type,
+            allow_sdk_types=True,
+        )
         return await self.chip_controller.WriteAttribute(
             nodeid=node_id,
             attributes=[(endpoint_id, attribute)],
