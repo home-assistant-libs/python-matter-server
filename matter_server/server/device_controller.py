@@ -598,7 +598,7 @@ class MatterDeviceController:
             ALL_ATTRIBUTES[cluster_id][attribute_id](),
         )
         attribute.value = parse_value(
-            name=attribute.__qualname__,
+            name=attribute_path,
             value=value,
             value_type=attribute.attribute_type.Type,
             allow_sdk_types=True,
