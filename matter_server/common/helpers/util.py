@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import base64
-import binascii
-import logging
-import platform
-import socket
 from base64 import b64decode
+import binascii
 from dataclasses import MISSING, asdict, fields, is_dataclass
 from datetime import datetime
 from enum import Enum
 from functools import cache
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as pkg_version
+from importlib.metadata import PackageNotFoundError, version as pkg_version
+import logging
+import platform
+import socket
 from types import NoneType, UnionType
 from typing import (
     TYPE_CHECKING,
