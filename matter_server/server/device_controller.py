@@ -22,7 +22,7 @@ from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZerocon
 
 from matter_server.common.helpers.util import convert_ip_address
 from matter_server.common.models import CommissionableNodeData, CommissioningParameters
-from matter_server.server.helpers.attributes import parse_attributes_from_read_result, parse_nullable_for_write
+from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
 
 from ..common.errors import (
@@ -619,8 +619,16 @@ class MatterDeviceController:
         if (node := self._nodes.get(node_id)) is None or not node.available:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
-        attribute = ALL_ATTRIBUTES[cluster_id][attribute_id]()
-        attribute.value = parse_nullable_for_write(value)
+        attribute = cast(
+            Clusters.ClusterAttributeDescriptor,
+            ALL_ATTRIBUTES[cluster_id][attribute_id](),
+        )
+        attribute.value = parse_value(
+            name=attribute.__qualname__,
+            value=value,
+            value_type=attribute.attribute_type.Type,
+            allow_sdk_types=True,
+        )
         return await self.chip_controller.WriteAttribute(
             nodeid=node_id,
             attributes=[(endpoint_id, attribute)],
@@ -1256,4 +1264,3 @@ class MatterDeviceController:
         node.available = False
         self.server.signal_event(EventType.NODE_UPDATED, node)
         LOGGER.info("Marked node %s as offline", node_id)
-

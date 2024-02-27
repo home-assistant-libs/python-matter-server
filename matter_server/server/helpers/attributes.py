@@ -1,8 +1,6 @@
 """Helpers to manage Cluster attributes."""
 
 from typing import Any
-from copy import deepcopy
-from chip.clusters import Objects as Clusters
 
 from ...common.helpers.util import create_attribute_path
 
@@ -25,18 +23,3 @@ def parse_attributes_from_read_result(
                 )
                 result[attribute_path] = attr_value
     return result
-
-def parse_nullable_for_write(payload):
-    """Parses the Python 'None' values to CHIP 'Nullable' type for writing attribute."""
-    outload = deepcopy(payload)
-
-    if isinstance(outload, dict):
-        for k, v in outload.items():
-            outload[k] = parse_nullable_for_write(outload[k])
-    elif isinstance(outload, list):
-        for i in range(0, len(outload)):
-            outload[i] = parse_nullable_for_write(outload[i])
-    else:
-        outload = Clusters.NullValue if outload is None else outload
-
-    return outload

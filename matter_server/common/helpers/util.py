@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import base64
-from base64 import b64decode
 import binascii
+import logging
+import platform
+import socket
+from base64 import b64decode
 from dataclasses import MISSING, asdict, fields, is_dataclass
 from datetime import datetime
 from enum import Enum
 from functools import cache
-from importlib.metadata import PackageNotFoundError, version as pkg_version
-import logging
-import platform
-import socket
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as pkg_version
 from types import NoneType, UnionType
 from typing import (
     TYPE_CHECKING,
@@ -108,8 +109,13 @@ def parse_value(
     value_type: Any,
     default: Any = MISSING,
     allow_none: bool = True,
+    allow_sdk_types: bool = False,
 ) -> Any:
-    """Try to parse a value from raw (json) data and type annotations."""
+    """
+    Try to parse a value from raw (json) data and type annotations.
+
+    If allow_sdk_types is False, any SDK specific custom data types will be converted.
+    """
     # pylint: disable=too-many-return-statements,too-many-branches
 
     if isinstance(value_type, str):
@@ -131,9 +137,9 @@ def parse_value(
         return default
     if value is None and value_type is NoneType:
         return None
-    if value is None and allow_none:
-        return None
     if value is None and value_type is Nullable:
+        return Nullable() if allow_sdk_types else None
+    if value is None and allow_none:
         return None
     if is_dataclass(value_type) and isinstance(value, dict):
         return dataclass_from_dict(value_type, value)
@@ -220,12 +226,12 @@ def parse_value(
     if value_type is uint and (
         isinstance(value, int) or (isinstance(value, str) and value.isnumeric())
     ):
-        return uint(value)
+        return uint(value) if allow_sdk_types else int(value)
     if value_type is float32 and (
         isinstance(value, (float, int))
         or (isinstance(value, str) and value.isnumeric())
     ):
-        return float32(value)
+        return float32(value) if allow_sdk_types else float(value)
 
     # If we reach this point, we could not match the value with the type and we raise
     if not isinstance(value, value_type):
@@ -236,7 +242,9 @@ def parse_value(
     return value
 
 
-def dataclass_from_dict(cls: type[_T], dict_obj: dict, strict: bool = False) -> _T:
+def dataclass_from_dict(
+    cls: type[_T], dict_obj: dict, strict: bool = False, allow_sdk_types: bool = False
+) -> _T:
     """
     Create (instance of) a dataclass by providing a dict with values.
 
@@ -259,6 +267,7 @@ def dataclass_from_dict(cls: type[_T], dict_obj: dict, strict: bool = False) -> 
                 type_hints[field.name],
                 field.default,
                 allow_none=not strict,
+                allow_sdk_types=allow_sdk_types,
             )
             for field in dc_fields
             if field.init
