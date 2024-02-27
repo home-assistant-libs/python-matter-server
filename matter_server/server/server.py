@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+from functools import partial
 import ipaddress
 import logging
+import os
+from pathlib import Path
 from typing import Any, Callable, Set, cast
 import weakref
 
@@ -30,6 +33,9 @@ from .device_controller import MatterDeviceController
 from .stack import MatterStack
 from .storage import StorageController
 from .vendor_info import VendorInfo
+
+DASHBOARD_DIR = Path(__file__).parent.joinpath("../../dashboard/dist/web/").resolve()
+DASHBOARD_DIR_EXISTS = DASHBOARD_DIR.exists()
 
 
 def mount_websocket(server: MatterServer, path: str) -> None:
@@ -106,7 +112,22 @@ class MatterServer:
         await self.device_controller.start()
         await self.vendor_info.start()
         mount_websocket(self, "/ws")
-        self.app.router.add_route("GET", "/", self._handle_info)
+        self.app.router.add_route("GET", "/info", self._handle_info)
+
+        # Host dashboard if the prebuilt files are detected
+        if DASHBOARD_DIR_EXISTS:
+            self.logger.debug("Detected dashboard files on %s", str(DASHBOARD_DIR))
+            for abs_dir, _, files in os.walk(str(DASHBOARD_DIR)):
+                rel_dir = abs_dir.replace(str(DASHBOARD_DIR), "")
+                for filename in files:
+                    filepath = os.path.join(abs_dir, filename)
+                    handler = partial(self._serve_static, filepath)
+                    if rel_dir == "" and filename == "index.html":
+                        route_path = "/"
+                    else:
+                        route_path = f"{rel_dir}/{filename}"
+                    self.app.router.add_route("GET", route_path, handler)
+
         self._runner = web.AppRunner(self.app, access_log=None)
         await self._runner.setup()
         self._http = MultiHostTCPSite(
@@ -233,3 +254,10 @@ class MatterServer:
         """Handle info endpoint to serve basic server (version) info."""
         # pylint: disable=unused-argument
         return web.json_response(self.get_info(), dumps=json_dumps)
+
+    async def _serve_static(
+        self, file_path: str, _request: web.Request
+    ) -> web.FileResponse:
+        """Serve file response."""
+        headers = {"Cache-Control": "no-cache"}
+        return web.FileResponse(file_path, headers=headers)
