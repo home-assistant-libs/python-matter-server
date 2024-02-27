@@ -10,7 +10,7 @@ from datetime import datetime
 from functools import partial
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
 
 from chip.ChipDeviceCtrl import DeviceProxyWrapper
 from chip.clusters import Attribute, Objects as Clusters
@@ -20,7 +20,6 @@ from chip.exceptions import ChipStackError
 from zeroconf import IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
-from matter_server.common.helpers.util import convert_ip_address
 from matter_server.common.models import CommissionableNodeData, CommissioningParameters
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
@@ -38,7 +37,6 @@ from ..common.helpers.util import (
     dataclass_from_dict,
     dataclass_to_dict,
     parse_attribute_path,
-    parse_value,
 )
 from ..common.models import (
     APICommand,
@@ -97,6 +95,7 @@ class MatterDeviceController:
         self._nodes_in_setup: set[int] = set()
         self._mdns_last_seen: dict[int, float] = {}
         self._nodes: dict[int, MatterNodeData] = {}
+        self._last_known_ip_addresses: dict[int, list[str]] = {}
         self._last_subscription_attempt: dict[int, int] = {}
         self.wifi_credentials_set: bool = False
         self.thread_credentials_set: bool = False
@@ -687,14 +686,12 @@ class MatterDeviceController:
     async def ping_node(self, node_id: int) -> NodePingResult:
         """Ping node on the currently known IP-adress(es)."""
         result: NodePingResult = {}
-        # the node's ip addresses are stored in the GeneralDiagnostics cluster
-        attribute = Clusters.GeneralDiagnostics.Attributes.NetworkInterfaces
-        attr_path = f"0/{attribute.cluster_id}/{attribute.attribute_id}"
         node = self._nodes.get(node_id)
         if node is None:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or is not yet interviewed"
             )
+        node_logger = LOGGER.getChild(f"[node {node_id}]")
 
         battery_powered = (
             node.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH, 0)
@@ -704,40 +701,70 @@ class MatterDeviceController:
         async def _do_ping(ip_address: str) -> None:
             """Ping IP and add to result."""
             timeout = 10 if battery_powered else 2
-            result[ip_address] = await ping_ip(ip_address, timeout)
-
-        # The network interfaces attribute contains a list of network interfaces.
-        # For regular nodes this is just a single interface but we iterate them all anyway.
-        # Create a list of tasks so we can do multiple pings simultanuous.
-        # NOTE: Upgrade this to a TaskGroup once we bump our minimal python version.
-        attr_data = cast(list[dict[str, Any]], node.attributes.get(attr_path))
-        tasks: list[Awaitable] = []
-        for network_interface_data in attr_data:
-            network_interface: Clusters.GeneralDiagnostics.Structs.NetworkInterface = (
-                parse_value(
-                    "network_interface",
-                    network_interface_data,
-                    Clusters.GeneralDiagnostics.Structs.NetworkInterface,
+            if "%" in ip_address:
+                # ip address contains an interface index
+                clean_ip, interface_idx = ip_address.split("%", 1)
+                node_logger.debug(
+                    "Pinging address %s (using interface %s)", clean_ip, interface_idx
                 )
-            )
-            # ignore invalid/non-operational interfaces
-            if not network_interface.isOperational:
-                continue
-            if network_interface.type in (
-                Clusters.GeneralDiagnostics.Enums.InterfaceTypeEnum.kUnspecified,
-                Clusters.GeneralDiagnostics.Enums.InterfaceTypeEnum.kUnknownEnumValue,
-            ):
-                continue
+            else:
+                clean_ip = ip_address
+                node_logger.debug("Pinging address %s", clean_ip)
+            result[clean_ip] = await ping_ip(ip_address, timeout)
 
-            # enumerate ipv4 and ipv6 addresses
-            for ipv4_address_hex in network_interface.IPv4Addresses:
-                ipv4_address = convert_ip_address(ipv4_address_hex)
-                tasks.append(_do_ping(ipv4_address))
-            for ipv6_address_hex in network_interface.IPv6Addresses:
-                ipv6_address = convert_ip_address(ipv6_address_hex, True)
-                tasks.append(_do_ping(ipv6_address))
+        ip_addresses = await self.get_node_ip_addresses(
+            node_id, prefer_cache=False, scoped=True
+        )
+        tasks = [_do_ping(x) for x in ip_addresses]
+        # TODO: replace this gather with a taskgroup once we bump our py version
         await asyncio.gather(*tasks)
+
+        # retrieve the currently connected/used address which is used
+        # by the sdk for communicating with the device
+        if TYPE_CHECKING:
+            assert self.chip_controller is not None
+        if sdk_result := await self._call_sdk(
+            self.chip_controller.GetAddressAndPort, nodeid=node_id
+        ):
+            active_address = sdk_result[0]
+            node_logger.info(
+                "The SDK is communicating with the device using %s", active_address
+            )
+            if active_address not in result and node.available:
+                # if the sdk is connected to a node, treat the address as pingable
+                result[active_address] = True
+
         return result
+
+    @api_command(APICommand.GET_NODE_IP_ADRESSES)
+    async def get_node_ip_addresses(
+        self, node_id: int, prefer_cache: bool = False, scoped: bool = False
+    ) -> list[str]:
+        """Return the currently known (scoped) IP-adress(es)."""
+        cached_info = self._last_known_ip_addresses.get(node_id, [])
+        if prefer_cache and cached_info:
+            return cached_info if scoped else [x.split("%")[0] for x in cached_info]
+        node = self._nodes.get(node_id)
+        if node is None:
+            raise NodeNotExists(
+                f"Node {node_id} does not exist or is not yet interviewed"
+            )
+        node_logger = LOGGER.getChild(f"[node {node_id}]")
+        # query mdns for all IP's
+        # ensure both fabric id and node id have 16 characters (prefix with zero's)
+        mdns_name = f"{self.compressed_fabric_id:0{16}X}-{node_id:0{16}X}.{MDNS_TYPE_OPERATIONAL_NODE}"
+        info = AsyncServiceInfo(MDNS_TYPE_OPERATIONAL_NODE, mdns_name)
+        if TYPE_CHECKING:
+            assert self._aiozc is not None
+        if not await info.async_request(self._aiozc.zeroconf, 3000):
+            node_logger.info(
+                "Node could not be discovered on the network, returning cached IP's"
+            )
+            return cached_info
+        ip_adresses = info.parsed_scoped_addresses(IPVersion.All)
+        # cache this info for later use
+        self._last_known_ip_addresses[node_id] = ip_adresses
+        return ip_adresses if scoped else [x.split("%")[0] for x in ip_adresses]
 
     async def _subscribe_node(self, node_id: int) -> None:
         """
@@ -997,6 +1024,8 @@ class MatterDeviceController:
             # prevent duplicate setup actions
             return
         self._nodes_in_setup.add(node_id)
+        # pre-cache ip-addresses
+        await self.get_node_ip_addresses(node_id)
         try:
             # (re)interview node (only) if needed
             node_data = self._nodes[node_id]

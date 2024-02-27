@@ -45,6 +45,7 @@ class APICommand(str, Enum):
     READ_ATTRIBUTE = "read_attribute"
     WRITE_ATTRIBUTE = "write_attribute"
     PING_NODE = "ping_node"
+    GET_NODE_IP_ADRESSES = "get_node_ip_addresses"
 
 
 EventCallBackType = Callable[[EventType, Any], None]
