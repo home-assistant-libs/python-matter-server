@@ -22,7 +22,7 @@ dependencies = [
   "coloredlogs",
   "dacite",
   "orjson",
-  "home-assistant-chip-clusters==2024.1.0",
+  "home-assistant-chip-clusters==2024.2.0",
 ]
 description = "Python Matter WebSocket Server"
 license = {text = "Apache-2.0"}
@@ -34,22 +34,22 @@ version = "0.0.0"
 
 [project.optional-dependencies]
 server = [
-  "home-assistant-chip-core==2024.1.0",
-  "cryptography==42.0.2",
+  "home-assistant-chip-core==2024.2.0",
+  "cryptography==42.0.5",
   "zeroconf==0.131.0",
 ]
 test = [
   "codespell==2.2.6",
   "isort==5.13.2",
   "mypy==1.8.0",
-  "pre-commit==3.6.0",
+  "pre-commit==3.6.2",
   "pre-commit-hooks==4.5.0",
-  "pylint==3.0.3",
-  "pytest==7.4.4",
+  "pylint==3.1.0",
+  "pytest==8.0.2",
   "pytest-asyncio==0.23.5",
   "pytest-aiohttp==1.0.5",
   "pytest-cov==4.1.0",
-  "ruff==0.2.1",
+  "ruff==0.2.2",
   "safety==3.0.1",
   "tomli==2.0.1",
 ]
@@ -156,16 +156,18 @@ ignore = [
   "D203", # Conflicts with other rules
   "D213", # Conflicts with other rules
   "D417", # False positives in some occasions
+  "EM102", # Just annoying, not really useful
   "FIX002", # Just annoying, not really useful
   "PLR2004", # Just annoying, not really useful
   "PD011", # Just annoying, not really useful
+  "TCH001", # Just annoying, not really useful
+  "TCH003", # Just annoying, not really useful
   "S101", # assert is often used to satisfy type checking
   "TD002", # Just annoying, not really useful
   "TD003", # Just annoying, not really useful
   "TD004", # Just annoying, not really useful
   "COM812", # Conflict with the Ruff formatter
   "ISC001", # Conflict with the Ruff formatter
-  "I001", # TEMPORARY DISABLED
   "TCH003", # TEMPORARY DISABLED
   "UP035", # TEMPORARY DISABLED
   "TCH002", # TEMPORARY DISABLED
@@ -249,6 +251,8 @@ fixture-parentheses = false
 mark-parentheses = false
 
 [tool.ruff.lint.isort]
+combine-as-imports = true
+force-sort-within-sections = true
 known-first-party = ["matter_server"]
 
 [tool.ruff.lint.mccabe]

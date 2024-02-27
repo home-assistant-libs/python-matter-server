@@ -5,8 +5,8 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import logging
-import weakref
 from typing import Any, Callable, Set, cast
+import weakref
 
 from aiohttp import web
 
