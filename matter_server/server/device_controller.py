@@ -37,6 +37,7 @@ from ..common.helpers.util import (
     dataclass_from_dict,
     dataclass_to_dict,
     parse_attribute_path,
+    parse_value,
 )
 from ..common.models import (
     APICommand,
