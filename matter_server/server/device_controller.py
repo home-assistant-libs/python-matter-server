@@ -9,6 +9,7 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
+from random import randint
 import time
 from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
 
@@ -98,6 +99,7 @@ class MatterDeviceController:
         self._nodes: dict[int, MatterNodeData] = {}
         self._last_known_ip_addresses: dict[int, list[str]] = {}
         self._last_subscription_attempt: dict[int, int] = {}
+        self._known_commissioning_params: dict[int, CommissioningParameters] = {}
         self.wifi_credentials_set: bool = False
         self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
@@ -403,8 +405,16 @@ class MatterDeviceController:
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
 
+        if (node := self._nodes.get(node_id)) is None or not node.available:
+            raise NodeNotReady(f"Node {node_id} is not (yet) available.")
+
+        if node_id in self._known_commissioning_params:
+            # node has already been put into commissioning mode,
+            # return previous parameters
+            return self._known_commissioning_params[node_id]
+
         if discriminator is None:
-            discriminator = 3840  # TODO generate random one
+            discriminator = randint(0, 4095)  # noqa: S311
 
         sdk_result = await self._call_sdk(
             self.chip_controller.OpenCommissioningWindow,
@@ -414,11 +424,18 @@ class MatterDeviceController:
             discriminator=discriminator,
             option=option,
         )
-        return CommissioningParameters(
+        self._known_commissioning_params[node_id] = params = CommissioningParameters(
             setup_pin_code=sdk_result.setupPinCode,
             setup_manual_code=sdk_result.setupManualCode,
             setup_qr_code=sdk_result.setupQRCode,
         )
+        # we store the commission parameters and clear them after the timeout
+        if TYPE_CHECKING:
+            assert self.server.loop
+        self.server.loop.call_later(
+            timeout, self._known_commissioning_params.pop, node_id, None
+        )
+        return params
 
     @api_command(APICommand.DISCOVER)
     async def discover_commissionable_nodes(
