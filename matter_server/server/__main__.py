@@ -1,4 +1,5 @@
 """Script entry point to run the Matter Server."""
+
 import argparse
 import asyncio
 import logging
@@ -110,6 +111,10 @@ def _setup_logging() -> None:
         # We can restore the default log level again when we've patched the device controller
         # to handle the raw attribute data to deal with custom clusters.
         logging.getLogger("chip.clusters.Attribute").setLevel(logging.CRITICAL)
+        # Temporary disable the logger of chip.native.DL because it now logs
+        # a whole list of errors when its trying to bind to internal interfaces on
+        # the HA supervisor set-up.
+        logging.getLogger("chip.native.DL").setLevel(logging.CRITICAL)
 
 
 def main() -> None:
