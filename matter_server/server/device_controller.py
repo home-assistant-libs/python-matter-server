@@ -556,7 +556,7 @@ class MatterDeviceController:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
         command_cls = getattr(cluster_cls.Commands, command_name)
-        command = dataclass_from_dict(command_cls, payload)
+        command = dataclass_from_dict(command_cls, payload, allow_sdk_types=True)
         node_lock = self._get_node_lock(node_id)
         async with node_lock:
             return await self.chip_controller.SendCommand(
