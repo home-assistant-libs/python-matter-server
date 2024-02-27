@@ -405,6 +405,9 @@ class MatterDeviceController:
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
 
+        if (node := self._nodes.get(node_id)) is None or not node.available:
+            raise NodeNotReady(f"Node {node_id} is not (yet) available.")
+
         if node_id in self._known_commissioning_params:
             # node has already been put into commissioning mode,
             # return previous parameters
