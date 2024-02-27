@@ -106,7 +106,7 @@ async def fetch_dcl_certificates(
                     )
                     LAST_CERT_IDS.add(paa["subjectKeyId"])
                     fetch_count += 1
-    except ClientError as err:
+    except (ClientError, TimeoutError) as err:
         LOGGER.warning(
             "Fetching latest certificates failed: error %s", err, exc_info=err
         )
@@ -142,7 +142,7 @@ async def fetch_git_certificates() -> int:
                 await write_paa_root_cert(certificate, cert)
                 LAST_CERT_IDS.add(cert)
                 fetch_count += 1
-    except ClientError as err:
+    except (ClientError, TimeoutError) as err:
         LOGGER.warning(
             "Fetching latest certificates failed: error %s", err, exc_info=err
         )
