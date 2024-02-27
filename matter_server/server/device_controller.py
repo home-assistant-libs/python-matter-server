@@ -414,7 +414,7 @@ class MatterDeviceController:
             return self._known_commissioning_params[node_id]
 
         if discriminator is None:
-            discriminator = randint(1000, 4096)  # noqa: S311
+            discriminator = randint(0, 4095)  # noqa: S311
 
         sdk_result = await self._call_sdk(
             self.chip_controller.OpenCommissioningWindow,
