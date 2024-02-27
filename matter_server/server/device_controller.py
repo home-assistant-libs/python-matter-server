@@ -545,8 +545,8 @@ class MatterDeviceController:
     @api_command(APICommand.READ_ATTRIBUTE)
     async def read_attribute(
         self, node_id: int, attribute_path: str, fabric_filtered: bool = False
-    ) -> Any:
-        """Read a single attribute (or Cluster) on a node."""
+    ) -> dict[str, Any]:
+        """Read one or more attribute(s) on a node by specifying an attributepath."""
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         if (node := self._nodes.get(node_id)) is None or not node.available:
@@ -576,9 +576,7 @@ class MatterDeviceController:
             # update cached info in node attributes
             self._nodes[node_id].attributes.update(read_atributes)
             self._write_node_state(node_id)
-            if len(read_atributes) > 1:
-                return read_atributes
-            return read_atributes.get(attribute_path, None)
+            return read_atributes
 
     @api_command(APICommand.WRITE_ATTRIBUTE)
     async def write_attribute(
