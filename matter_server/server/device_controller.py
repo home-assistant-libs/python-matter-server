@@ -737,13 +737,7 @@ class MatterDeviceController:
         node_logger = LOGGER.getChild(f"[node {node_id}]")
         # query mdns for all IP's
         # ensure both fabric id and node id have 16 characters (prefix with zero's)
-        fabric_id_part = self.fabric_id_hex.upper()
-        while len(fabric_id_part) < 16:
-            fabric_id_part = "0" + fabric_id_part
-        node_id_part = f"{node_id:0x}"
-        while len(node_id_part) < 16:
-            node_id_part = "0" + node_id_part
-        mdns_name = f"{fabric_id_part}-{node_id_part}.{MDNS_TYPE_OPERATIONAL_NODE}"
+        mdns_name = f"{self.compressed_fabric_id:0{16}X}-{node_id:0{16}X}.{MDNS_TYPE_OPERATIONAL_NODE}"
         info = AsyncServiceInfo(MDNS_TYPE_OPERATIONAL_NODE, mdns_name)
         if TYPE_CHECKING:
             assert self._aiozc is not None
