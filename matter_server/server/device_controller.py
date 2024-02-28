@@ -551,8 +551,7 @@ class MatterDeviceController:
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
         command_cls = getattr(cluster_cls.Commands, command_name)
         command = dataclass_from_dict(command_cls, payload, allow_sdk_types=True)
-        node_lock = self._get_node_lock(node_id)
-        async with node_lock:
+        async with self._get_node_lock(node_id):
             return await self.chip_controller.SendCommand(
                 nodeid=node_id,
                 endpoint=endpoint_id,
@@ -573,10 +572,9 @@ class MatterDeviceController:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
         assert self.server.loop is not None
-        future = self.server.loop.create_future()
-        device = await self._resolve_node(node_id)
-        node_lock = self._get_node_lock(node_id)
-        async with node_lock:
+        async with self._get_node_lock(node_id):
+            future = self.server.loop.create_future()
+            device = await self._resolve_node(node_id)
             Attribute.Read(
                 future=future,
                 eventLoop=self.server.loop,
@@ -621,10 +619,11 @@ class MatterDeviceController:
             value_type=attribute.attribute_type.Type,
             allow_sdk_types=True,
         )
-        return await self.chip_controller.WriteAttribute(
-            nodeid=node_id,
-            attributes=[(endpoint_id, attribute)],
-        )
+        async with self._get_node_lock(node_id):
+            return await self.chip_controller.WriteAttribute(
+                nodeid=node_id,
+                attributes=[(endpoint_id, attribute)],
+            )
 
     @api_command(APICommand.REMOVE_NODE)
     async def remove_node(self, node_id: int) -> None:
@@ -1084,8 +1083,7 @@ class MatterDeviceController:
         self, node_id: int, retries: int = 2, attempt: int = 1
     ) -> DeviceProxyWrapper:
         """Resolve a Node on the network."""
-        # log_level = logging.DEBUG if attempt == 1 else logging.INFO
-        log_level = logging.INFO  # TEMP !
+        log_level = logging.DEBUG if attempt == 1 else logging.INFO
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         try:
