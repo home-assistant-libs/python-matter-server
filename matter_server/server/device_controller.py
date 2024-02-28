@@ -104,6 +104,7 @@ class MatterDeviceController:
         self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
         self._node_lock: dict[int, asyncio.Lock] = {}
+        self._node_setup_lock: asyncio.Lock = asyncio.Lock()
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
 
@@ -1042,35 +1043,38 @@ class MatterDeviceController:
         self._nodes_in_setup.add(node_id)
         # pre-cache ip-addresses
         await self.get_node_ip_addresses(node_id)
-        try:
-            # (re)interview node (only) if needed
-            node_data = self._nodes[node_id]
-            if (
-                # re-interview if we dont have any node attributes (empty node)
-                not node_data.attributes
-                # re-interview if the data model schema has changed
-                or node_data.interview_version != DATA_MODEL_SCHEMA_VERSION
-            ):
-                try:
-                    await self.interview_node(node_id)
-                except (NodeNotResolving, NodeInterviewFailed) as err:
-                    LOGGER.warning("Unable to interview Node %s", exc_info=err)
-                    # NOTE: the node will be picked up by mdns discovery automatically
-                    # when it comes available again.
-                    return
-
-            # setup subscriptions for the node
+        # we use a lock for the node setup process to process nodes sequentially
+        # to prevent a flood of the (thread) network when there are many nodes being setup.
+        async with self._node_setup_lock:
             try:
-                await self._subscribe_node(node_id)
-            except NodeNotResolving:
-                LOGGER.warning(
-                    "Unable to subscribe to Node %s as it is unavailable",
-                    node_id,
-                )
-                # NOTE: the node will be picked up by mdns discovery automatically
-                # when it becomes available again.
-        finally:
-            self._nodes_in_setup.discard(node_id)
+                # (re)interview node (only) if needed
+                node_data = self._nodes[node_id]
+                if (
+                    # re-interview if we dont have any node attributes (empty node)
+                    not node_data.attributes
+                    # re-interview if the data model schema has changed
+                    or node_data.interview_version != DATA_MODEL_SCHEMA_VERSION
+                ):
+                    try:
+                        await self.interview_node(node_id)
+                    except (NodeNotResolving, NodeInterviewFailed) as err:
+                        LOGGER.warning("Unable to interview Node %s", exc_info=err)
+                        # NOTE: the node will be picked up by mdns discovery automatically
+                        # when it comes available again.
+                        return
+
+                # setup subscriptions for the node
+                try:
+                    await self._subscribe_node(node_id)
+                except NodeNotResolving:
+                    LOGGER.warning(
+                        "Unable to subscribe to Node %s as it is unavailable",
+                        node_id,
+                    )
+                    # NOTE: the node will be picked up by mdns discovery automatically
+                    # when it becomes available again.
+            finally:
+                self._nodes_in_setup.discard(node_id)
 
     async def _resolve_node(
         self, node_id: int, retries: int = 2, attempt: int = 1
