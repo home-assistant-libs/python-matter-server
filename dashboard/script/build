@@ -6,6 +6,8 @@ set -e
 cd "$(dirname "$0")/.."
 
 rm -rf dist
+rm -rf ../matter_server/dashboard
 NODE_ENV=production npm exec -- tsc
 NODE_ENV=production npm exec -- rollup -c
 cp -r public/* dist/web
+mv dist/web ../matter_server/dashboard

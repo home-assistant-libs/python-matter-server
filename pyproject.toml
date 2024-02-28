@@ -67,10 +67,10 @@ platforms = ["any"]
 zip-safe = false
 
 [tool.setuptools.package-data]
-matter_server = ["py.typed"]
+matter_server = ["py.typed", "dashboard/**"]
 
 [tool.setuptools.packages.find]
-include = ["matter_server*", "dashboard/dist/web*"]
+include = ["matter_server*"]
 
 [tool.mypy]
 check_untyped_defs = true
