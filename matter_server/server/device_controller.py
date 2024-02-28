@@ -970,30 +970,25 @@ class MatterDeviceController:
         self._last_subscription_attempt[node_id] = 0
         future = loop.create_future()
         device = await self._resolve_node(node_id)
-        try:
-            Attribute.Read(
-                future=future,
-                eventLoop=loop,
-                device=device.deviceProxy,
-                devCtrl=self.chip_controller,
-                attributes=[Attribute.AttributePath()],  # wildcard
-                events=[
-                    Attribute.EventPath(
-                        EndpointId=None, Cluster=None, Event=None, Urgent=1
-                    )
-                ],
-                returnClusterObject=False,
-                subscriptionParameters=Attribute.SubscriptionParameters(
-                    interval_floor, interval_ceiling
-                ),
-                # Use fabricfiltered as False to detect changes made by other controllers
-                # and to be able to provide a list of all fabrics attached to the device
-                fabricFiltered=False,
-                autoResubscribe=True,
-            ).raise_on_error()
-            sub: Attribute.SubscriptionTransaction = await future
-        except Exception as err:  # pylint: disable=broad-except
-            node_logger.exception("Error setting up subscription", exc_info=err)
+        Attribute.Read(
+            future=future,
+            eventLoop=loop,
+            device=device.deviceProxy,
+            devCtrl=self.chip_controller,
+            attributes=[Attribute.AttributePath()],  # wildcard
+            events=[
+                Attribute.EventPath(EndpointId=None, Cluster=None, Event=None, Urgent=1)
+            ],
+            returnClusterObject=False,
+            subscriptionParameters=Attribute.SubscriptionParameters(
+                interval_floor, interval_ceiling
+            ),
+            # Use fabricfiltered as False to detect changes made by other controllers
+            # and to be able to provide a list of all fabrics attached to the device
+            fabricFiltered=False,
+            autoResubscribe=True,
+        ).raise_on_error()
+        sub: Attribute.SubscriptionTransaction = await future
 
         sub.SetAttributeUpdateCallback(attribute_updated_callback)
         sub.SetEventUpdateCallback(event_callback)
@@ -1041,8 +1036,16 @@ class MatterDeviceController:
             # prevent duplicate setup actions
             return
         self._nodes_in_setup.add(node_id)
-        # pre-cache ip-addresses
-        await self.get_node_ip_addresses(node_id)
+        # ping the node to out stale mdns reports and to prevent that we
+        # send an unreachable node to the sdk which is very slow with resolving it
+        # this will also precache the ip addresses of the node for later use.
+        ping_result = await self.ping_node(node_id)
+        if not any(ping_result.values()):
+            LOGGER.warning(
+                "Skip set-up for node %s because it does not appear to be reachable...",
+                node_id,
+            )
+            return
         # we use a lock for the node setup process to process nodes sequentially
         # to prevent a flood of the (thread) network when there are many nodes being setup.
         async with self._node_setup_lock:

@@ -193,12 +193,24 @@ class WebsocketClientHandler:
                 result = await result
             self._send_message(SuccessResultMessage(msg.message_id, result))
         except ChipStackError as err:
-            self._logger.exception("SDK Error during handling message: %s", msg)
+            self._logger.error(
+                "SDK Error during handling message: %s: %s",
+                msg.command,
+                str(err),
+                # only print the full stacktrace if debug logging is enabled
+                exc_info=err if self._logger.isEnabledFor(logging.DEBUG) else None,
+            )
             self._send_message(
                 ErrorResultMessage(msg.message_id, SDKStackError.error_code, str(err))
             )
-        except Exception as err:  # pylint: disable=broad-except
-            self._logger.exception("Error handling message: %s", msg)
+        except Exception as err:  # pylint: disable=broad-except  # noqa: BLE001
+            self._logger.error(
+                "SDK Error during handling message: %s: %s",
+                msg.command,
+                str(err),
+                # only print the full stacktrace if debug logging is enabled
+                exc_info=err if self._logger.isEnabledFor(logging.DEBUG) else None,
+            )
             error_code = getattr(err, "error_code", MatterError.error_code)
             self._send_message(ErrorResultMessage(msg.message_id, error_code, str(err)))
 
