@@ -1080,7 +1080,8 @@ class MatterDeviceController:
         self, node_id: int, retries: int = 2, attempt: int = 1
     ) -> DeviceProxyWrapper:
         """Resolve a Node on the network."""
-        log_level = logging.DEBUG if attempt == 1 else logging.INFO
+        # log_level = logging.DEBUG if attempt == 1 else logging.INFO
+        log_level = logging.INFO  # TEMP !
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         try:
