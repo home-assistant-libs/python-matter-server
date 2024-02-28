@@ -69,6 +69,9 @@ MAX_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 1800
 MAX_COMMISSION_RETRIES = 3
 NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE = 3
 NODE_RESUBSCRIBE_TIMEOUT_OFFLINE = 30 * 60 * 1000
+NODE_PING_TIMEOUT = 10
+NODE_PING_TIMEOUT_BATTERY_POWERED = 60
+NODE_MDNS_BACKOFF = 60
 
 MDNS_TYPE_OPERATIONAL_NODE = "_matter._tcp.local."
 MDNS_TYPE_COMMISSIONABLE_NODE = "_matterc._udp.local."
@@ -724,7 +727,11 @@ class MatterDeviceController:
 
         async def _do_ping(ip_address: str) -> None:
             """Ping IP and add to result."""
-            timeout = 60 if battery_powered else 10
+            timeout = (
+                NODE_PING_TIMEOUT_BATTERY_POWERED
+                if battery_powered
+                else NODE_PING_TIMEOUT
+            )
             if "%" in ip_address:
                 # ip address contains an interface index
                 clean_ip, interface_idx = ip_address.split("%", 1)
@@ -1189,7 +1196,7 @@ class MatterDeviceController:
         # and we have other logic in place to determine node aliveness
         now = time.time()
         last_seen = self._node_last_seen.get(node_id, 0)
-        if node.available and now - last_seen < 60:
+        if node.available and now - last_seen < NODE_MDNS_BACKOFF:
             return
         self._node_last_seen[node_id] = now
 
