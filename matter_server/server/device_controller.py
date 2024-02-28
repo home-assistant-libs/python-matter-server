@@ -807,7 +807,7 @@ class MatterDeviceController:
         # if so, we need to unsubscribe
         if prev_sub := self._subscriptions.get(node_id, None):
             async with node_lock:
-                node_logger.debug("Unsubscribing from existing subscription.")
+                node_logger.info("Unsubscribing from existing subscription.")
                 await self._call_sdk(prev_sub.Shutdown)
                 del self._subscriptions[node_id]
 
@@ -1039,8 +1039,12 @@ class MatterDeviceController:
             raise NodeNotExists(f"Node {node_id} does not exist.")
         if node_id in self._nodes_in_setup:
             # prevent duplicate setup actions
+            LOGGER.warning(
+                "Ignoring node setup for node %s as its already being setup.", node_id
+            )
             return
         self._nodes_in_setup.add(node_id)
+        LOGGER.info("Setting-up node %s...", node_id)
         # pre-cache ip-addresses
         await self.get_node_ip_addresses(node_id)
         # we use a lock for the node setup process to process nodes sequentially
@@ -1062,7 +1066,6 @@ class MatterDeviceController:
                         # NOTE: the node will be picked up by mdns discovery automatically
                         # when it comes available again.
                         return
-
                 # setup subscriptions for the node
                 try:
                     await self._subscribe_node(node_id)
