@@ -98,7 +98,7 @@ class MatterDeviceController:
         self.event_history: deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
         self._nodes_in_setup: set[int] = set()
-        self._mdns_last_seen: dict[int, float] = {}
+        self._node_last_seen: dict[int, float] = {}
         self._nodes: dict[int, MatterNodeData] = {}
         self._last_known_ip_addresses: dict[int, list[str]] = {}
         self._last_subscription_attempt: dict[int, int] = {}
@@ -719,7 +719,7 @@ class MatterDeviceController:
 
         async def _do_ping(ip_address: str) -> None:
             """Ping IP and add to result."""
-            timeout = 10 if battery_powered else 2
+            timeout = 30 if battery_powered else 5
             if "%" in ip_address:
                 # ip address contains an interface index
                 clean_ip, interface_idx = ip_address.split("%", 1)
@@ -826,7 +826,7 @@ class MatterDeviceController:
             path: Attribute.TypedAttributePath,
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
-            self._mdns_last_seen[node_id] = time.time()
+            self._node_last_seen[node_id] = time.time()
             new_value = transaction.GetAttribute(path)
             # failsafe: ignore ValueDecodeErrors
             # these are set by the SDK if parsing the value failed miserably
@@ -953,7 +953,7 @@ class MatterDeviceController:
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
-            self._mdns_last_seen[node_id] = time.time()
+            self._node_last_seen[node_id] = time.time()
             node_logger.info("Re-Subscription succeeded")
             self._last_subscription_attempt[node_id] = 0
             # mark node as available and signal consumers
@@ -1012,7 +1012,7 @@ class MatterDeviceController:
         tlv_attributes = sub._readTransaction._cache.attributeTLVCache
         node.attributes.update(parse_attributes_from_read_result(tlv_attributes))
         node_logger.info("Subscription succeeded")
-        self._mdns_last_seen[node_id] = time.time()
+        self._node_last_seen[node_id] = time.time()
         self.server.signal_event(EventType.NODE_UPDATED, node)
 
     def _get_next_node_id(self) -> int:
@@ -1182,10 +1182,8 @@ class MatterDeviceController:
         # mdns events for matter devices arrive in bursts of (duplicate) messages
         # so we debounce this as we only use the mdns messages for operational node discovery
         # and we have other logic in place to determine node aliveness
-        now = time.time()
-        last_seen = self._mdns_last_seen.get(node_id, 0)
-        self._mdns_last_seen[node_id] = now
-        if now - last_seen < 30:
+        last_seen = self._node_last_seen.get(node_id, 0)
+        if node.available and time.time() - last_seen < MIN_NODE_SUBSCRIPTION_CEILING:
             return
 
         # we treat UPDATE state changes as ADD if the node is marked as
