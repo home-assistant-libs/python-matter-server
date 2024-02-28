@@ -800,16 +800,14 @@ class MatterDeviceController:
             )
 
         node_logger = LOGGER.getChild(f"[node {node_id}]")
-        node_lock = self._get_node_lock(node_id)
         node = self._nodes[node_id]
 
         # check if we already have setup subscriptions for this node,
         # if so, we need to unsubscribe
         if prev_sub := self._subscriptions.get(node_id, None):
-            async with node_lock:
-                node_logger.info("Unsubscribing from existing subscription.")
-                await self._call_sdk(prev_sub.Shutdown)
-                del self._subscriptions[node_id]
+            node_logger.info("Unsubscribing from existing subscription.")
+            await self._call_sdk(prev_sub.Shutdown)
+            del self._subscriptions[node_id]
 
         # determine if node is battery powered sleeping device
         # Endpoint 0, ThreadNetworkDiagnostics Cluster, routingRole attribute
@@ -827,7 +825,6 @@ class MatterDeviceController:
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
             self._mdns_last_seen[node_id] = time.time()
-            assert loop is not None
             new_value = transaction.GetAttribute(path)
             # failsafe: ignore ValueDecodeErrors
             # these are set by the SDK if parsing the value failed miserably
