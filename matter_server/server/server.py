@@ -116,9 +116,10 @@ class MatterServer:
 
         # Host dashboard if the prebuilt files are detected
         if DASHBOARD_DIR_EXISTS:
-            self.logger.debug("Detected dashboard files on %s", str(DASHBOARD_DIR))
-            for abs_dir, _, files in os.walk(str(DASHBOARD_DIR)):
-                rel_dir = abs_dir.replace(str(DASHBOARD_DIR), "")
+            dashboard_dir = str(DASHBOARD_DIR)
+            self.logger.debug("Detected dashboard files on %s", dashboard_dir)
+            for abs_dir, _, files in os.walk(dashboard_dir):
+                rel_dir = abs_dir.replace(dashboard_dir, "")
                 for filename in files:
                     filepath = os.path.join(abs_dir, filename)
                     handler = partial(self._serve_static, filepath)
