@@ -1187,9 +1187,11 @@ class MatterDeviceController:
         # mdns events for matter devices arrive in bursts of (duplicate) messages
         # so we debounce this as we only use the mdns messages for operational node discovery
         # and we have other logic in place to determine node aliveness
+        now = time.time()
         last_seen = self._node_last_seen.get(node_id, 0)
-        if node.available and time.time() - last_seen < MAX_NODE_SUBSCRIPTION_CEILING:
+        if node.available and now - last_seen < 60:
             return
+        self._node_last_seen[node_id] = now
 
         # we treat UPDATE state changes as ADD if the node is marked as
         # unavailable to ensure we catch a node being operational
