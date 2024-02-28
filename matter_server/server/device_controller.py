@@ -104,7 +104,7 @@ class MatterDeviceController:
         self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
         self._node_lock: dict[int, asyncio.Lock] = {}
-        self._node_setup_lock: asyncio.Lock = asyncio.Lock()
+        self._node_setup_lock: asyncio.Semaphore = asyncio.Semaphore(5)
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
 
@@ -1039,17 +1039,17 @@ class MatterDeviceController:
             raise NodeNotExists(f"Node {node_id} does not exist.")
         if node_id in self._nodes_in_setup:
             # prevent duplicate setup actions
-            LOGGER.warning(
-                "Ignoring node setup for node %s as its already being setup.", node_id
-            )
             return
         self._nodes_in_setup.add(node_id)
-        LOGGER.info("Setting-up node %s...", node_id)
         # pre-cache ip-addresses
         await self.get_node_ip_addresses(node_id)
         # we use a lock for the node setup process to process nodes sequentially
         # to prevent a flood of the (thread) network when there are many nodes being setup.
         async with self._node_setup_lock:
+            # add this little random sleep here to do a bit of throttling
+            # can be optimized later
+            await asyncio.sleep(randint(0, 5))  # noqa: S311
+            LOGGER.info("Setting-up node %s...", node_id)
             try:
                 # (re)interview node (only) if needed
                 node_data = self._nodes[node_id]
@@ -1191,6 +1191,9 @@ class MatterDeviceController:
         if node.available and state_change == ServiceStateChange.Updated:
             return
 
+        if node_id in self._nodes_in_setup:
+            # prevent duplicate setup actions
+            return
         LOGGER.info("Node %s (re)discovered on MDNS", node_id)
         # setup the node - this will (re) setup the subscriptions etc.
         asyncio.create_task(self._setup_node(node_id))
