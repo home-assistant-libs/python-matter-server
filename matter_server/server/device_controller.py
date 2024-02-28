@@ -671,7 +671,12 @@ class MatterDeviceController:
                 ),
             )
         except ChipStackError as err:
-            LOGGER.warning("Removing current fabric from device failed.", exc_info=err)
+            LOGGER.warning(
+                "Removing current fabric from device failed: %s",
+                str(err),
+                # only log stacktrace if we have debug logging enabled
+                exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
+            )
             return
         if (
             result is None
@@ -719,7 +724,7 @@ class MatterDeviceController:
 
         async def _do_ping(ip_address: str) -> None:
             """Ping IP and add to result."""
-            timeout = 30 if battery_powered else 5
+            timeout = 60 if battery_powered else 10
             if "%" in ip_address:
                 # ip address contains an interface index
                 clean_ip, interface_idx = ip_address.split("%", 1)
@@ -1183,7 +1188,7 @@ class MatterDeviceController:
         # so we debounce this as we only use the mdns messages for operational node discovery
         # and we have other logic in place to determine node aliveness
         last_seen = self._node_last_seen.get(node_id, 0)
-        if node.available and time.time() - last_seen < MIN_NODE_SUBSCRIPTION_CEILING:
+        if node.available and time.time() - last_seen < MAX_NODE_SUBSCRIPTION_CEILING:
             return
 
         # we treat UPDATE state changes as ADD if the node is marked as

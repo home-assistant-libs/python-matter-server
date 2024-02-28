@@ -96,9 +96,7 @@ args = parser.parse_args()
 
 
 def _setup_logging() -> None:
-    log_fmt = (
-        "%(asctime)s.%(msecs)03d %(levelname)s (%(threadName)s) [%(name)s] %(message)s"
-    )
+    log_fmt = "%(asctime)s (%(threadName)s) %(levelname)s [%(name)s] %(message)s"
     custom_level_style = {
         **coloredlogs.DEFAULT_LEVEL_STYLES,
         "chip_automation": {"color": "green", "faint": True},
