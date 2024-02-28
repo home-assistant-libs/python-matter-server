@@ -62,8 +62,10 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
-NODE_SUBSCRIPTION_CEILING = 60
-NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 1800
+MIN_NODE_SUBSCRIPTION_CEILING = 60
+MAX_NODE_SUBSCRIPTION_CEILING = 300
+MIN_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 300
+MAX_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 1800
 MAX_COMMISSION_RETRIES = 3
 NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE = 3
 NODE_RESUBSCRIBE_TIMEOUT_OFFLINE = 30 * 60 * 1000
@@ -962,9 +964,14 @@ class MatterDeviceController:
         node_logger.info("Setting up attributes and events subscription.")
         interval_floor = 0
         interval_ceiling = (
-            NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED
+            randint(  # noqa: S311
+                MIN_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED,
+                MAX_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED,
+            )
             if battery_powered
-            else NODE_SUBSCRIPTION_CEILING
+            else randint(  # noqa: S311
+                MIN_NODE_SUBSCRIPTION_CEILING, MAX_NODE_SUBSCRIPTION_CEILING
+            )
         )
         self._last_subscription_attempt[node_id] = 0
         future = loop.create_future()
@@ -1175,11 +1182,10 @@ class MatterDeviceController:
         # mdns events for matter devices arrive in bursts of (duplicate) messages
         # so we debounce this as we only use the mdns messages for operational node discovery
         # and we have other logic in place to determine node aliveness
-
         now = time.time()
         last_seen = self._mdns_last_seen.get(node_id, 0)
         self._mdns_last_seen[node_id] = now
-        if now - last_seen < NODE_SUBSCRIPTION_CEILING:
+        if now - last_seen < MIN_NODE_SUBSCRIPTION_CEILING:
             return
 
         # we treat UPDATE state changes as ADD if the node is marked as
