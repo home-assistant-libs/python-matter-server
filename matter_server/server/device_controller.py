@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from functools import partial
 import logging
@@ -106,6 +107,7 @@ class MatterDeviceController:
         self._node_lock: dict[int, asyncio.Lock] = {}
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
+        self._sdk_executor = ThreadPoolExecutor(max_workers=1)
 
     async def initialize(self) -> None:
         """Async initialize of controller."""
@@ -1027,7 +1029,7 @@ class MatterDeviceController:
         return cast(
             _T,
             await self.server.loop.run_in_executor(
-                None,
+                self._sdk_executor,
                 partial(func, *args, **kwargs),
             ),
         )
