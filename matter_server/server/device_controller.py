@@ -710,7 +710,7 @@ class MatterDeviceController:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or is not yet interviewed"
             )
-        node_logger = LOGGER.getChild(f"[node {node_id}]")
+        node_logger = LOGGER.getChild(f"node_{node_id}")
 
         battery_powered = (
             node.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH, 0)
@@ -768,7 +768,7 @@ class MatterDeviceController:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or is not yet interviewed"
             )
-        node_logger = LOGGER.getChild(f"[node {node_id}]")
+        node_logger = LOGGER.getChild(f"node_{node_id}")
         # query mdns for all IP's
         # ensure both fabric id and node id have 16 characters (prefix with zero's)
         mdns_name = f"{self.compressed_fabric_id:0{16}X}-{node_id:0{16}X}.{MDNS_TYPE_OPERATIONAL_NODE}"
@@ -801,7 +801,7 @@ class MatterDeviceController:
                 f"Node {node_id} does not exist or has not been interviewed."
             )
 
-        node_logger = LOGGER.getChild(f"[node {node_id}]")
+        node_logger = LOGGER.getChild(f"node_{node_id}")
         node = self._nodes[node_id]
 
         # check if we already have setup subscriptions for this node,
