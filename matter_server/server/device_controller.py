@@ -1048,9 +1048,9 @@ class MatterDeviceController:
             return
         self._nodes_in_setup.add(node_id)
         try:
-            # ping the node to out stale mdns reports and to prevent that we
-            # send an unreachable node to the sdk which is very slow with resolving it
-            # this will also precache the ip addresses of the node for later use.
+            # Ping the node to rule out stale mdns reports and to prevent that we
+            # send an unreachable node to the sdk which is very slow with resolving it.
+            # This will also precache the ip addresses of the node for later use.
             ping_result = await self.ping_node(node_id)
             if not any(ping_result.values()):
                 LOGGER.warning(

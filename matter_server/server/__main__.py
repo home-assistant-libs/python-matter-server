@@ -182,7 +182,7 @@ def main() -> None:
         await server.stop()
 
     # run the server
-    run(server.start(), shutdown_callback=handle_stop, executor_workers=32)
+    run(server.start(), shutdown_callback=handle_stop)
 
 
 if __name__ == "__main__":
