@@ -62,7 +62,7 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
-MIN_NODE_SUBSCRIPTION_CEILING = 60
+MIN_NODE_SUBSCRIPTION_CEILING = 30
 MAX_NODE_SUBSCRIPTION_CEILING = 300
 MIN_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 300
 MAX_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 1800
@@ -1185,7 +1185,7 @@ class MatterDeviceController:
         now = time.time()
         last_seen = self._mdns_last_seen.get(node_id, 0)
         self._mdns_last_seen[node_id] = now
-        if now - last_seen < MIN_NODE_SUBSCRIPTION_CEILING:
+        if now - last_seen < 30:
             return
 
         # we treat UPDATE state changes as ADD if the node is marked as
