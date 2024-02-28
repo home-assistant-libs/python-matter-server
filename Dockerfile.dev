@@ -10,7 +10,6 @@ RUN \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         libuv1 \
-        openssl \
         zlib1g \
         libjson-c5 \
         libnl-3-200 \
