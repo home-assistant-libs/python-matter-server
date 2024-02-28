@@ -3,16 +3,19 @@ import { MatterClient } from "../client/client";
 async function main() {
   import("../pages/matter-dashboard-app");
 
-  // Turn httpX url into wsX url and append "/ws"
-  let url = "ws" + new URL("./ws", location.href).toString().substring(4);
-
-  // Inside Home Assistant ingress, we will not prompt for the URL
-  if (!location.pathname.endsWith("/ingress")) {
+  let url = "";
+  // Detect if we're running in the (production) webserver included in the matter server or not.
+  if (location.href.includes(":5580")) {
+    // production server running inside the matter server
+    // Turn httpX url into wsX url and append "/ws"
+    url = "ws" + new URL("./ws", location.href).toString().substring(4);
+  } else {
+    // development server, ask for url to matter server
     let storageUrl = localStorage.getItem("matterURL");
     if (!storageUrl) {
       storageUrl = prompt(
-        "Enter Matter URL",
-        "ws://homeassistant.local:5580/ws"
+        "Enter Websocket URL to a running Matter Server",
+        "ws://localhost:5580/ws"
       );
       if (!storageUrl) {
         alert("Unable to connect without URL");

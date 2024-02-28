@@ -28,14 +28,19 @@ class MatterDashboard extends LitElement {
 
   render() {
     const nodes = this.nodeEntries(this.nodes);
+    const isProductionServer = location.href.includes(":5580")
 
     return html`
       <div class="header">
         <div>Python Matter Server</div>
         <div class="actions">
+        ${isProductionServer
+        ? ""
+        : html`
           <md-icon-button @click=${this._disconnect}>
             <ha-svg-icon .path=${mdiLogout}></ha-svg-icon>
           </md-icon-button>
+          `}
         </div>
       </div>
       <div class="container">
@@ -50,20 +55,20 @@ class MatterDashboard extends LitElement {
           </md-list-item>
           <md-divider></md-divider>
           ${nodes.map(([id, node]) => {
-            return html`
+          return html`
               <md-list-item type="link" href=${`#node/${node.node_id}`}>
                 <span slot="start">${node.node_id}</span>
                 <div slot="headline">
                   ${node.vendorName} ${node.productName}
                   ${node.available
-                    ? ""
-                    : html`<span class="status">OFFLINE</span>`}
+              ? ""
+              : html`<span class="status">OFFLINE</span>`}
                 </div>
                 <div slot="supporting-text">${node.serialNumber}</div>
                 <ha-svg-icon slot="end" .path=${mdiChevronRight}></ha-svg-icon>
               </md-list-item>
             `;
-          })}
+        })}
         </md-list>
       </div>
       <div class="footer">
