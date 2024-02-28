@@ -115,6 +115,9 @@ def _setup_logging() -> None:
         # a whole list of errors when its trying to bind to internal interfaces on
         # the HA supervisor set-up.
         logging.getLogger("chip.native.DL").setLevel(logging.CRITICAL)
+        # (temporary) raise the log level of zeroconf as its a logs an annoying
+        # warning at startup while trying to bind to a loopback IPv6 interface
+        logging.getLogger("zeroconf").setLevel(logging.ERROR)
 
 
 def main() -> None:

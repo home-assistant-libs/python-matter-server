@@ -119,11 +119,11 @@ async def test_server_start(
     assert application.call_count == 1
     application_instance = application.return_value
     add_route = application_instance.router.add_route
-    assert add_route.call_count == 2
+    assert add_route.call_count >= 2
     assert add_route.call_args_list[0][0][0] == "GET"
     assert add_route.call_args_list[0][0][1] == "/ws"
     assert add_route.call_args_list[1][0][0] == "GET"
-    assert add_route.call_args_list[1][0][1] == "/"
+    assert add_route.call_args_list[1][0][1] == "/info"
     assert app_runner.call_count == 1
     assert app_runner.return_value.setup.call_count == 1
     assert multi_host_tcp_site.call_count == 1

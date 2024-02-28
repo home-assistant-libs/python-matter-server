@@ -70,7 +70,7 @@ zip-safe = false
 matter_server = ["py.typed"]
 
 [tool.setuptools.packages.find]
-include = ["matter_server*"]
+include = ["matter_server*", "dashboard/dist/web*"]
 
 [tool.mypy]
 check_untyped_defs = true
