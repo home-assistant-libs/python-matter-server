@@ -5,6 +5,8 @@ import asyncio
 import logging
 import os
 from pathlib import Path
+import sys
+import threading
 
 from aiorun import run
 import coloredlogs
@@ -115,6 +117,20 @@ def _setup_logging() -> None:
         # (temporary) raise the log level of zeroconf as its a logs an annoying
         # warning at startup while trying to bind to a loopback IPv6 interface
         logging.getLogger("zeroconf").setLevel(logging.ERROR)
+
+    # register global uncaught exception loggers
+    sys.excepthook = lambda *args: logging.getLogger(None).exception(
+        "Uncaught exception",
+        exc_info=args,
+    )
+    threading.excepthook = lambda args: logging.getLogger(None).exception(
+        "Uncaught thread exception",
+        exc_info=(  # type: ignore[arg-type]
+            args.exc_type,
+            args.exc_value,
+            args.exc_traceback,
+        ),
+    )
 
 
 def main() -> None:
