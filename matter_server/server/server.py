@@ -8,6 +8,7 @@ import ipaddress
 import logging
 import os
 from pathlib import Path
+import traceback
 from typing import Any, Callable, Set, cast
 import weakref
 
@@ -36,6 +37,30 @@ from .vendor_info import VendorInfo
 
 DASHBOARD_DIR = Path(__file__).parent.joinpath("../dashboard/").resolve()
 DASHBOARD_DIR_EXISTS = DASHBOARD_DIR.exists()
+
+
+def _global_loop_exception_handler(_: Any, context: dict[str, Any]) -> None:
+    """Handle all exception inside the core loop."""
+    kwargs = {}
+    if exception := context.get("exception"):
+        kwargs["exc_info"] = (type(exception), exception, exception.__traceback__)
+
+    logger = logging.getLogger(__package__)
+    if source_traceback := context.get("source_traceback"):
+        stack_summary = "".join(traceback.format_list(source_traceback))
+        logger.error(
+            "Error doing job: %s: %s",
+            context["message"],
+            stack_summary,
+            **kwargs,  # type: ignore[arg-type]
+        )
+        return
+
+    logger.error(
+        "Error doing task: %s",
+        context["message"],
+        **kwargs,  # type: ignore[arg-type]
+    )
 
 
 def mount_websocket(server: MatterServer, path: str) -> None:
@@ -107,6 +132,7 @@ class MatterServer:
                 "CHIP Core version does not match CHIP Clusters version."
             )
         self.loop = asyncio.get_running_loop()
+        self.loop.set_exception_handler(_global_loop_exception_handler)
         await self.device_controller.initialize()
         await self.storage.start()
         await self.device_controller.start()

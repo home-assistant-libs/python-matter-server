@@ -2,9 +2,14 @@
 
 import argparse
 import asyncio
+from contextlib import suppress
 import logging
+from logging.handlers import RotatingFileHandler
 import os
 from pathlib import Path
+import sys
+import threading
+from typing import Final
 
 from aiorun import run
 import coloredlogs
@@ -19,6 +24,11 @@ DEFAULT_PORT = 5580
 # Default to None to bind to all addresses on both IPv4 and IPv6
 DEFAULT_LISTEN_ADDRESS = None
 DEFAULT_STORAGE_PATH = os.path.join(Path.home(), ".matter_server")
+
+FORMAT_DATE: Final = "%Y-%m-%d"
+FORMAT_TIME: Final = "%H:%M:%S"
+FORMAT_DATETIME: Final = f"{FORMAT_DATE} {FORMAT_TIME}"
+MAX_LOG_FILESIZE = 1000000 * 10  # 10 MB
 
 # Get parsed passed in arguments.
 parser = argparse.ArgumentParser(
@@ -86,6 +96,7 @@ args = parser.parse_args()
 
 
 def _setup_logging() -> None:
+    log_fmt = "%(asctime)s (%(threadName)s) %(levelname)s [%(name)s] %(message)s"
     custom_level_style = {
         **coloredlogs.DEFAULT_LEVEL_STYLES,
         "chip_automation": {"color": "green", "faint": True},
@@ -94,37 +105,67 @@ def _setup_logging() -> None:
         "chip_error": {"color": "red"},
     }
     # Let coloredlogs handle all levels, we filter levels in the logging module
-    coloredlogs.install(level=logging.NOTSET, level_styles=custom_level_style)
+    coloredlogs.install(
+        level=logging.NOTSET, level_styles=custom_level_style, fmt=log_fmt
+    )
 
-    handlers = None
+    # Capture warnings.warn(...) and friends messages in logs.
+    # The standard destination for them is stderr, which may end up unnoticed.
+    # This way they're where other messages are, and can be filtered as usual.
+    logging.captureWarnings(True)
+
+    logging.basicConfig(level=args.log_level.upper())
+    logger = logging.getLogger()
+
+    # setup file handler
     if args.log_file:
-        handlers = [logging.FileHandler(args.log_file)]
-    logging.basicConfig(handlers=handlers, level=args.log_level.upper())
+        log_filename = os.path.join(args.log_file)
+        file_handler = RotatingFileHandler(
+            log_filename, maxBytes=MAX_LOG_FILESIZE, backupCount=1
+        )
+        # rotate log at each start
+        with suppress(OSError):
+            file_handler.doRollover()
+        file_handler.setFormatter(logging.Formatter(log_fmt, datefmt=FORMAT_DATETIME))
+        logger.addHandler(file_handler)
 
     stack.init_logging(args.log_level_sdk.upper())
-    logging.getLogger().setLevel(args.log_level.upper())
+    logger.setLevel(args.log_level.upper())
 
-    if not logging.getLogger().isEnabledFor(logging.DEBUG):
+    if not logger.isEnabledFor(logging.DEBUG):
         logging.getLogger("PersistentStorage").setLevel(logging.WARNING)
         # Temporary disable the logger of chip.clusters.Attribute because it now logs
         # an error on every custom attribute that couldn't be parsed which confuses people.
         # We can restore the default log level again when we've patched the device controller
         # to handle the raw attribute data to deal with custom clusters.
         logging.getLogger("chip.clusters.Attribute").setLevel(logging.CRITICAL)
-    if not logging.getLogger().isEnabledFor(logging.DEBUG):
         # (temporary) raise the log level of zeroconf as its a logs an annoying
         # warning at startup while trying to bind to a loopback IPv6 interface
         logging.getLogger("zeroconf").setLevel(logging.ERROR)
+
+    # register global uncaught exception loggers
+    sys.excepthook = lambda *args: logger.exception(
+        "Uncaught exception",
+        exc_info=args,
+    )
+    threading.excepthook = lambda args: logger.exception(
+        "Uncaught thread exception",
+        exc_info=(  # type: ignore[arg-type]
+            args.exc_type,
+            args.exc_value,
+            args.exc_traceback,
+        ),
+    )
 
 
 def main() -> None:
     """Run main execution."""
 
-    _setup_logging()
-
     # make sure storage path exists
     if not os.path.isdir(args.storage_path):
         os.mkdir(args.storage_path)
+
+    _setup_logging()
 
     # Init server
     server = MatterServer(

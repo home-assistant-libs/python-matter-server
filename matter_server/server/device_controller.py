@@ -62,11 +62,16 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
-NODE_SUBSCRIPTION_CEILING = 60
-NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 1800
+MIN_NODE_SUBSCRIPTION_CEILING = 30
+MAX_NODE_SUBSCRIPTION_CEILING = 300
+MIN_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 300
+MAX_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 1800
 MAX_COMMISSION_RETRIES = 3
 NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE = 3
 NODE_RESUBSCRIBE_TIMEOUT_OFFLINE = 30 * 60 * 1000
+NODE_PING_TIMEOUT = 10
+NODE_PING_TIMEOUT_BATTERY_POWERED = 60
+NODE_MDNS_BACKOFF = 60
 
 MDNS_TYPE_OPERATIONAL_NODE = "_matter._tcp.local."
 MDNS_TYPE_COMMISSIONABLE_NODE = "_matterc._udp.local."
@@ -96,7 +101,7 @@ class MatterDeviceController:
         self.event_history: deque[Attribute.EventReadResult] = deque(maxlen=25)
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
         self._nodes_in_setup: set[int] = set()
-        self._mdns_last_seen: dict[int, float] = {}
+        self._node_last_seen: dict[int, float] = {}
         self._nodes: dict[int, MatterNodeData] = {}
         self._last_known_ip_addresses: dict[int, list[str]] = {}
         self._last_subscription_attempt: dict[int, int] = {}
@@ -550,8 +555,7 @@ class MatterDeviceController:
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
         command_cls = getattr(cluster_cls.Commands, command_name)
         command = dataclass_from_dict(command_cls, payload, allow_sdk_types=True)
-        node_lock = self._get_node_lock(node_id)
-        async with node_lock:
+        async with self._get_node_lock(node_id):
             return await self.chip_controller.SendCommand(
                 nodeid=node_id,
                 endpoint=endpoint_id,
@@ -572,10 +576,9 @@ class MatterDeviceController:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
         assert self.server.loop is not None
-        future = self.server.loop.create_future()
-        device = await self._resolve_node(node_id)
-        node_lock = self._get_node_lock(node_id)
-        async with node_lock:
+        async with self._get_node_lock(node_id):
+            future = self.server.loop.create_future()
+            device = await self._resolve_node(node_id)
             Attribute.Read(
                 future=future,
                 eventLoop=self.server.loop,
@@ -620,10 +623,11 @@ class MatterDeviceController:
             value_type=attribute.attribute_type.Type,
             allow_sdk_types=True,
         )
-        return await self.chip_controller.WriteAttribute(
-            nodeid=node_id,
-            attributes=[(endpoint_id, attribute)],
-        )
+        async with self._get_node_lock(node_id):
+            return await self.chip_controller.WriteAttribute(
+                nodeid=node_id,
+                attributes=[(endpoint_id, attribute)],
+            )
 
     @api_command(APICommand.REMOVE_NODE)
     async def remove_node(self, node_id: int) -> None:
@@ -670,7 +674,12 @@ class MatterDeviceController:
                 ),
             )
         except ChipStackError as err:
-            LOGGER.warning("Removing current fabric from device failed.", exc_info=err)
+            LOGGER.warning(
+                "Removing current fabric from device failed: %s",
+                str(err),
+                # only log stacktrace if we have debug logging enabled
+                exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
+            )
             return
         if (
             result is None
@@ -709,7 +718,7 @@ class MatterDeviceController:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or is not yet interviewed"
             )
-        node_logger = LOGGER.getChild(f"[node {node_id}]")
+        node_logger = LOGGER.getChild(f"node_{node_id}")
 
         battery_powered = (
             node.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH, 0)
@@ -718,7 +727,11 @@ class MatterDeviceController:
 
         async def _do_ping(ip_address: str) -> None:
             """Ping IP and add to result."""
-            timeout = 10 if battery_powered else 2
+            timeout = (
+                NODE_PING_TIMEOUT_BATTERY_POWERED
+                if battery_powered
+                else NODE_PING_TIMEOUT
+            )
             if "%" in ip_address:
                 # ip address contains an interface index
                 clean_ip, interface_idx = ip_address.split("%", 1)
@@ -767,7 +780,7 @@ class MatterDeviceController:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or is not yet interviewed"
             )
-        node_logger = LOGGER.getChild(f"[node {node_id}]")
+        node_logger = LOGGER.getChild(f"node_{node_id}")
         # query mdns for all IP's
         # ensure both fabric id and node id have 16 characters (prefix with zero's)
         mdns_name = f"{self.compressed_fabric_id:0{16}X}-{node_id:0{16}X}.{MDNS_TYPE_OPERATIONAL_NODE}"
@@ -800,17 +813,15 @@ class MatterDeviceController:
                 f"Node {node_id} does not exist or has not been interviewed."
             )
 
-        node_logger = LOGGER.getChild(f"[node {node_id}]")
-        node_lock = self._get_node_lock(node_id)
+        node_logger = LOGGER.getChild(f"node_{node_id}")
         node = self._nodes[node_id]
 
         # check if we already have setup subscriptions for this node,
         # if so, we need to unsubscribe
         if prev_sub := self._subscriptions.get(node_id, None):
-            async with node_lock:
-                node_logger.debug("Unsubscribing from existing subscription.")
-                await self._call_sdk(prev_sub.Shutdown)
-                del self._subscriptions[node_id]
+            node_logger.info("Unsubscribing from existing subscription.")
+            await self._call_sdk(prev_sub.Shutdown)
+            del self._subscriptions[node_id]
 
         # determine if node is battery powered sleeping device
         # Endpoint 0, ThreadNetworkDiagnostics Cluster, routingRole attribute
@@ -827,8 +838,7 @@ class MatterDeviceController:
             path: Attribute.TypedAttributePath,
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
-            self._mdns_last_seen[node_id] = time.time()
-            assert loop is not None
+            self._node_last_seen[node_id] = time.time()
             new_value = transaction.GetAttribute(path)
             # failsafe: ignore ValueDecodeErrors
             # these are set by the SDK if parsing the value failed miserably
@@ -955,7 +965,7 @@ class MatterDeviceController:
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
-            self._mdns_last_seen[node_id] = time.time()
+            self._node_last_seen[node_id] = time.time()
             node_logger.info("Re-Subscription succeeded")
             self._last_subscription_attempt[node_id] = 0
             # mark node as available and signal consumers
@@ -966,34 +976,36 @@ class MatterDeviceController:
         node_logger.info("Setting up attributes and events subscription.")
         interval_floor = 0
         interval_ceiling = (
-            NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED
+            randint(  # noqa: S311
+                MIN_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED,
+                MAX_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED,
+            )
             if battery_powered
-            else NODE_SUBSCRIPTION_CEILING
+            else randint(  # noqa: S311
+                MIN_NODE_SUBSCRIPTION_CEILING, MAX_NODE_SUBSCRIPTION_CEILING
+            )
         )
         self._last_subscription_attempt[node_id] = 0
         future = loop.create_future()
         device = await self._resolve_node(node_id)
-        async with node_lock:
-            Attribute.Read(
-                future=future,
-                eventLoop=loop,
-                device=device.deviceProxy,
-                devCtrl=self.chip_controller,
-                attributes=[Attribute.AttributePath()],  # wildcard
-                events=[
-                    Attribute.EventPath(
-                        EndpointId=None, Cluster=None, Event=None, Urgent=1
-                    )
-                ],
-                returnClusterObject=False,
-                subscriptionParameters=Attribute.SubscriptionParameters(
-                    interval_floor, interval_ceiling
-                ),
-                # Use fabricfiltered as False to detect changes made by other controllers
-                # and to be able to provide a list of all fabrics attached to the device
-                fabricFiltered=False,
-                autoResubscribe=True,
-            ).raise_on_error()
+        Attribute.Read(
+            future=future,
+            eventLoop=loop,
+            device=device.deviceProxy,
+            devCtrl=self.chip_controller,
+            attributes=[Attribute.AttributePath()],  # wildcard
+            events=[
+                Attribute.EventPath(EndpointId=None, Cluster=None, Event=None, Urgent=1)
+            ],
+            returnClusterObject=False,
+            subscriptionParameters=Attribute.SubscriptionParameters(
+                interval_floor, interval_ceiling
+            ),
+            # Use fabricfiltered as False to detect changes made by other controllers
+            # and to be able to provide a list of all fabrics attached to the device
+            fabricFiltered=False,
+            autoResubscribe=True,
+        ).raise_on_error()
         sub: Attribute.SubscriptionTransaction = await future
 
         sub.SetAttributeUpdateCallback(attribute_updated_callback)
@@ -1012,7 +1024,7 @@ class MatterDeviceController:
         tlv_attributes = sub._readTransaction._cache.attributeTLVCache
         node.attributes.update(parse_attributes_from_read_result(tlv_attributes))
         node_logger.info("Subscription succeeded")
-        self._mdns_last_seen[node_id] = time.time()
+        self._node_last_seen[node_id] = time.time()
         self.server.signal_event(EventType.NODE_UPDATED, node)
 
     def _get_next_node_id(self) -> int:
@@ -1042,9 +1054,18 @@ class MatterDeviceController:
             # prevent duplicate setup actions
             return
         self._nodes_in_setup.add(node_id)
-        # pre-cache ip-addresses
-        await self.get_node_ip_addresses(node_id)
         try:
+            # Ping the node to rule out stale mdns reports and to prevent that we
+            # send an unreachable node to the sdk which is very slow with resolving it.
+            # This will also precache the ip addresses of the node for later use.
+            ping_result = await self.ping_node(node_id)
+            if not any(ping_result.values()):
+                LOGGER.warning(
+                    "Skip set-up for node %s because it does not appear to be reachable...",
+                    node_id,
+                )
+                return
+            LOGGER.info("Setting-up node %s...", node_id)
             # (re)interview node (only) if needed
             node_data = self._nodes[node_id]
             if (
@@ -1060,7 +1081,6 @@ class MatterDeviceController:
                     # NOTE: the node will be picked up by mdns discovery automatically
                     # when it comes available again.
                     return
-
             # setup subscriptions for the node
             try:
                 await self._subscribe_node(node_id)
@@ -1174,18 +1194,20 @@ class MatterDeviceController:
         # mdns events for matter devices arrive in bursts of (duplicate) messages
         # so we debounce this as we only use the mdns messages for operational node discovery
         # and we have other logic in place to determine node aliveness
-
         now = time.time()
-        last_seen = self._mdns_last_seen.get(node_id, 0)
-        self._mdns_last_seen[node_id] = now
-        if now - last_seen < NODE_SUBSCRIPTION_CEILING:
+        last_seen = self._node_last_seen.get(node_id, 0)
+        if node.available and now - last_seen < NODE_MDNS_BACKOFF:
             return
+        self._node_last_seen[node_id] = now
 
         # we treat UPDATE state changes as ADD if the node is marked as
         # unavailable to ensure we catch a node being operational
         if node.available and state_change == ServiceStateChange.Updated:
             return
 
+        if node_id in self._nodes_in_setup:
+            # prevent duplicate setup actions
+            return
         LOGGER.info("Node %s (re)discovered on MDNS", node_id)
         # setup the node - this will (re) setup the subscriptions etc.
         asyncio.create_task(self._setup_node(node_id))
