@@ -10,7 +10,7 @@ async function main() {
     // Turn httpX url into wsX url and append "/ws"
     url = "ws" + new URL("./ws", location.href).toString().substring(4);
   } else {
-    // dvelopment server, ask for url to matter server
+    // development server, ask for url to matter server
     let storageUrl = localStorage.getItem("matterURL");
     if (!storageUrl) {
       storageUrl = prompt(
