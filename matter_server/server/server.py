@@ -34,7 +34,7 @@ from .stack import MatterStack
 from .storage import StorageController
 from .vendor_info import VendorInfo
 
-DASHBOARD_DIR = Path(__file__).parent.joinpath("../../dashboard/dist/web/").resolve()
+DASHBOARD_DIR = Path(__file__).parent.joinpath("../dashboard/").resolve()
 DASHBOARD_DIR_EXISTS = DASHBOARD_DIR.exists()
 
 

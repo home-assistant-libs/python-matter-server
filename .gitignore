@@ -168,3 +168,6 @@ venv39/
 
 # ruff
 .ruff_cache/
+
+# prebuilt dashboard files
+matter_server/dashboard/

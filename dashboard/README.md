@@ -30,4 +30,5 @@ The production build is generated when you run
 script/build
 ```
 
-The folder `dist/web` will contain the build that can be served by any web browser.
+The production build is generated into the matter_server folder, to be picked up by
+the webserver of the python matter server.
