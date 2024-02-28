@@ -972,27 +972,24 @@ class MatterDeviceController:
         self._last_subscription_attempt[node_id] = 0
         future = loop.create_future()
         device = await self._resolve_node(node_id)
-        async with node_lock:
-            Attribute.Read(
-                future=future,
-                eventLoop=loop,
-                device=device.deviceProxy,
-                devCtrl=self.chip_controller,
-                attributes=[Attribute.AttributePath()],  # wildcard
-                events=[
-                    Attribute.EventPath(
-                        EndpointId=None, Cluster=None, Event=None, Urgent=1
-                    )
-                ],
-                returnClusterObject=False,
-                subscriptionParameters=Attribute.SubscriptionParameters(
-                    interval_floor, interval_ceiling
-                ),
-                # Use fabricfiltered as False to detect changes made by other controllers
-                # and to be able to provide a list of all fabrics attached to the device
-                fabricFiltered=False,
-                autoResubscribe=True,
-            ).raise_on_error()
+        Attribute.Read(
+            future=future,
+            eventLoop=loop,
+            device=device.deviceProxy,
+            devCtrl=self.chip_controller,
+            attributes=[Attribute.AttributePath()],  # wildcard
+            events=[
+                Attribute.EventPath(EndpointId=None, Cluster=None, Event=None, Urgent=1)
+            ],
+            returnClusterObject=False,
+            subscriptionParameters=Attribute.SubscriptionParameters(
+                interval_floor, interval_ceiling
+            ),
+            # Use fabricfiltered as False to detect changes made by other controllers
+            # and to be able to provide a list of all fabrics attached to the device
+            fabricFiltered=False,
+            autoResubscribe=True,
+        ).raise_on_error()
         sub: Attribute.SubscriptionTransaction = await future
 
         sub.SetAttributeUpdateCallback(attribute_updated_callback)
