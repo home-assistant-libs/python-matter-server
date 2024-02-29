@@ -113,8 +113,10 @@ class MatterDeviceController:
         self._node_lock: dict[int, asyncio.Lock] = {}
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
-        self._sdk_executor = ThreadPoolExecutor(max_workers=1)
         self._fallback_node_scanner_timer: asyncio.TimerHandle | None = None
+        self._sdk_executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="SDKExecutor"
+        )
 
     async def initialize(self) -> None:
         """Async initialize of controller."""
