@@ -123,7 +123,7 @@ class MatterServer:
         self._subscribers: Set[EventCallBackType] = set()
         self._register_api_commands()
 
-    async def start(self) -> None:
+    async def start(self, fetch_paa: bool) -> None:
         """Start running the Matter server."""
         self.logger.info("Starting the Matter Server...")
         # safety shield: make sure we use same clusters and core packages!
@@ -133,7 +133,7 @@ class MatterServer:
             )
         self.loop = asyncio.get_running_loop()
         self.loop.set_exception_handler(_global_loop_exception_handler)
-        await self.device_controller.initialize()
+        await self.device_controller.initialize(fetch_paa)
         await self.storage.start()
         await self.device_controller.start()
         await self.vendor_info.start()

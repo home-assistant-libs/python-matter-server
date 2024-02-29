@@ -91,6 +91,12 @@ parser.add_argument(
     default=None,
     help="Primary network interface for link-local addresses (optional).",
 )
+parser.add_argument(
+    "--skip-paa-certificate-fetch",
+    dest="fetch_paa",
+    action="store_false",
+    help="Do not fetch PAA root certificates on startup.",
+)
 
 args = parser.parse_args()
 
@@ -182,7 +188,7 @@ def main() -> None:
         await server.stop()
 
     # run the server
-    run(server.start(), shutdown_callback=handle_stop)
+    run(server.start(args.fetch_paa), shutdown_callback=handle_stop)
 
 
 if __name__ == "__main__":

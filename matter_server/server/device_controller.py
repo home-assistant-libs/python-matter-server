@@ -121,11 +121,12 @@ class MatterDeviceController:
             max_workers=1, thread_name_prefix="SDKExecutor"
         )
 
-    async def initialize(self) -> None:
+    async def initialize(self, fetch_paa: bool) -> None:
         """Async initialize of controller."""
         # (re)fetch all PAA certificates once at startup
         # NOTE: this must be done before initializing the controller
-        await fetch_certificates()
+        if fetch_paa:
+            await fetch_certificates()
         # Instantiate the underlying ChipDeviceController instance on the Fabric
         self.chip_controller = self.server.stack.fabric_admin.NewController(
             paaTrustStorePath=str(PAA_ROOT_CERTS_DIR)
