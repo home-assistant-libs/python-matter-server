@@ -1,0 +1,15 @@
+{
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+    },
+    "editor.rulers": [
+        88
+    ],
+    "isort.args": [
+        "-l", "88",
+        "--combine-as",
+        "--force-sort-within-sections",
+        "--project", "matter_server",
+        "--split-on-trailing-comma"
+    ],
+}
