@@ -710,7 +710,7 @@ class MatterDeviceController:
         )
 
     @api_command(APICommand.PING_NODE)
-    async def ping_node(self, node_id: int) -> NodePingResult:
+    async def ping_node(self, node_id: int, attempts: int = 1) -> NodePingResult:
         """Ping node on the currently known IP-adress(es)."""
         result: NodePingResult = {}
         node = self._nodes.get(node_id)
@@ -741,7 +741,7 @@ class MatterDeviceController:
             else:
                 clean_ip = ip_address
                 node_logger.debug("Pinging address %s", clean_ip)
-            result[clean_ip] = await ping_ip(ip_address, timeout)
+            result[clean_ip] = await ping_ip(ip_address, timeout, attempts=attempts)
 
         ip_addresses = await self.get_node_ip_addresses(
             node_id, prefer_cache=False, scoped=True
@@ -1058,7 +1058,7 @@ class MatterDeviceController:
             # Ping the node to rule out stale mdns reports and to prevent that we
             # send an unreachable node to the sdk which is very slow with resolving it.
             # This will also precache the ip addresses of the node for later use.
-            ping_result = await self.ping_node(node_id)
+            ping_result = await self.ping_node(node_id, attempts=3)
             if not any(ping_result.values()):
                 LOGGER.warning(
                     "Skip set-up for node %s because it does not appear to be reachable...",
