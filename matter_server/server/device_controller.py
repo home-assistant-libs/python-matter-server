@@ -1090,18 +1090,27 @@ class MatterDeviceController:
             ):
                 try:
                     await self.interview_node(node_id)
-                except (NodeNotResolving, NodeInterviewFailed, TimeoutError) as err:
-                    LOGGER.warning("Unable to interview Node %s", exc_info=err)
+                except (NodeNotResolving, NodeInterviewFailed) as err:
+                    LOGGER.warning(
+                        "Unable to interview Node %s: %s",
+                        node_id,
+                        str(err),
+                        # log full stack trace if debug logging is enabled
+                        exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
+                    )
                     # NOTE: the node will be picked up by mdns discovery automatically
                     # when it comes available again.
                     return
             # setup subscriptions for the node
             try:
                 await self._subscribe_node(node_id)
-            except (NodeNotResolving, TimeoutError):
+            except (NodeNotResolving, TimeoutError) as err:
                 LOGGER.warning(
-                    "Unable to subscribe to Node %s as it is unavailable",
+                    "Unable to subscribe to Node %s: %s",
                     node_id,
+                    str(err),
+                    # log full stack trace if debug logging is enabled
+                    exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
                 )
                 # NOTE: the node will be picked up by mdns discovery automatically
                 # when it becomes available again.
