@@ -681,7 +681,7 @@ class MatterDeviceController:
         except ChipStackError as err:
             LOGGER.warning(
                 "Removing current fabric from device failed: %s",
-                str(err),
+                str(err) or err.__class__.__name__,
                 # only log stacktrace if we have debug logging enabled
                 exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
             )
@@ -1096,7 +1096,7 @@ class MatterDeviceController:
                     LOGGER.warning(
                         "Unable to interview Node %s: %s",
                         node_id,
-                        str(err),
+                        str(err) or err.__class__.__name__,
                         # log full stack trace if debug logging is enabled
                         exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
                     )
@@ -1110,7 +1110,7 @@ class MatterDeviceController:
                 LOGGER.warning(
                     "Unable to subscribe to Node %s: %s",
                     node_id,
-                    str(err),
+                    str(err) or err.__class__.__name__,
                     # log full stack trace if debug logging is enabled
                     exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
                 )
