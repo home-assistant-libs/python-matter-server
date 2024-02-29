@@ -75,6 +75,7 @@ NODE_RESUBSCRIBE_TIMEOUT_OFFLINE = 30 * 60 * 1000
 NODE_PING_TIMEOUT = 10
 NODE_PING_TIMEOUT_BATTERY_POWERED = 60
 NODE_MDNS_BACKOFF = 60
+FALLBACK_NODE_SCANNER_INTERVAL = 1800
 
 MDNS_TYPE_OPERATIONAL_NODE = "_matter._tcp.local."
 MDNS_TYPE_COMMISSIONABLE_NODE = "_matterc._udp.local."
@@ -115,6 +116,7 @@ class MatterDeviceController:
         self._node_lock: dict[int, asyncio.Lock] = {}
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
+        self._fallback_node_scanner_timer: asyncio.TimerHandle | None = None
         self._sdk_executor = ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="SDKExecutor"
         )
@@ -179,20 +181,24 @@ class MatterDeviceController:
             services,
             handlers=[self._on_mdns_service_state_change],
         )
+        # set-up fallback node scanner
+        asyncio.create_task(self._fallback_node_scanner())
 
     async def stop(self) -> None:
         """Handle logic on server stop."""
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
+        # shutdown (and cleanup) mdns browser and fallback node scanner
+        if self._aiobrowser:
+            await self._aiobrowser.async_cancel()
+        if self._fallback_node_scanner_timer:
+            self._fallback_node_scanner_timer.cancel()
+        if self._aiozc:
+            await self._aiozc.async_close()
         # unsubscribe all node subscriptions
         for sub in self._subscriptions.values():
             await self._call_sdk(sub.Shutdown)
         self._subscriptions = {}
-        # shutdown (and cleanup) mdns browser
-        if self._aiobrowser:
-            await self._aiobrowser.async_cancel()
-        if self._aiozc:
-            await self._aiozc.async_close()
         # shutdown the sdk device controller
         await self._call_sdk(self.chip_controller.Shutdown)
         LOGGER.debug("Stopped.")
@@ -1275,3 +1281,30 @@ class MatterDeviceController:
         node.available = False
         self.server.signal_event(EventType.NODE_UPDATED, node)
         LOGGER.info("Marked node %s as offline", node_id)
+
+    async def _fallback_node_scanner(self) -> None:
+        """Scan for operational nodes in the background that are missed by mdns."""
+        # This code could/should be removed in the future and is added to have a fallback
+        # to discover operational nodes that got somehow missed by zeroconf.
+        # the issue in zeroconf is being investigated and in the meanwhile we have this fallback.
+        for node_id, node in self._nodes.items():
+            if node.available:
+                continue
+            now = time.time()
+            last_seen = self._node_last_seen.get(node_id, 0)
+            if now - last_seen < FALLBACK_NODE_SCANNER_INTERVAL:
+                continue
+            if await self.ping_node(node_id, attempts=3):
+                LOGGER.info("Node %s discovered using fallback ping", node_id)
+                await self._setup_node(node_id)
+
+        def reschedule_self() -> None:
+            self._fallback_node_scanner_timer = None
+            asyncio.create_task(self._fallback_node_scanner())
+
+        # reschedule task to run at next interval
+        if TYPE_CHECKING:
+            assert self.server.loop
+        self._fallback_node_scanner_timer = self.server.loop.call_later(
+            FALLBACK_NODE_SCANNER_INTERVAL, reschedule_self
+        )
