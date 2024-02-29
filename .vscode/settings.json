@@ -11,5 +11,5 @@
         "--force-sort-within-sections",
         "--project", "matter_server",
         "--split-on-trailing-comma"
-    ],
+    ]
 }
