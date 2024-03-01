@@ -8,8 +8,10 @@ All rights reserved.
 """
 
 import asyncio
+from datetime import UTC, datetime
 import logging
 from os import makedirs
+from pathlib import Path
 import re
 
 from aiohttp import ClientError, ClientSession
@@ -62,9 +64,6 @@ async def fetch_dcl_certificates(
 ) -> int:
     """Fetch DCL PAA Certificates."""
     LOGGER.info("Fetching the latest PAA root certificates from DCL.")
-    if not PAA_ROOT_CERTS_DIR.is_dir():
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, makedirs, PAA_ROOT_CERTS_DIR)
     fetch_count: int = 0
     base_urls = set()
     # determine which url's need to be queried.
@@ -158,6 +157,11 @@ async def fetch_certificates(
 ) -> int:
     """Fetch PAA Certificates."""
 
+    loop = asyncio.get_running_loop()
+
+    if not PAA_ROOT_CERTS_DIR.is_dir():
+        await loop.run_in_executor(None, makedirs, PAA_ROOT_CERTS_DIR)
+
     fetch_count = await fetch_dcl_certificates(
         fetch_test_certificates=fetch_test_certificates,
         fetch_production_certificates=fetch_production_certificates,
@@ -166,4 +170,16 @@ async def fetch_certificates(
     if fetch_test_certificates:
         fetch_count += await fetch_git_certificates()
 
+    await loop.run_in_executor(None, PAA_ROOT_CERTS_DIR.touch, None)
+
     return fetch_count
+
+
+async def get_certificate_age() -> datetime:
+    """Get last time PAA Certificates have been fetched."""
+
+    def _get_certificate_age(path: Path) -> datetime:
+        return datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _get_certificate_age, PAA_ROOT_CERTS_DIR)
