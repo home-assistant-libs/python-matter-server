@@ -14,6 +14,7 @@ from random import randint
 import time
 from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
 
+import async_timeout
 from chip.ChipDeviceCtrl import DeviceProxyWrapper
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
@@ -1111,7 +1112,14 @@ class MatterDeviceController:
                         return
                 # setup subscriptions for the node
                 try:
-                    await self._subscribe_node(node_id)
+                    async with async_timeout.timeout(1800):
+                        await self._subscribe_node(node_id)
+                except TimeoutError:
+                    LOGGER.error(
+                        "POSSIBLE DEADLOCK DETECTED - REPORT TO HOME ASSISTANT DEVELOPERS: "
+                        "Setting up subscriptions for node %s did not succeed after 30 minutes. ",
+                        node_id,
+                    )
                 except (NodeNotResolving, ChipStackError) as err:
                     LOGGER.warning(
                         "Unable to subscribe to Node %s: %s",
