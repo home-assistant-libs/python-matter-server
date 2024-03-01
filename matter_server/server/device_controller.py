@@ -247,15 +247,15 @@ class MatterDeviceController:
                 attempts,
                 MAX_COMMISSION_RETRIES,
             )
-            success: bool | PyChipError = await self._call_sdk(
+            success: PyChipError | None = await self._call_sdk(
                 self.chip_controller.CommissionWithCode,
                 setupPayload=code,
                 nodeid=node_id,
                 networkOnly=network_only,
             )
-            if not isinstance(success, PyChipError) and success:
+            if success and success.is_success:
                 break
-            if not success and attempts >= MAX_COMMISSION_RETRIES:
+            if attempts >= MAX_COMMISSION_RETRIES:
                 raise NodeCommissionFailed(
                     f"Commission with code failed for node {node_id}."
                 )
@@ -319,6 +319,7 @@ class MatterDeviceController:
         # by retrying, we increase the chances of a successful commission
         while attempts <= MAX_COMMISSION_RETRIES:
             attempts += 1
+            success: PyChipError | None
             if ip_addr is None:
                 # regular CommissionOnNetwork if no IP address provided
                 LOGGER.info(
@@ -348,9 +349,9 @@ class MatterDeviceController:
                     setupPinCode=setup_pin_code,
                     ipaddr=ip_addr,
                 )
-            if success:
+            if success and success.is_success:
                 break
-            if not success and attempts >= MAX_COMMISSION_RETRIES:
+            if attempts >= MAX_COMMISSION_RETRIES:
                 raise NodeCommissionFailed(f"Commissioning failed for node {node_id}.")
             await asyncio.sleep(5)
 
