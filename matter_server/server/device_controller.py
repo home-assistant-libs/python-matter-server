@@ -14,7 +14,6 @@ from random import randint
 import time
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, cast
 
-import async_timeout
 from chip.ChipDeviceCtrl import DeviceProxyWrapper
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
@@ -62,8 +61,6 @@ _T = TypeVar("_T")
 
 DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
-
-DEFAULT_CALL_TIMEOUT = 300
 
 LOGGER = logging.getLogger(__name__)
 MIN_NODE_SUBSCRIPTION_CEILING = 30
@@ -1058,7 +1055,6 @@ class MatterDeviceController:
         self,
         target: Callable[..., _T] | Awaitable[_T],
         *args: Any,
-        call_timeout: int = DEFAULT_CALL_TIMEOUT,
         **kwargs: Any,
     ) -> _T:
         """Call function on the SDK in executor and return result."""
@@ -1073,10 +1069,8 @@ class MatterDeviceController:
             )
         # we guard all calls to the sdk with a lock because we have no good way
         # of knowing if all code in the python wrapper is thread safe.
-        # The additional timeout is a guard to prevent ourselves from deadlocking somehow.
-        async with async_timeout.timeout(call_timeout):
-            async with self._sdk_lock:
-                return cast(_T, await target)
+        async with self._sdk_lock:
+            return cast(_T, await target)
 
     async def _setup_node(self, node_id: int) -> None:
         """Handle set-up of subscriptions and interview (if needed) for known/discovered node."""
