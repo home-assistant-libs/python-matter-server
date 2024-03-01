@@ -103,7 +103,7 @@ def fetch_certificates_fixture() -> Generator[MagicMock, None, None]:
 async def server_fixture() -> AsyncGenerator[MatterServer, None]:
     """Yield a server."""
     server = MatterServer("test_storage_path", 1234, 5678, 5580, None)
-    await server.start()
+    await server.start(fetch_paa=False)
     yield server
     await server.stop()
 
