@@ -126,6 +126,7 @@ class MatterDeviceController:
         # (re)fetch all PAA certificates once at startup
         # NOTE: this must be done before initializing the controller
         await fetch_certificates()
+
         # Instantiate the underlying ChipDeviceController instance on the Fabric
         self.chip_controller = self.server.stack.fabric_admin.NewController(
             paaTrustStorePath=str(PAA_ROOT_CERTS_DIR)
