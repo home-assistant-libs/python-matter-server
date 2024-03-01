@@ -8,7 +8,7 @@ All rights reserved.
 """
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import logging
 from os import makedirs
 import re
@@ -150,6 +150,13 @@ async def fetch_git_certificates() -> int:
     return fetch_count
 
 
+async def _get_certificate_age() -> datetime:
+    """Get last time PAA Certificates have been fetched."""
+    loop = asyncio.get_running_loop()
+    stat = await loop.run_in_executor(None, PAA_ROOT_CERTS_DIR.stat)
+    return datetime.fromtimestamp(stat.st_mtime, tz=UTC)
+
+
 async def fetch_certificates(
     fetch_test_certificates: bool = True,
     fetch_production_certificates: bool = True,
@@ -159,6 +166,14 @@ async def fetch_certificates(
 
     if not PAA_ROOT_CERTS_DIR.is_dir():
         await loop.run_in_executor(None, makedirs, PAA_ROOT_CERTS_DIR)
+    else:
+        stat = await loop.run_in_executor(None, PAA_ROOT_CERTS_DIR.stat)
+        last_fetch = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
+        if last_fetch > datetime.now(tz=UTC) - timedelta(days=1):
+            LOGGER.info(
+                "Skip fetching certificates (already fetched within the last 24h)."
+            )
+            return 0
 
     fetch_count = await fetch_dcl_certificates(
         fetch_test_certificates=fetch_test_certificates,
@@ -171,10 +186,3 @@ async def fetch_certificates(
     await loop.run_in_executor(None, PAA_ROOT_CERTS_DIR.touch)
 
     return fetch_count
-
-
-async def get_certificate_age() -> datetime:
-    """Get last time PAA Certificates have been fetched."""
-    loop = asyncio.get_running_loop()
-    stat = await loop.run_in_executor(None, PAA_ROOT_CERTS_DIR.stat)
-    return datetime.fromtimestamp(stat.st_mtime, tz=UTC)

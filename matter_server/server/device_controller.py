@@ -7,7 +7,7 @@ from __future__ import annotations
 import asyncio
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from functools import partial
 import logging
 from random import randint
@@ -50,7 +50,7 @@ from ..common.models import (
     NodePingResult,
 )
 from .const import DATA_MODEL_SCHEMA_VERSION, PAA_ROOT_CERTS_DIR
-from .helpers.paa_certificates import fetch_certificates, get_certificate_age
+from .helpers.paa_certificates import fetch_certificates
 
 if TYPE_CHECKING:
     from chip.ChipDeviceCtrl import ChipDeviceController
@@ -125,8 +125,7 @@ class MatterDeviceController:
         """Async initialize of controller."""
         # (re)fetch all PAA certificates once at startup
         # NOTE: this must be done before initializing the controller
-        if await get_certificate_age() < datetime.now(tz=UTC) - timedelta(days=1):
-            await fetch_certificates()
+        await fetch_certificates()
 
         # Instantiate the underlying ChipDeviceController instance on the Fabric
         self.chip_controller = self.server.stack.fabric_admin.NewController(
