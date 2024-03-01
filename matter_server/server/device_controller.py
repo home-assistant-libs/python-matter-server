@@ -111,7 +111,6 @@ class MatterDeviceController:
         self.wifi_credentials_set: bool = False
         self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
-        self._sdk_lock = asyncio.Lock()
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
         self._fallback_node_scanner_timer: asyncio.TimerHandle | None = None
@@ -247,13 +246,13 @@ class MatterDeviceController:
                 attempts,
                 MAX_COMMISSION_RETRIES,
             )
-            success: PyChipError | None = await self._call_sdk(
+            result: PyChipError | None = await self._call_sdk(
                 self.chip_controller.CommissionWithCode,
                 setupPayload=code,
                 nodeid=node_id,
                 networkOnly=network_only,
             )
-            if success and success.is_success:
+            if result and result.is_success:
                 break
             if attempts >= MAX_COMMISSION_RETRIES:
                 raise NodeCommissionFailed(
@@ -319,7 +318,7 @@ class MatterDeviceController:
         # by retrying, we increase the chances of a successful commission
         while attempts <= MAX_COMMISSION_RETRIES:
             attempts += 1
-            success: PyChipError | None
+            result: PyChipError | None
             if ip_addr is None:
                 # regular CommissionOnNetwork if no IP address provided
                 LOGGER.info(
@@ -328,7 +327,7 @@ class MatterDeviceController:
                     attempts,
                     MAX_COMMISSION_RETRIES,
                 )
-                success = await self._call_sdk(
+                result = await self._call_sdk(
                     self.chip_controller.CommissionOnNetwork,
                     nodeId=node_id,
                     setupPinCode=setup_pin_code,
@@ -343,13 +342,13 @@ class MatterDeviceController:
                     attempts,
                     MAX_COMMISSION_RETRIES,
                 )
-                success = await self._call_sdk(
+                result = await self._call_sdk(
                     self.chip_controller.CommissionIP,
                     nodeid=node_id,
                     setupPinCode=setup_pin_code,
                     ipaddr=ip_addr,
                 )
-            if success and success.is_success:
+            if result and result.is_success:
                 break
             if attempts >= MAX_COMMISSION_RETRIES:
                 raise NodeCommissionFailed(f"Commissioning failed for node {node_id}.")
