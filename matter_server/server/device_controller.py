@@ -1117,7 +1117,7 @@ class MatterDeviceController:
                 except TimeoutError:
                     LOGGER.error(
                         "POSSIBLE DEADLOCK DETECTED - REPORT TO HOME ASSISTANT DEVELOPERS: "
-                        "Setting up subscriptions for node %s did not succeed after 30 minutes. ",
+                        "Setting up subscriptions for node %s did not succeed after 30 minutes.",
                         node_id,
                     )
                 except (NodeNotResolving, ChipStackError) as err:
