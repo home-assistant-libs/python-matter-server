@@ -49,6 +49,12 @@ parser.add_argument(
     default=None,
     help="Primary network interface for link-local addresses (optional).",
 )
+parser.add_argument(
+    "--skip-paa-certificate-fetch",
+    dest="fetch_paa",
+    action="store_false",
+    help="Do not fetch PAA root certificates on startup.",
+)
 
 args = parser.parse_args()
 
@@ -74,7 +80,7 @@ if __name__ == "__main__":
     async def run_matter():
         """Run the Matter server and client."""
         # start Matter Server
-        await server.start()
+        await server.start(args.fetch_paa)
 
         # run the client
         url = f"http://127.0.0.1:{args.port}/ws"
