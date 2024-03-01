@@ -1112,12 +1112,12 @@ class MatterDeviceController:
                         return
                 # setup subscriptions for the node
                 try:
-                    async with async_timeout.timeout(1800):
+                    async with async_timeout.timeout(15 * 60 * 60):
                         await self._subscribe_node(node_id)
                 except TimeoutError:
-                    LOGGER.error(
-                        "POSSIBLE DEADLOCK DETECTED - REPORT TO HOME ASSISTANT DEVELOPERS: "
-                        "Setting up subscriptions for node %s did not succeed after 30 minutes.",
+                    LOGGER.warning(
+                        "Setting up subscriptions for node %s did not "
+                        "succeed after 15 minutes!",
                         node_id,
                     )
                 except (NodeNotResolving, ChipStackError) as err:
