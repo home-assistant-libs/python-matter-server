@@ -591,12 +591,13 @@ class MatterDeviceController:
         if TYPE_CHECKING:
             assert self.server.loop
             assert self.chip_controller
-        loop = self.server.loop
-        future = loop.create_future()
+
+        future = self.server.loop.create_future()
+        device = await self._resolve_node(node_id)
         Attribute.Read(
             future=future,
-            eventLoop=loop,
-            device=device,
+            eventLoop=self.server.loop,
+            device=device.deviceProxy,
             devCtrl=self.chip_controller,
             attributes=[
                 Attribute.AttributePath(
@@ -607,7 +608,6 @@ class MatterDeviceController:
             ],
             fabricFiltered=fabric_filtered,
         ).raise_on_error()
-
         result: Attribute.AsyncReadTransaction.ReadResponse = await future
         read_atributes = parse_attributes_from_read_result(result.tlvAttributes)
         # update cached info in node attributes
