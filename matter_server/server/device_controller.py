@@ -1288,8 +1288,9 @@ class MatterDeviceController:
             last_seen = self._node_last_seen.get(node_id, 0)
             if now - last_seen < FALLBACK_NODE_SCANNER_INTERVAL:
                 continue
-            if await self.ping_node(node_id, attempts=3, allow_cached_ips=False):
+            if await self.ping_node(node_id, attempts=3, allow_cached_ips=True):
                 LOGGER.info("Node %s discovered using fallback ping", node_id)
+                self._node_last_seen[node_id] = now
                 await self._setup_node(node_id)
 
         def reschedule_self() -> None:
