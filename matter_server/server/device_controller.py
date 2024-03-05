@@ -503,15 +503,14 @@ class MatterDeviceController:
             raise RuntimeError("Device Controller not initialized.")
 
         try:
-            if not (node := self._nodes.get(node_id)) or not node.available:
-                LOGGER.info("Interviewing node: %s", node_id)
-                read_response: Attribute.AsyncReadTransaction.ReadResponse = (
-                    await self.chip_controller.Read(
-                        nodeid=node_id,
-                        attributes="*",
-                        fabricFiltered=False,
-                    )
+            LOGGER.info("Interviewing node: %s", node_id)
+            read_response: Attribute.AsyncReadTransaction.ReadResponse = (
+                await self.chip_controller.Read(
+                    nodeid=node_id,
+                    attributes="*",
+                    fabricFiltered=False,
                 )
+            )
         except ChipStackError as err:
             raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
 
