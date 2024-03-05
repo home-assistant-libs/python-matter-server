@@ -1,6 +1,7 @@
 """Utils for Matter server."""
 
 import asyncio
+from contextlib import suppress
 import platform
 
 import async_timeout
@@ -44,7 +45,8 @@ async def check_output(shell_cmd: str) -> tuple[int | None, bytes]:
     try:
         stdout, _ = await proc.communicate()
     except asyncio.CancelledError:
-        proc.terminate()
-        await proc.communicate()
+        with suppress(ProcessLookupError):
+            proc.terminate()
+            await proc.communicate()
         raise
     return (proc.returncode, stdout)
