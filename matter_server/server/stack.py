@@ -28,6 +28,8 @@ CHIP_PROGRESS = logging.INFO - 1
 CHIP_DETAIL = logging.DEBUG - 1
 CHIP_AUTOMATION = logging.DEBUG - 2
 
+_category_num: int = 4
+
 
 @LogRedirectCallback_t  # type: ignore[misc]
 def _redirect_to_python_logging(
@@ -58,15 +60,15 @@ def init_logging(category: str) -> None:
     """Initialize Matter SDK logging. Filter by category."""
 
     _LOGGER.info("Initializing CHIP/Matter Logging...")
-    category_num = ERROR_CATEGORY_NONE
+    _category_num = ERROR_CATEGORY_NONE
     if category == "ERROR":
-        category_num = ERROR_CATEGORY_ERROR
+        _category_num = ERROR_CATEGORY_ERROR
     elif category == "PROGRESS":
-        category_num = ERROR_CATEGORY_PROGRESS
+        _category_num = ERROR_CATEGORY_PROGRESS
     elif category == "DETAIL":
-        category_num = ERROR_CATEGORY_DETAIL
+        _category_num = ERROR_CATEGORY_DETAIL
     elif category == "AUTOMATION":
-        category_num = 4
+        _category_num = 4
 
     logging.addLevelName(CHIP_ERROR, "CHIP_ERROR")
     logging.addLevelName(CHIP_PROGRESS, "CHIP_PROGRESS")
@@ -74,11 +76,8 @@ def init_logging(category: str) -> None:
     logging.addLevelName(CHIP_AUTOMATION, "CHIP_AUTOMATION")
     logging.getLogger("chip.native").setLevel(CHIP_AUTOMATION)
 
-    handle = _GetLoggingLibraryHandle()
-    handle.pychip_logging_set_callback(_redirect_to_python_logging)
-
-    # Handle log level selection on SDK level
-    chip.logging.SetLogFilter(category_num)
+    # We can't setup logging here yet as the stack needs to be
+    # initialized first!
 
 
 class MatterStack:
@@ -94,6 +93,14 @@ class MatterStack:
         storage_file = os.path.join(server.storage_path, "chip.json")
         self.logger.debug("Using storage file: %s", storage_file)
         chip.native.Init()
+
+        # Initialize logging after stack init!
+        # See: https://github.com/project-chip/connectedhomeip/issues/20233
+        handle = _GetLoggingLibraryHandle()
+        handle.pychip_logging_set_callback(_redirect_to_python_logging)
+
+        # Handle log level selection on SDK level
+        chip.logging.SetLogFilter(_category_num)
 
         self._chip_stack = ChipStack(
             persistentStoragePath=storage_file,
