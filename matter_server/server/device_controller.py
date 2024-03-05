@@ -114,6 +114,7 @@ class MatterDeviceController:
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
         self._fallback_node_scanner_timer: asyncio.TimerHandle | None = None
+        self._fallback_node_scanner_task: asyncio.Task | None = None
         self._sdk_executor = ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="SDKExecutor"
         )
@@ -181,7 +182,7 @@ class MatterDeviceController:
             handlers=[self._on_mdns_service_state_change],
         )
         # set-up fallback node scanner
-        asyncio.create_task(self._fallback_node_scanner())
+        self._schedule_fallback_scanner()
 
     async def stop(self) -> None:
         """Handle logic on server stop."""
@@ -192,6 +193,8 @@ class MatterDeviceController:
             await self._aiobrowser.async_cancel()
         if self._fallback_node_scanner_timer:
             self._fallback_node_scanner_timer.cancel()
+        if (scan_task := self._fallback_node_scanner_task) and not scan_task.done():
+            scan_task.cancel()
         if self._aiozc:
             await self._aiozc.async_close()
         # unsubscribe all node subscriptions
@@ -583,7 +586,6 @@ class MatterDeviceController:
         if (node := self._nodes.get(node_id)) is None or not node.available:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
-        device = await self._resolve_node(node_id)
         # Read a list of attributes and/or events from a target node.
         # This is basically a re-implementation of the chip controller's Read function
         # but one that allows us to send/request custom attributes.
@@ -908,7 +910,7 @@ class MatterDeviceController:
             node.attributes[attr_path] = new_value
 
             # schedule save to persistent storage
-            self._write_node_state(node_id)
+            loop.call_soon_threadsafe(self._write_node_state, node_id)
 
             # This callback is running in the CHIP stack thread
             loop.call_soon_threadsafe(
@@ -1067,17 +1069,17 @@ class MatterDeviceController:
             # prevent duplicate setup actions
             return
         self._nodes_in_setup.add(node_id)
+        node_logger = LOGGER.getChild(f"node_{node_id}")
         try:
             async with self._node_setup_throttle:
-                LOGGER.info("Setting-up node %s...", node_id)
+                node_logger.info("Setting-up node...")
 
                 # try to resolve the node using the sdk first before do anything else
                 try:
                     await self._resolve_node(node_id=node_id)
                 except NodeNotResolving as err:
-                    LOGGER.warning(
-                        "Setup for node %s failed: %s",
-                        node_id,
+                    node_logger.warning(
+                        "Setup for node failed: %s",
                         str(err) or err.__class__.__name__,
                         # log full stack trace if debug logging is enabled
                         exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
@@ -1097,9 +1099,8 @@ class MatterDeviceController:
                     try:
                         await self.interview_node(node_id)
                     except NodeInterviewFailed as err:
-                        LOGGER.warning(
-                            "Setup for node %s failed: %s",
-                            node_id,
+                        node_logger.warning(
+                            "Setup for node failed: %s",
                             str(err) or err.__class__.__name__,
                             # log full stack trace if debug logging is enabled
                             exc_info=err
@@ -1114,9 +1115,8 @@ class MatterDeviceController:
                 try:
                     await self._subscribe_node(node_id)
                 except ChipStackError as err:
-                    LOGGER.warning(
-                        "Unable to subscribe to Node %s: %s",
-                        node_id,
+                    node_logger.warning(
+                        "Unable to subscribe to Node: %s",
                         str(err) or err.__class__.__name__,
                         # log full stack trace if debug logging is enabled
                         exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
@@ -1141,6 +1141,7 @@ class MatterDeviceController:
                 attempt,
                 retries,
             )
+            time_start = time.time()
             return await self._call_sdk(
                 self.chip_controller.GetConnectedDeviceSync,
                 nodeid=node_id,
@@ -1155,6 +1156,11 @@ class MatterDeviceController:
             # retry the resolve
             return await self._resolve_node(
                 node_id=node_id, retries=retries, attempt=attempt + 1
+            )
+        finally:
+            resolve_time_seconds = int(time.time() - time_start)
+            LOGGER.debug(
+                "Resolving node %s took %s seconds", node_id, resolve_time_seconds
             )
 
     def _handle_endpoints_removed(self, node_id: int, endpoints: Iterable[int]) -> None:
@@ -1294,13 +1300,24 @@ class MatterDeviceController:
                 self._node_last_seen[node_id] = now
                 await self._setup_node(node_id)
 
-        def reschedule_self() -> None:
-            self._fallback_node_scanner_timer = None
-            asyncio.create_task(self._fallback_node_scanner())
+        # reschedule self to run at next interval
+        self._schedule_fallback_scanner()
 
-        # reschedule task to run at next interval
+    def _schedule_fallback_scanner(self) -> None:
+        """Schedule running the fallback node scanner at X interval."""
+        if existing := self._fallback_node_scanner_timer:
+            existing.cancel()
+
+        def run_fallback_node_scanner() -> None:
+            self._fallback_node_scanner_timer = None
+            if (existing := self._fallback_node_scanner_task) and not existing.done():
+                existing.cancel()
+            self._fallback_node_scanner_task = asyncio.create_task(
+                self._fallback_node_scanner()
+            )
+
         if TYPE_CHECKING:
             assert self.server.loop
         self._fallback_node_scanner_timer = self.server.loop.call_later(
-            FALLBACK_NODE_SCANNER_INTERVAL, reschedule_self
+            FALLBACK_NODE_SCANNER_INTERVAL, run_fallback_node_scanner
         )
