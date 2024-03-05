@@ -60,6 +60,7 @@ def init_logging(category: str) -> None:
     """Initialize Matter SDK logging. Filter by category."""
 
     _LOGGER.info("Initializing CHIP/Matter Logging...")
+    global _category_num  # pylint: disable=global-statement  # noqa: PLW0603
     _category_num = ERROR_CATEGORY_NONE
     if category == "ERROR":
         _category_num = ERROR_CATEGORY_ERROR
