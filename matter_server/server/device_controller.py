@@ -501,7 +501,6 @@ class MatterDeviceController:
 
         try:
             if not (node := self._nodes.get(node_id)) or not node.available:
-                await self._resolve_node(node_id=node_id)
                 LOGGER.info("Interviewing node: %s", node_id)
                 read_response: Attribute.AsyncReadTransaction.ReadResponse = (
                     await self.chip_controller.Read(
@@ -1070,17 +1069,23 @@ class MatterDeviceController:
         self._nodes_in_setup.add(node_id)
         try:
             async with self._node_setup_throttle:
-                # Ping the node to rule out stale mdns reports and to prevent that we
-                # send an unreachable node to the sdk which is very slow with resolving it.
-                # This will also precache the ip addresses of the node for later use.
-                ping_result = await self.ping_node(node_id, attempts=3)
-                if not any(ping_result.values()):
-                    LOGGER.warning(
-                        "Skip set-up for node %s because it does not appear to be reachable...",
-                        node_id,
-                    )
-                    return
                 LOGGER.info("Setting-up node %s...", node_id)
+
+                # try to resolve the node using the sdk first before do anything else
+                try:
+                    await self._resolve_node(node_id=node_id)
+                except NodeNotResolving as err:
+                    LOGGER.warning(
+                        "Setup for node %s failed: %s",
+                        node_id,
+                        str(err) or err.__class__.__name__,
+                        # log full stack trace if debug logging is enabled
+                        exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
+                    )
+                    # NOTE: the node will be picked up by mdns discovery automatically
+                    # when it comes available again.
+                    return
+
                 # (re)interview node (only) if needed
                 node_data = self._nodes[node_id]
                 if (
@@ -1091,9 +1096,9 @@ class MatterDeviceController:
                 ):
                     try:
                         await self.interview_node(node_id)
-                    except (NodeNotResolving, NodeInterviewFailed) as err:
+                    except NodeInterviewFailed as err:
                         LOGGER.warning(
-                            "Unable to interview Node %s: %s",
+                            "Setup for node %s failed: %s",
                             node_id,
                             str(err) or err.__class__.__name__,
                             # log full stack trace if debug logging is enabled
@@ -1104,10 +1109,11 @@ class MatterDeviceController:
                         # NOTE: the node will be picked up by mdns discovery automatically
                         # when it comes available again.
                         return
+
                 # setup subscriptions for the node
                 try:
                     await self._subscribe_node(node_id)
-                except (NodeNotResolving, ChipStackError) as err:
+                except ChipStackError as err:
                     LOGGER.warning(
                         "Unable to subscribe to Node %s: %s",
                         node_id,
