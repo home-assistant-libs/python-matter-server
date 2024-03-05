@@ -20,7 +20,7 @@ from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
 from chip.native import PyChipError
-from zeroconf import IPVersion, ServiceStateChange, Zeroconf
+from zeroconf import BadTypeInNameException, IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
 from matter_server.common.models import CommissionableNodeData, CommissioningParameters
@@ -72,7 +72,7 @@ NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE = 3
 NODE_RESUBSCRIBE_TIMEOUT_OFFLINE = 30 * 60 * 1000
 NODE_PING_TIMEOUT = 10
 NODE_PING_TIMEOUT_BATTERY_POWERED = 60
-NODE_MDNS_BACKOFF = 60
+NODE_MDNS_BACKOFF = 300
 FALLBACK_NODE_SCANNER_INTERVAL = 1800
 
 MDNS_TYPE_OPERATIONAL_NODE = "_matter._tcp.local."
@@ -119,6 +119,7 @@ class MatterDeviceController:
             max_workers=1, thread_name_prefix="SDKExecutor"
         )
         self._node_setup_throttle = asyncio.Semaphore(10)
+        self._mdns_event_timer: dict[str, asyncio.TimerHandle] = {}
 
     async def initialize(self) -> None:
         """Async initialize of controller."""
@@ -1198,29 +1199,46 @@ class MatterDeviceController:
         name: str,
         state_change: ServiceStateChange,
     ) -> None:
-        LOGGER.debug("Received %s MDNS event for %s", state_change, name)
+        # mdns events may arrive in bursts of (duplicate) messages
+        # so we debounce this with a timer handle.
+        if state_change == ServiceStateChange.Removed:
+            # if we have an existing timer for this name, cancel it.
+            if cancel := self._mdns_event_timer.pop(name, None):
+                cancel.cancel()
+            if service_type == MDNS_TYPE_OPERATIONAL_NODE:
+                # we're not interested in operational node removals,
+                # this is already handled by the subscription logic
+                return
+
+        if name in self._mdns_event_timer:
+            # We already have a timer to resolve this service, so ignore this callback.
+            return
+
+        if TYPE_CHECKING:
+            assert self.server.loop
+
         if service_type == MDNS_TYPE_COMMISSIONABLE_NODE:
-            asyncio.create_task(
-                self._on_mdns_commissionable_node_state(name, state_change)
+            # process the event with a debounce timer
+            self._mdns_event_timer[name] = self.server.loop.call_later(
+                0.5, self._on_mdns_commissionable_node_state, name, state_change
             )
             return
+
         if service_type == MDNS_TYPE_OPERATIONAL_NODE:
-            self._on_mdns_operational_node_state(name, state_change)
+            if self.fabric_id_hex not in name.lower():
+                # filter out messages that are not for our fabric
+                return
+        # process the event with a debounce timer
+        self._mdns_event_timer[name] = self.server.loop.call_later(
+            0.5, self._on_mdns_operational_node_state, name, state_change
+        )
 
     def _on_mdns_operational_node_state(
         self, name: str, state_change: ServiceStateChange
     ) -> None:
         """Handle a (operational) Matter node MDNS state change."""
-        name = name.lower()
-        if self.fabric_id_hex not in name:
-            # filter out messages that are not for our fabric
-            return
-
-        if state_change == ServiceStateChange.Removed:
-            # we're not interested in removals as this is already
-            # handled in the subscription logic
-            return
-
+        self._mdns_event_timer.pop(name, None)
+        logger = LOGGER.getChild("mdns")
         # the mdns name is constructed as [fabricid]-[nodeid]._matter._tcp.local.
         # extract the node id from the name
         node_id = int(name.split("-")[1].split(".")[0], 16)
@@ -1228,16 +1246,11 @@ class MatterDeviceController:
         if not (node := self._nodes.get(node_id)):
             return  # this should not happen, but guard just in case
 
-        # mdns events for matter devices arrive in bursts of (duplicate) messages
-        # so we debounce this as we only use the mdns messages for operational node discovery
-        # and we have other logic in place to determine node aliveness
         now = time.time()
         last_seen = self._node_last_seen.get(node_id, 0)
-        if node.available and now - last_seen < NODE_MDNS_BACKOFF:
-            return
         self._node_last_seen[node_id] = now
 
-        # we treat UPDATE state changes as ADD if the node is marked as
+        # we only treat UPDATE state changes as ADD if the node is marked as
         # unavailable to ensure we catch a node being operational
         if node.available and state_change == ServiceStateChange.Updated:
             return
@@ -1245,19 +1258,42 @@ class MatterDeviceController:
         if node_id in self._nodes_in_setup:
             # prevent duplicate setup actions
             return
-        LOGGER.info("Node %s (re)discovered on MDNS", node_id)
+
+        if node_id not in self._subscriptions:
+            logger.info("Node %s discovered on MDNS", node_id)
+        elif (now - last_seen) > NODE_MDNS_BACKOFF:
+            # node came back online after being offline for a while or restarted
+            logger.info("Node %s re-discovered on MDNS", node_id)
+        else:
+            # ignore all other cases
+            return
+
         # setup the node - this will (re) setup the subscriptions etc.
         asyncio.create_task(self._setup_node(node_id))
 
-    async def _on_mdns_commissionable_node_state(
+    def _on_mdns_commissionable_node_state(
         self, name: str, state_change: ServiceStateChange
     ) -> None:
         """Handle a (commissionable) Matter node MDNS state change."""
-        if state_change == ServiceStateChange.Added:
+        self._mdns_event_timer.pop(name, None)
+        logger = LOGGER.getChild("mdns")
+
+        try:
             info = AsyncServiceInfo(MDNS_TYPE_COMMISSIONABLE_NODE, name)
-            assert self._aiozc is not None
+        except BadTypeInNameException as ex:
+            logger.debug("Ignoring record with bad type in name: %s: %s", name, ex)
+            return
+
+        async def handle_commissionable_node_added() -> None:
+            if TYPE_CHECKING:
+                assert self._aiozc is not None
             await info.async_request(self._aiozc.zeroconf, 3000)
-            LOGGER.debug("Discovered commissionable Matter node using MDNS: %s", info)
+            logger.debug("Discovered commissionable Matter node: %s", info)
+
+        if state_change == ServiceStateChange.Added:
+            asyncio.create_task(handle_commissionable_node_added())
+        elif state_change == ServiceStateChange.Removed:
+            logger.debug("Commissionable Matter node disappeared: %s", info)
 
     def _write_node_state(self, node_id: int, force: bool = False) -> None:
         """Schedule the write of the current node state to persistent storage."""
