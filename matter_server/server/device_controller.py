@@ -727,9 +727,7 @@ class MatterDeviceController:
         )
 
     @api_command(APICommand.PING_NODE)
-    async def ping_node(
-        self, node_id: int, attempts: int = 1, allow_cached_ips: bool = True
-    ) -> NodePingResult:
+    async def ping_node(self, node_id: int, attempts: int = 1) -> NodePingResult:
         """Ping node on the currently known IP-adress(es)."""
         result: NodePingResult = {}
         node = self._nodes.get(node_id)
@@ -763,7 +761,7 @@ class MatterDeviceController:
             result[clean_ip] = await ping_ip(ip_address, timeout, attempts=attempts)
 
         ip_addresses = await self.get_node_ip_addresses(
-            node_id, prefer_cache=False, scoped=True, allow_cache=allow_cached_ips
+            node_id, prefer_cache=False, scoped=True
         )
         tasks = [_do_ping(x) for x in ip_addresses]
         # TODO: replace this gather with a taskgroup once we bump our py version
@@ -792,7 +790,6 @@ class MatterDeviceController:
         node_id: int,
         prefer_cache: bool = False,
         scoped: bool = False,
-        allow_cache: bool = True,
     ) -> list[str]:
         """Return the currently known (scoped) IP-adress(es)."""
         cached_info = self._last_known_ip_addresses.get(node_id, [])
@@ -810,7 +807,7 @@ class MatterDeviceController:
         info = AsyncServiceInfo(MDNS_TYPE_OPERATIONAL_NODE, mdns_name)
         if TYPE_CHECKING:
             assert self._aiozc is not None
-        if not await info.async_request(self._aiozc.zeroconf, 3000) and allow_cache:
+        if not await info.async_request(self._aiozc.zeroconf, 3000):
             node_logger.info(
                 "Node could not be discovered on the network, returning cached IP's"
             )
@@ -1076,9 +1073,7 @@ class MatterDeviceController:
                 # Ping the node to rule out stale mdns reports and to prevent that we
                 # send an unreachable node to the sdk which is very slow with resolving it.
                 # This will also precache the ip addresses of the node for later use.
-                ping_result = await self.ping_node(
-                    node_id, attempts=3, allow_cached_ips=False
-                )
+                ping_result = await self.ping_node(node_id, attempts=3)
                 if not any(ping_result.values()):
                     LOGGER.warning(
                         "Skip set-up for node %s because it does not appear to be reachable...",
@@ -1288,7 +1283,7 @@ class MatterDeviceController:
             last_seen = self._node_last_seen.get(node_id, 0)
             if now - last_seen < FALLBACK_NODE_SCANNER_INTERVAL:
                 continue
-            if await self.ping_node(node_id, attempts=3, allow_cached_ips=True):
+            if await self.ping_node(node_id, attempts=3):
                 LOGGER.info("Node %s discovered using fallback ping", node_id)
                 self._node_last_seen[node_id] = now
                 await self._setup_node(node_id)
