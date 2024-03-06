@@ -682,14 +682,12 @@ class MatterDeviceController:
             return
         result: Clusters.OperationalCredentials.Commands.NOCResponse | None = None
         try:
-            result = await self._call_sdk(
-                self.chip_controller.SendCommand(
-                    nodeid=node_id,
-                    endpoint=0,
-                    payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
-                        fabricIndex=fabric_index,
-                    ),
-                )
+            result = await self.chip_controller.SendCommand(
+                nodeid=node_id,
+                endpoint=0,
+                payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
+                    fabricIndex=fabric_index,
+                ),
             )
         except ChipStackError as err:
             LOGGER.warning(
