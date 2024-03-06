@@ -1295,6 +1295,8 @@ class MatterDeviceController:
 
     def _write_node_state(self, node_id: int, force: bool = False) -> None:
         """Schedule the write of the current node state to persistent storage."""
+        if node_id not in self._nodes:
+            return  # guard
         node = self._nodes[node_id]
         self.server.storage.set(
             DATA_KEY_NODES,
