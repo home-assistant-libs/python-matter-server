@@ -1,4 +1,5 @@
 """Generate device types from matter-devices.xml."""
+
 import pathlib
 
 import black

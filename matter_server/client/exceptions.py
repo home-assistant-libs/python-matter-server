@@ -1,4 +1,5 @@
 """Client-specific Exceptions for matter-server library."""
+
 from __future__ import annotations
 
 

@@ -1,4 +1,5 @@
 """Several helpers for the WebSockets API."""
+
 from __future__ import annotations
 
 from dataclasses import MISSING, dataclass

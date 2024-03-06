@@ -1,4 +1,5 @@
 """Multiple host capable aiohttp Site."""
+
 from __future__ import annotations
 
 import asyncio
