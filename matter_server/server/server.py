@@ -9,7 +9,7 @@ import logging
 import os
 from pathlib import Path
 import traceback
-from typing import Any, Callable, Set, cast
+from typing import TYPE_CHECKING, Any, Callable, Set, cast
 import weakref
 
 from aiohttp import web
@@ -133,6 +133,7 @@ class MatterServer:
             )
         self.loop = asyncio.get_running_loop()
         self.loop.set_exception_handler(_global_loop_exception_handler)
+        self.loop.set_debug(os.environ.get("PYTHONDEBUG", "") != "")
         await self.device_controller.initialize()
         await self.storage.start()
         await self.device_controller.start()
@@ -219,11 +220,13 @@ class MatterServer:
 
     def signal_event(self, evt: EventType, data: Any = None) -> None:
         """Signal event to listeners."""
+        if TYPE_CHECKING:
+            assert self.loop
         for callback in self._subscribers:
             if asyncio.iscoroutinefunction(callback):
                 asyncio.create_task(callback(evt, data))
             else:
-                callback(evt, data)
+                self.loop.call_soon_threadsafe(callback, evt, data)
 
     def scope_ipv6_lla(self, ip_addr: str) -> str:
         """Scope IPv6 link-local addresses to primary interface.

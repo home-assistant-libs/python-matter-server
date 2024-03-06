@@ -14,14 +14,13 @@ from random import randint
 import time
 from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
 
-import async_timeout
 from chip.ChipDeviceCtrl import DeviceProxyWrapper
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.exceptions import ChipStackError
 from chip.native import PyChipError
-from zeroconf import IPVersion, ServiceStateChange, Zeroconf
+from zeroconf import BadTypeInNameException, IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
 from matter_server.common.models import CommissionableNodeData, CommissioningParameters
@@ -73,7 +72,7 @@ NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE = 3
 NODE_RESUBSCRIBE_TIMEOUT_OFFLINE = 30 * 60 * 1000
 NODE_PING_TIMEOUT = 10
 NODE_PING_TIMEOUT_BATTERY_POWERED = 60
-NODE_MDNS_BACKOFF = 60
+NODE_MDNS_BACKOFF = 300
 FALLBACK_NODE_SCANNER_INTERVAL = 1800
 
 MDNS_TYPE_OPERATIONAL_NODE = "_matter._tcp.local."
@@ -115,10 +114,12 @@ class MatterDeviceController:
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
         self._fallback_node_scanner_timer: asyncio.TimerHandle | None = None
+        self._fallback_node_scanner_task: asyncio.Task | None = None
         self._sdk_executor = ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="SDKExecutor"
         )
         self._node_setup_throttle = asyncio.Semaphore(10)
+        self._mdns_event_timer: dict[str, asyncio.TimerHandle] = {}
 
     async def initialize(self) -> None:
         """Async initialize of controller."""
@@ -182,7 +183,7 @@ class MatterDeviceController:
             handlers=[self._on_mdns_service_state_change],
         )
         # set-up fallback node scanner
-        asyncio.create_task(self._fallback_node_scanner())
+        self._schedule_fallback_scanner()
 
     async def stop(self) -> None:
         """Handle logic on server stop."""
@@ -193,6 +194,8 @@ class MatterDeviceController:
             await self._aiobrowser.async_cancel()
         if self._fallback_node_scanner_timer:
             self._fallback_node_scanner_timer.cancel()
+        if (scan_task := self._fallback_node_scanner_task) and not scan_task.done():
+            scan_task.cancel()
         if self._aiozc:
             await self._aiozc.async_close()
         # unsubscribe all node subscriptions
@@ -501,16 +504,14 @@ class MatterDeviceController:
             raise RuntimeError("Device Controller not initialized.")
 
         try:
-            if not (node := self._nodes.get(node_id)) or not node.available:
-                await self._resolve_node(node_id=node_id)
-                LOGGER.info("Interviewing node: %s", node_id)
-                read_response: Attribute.AsyncReadTransaction.ReadResponse = (
-                    await self.chip_controller.Read(
-                        nodeid=node_id,
-                        attributes="*",
-                        fabricFiltered=False,
-                    )
+            LOGGER.info("Interviewing node: %s", node_id)
+            read_response: Attribute.AsyncReadTransaction.ReadResponse = (
+                await self.chip_controller.Read(
+                    nodeid=node_id,
+                    attributes="*",
+                    fabricFiltered=False,
                 )
+            )
         except ChipStackError as err:
             raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
 
@@ -585,7 +586,6 @@ class MatterDeviceController:
         if (node := self._nodes.get(node_id)) is None or not node.available:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
-        device = await self._resolve_node(node_id)
         # Read a list of attributes and/or events from a target node.
         # This is basically a re-implementation of the chip controller's Read function
         # but one that allows us to send/request custom attributes.
@@ -682,14 +682,12 @@ class MatterDeviceController:
             return
         result: Clusters.OperationalCredentials.Commands.NOCResponse | None = None
         try:
-            result = await self._call_sdk(
-                self.chip_controller.SendCommand(
-                    nodeid=node_id,
-                    endpoint=0,
-                    payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
-                        fabricIndex=fabric_index,
-                    ),
-                )
+            result = await self.chip_controller.SendCommand(
+                nodeid=node_id,
+                endpoint=0,
+                payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
+                    fabricIndex=fabric_index,
+                ),
             )
         except ChipStackError as err:
             LOGGER.warning(
@@ -728,9 +726,7 @@ class MatterDeviceController:
         )
 
     @api_command(APICommand.PING_NODE)
-    async def ping_node(
-        self, node_id: int, attempts: int = 1, allow_cached_ips: bool = True
-    ) -> NodePingResult:
+    async def ping_node(self, node_id: int, attempts: int = 1) -> NodePingResult:
         """Ping node on the currently known IP-adress(es)."""
         result: NodePingResult = {}
         node = self._nodes.get(node_id)
@@ -764,7 +760,7 @@ class MatterDeviceController:
             result[clean_ip] = await ping_ip(ip_address, timeout, attempts=attempts)
 
         ip_addresses = await self.get_node_ip_addresses(
-            node_id, prefer_cache=False, scoped=True, allow_cache=allow_cached_ips
+            node_id, prefer_cache=False, scoped=True
         )
         tasks = [_do_ping(x) for x in ip_addresses]
         # TODO: replace this gather with a taskgroup once we bump our py version
@@ -793,7 +789,6 @@ class MatterDeviceController:
         node_id: int,
         prefer_cache: bool = False,
         scoped: bool = False,
-        allow_cache: bool = True,
     ) -> list[str]:
         """Return the currently known (scoped) IP-adress(es)."""
         cached_info = self._last_known_ip_addresses.get(node_id, [])
@@ -811,7 +806,7 @@ class MatterDeviceController:
         info = AsyncServiceInfo(MDNS_TYPE_OPERATIONAL_NODE, mdns_name)
         if TYPE_CHECKING:
             assert self._aiozc is not None
-        if not await info.async_request(self._aiozc.zeroconf, 3000) and allow_cache:
+        if not await info.async_request(self._aiozc.zeroconf, 3000):
             node_logger.info(
                 "Node could not be discovered on the network, returning cached IP's"
             )
@@ -913,7 +908,7 @@ class MatterDeviceController:
             node.attributes[attr_path] = new_value
 
             # schedule save to persistent storage
-            self._write_node_state(node_id)
+            loop.call_soon_threadsafe(self._write_node_state, node_id)
 
             # This callback is running in the CHIP stack thread
             loop.call_soon_threadsafe(
@@ -1072,21 +1067,25 @@ class MatterDeviceController:
             # prevent duplicate setup actions
             return
         self._nodes_in_setup.add(node_id)
+        node_logger = LOGGER.getChild(f"node_{node_id}")
         try:
             async with self._node_setup_throttle:
-                # Ping the node to rule out stale mdns reports and to prevent that we
-                # send an unreachable node to the sdk which is very slow with resolving it.
-                # This will also precache the ip addresses of the node for later use.
-                ping_result = await self.ping_node(
-                    node_id, attempts=3, allow_cached_ips=False
-                )
-                if not any(ping_result.values()):
-                    LOGGER.warning(
-                        "Skip set-up for node %s because it does not appear to be reachable...",
-                        node_id,
+                node_logger.info("Setting-up node...")
+
+                # try to resolve the node using the sdk first before do anything else
+                try:
+                    await self._resolve_node(node_id=node_id)
+                except NodeNotResolving as err:
+                    node_logger.warning(
+                        "Setup for node failed: %s",
+                        str(err) or err.__class__.__name__,
+                        # log full stack trace if debug logging is enabled
+                        exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
                     )
+                    # NOTE: the node will be picked up by mdns discovery automatically
+                    # when it comes available again.
                     return
-                LOGGER.info("Setting-up node %s...", node_id)
+
                 # (re)interview node (only) if needed
                 node_data = self._nodes[node_id]
                 if (
@@ -1097,10 +1096,9 @@ class MatterDeviceController:
                 ):
                     try:
                         await self.interview_node(node_id)
-                    except (NodeNotResolving, NodeInterviewFailed) as err:
-                        LOGGER.warning(
-                            "Unable to interview Node %s: %s",
-                            node_id,
+                    except NodeInterviewFailed as err:
+                        node_logger.warning(
+                            "Setup for node failed: %s",
                             str(err) or err.__class__.__name__,
                             # log full stack trace if debug logging is enabled
                             exc_info=err
@@ -1110,20 +1108,13 @@ class MatterDeviceController:
                         # NOTE: the node will be picked up by mdns discovery automatically
                         # when it comes available again.
                         return
+
                 # setup subscriptions for the node
                 try:
-                    async with async_timeout.timeout(15 * 60):
-                        await self._subscribe_node(node_id)
-                except TimeoutError:
-                    LOGGER.warning(
-                        "Setting up subscriptions for node %s did not "
-                        "succeed after 15 minutes!",
-                        node_id,
-                    )
-                except (NodeNotResolving, ChipStackError) as err:
-                    LOGGER.warning(
-                        "Unable to subscribe to Node %s: %s",
-                        node_id,
+                    await self._subscribe_node(node_id)
+                except ChipStackError as err:
+                    node_logger.warning(
+                        "Unable to subscribe to Node: %s",
                         str(err) or err.__class__.__name__,
                         # log full stack trace if debug logging is enabled
                         exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
@@ -1148,6 +1139,7 @@ class MatterDeviceController:
                 attempt,
                 retries,
             )
+            time_start = time.time()
             return await self._call_sdk(
                 self.chip_controller.GetConnectedDeviceSync,
                 nodeid=node_id,
@@ -1162,6 +1154,11 @@ class MatterDeviceController:
             # retry the resolve
             return await self._resolve_node(
                 node_id=node_id, retries=retries, attempt=attempt + 1
+            )
+        finally:
+            resolve_time_seconds = int(time.time() - time_start)
+            LOGGER.debug(
+                "Resolving node %s took %s seconds", node_id, resolve_time_seconds
             )
 
     def _handle_endpoints_removed(self, node_id: int, endpoints: Iterable[int]) -> None:
@@ -1200,29 +1197,46 @@ class MatterDeviceController:
         name: str,
         state_change: ServiceStateChange,
     ) -> None:
-        LOGGER.debug("Received %s MDNS event for %s", state_change, name)
+        # mdns events may arrive in bursts of (duplicate) messages
+        # so we debounce this with a timer handle.
+        if state_change == ServiceStateChange.Removed:
+            # if we have an existing timer for this name, cancel it.
+            if cancel := self._mdns_event_timer.pop(name, None):
+                cancel.cancel()
+            if service_type == MDNS_TYPE_OPERATIONAL_NODE:
+                # we're not interested in operational node removals,
+                # this is already handled by the subscription logic
+                return
+
+        if name in self._mdns_event_timer:
+            # We already have a timer to resolve this service, so ignore this callback.
+            return
+
+        if TYPE_CHECKING:
+            assert self.server.loop
+
         if service_type == MDNS_TYPE_COMMISSIONABLE_NODE:
-            asyncio.create_task(
-                self._on_mdns_commissionable_node_state(name, state_change)
+            # process the event with a debounce timer
+            self._mdns_event_timer[name] = self.server.loop.call_later(
+                0.5, self._on_mdns_commissionable_node_state, name, state_change
             )
             return
+
         if service_type == MDNS_TYPE_OPERATIONAL_NODE:
-            self._on_mdns_operational_node_state(name, state_change)
+            if self.fabric_id_hex not in name.lower():
+                # filter out messages that are not for our fabric
+                return
+        # process the event with a debounce timer
+        self._mdns_event_timer[name] = self.server.loop.call_later(
+            0.5, self._on_mdns_operational_node_state, name, state_change
+        )
 
     def _on_mdns_operational_node_state(
         self, name: str, state_change: ServiceStateChange
     ) -> None:
         """Handle a (operational) Matter node MDNS state change."""
-        name = name.lower()
-        if self.fabric_id_hex not in name:
-            # filter out messages that are not for our fabric
-            return
-
-        if state_change == ServiceStateChange.Removed:
-            # we're not interested in removals as this is already
-            # handled in the subscription logic
-            return
-
+        self._mdns_event_timer.pop(name, None)
+        logger = LOGGER.getChild("mdns")
         # the mdns name is constructed as [fabricid]-[nodeid]._matter._tcp.local.
         # extract the node id from the name
         node_id = int(name.split("-")[1].split(".")[0], 16)
@@ -1230,16 +1244,11 @@ class MatterDeviceController:
         if not (node := self._nodes.get(node_id)):
             return  # this should not happen, but guard just in case
 
-        # mdns events for matter devices arrive in bursts of (duplicate) messages
-        # so we debounce this as we only use the mdns messages for operational node discovery
-        # and we have other logic in place to determine node aliveness
         now = time.time()
         last_seen = self._node_last_seen.get(node_id, 0)
-        if node.available and now - last_seen < NODE_MDNS_BACKOFF:
-            return
         self._node_last_seen[node_id] = now
 
-        # we treat UPDATE state changes as ADD if the node is marked as
+        # we only treat UPDATE state changes as ADD if the node is marked as
         # unavailable to ensure we catch a node being operational
         if node.available and state_change == ServiceStateChange.Updated:
             return
@@ -1247,22 +1256,47 @@ class MatterDeviceController:
         if node_id in self._nodes_in_setup:
             # prevent duplicate setup actions
             return
-        LOGGER.info("Node %s (re)discovered on MDNS", node_id)
+
+        if node_id not in self._subscriptions:
+            logger.info("Node %s discovered on MDNS", node_id)
+        elif (now - last_seen) > NODE_MDNS_BACKOFF:
+            # node came back online after being offline for a while or restarted
+            logger.info("Node %s re-discovered on MDNS", node_id)
+        else:
+            # ignore all other cases
+            return
+
         # setup the node - this will (re) setup the subscriptions etc.
         asyncio.create_task(self._setup_node(node_id))
 
-    async def _on_mdns_commissionable_node_state(
+    def _on_mdns_commissionable_node_state(
         self, name: str, state_change: ServiceStateChange
     ) -> None:
         """Handle a (commissionable) Matter node MDNS state change."""
-        if state_change == ServiceStateChange.Added:
+        self._mdns_event_timer.pop(name, None)
+        logger = LOGGER.getChild("mdns")
+
+        try:
             info = AsyncServiceInfo(MDNS_TYPE_COMMISSIONABLE_NODE, name)
-            assert self._aiozc is not None
+        except BadTypeInNameException as ex:
+            logger.debug("Ignoring record with bad type in name: %s: %s", name, ex)
+            return
+
+        async def handle_commissionable_node_added() -> None:
+            if TYPE_CHECKING:
+                assert self._aiozc is not None
             await info.async_request(self._aiozc.zeroconf, 3000)
-            LOGGER.debug("Discovered commissionable Matter node using MDNS: %s", info)
+            logger.debug("Discovered commissionable Matter node: %s", info)
+
+        if state_change == ServiceStateChange.Added:
+            asyncio.create_task(handle_commissionable_node_added())
+        elif state_change == ServiceStateChange.Removed:
+            logger.debug("Commissionable Matter node disappeared: %s", info)
 
     def _write_node_state(self, node_id: int, force: bool = False) -> None:
         """Schedule the write of the current node state to persistent storage."""
+        if node_id not in self._nodes:
+            return  # guard
         node = self._nodes[node_id]
         self.server.storage.set(
             DATA_KEY_NODES,
@@ -1296,17 +1330,29 @@ class MatterDeviceController:
             last_seen = self._node_last_seen.get(node_id, 0)
             if now - last_seen < FALLBACK_NODE_SCANNER_INTERVAL:
                 continue
-            if await self.ping_node(node_id, attempts=3, allow_cached_ips=False):
+            if await self.ping_node(node_id, attempts=3):
                 LOGGER.info("Node %s discovered using fallback ping", node_id)
+                self._node_last_seen[node_id] = now
                 await self._setup_node(node_id)
 
-        def reschedule_self() -> None:
-            self._fallback_node_scanner_timer = None
-            asyncio.create_task(self._fallback_node_scanner())
+        # reschedule self to run at next interval
+        self._schedule_fallback_scanner()
 
-        # reschedule task to run at next interval
+    def _schedule_fallback_scanner(self) -> None:
+        """Schedule running the fallback node scanner at X interval."""
+        if existing := self._fallback_node_scanner_timer:
+            existing.cancel()
+
+        def run_fallback_node_scanner() -> None:
+            self._fallback_node_scanner_timer = None
+            if (existing := self._fallback_node_scanner_task) and not existing.done():
+                existing.cancel()
+            self._fallback_node_scanner_task = asyncio.create_task(
+                self._fallback_node_scanner()
+            )
+
         if TYPE_CHECKING:
             assert self.server.loop
         self._fallback_node_scanner_timer = self.server.loop.call_later(
-            FALLBACK_NODE_SCANNER_INTERVAL, reschedule_self
+            FALLBACK_NODE_SCANNER_INTERVAL, run_fallback_node_scanner
         )
