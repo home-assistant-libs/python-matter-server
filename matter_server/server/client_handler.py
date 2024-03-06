@@ -15,7 +15,7 @@ from chip.exceptions import ChipStackError
 from matter_server.common.helpers.json import json_dumps, json_loads
 from matter_server.common.models import EventType
 
-from ..common.errors import InvalidArguments, InvalidCommand, MatterError, SDKStackError
+from ..common.errors import InvalidArguments, InvalidCommand, MatterError
 from ..common.helpers.api import parse_arguments
 from ..common.helpers.util import dataclass_from_dict
 from ..common.models import (
@@ -192,27 +192,22 @@ class WebsocketClientHandler:
             if asyncio.iscoroutine(result):
                 result = await result
             self._send_message(SuccessResultMessage(msg.message_id, result))
-        except ChipStackError as err:
-            self._logger.error(
-                "SDK Error during handling message: %s: %s",
-                msg.command,
-                str(err),
-                # only print the full stacktrace if debug logging is enabled
-                exc_info=err if self._logger.isEnabledFor(logging.DEBUG) else None,
-            )
-            self._send_message(
-                ErrorResultMessage(msg.message_id, SDKStackError.error_code, str(err))
-            )
-        except Exception as err:  # pylint: disable=broad-except  # noqa: BLE001
-            self._logger.error(
-                "SDK Error during handling message: %s: %s",
-                msg.command,
-                str(err),
-                # only print the full stacktrace if debug logging is enabled
-                exc_info=err if self._logger.isEnabledFor(logging.DEBUG) else None,
-            )
+        except (ChipStackError, MatterError) as err:
             error_code = getattr(err, "error_code", MatterError.error_code)
+            message_str = msg.command
+            if msg.args and (node_id := msg.args.get("node_id")):
+                message_str += f" (node {node_id})"
+            self._logger.error(
+                "Error while handling: %s: %s",
+                message_str,
+                str(err) or err.__class__.__name__,
+                # only print the full stacktrace if debug logging is enabled
+                exc_info=err if self._logger.isEnabledFor(logging.DEBUG) else None,
+            )
             self._send_message(ErrorResultMessage(msg.message_id, error_code, str(err)))
+        except Exception as err:
+            self._send_message(ErrorResultMessage(msg.message_id, 0, str(err)))
+            raise err
 
     async def _writer(self) -> None:
         """Write outgoing messages."""
