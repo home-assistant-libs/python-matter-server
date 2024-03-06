@@ -198,8 +198,8 @@ class WebsocketClientHandler:
             if msg.args and (node_id := msg.args.get("node_id")):
                 message_str += f" (node {node_id})"
             self._logger.error(
-                "Error while handling command: %s: %s",
-                msg.command,
+                "Error while handling: %s: %s",
+                message_str,
                 str(err) or err.__class__.__name__,
                 # only print the full stacktrace if debug logging is enabled
                 exc_info=err if self._logger.isEnabledFor(logging.DEBUG) else None,
@@ -209,7 +209,7 @@ class WebsocketClientHandler:
             )
         except Exception as err:  # pylint: disable=broad-except
             self._logger.exception(
-                "Unhandled exception while handling command: %s",
+                "Unhandled exception while handling: %s",
                 msg.command,
             )
             error_code = getattr(err, "error_code", 0)
