@@ -133,7 +133,7 @@ class MatterServer:
             )
         self.loop = asyncio.get_running_loop()
         self.loop.set_exception_handler(_global_loop_exception_handler)
-        self.loop.set_debug(os.environ.get("PYTHONDEBUG") == "1")
+        self.loop.set_debug(os.environ.get("PYTHONDEBUG", "") != "")
         await self.device_controller.initialize()
         await self.storage.start()
         await self.device_controller.start()
