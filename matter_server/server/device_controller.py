@@ -63,16 +63,15 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
-MIN_NODE_SUBSCRIPTION_CEILING = 30
-MAX_NODE_SUBSCRIPTION_CEILING = 300
-MIN_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 300
-MAX_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 1800
+NODE_SUBSCRIPTION_CEILING_WIFI = 30
+NODE_SUBSCRIPTION_CEILING_THREAD = 60
+NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 600
 MAX_COMMISSION_RETRIES = 3
 NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE = 3
 NODE_RESUBSCRIBE_TIMEOUT_OFFLINE = 30 * 60 * 1000
 NODE_PING_TIMEOUT = 10
 NODE_PING_TIMEOUT_BATTERY_POWERED = 60
-NODE_MDNS_BACKOFF = 300
+NODE_MDNS_BACKOFF = 610  # must be higher than (highest) sub ceiling
 FALLBACK_NODE_SCANNER_INTERVAL = 1800
 
 MDNS_TYPE_OPERATIONAL_NODE = "_matter._tcp.local."
@@ -842,13 +841,6 @@ class MatterDeviceController:
             await self._call_sdk(prev_sub.Shutdown)
             del self._subscriptions[node_id]
 
-        # determine if node is battery powered sleeping device
-        # Endpoint 0, ThreadNetworkDiagnostics Cluster, routingRole attribute
-        battery_powered = (
-            node.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH, 0)
-            == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kSleepyEndDevice
-        )
-
         loop = cast(asyncio.AbstractEventLoop, self.server.loop)
 
         # set-up the actual subscription
@@ -927,6 +919,7 @@ class MatterDeviceController:
             node_logger.debug(
                 "Received node event: %s - transaction: %s", data, transaction
             )
+            self._node_last_seen[node_id] = time.time()
             node_event = MatterNodeEvent(
                 node_id=node_id,
                 endpoint_id=data.Header.EndpointId,
@@ -994,16 +987,19 @@ class MatterDeviceController:
 
         node_logger.info("Setting up attributes and events subscription.")
         interval_floor = 0
-        interval_ceiling = (
-            randint(  # noqa: S311
-                MIN_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED,
-                MAX_NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED,
-            )
-            if battery_powered
-            else randint(  # noqa: S311
-                MIN_NODE_SUBSCRIPTION_CEILING, MAX_NODE_SUBSCRIPTION_CEILING
-            )
-        )
+        # determine subscription ceiling based on routing role
+        # Endpoint 0, ThreadNetworkDiagnostics Cluster, routingRole attribute
+        # for WiFi devices, this cluster doesn't exist.
+        routing_role = node.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH)
+        if routing_role is None:
+            interval_ceiling = NODE_SUBSCRIPTION_CEILING_WIFI
+        elif (
+            routing_role
+            == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kSleepyEndDevice
+        ):
+            interval_ceiling = NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED
+        else:
+            interval_ceiling = NODE_SUBSCRIPTION_CEILING_THREAD
         self._last_subscription_attempt[node_id] = 0
         sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
             node_id,
