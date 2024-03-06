@@ -192,26 +192,27 @@ class WebsocketClientHandler:
             if asyncio.iscoroutine(result):
                 result = await result
             self._send_message(SuccessResultMessage(msg.message_id, result))
-        except ChipStackError as err:
+        except (ChipStackError, MatterError) as err:
+            error_code = getattr(err, "error_code", MatterError.error_code)
+            message_str = msg.command
+            if msg.args and (node_id := msg.args.get("node_id")):
+                message_str += f" (node {node_id})"
             self._logger.error(
-                "SDK Error during handling message: %s: %s",
+                "Error while handling command: %s: %s",
                 msg.command,
-                str(err),
+                str(err) or err.__class__.__name__,
                 # only print the full stacktrace if debug logging is enabled
                 exc_info=err if self._logger.isEnabledFor(logging.DEBUG) else None,
             )
             self._send_message(
                 ErrorResultMessage(msg.message_id, SDKStackError.error_code, str(err))
             )
-        except Exception as err:  # pylint: disable=broad-except  # noqa: BLE001
-            self._logger.error(
-                "SDK Error during handling message: %s: %s",
+        except Exception as err:  # pylint: disable=broad-except
+            self._logger.exception(
+                "Unhandled exception while handling command: %s",
                 msg.command,
-                str(err),
-                # only print the full stacktrace if debug logging is enabled
-                exc_info=err if self._logger.isEnabledFor(logging.DEBUG) else None,
             )
-            error_code = getattr(err, "error_code", MatterError.error_code)
+            error_code = getattr(err, "error_code", 0)
             self._send_message(ErrorResultMessage(msg.message_id, error_code, str(err)))
 
     async def _writer(self) -> None:
