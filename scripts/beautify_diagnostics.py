@@ -1,4 +1,5 @@
 """Script to beautify diagnostics output."""
+
 import json
 import sys
 

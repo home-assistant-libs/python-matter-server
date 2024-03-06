@@ -1,4 +1,5 @@
 """Logic to handle storage of persistent data."""
+
 from __future__ import annotations
 
 import asyncio

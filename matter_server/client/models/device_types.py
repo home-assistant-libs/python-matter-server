@@ -4,6 +4,7 @@ Definitions for all known Device types.
 This file is auto generated from `zcl/data-model/chip/matter-devices.xml`
 Do not override!
 """
+
 from __future__ import annotations
 
 import typing

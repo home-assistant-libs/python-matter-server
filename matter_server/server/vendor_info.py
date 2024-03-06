@@ -1,4 +1,5 @@
 """Fetches vendor info from the CSA."""
+
 from __future__ import annotations
 
 import logging
