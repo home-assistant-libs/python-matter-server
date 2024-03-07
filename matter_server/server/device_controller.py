@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import asyncio
 from collections import deque
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from functools import partial
 import logging
@@ -114,9 +113,6 @@ class MatterDeviceController:
         self._aiozc: AsyncZeroconf | None = None
         self._fallback_node_scanner_timer: asyncio.TimerHandle | None = None
         self._fallback_node_scanner_task: asyncio.Task | None = None
-        self._sdk_executor = ThreadPoolExecutor(
-            max_workers=1, thread_name_prefix="SDKExecutor"
-        )
         self._node_setup_throttle = asyncio.Semaphore(10)
         self._mdns_event_timer: dict[str, asyncio.TimerHandle] = {}
 
@@ -1050,7 +1046,7 @@ class MatterDeviceController:
         return cast(
             _T,
             await self.server.loop.run_in_executor(
-                self._sdk_executor,
+                None,
                 partial(target, *args, **kwargs),
             ),
         )
