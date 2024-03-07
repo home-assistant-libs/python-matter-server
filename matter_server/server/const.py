@@ -1,4 +1,5 @@
 """Server-only constants for the Python Matter Server."""
+
 import pathlib
 from typing import Final
 
