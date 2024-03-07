@@ -1068,8 +1068,50 @@ class MatterDeviceController:
             return
         self._nodes_in_setup.add(node_id)
         node_logger = LOGGER.getChild(f"node_{node_id}")
-        try:
-            async with self._node_setup_throttle:
+        node_data = self._nodes[node_id]
+        log_timers: dict[int, asyncio.TimerHandle] = {}
+
+        def log_node_long_setup(time_start: float) -> None:
+            """Temporary measure to track a locked-up SDK issue in some (special) circumstances."""
+            time_mins = int((time.time() - time_start) / 60)
+            if TYPE_CHECKING:
+                assert self.server.loop
+                assert self.chip_controller
+            # get productlabel or modelname from raw attributes
+            node_model = node_data.attributes.get(
+                "0/40/14", node_data.attributes.get("0/40/3", "")
+            )
+            node_name = f"Node {node_id} ({node_model})"
+            # get current IP the sdk is using to communicate with the device
+            if sdk_ip_info := self.chip_controller.GetAddressAndPort(node_id):
+                ip_address = sdk_ip_info[0]
+            else:
+                ip_address = "unknown"
+
+            node_logger.error(
+                f"\n\nATTENTION: {node_name} did not complete setup in {time_mins} minutes.\n"  # noqa: G004
+                "This is an indication of a (connectivity) issue with this device. \n"
+                f"IP-address in use for this device: {ip_address}\n"
+                "Try powercycling this device and/or relocate it closer to a Border Router or \n"
+                "WiFi Access Point. If this issue persists, please create an issue report on \n"
+                "the Matter channel of the Home Assistant Discord server or on Github:\n"
+                "https://github.com/home-assistant/core/issues/new?assignees=&labels="
+                "integration%3A%20matter&projects=&template=bug_report.yml\n",
+            )
+            # reschedule itself
+            log_timers[node_id] = self.server.loop.call_later(
+                15 * 60, log_node_long_setup, time_start
+            )
+
+        async with self._node_setup_throttle:
+            time_start = time.time()
+            # we want to track nodes that take too long so we log it when we detect that
+            if TYPE_CHECKING:
+                assert self.server.loop
+            log_timers[node_id] = self.server.loop.call_later(
+                15 * 60, log_node_long_setup, time_start
+            )
+            try:
                 node_logger.info("Setting-up node...")
 
                 # try to resolve the node using the sdk first before do anything else
@@ -1087,7 +1129,7 @@ class MatterDeviceController:
                     return
 
                 # (re)interview node (only) if needed
-                node_data = self._nodes[node_id]
+
                 if (
                     # re-interview if we dont have any node attributes (empty node)
                     not node_data.attributes
@@ -1121,8 +1163,9 @@ class MatterDeviceController:
                     )
                     # NOTE: the node will be picked up by mdns discovery automatically
                     # when it becomes available again.
-        finally:
-            self._nodes_in_setup.discard(node_id)
+            finally:
+                log_timers[node_id].cancel()
+                self._nodes_in_setup.discard(node_id)
 
     async def _resolve_node(
         self, node_id: int, retries: int = 2, attempt: int = 1
