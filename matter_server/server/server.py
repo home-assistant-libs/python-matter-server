@@ -7,7 +7,6 @@ from functools import partial
 import ipaddress
 import logging
 import os
-import pathlib
 from pathlib import Path
 import traceback
 from typing import TYPE_CHECKING, Any, Callable, Set, cast
@@ -30,7 +29,7 @@ from ..common.models import (
     ServerInfoMessage,
 )
 from ..server.client_handler import WebsocketClientHandler
-from .const import MIN_SCHEMA_VERSION
+from .const import DEFAULT_PAA_ROOT_CERTS_DIR, MIN_SCHEMA_VERSION
 from .device_controller import MatterDeviceController
 from .stack import MatterStack
 from .storage import StorageController
@@ -111,13 +110,7 @@ class MatterServer:
         self.listen_addresses = listen_addresses
         self.primary_interface = primary_interface
         if paa_root_cert_dir is None:
-            self.paa_root_cert_dir = (
-                pathlib.Path(__file__)
-                .parent.resolve()
-                .parent.resolve()
-                .parent.resolve()
-                .joinpath("credentials/development/paa-root-certs")
-            )
+            self.paa_root_cert_dir = DEFAULT_PAA_ROOT_CERTS_DIR
         else:
             self.paa_root_cert_dir = Path(paa_root_cert_dir).absolute()
         self.logger = logging.getLogger(__name__)
