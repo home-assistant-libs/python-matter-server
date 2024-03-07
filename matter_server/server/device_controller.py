@@ -115,7 +115,7 @@ class MatterDeviceController:
         self._fallback_node_scanner_task: asyncio.Task | None = None
         self._node_setup_throttle = asyncio.Semaphore(5)
         self._mdns_event_timer: dict[str, asyncio.TimerHandle] = {}
-        self._resolve_lock = asyncio.Lock()
+        self._node_lock: dict[int, asyncio.Lock] = {}
 
     async def initialize(self) -> None:
         """Async initialize of controller."""
@@ -434,14 +434,15 @@ class MatterDeviceController:
         if discriminator is None:
             discriminator = randint(0, 4095)  # noqa: S311
 
-        sdk_result = await self._call_sdk(
-            self.chip_controller.OpenCommissioningWindow,
-            nodeid=node_id,
-            timeout=timeout,
-            iteration=iteration,
-            discriminator=discriminator,
-            option=option,
-        )
+        async with self._get_node_lock(node_id):
+            sdk_result = await self._call_sdk(
+                self.chip_controller.OpenCommissioningWindow,
+                nodeid=node_id,
+                timeout=timeout,
+                iteration=iteration,
+                discriminator=discriminator,
+                option=option,
+            )
         self._known_commissioning_params[node_id] = params = CommissioningParameters(
             setup_pin_code=sdk_result.setupPinCode,
             setup_manual_code=sdk_result.setupManualCode,
@@ -501,13 +502,14 @@ class MatterDeviceController:
 
         try:
             LOGGER.info("Interviewing node: %s", node_id)
-            read_response: Attribute.AsyncReadTransaction.ReadResponse = (
-                await self.chip_controller.Read(
-                    nodeid=node_id,
-                    attributes="*",
-                    fabricFiltered=False,
+            async with self._get_node_lock(node_id):
+                read_response: Attribute.AsyncReadTransaction.ReadResponse = (
+                    await self.chip_controller.Read(
+                        nodeid=node_id,
+                        attributes="*",
+                        fabricFiltered=False,
+                    )
                 )
-            )
         except ChipStackError as err:
             raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
 
@@ -563,14 +565,15 @@ class MatterDeviceController:
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
         command_cls = getattr(cluster_cls.Commands, command_name)
         command = dataclass_from_dict(command_cls, payload, allow_sdk_types=True)
-        return await self.chip_controller.SendCommand(
-            nodeid=node_id,
-            endpoint=endpoint_id,
-            payload=command,
-            responseType=response_type,
-            timedRequestTimeoutMs=timed_request_timeout_ms,
-            interactionTimeoutMs=interaction_timeout_ms,
-        )
+        async with self._get_node_lock(node_id):
+            return await self.chip_controller.SendCommand(
+                nodeid=node_id,
+                endpoint=endpoint_id,
+                payload=command,
+                responseType=response_type,
+                timedRequestTimeoutMs=timed_request_timeout_ms,
+                interactionTimeoutMs=interaction_timeout_ms,
+            )
 
     @api_command(APICommand.READ_ATTRIBUTE)
     async def read_attribute(
@@ -592,21 +595,22 @@ class MatterDeviceController:
 
         future = self.server.loop.create_future()
         device = await self._resolve_node(node_id)
-        Attribute.Read(
-            future=future,
-            eventLoop=self.server.loop,
-            device=device.deviceProxy,
-            devCtrl=self.chip_controller,
-            attributes=[
-                Attribute.AttributePath(
-                    EndpointId=endpoint_id,
-                    ClusterId=cluster_id,
-                    AttributeId=attribute_id,
-                )
-            ],
-            fabricFiltered=fabric_filtered,
-        ).raise_on_error()
-        result: Attribute.AsyncReadTransaction.ReadResponse = await future
+        async with self._get_node_lock(node_id):
+            Attribute.Read(
+                future=future,
+                eventLoop=self.server.loop,
+                device=device.deviceProxy,
+                devCtrl=self.chip_controller,
+                attributes=[
+                    Attribute.AttributePath(
+                        EndpointId=endpoint_id,
+                        ClusterId=cluster_id,
+                        AttributeId=attribute_id,
+                    )
+                ],
+                fabricFiltered=fabric_filtered,
+            ).raise_on_error()
+            result: Attribute.AsyncReadTransaction.ReadResponse = await future
         read_atributes = parse_attributes_from_read_result(result.tlvAttributes)
         # update cached info in node attributes
         self._nodes[node_id].attributes.update(read_atributes)
@@ -636,10 +640,11 @@ class MatterDeviceController:
             value_type=attribute.attribute_type.Type,
             allow_sdk_types=True,
         )
-        return await self.chip_controller.WriteAttribute(
-            nodeid=node_id,
-            attributes=[(endpoint_id, attribute)],
-        )
+        async with self._get_node_lock(node_id):
+            return await self.chip_controller.WriteAttribute(
+                nodeid=node_id,
+                attributes=[(endpoint_id, attribute)],
+            )
 
     @api_command(APICommand.REMOVE_NODE)
     async def remove_node(self, node_id: int) -> None:
@@ -998,16 +1003,17 @@ class MatterDeviceController:
         else:
             interval_ceiling = NODE_SUBSCRIPTION_CEILING_THREAD
         self._last_subscription_attempt[node_id] = 0
-        sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
-            node_id,
-            attributes="*",
-            events=[("*", 1)],
-            returnClusterObject=False,
-            reportInterval=(interval_floor, interval_ceiling),
-            fabricFiltered=False,
-            keepSubscriptions=True,
-            autoResubscribe=True,
-        )
+        async with self._get_node_lock(node_id):
+            sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
+                node_id,
+                attributes="*",
+                events=[("*", 1)],
+                returnClusterObject=False,
+                reportInterval=(interval_floor, interval_ceiling),
+                fabricFiltered=False,
+                keepSubscriptions=True,
+                autoResubscribe=True,
+            )
 
         sub.SetAttributeUpdateCallback(attribute_updated_callback)
         sub.SetEventUpdateCallback(event_callback)
@@ -1133,7 +1139,7 @@ class MatterDeviceController:
                 retries,
             )
             time_start = time.time()
-            async with self._resolve_lock:
+            async with self._get_node_lock(node_id):
                 return await self._call_sdk(
                     self.chip_controller.GetConnectedDeviceSync,
                     nodeid=node_id,
@@ -1350,3 +1356,9 @@ class MatterDeviceController:
         self._fallback_node_scanner_timer = self.server.loop.call_later(
             FALLBACK_NODE_SCANNER_INTERVAL, run_fallback_node_scanner
         )
+
+    def _get_node_lock(self, node_id: int) -> asyncio.Lock:
+        """Return lock for given node."""
+        if node_id not in self._node_lock:
+            self._node_lock[node_id] = asyncio.Lock()
+        return self._node_lock[node_id]
