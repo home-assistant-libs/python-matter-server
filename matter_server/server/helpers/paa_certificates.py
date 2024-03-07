@@ -11,13 +11,12 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 import logging
 from os import makedirs
+from pathlib import Path
 import re
 
 from aiohttp import ClientError, ClientSession
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
-
-from matter_server.server.const import PAA_ROOT_CERTS_DIR
 
 # Git repo details
 OWNER = "project-chip"
@@ -33,14 +32,16 @@ GIT_URL = f"https://raw.githubusercontent.com/{OWNER}/{REPO}/master/{PATH}"
 LAST_CERT_IDS: set[str] = set()
 
 
-async def write_paa_root_cert(certificate: str, subject: str) -> None:
+async def write_paa_root_cert(
+    paa_root_cert_dir: Path, certificate: str, subject: str
+) -> None:
     """Write certificate from string to file."""
 
     def _write() -> None:
         filename_base = "dcld_mirror_" + re.sub(
             "[^a-zA-Z0-9_-]", "", re.sub("[=, ]", "_", subject)
         )
-        filepath_base = PAA_ROOT_CERTS_DIR.joinpath(filename_base)
+        filepath_base = paa_root_cert_dir.joinpath(filename_base)
         # handle PEM certificate file
         file_path_pem = f"{filepath_base}.pem"
         LOGGER.debug("Writing certificate %s", file_path_pem)
@@ -58,6 +59,7 @@ async def write_paa_root_cert(certificate: str, subject: str) -> None:
 
 
 async def fetch_dcl_certificates(
+    paa_root_cert_dir: Path,
     fetch_test_certificates: bool = True,
     fetch_production_certificates: bool = True,
 ) -> int:
@@ -99,6 +101,7 @@ async def fetch_dcl_certificates(
                     certificate = certificate.rstrip("\n")
 
                     await write_paa_root_cert(
+                        paa_root_cert_dir,
                         certificate,
                         subject,
                     )
@@ -119,7 +122,7 @@ async def fetch_dcl_certificates(
 # are correctly captured
 
 
-async def fetch_git_certificates() -> int:
+async def fetch_git_certificates(paa_root_cert_dir: Path) -> int:
     """Fetch Git PAA Certificates."""
     fetch_count = 0
     LOGGER.info("Fetching the latest PAA root certificates from Git.")
@@ -137,7 +140,7 @@ async def fetch_git_certificates() -> int:
                     continue
                 async with http_session.get(f"{GIT_URL}/{cert}.pem") as response:
                     certificate = await response.text()
-                await write_paa_root_cert(certificate, cert)
+                await write_paa_root_cert(paa_root_cert_dir, certificate, cert)
                 LAST_CERT_IDS.add(cert)
                 fetch_count += 1
     except (ClientError, TimeoutError) as err:
@@ -150,24 +153,18 @@ async def fetch_git_certificates() -> int:
     return fetch_count
 
 
-async def _get_certificate_age() -> datetime:
-    """Get last time PAA Certificates have been fetched."""
-    loop = asyncio.get_running_loop()
-    stat = await loop.run_in_executor(None, PAA_ROOT_CERTS_DIR.stat)
-    return datetime.fromtimestamp(stat.st_mtime, tz=UTC)
-
-
 async def fetch_certificates(
+    paa_root_cert_dir: Path,
     fetch_test_certificates: bool = True,
     fetch_production_certificates: bool = True,
 ) -> int:
     """Fetch PAA Certificates."""
     loop = asyncio.get_running_loop()
 
-    if not PAA_ROOT_CERTS_DIR.is_dir():
-        await loop.run_in_executor(None, makedirs, PAA_ROOT_CERTS_DIR)
+    if not paa_root_cert_dir.is_dir():
+        await loop.run_in_executor(None, makedirs, paa_root_cert_dir)
     else:
-        stat = await loop.run_in_executor(None, PAA_ROOT_CERTS_DIR.stat)
+        stat = await loop.run_in_executor(None, paa_root_cert_dir.stat)
         last_fetch = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
         if last_fetch > datetime.now(tz=UTC) - timedelta(days=1):
             LOGGER.info(
@@ -176,13 +173,14 @@ async def fetch_certificates(
             return 0
 
     fetch_count = await fetch_dcl_certificates(
+        paa_root_cert_dir=paa_root_cert_dir,
         fetch_test_certificates=fetch_test_certificates,
         fetch_production_certificates=fetch_production_certificates,
     )
 
     if fetch_test_certificates:
-        fetch_count += await fetch_git_certificates()
+        fetch_count += await fetch_git_certificates(paa_root_cert_dir)
 
-    await loop.run_in_executor(None, PAA_ROOT_CERTS_DIR.touch)
+    await loop.run_in_executor(None, paa_root_cert_dir.touch)
 
     return fetch_count

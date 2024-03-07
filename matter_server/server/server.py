@@ -7,6 +7,7 @@ from functools import partial
 import ipaddress
 import logging
 import os
+import pathlib
 from pathlib import Path
 import traceback
 from typing import TYPE_CHECKING, Any, Callable, Set, cast
@@ -100,6 +101,7 @@ class MatterServer:
         port: int,
         listen_addresses: list[str] | None = None,
         primary_interface: str | None = None,
+        paa_root_cert_dir: Path | None = None,
     ) -> None:
         """Initialize the Matter Server."""
         self.storage_path = storage_path
@@ -108,6 +110,16 @@ class MatterServer:
         self.port = port
         self.listen_addresses = listen_addresses
         self.primary_interface = primary_interface
+        if paa_root_cert_dir is None:
+            self.paa_root_cert_dir = (
+                pathlib.Path(__file__)
+                .parent.resolve()
+                .parent.resolve()
+                .parent.resolve()
+                .joinpath("credentials/development/paa-root-certs")
+            )
+        else:
+            self.paa_root_cert_dir = Path(paa_root_cert_dir).absolute()
         self.logger = logging.getLogger(__name__)
         self.app = web.Application()
         self.loop: asyncio.AbstractEventLoop | None = None
@@ -134,7 +146,7 @@ class MatterServer:
         self.loop = asyncio.get_running_loop()
         self.loop.set_exception_handler(_global_loop_exception_handler)
         self.loop.set_debug(os.environ.get("PYTHONDEBUG", "") != "")
-        await self.device_controller.initialize()
+        await self.device_controller.initialize(self.paa_root_cert_dir)
         await self.storage.start()
         await self.device_controller.start()
         await self.vendor_info.start()

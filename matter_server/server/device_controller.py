@@ -9,6 +9,7 @@ from collections import deque
 from datetime import datetime
 from functools import partial
 import logging
+from pathlib import Path
 from random import randint
 import time
 from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
@@ -48,7 +49,7 @@ from ..common.models import (
     MatterNodeEvent,
     NodePingResult,
 )
-from .const import DATA_MODEL_SCHEMA_VERSION, PAA_ROOT_CERTS_DIR
+from .const import DATA_MODEL_SCHEMA_VERSION
 from .helpers.paa_certificates import fetch_certificates
 
 if TYPE_CHECKING:
@@ -117,15 +118,15 @@ class MatterDeviceController:
         self._mdns_event_timer: dict[str, asyncio.TimerHandle] = {}
         self._node_lock: dict[int, asyncio.Lock] = {}
 
-    async def initialize(self) -> None:
+    async def initialize(self, paa_root_cert_dir: Path) -> None:
         """Async initialize of controller."""
         # (re)fetch all PAA certificates once at startup
         # NOTE: this must be done before initializing the controller
-        await fetch_certificates()
+        await fetch_certificates(paa_root_cert_dir)
 
         # Instantiate the underlying ChipDeviceController instance on the Fabric
         self.chip_controller = self.server.stack.fabric_admin.NewController(
-            paaTrustStorePath=str(PAA_ROOT_CERTS_DIR)
+            paaTrustStorePath=str(paa_root_cert_dir)
         )
         self.compressed_fabric_id = cast(
             int, await self._call_sdk(self.chip_controller.GetCompressedFabricId)
