@@ -11,11 +11,9 @@ MIN_SCHEMA_VERSION = 5
 # and a full re-interview is mandatory
 DATA_MODEL_SCHEMA_VERSION = 6
 
-# the paa-root-certs path is hardcoded in the sdk at this time
-# and always uses the development subfolder
-# regardless of anything you pass into instantiating the controller
-# revisit this once matter 1.1 is released
-PAA_ROOT_CERTS_DIR: Final[pathlib.Path] = (
+# Keep default location inherited from early version of the Python
+# bindings.
+DEFAULT_PAA_ROOT_CERTS_DIR: Final[pathlib.Path] = (
     pathlib.Path(__file__)
     .parent.resolve()
     .parent.resolve()

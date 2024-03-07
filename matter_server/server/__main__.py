@@ -91,6 +91,12 @@ parser.add_argument(
     default=None,
     help="Primary network interface for link-local addresses (optional).",
 )
+parser.add_argument(
+    "--paa-root-cert-dir",
+    type=str,
+    default=None,
+    help="Directory where PAA root certificates are stored.",
+)
 
 args = parser.parse_args()
 
@@ -175,6 +181,7 @@ def main() -> None:
         int(args.port),
         args.listen_address,
         args.primary_interface,
+        args.paa_root_cert_dir,
     )
 
     async def handle_stop(loop: asyncio.AbstractEventLoop) -> None:
