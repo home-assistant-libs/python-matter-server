@@ -113,7 +113,7 @@ class MatterDeviceController:
         self._aiozc: AsyncZeroconf | None = None
         self._fallback_node_scanner_timer: asyncio.TimerHandle | None = None
         self._fallback_node_scanner_task: asyncio.Task | None = None
-        self._node_setup_throttle = asyncio.Semaphore(10)
+        self._node_setup_throttle = asyncio.Semaphore(5)
         self._mdns_event_timer: dict[str, asyncio.TimerHandle] = {}
 
     async def initialize(self) -> None:
