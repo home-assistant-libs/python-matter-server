@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Coroutine
 from dataclasses import MISSING, dataclass
 import inspect
-from typing import Any, Callable, Coroutine, TypeVar, get_type_hints
+from typing import Any, TypeVar, get_type_hints
 
 from matter_server.common.helpers.util import parse_value
 
