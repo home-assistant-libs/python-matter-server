@@ -187,7 +187,7 @@ class WebsocketClientHandler:
             try:
                 args = parse_arguments(handler.signature, handler.type_hints, msg.args)
             except (TypeError, KeyError, ValueError) as err:
-                raise InvalidArguments() from err
+                raise InvalidArguments from err
             result = handler.target(**args)
             if asyncio.iscoroutine(result):
                 result = await result

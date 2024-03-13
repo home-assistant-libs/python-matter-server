@@ -113,7 +113,7 @@ class MatterClientConnection:
             raise ConnectionClosed("Connection was closed.")
 
         if ws_msg.type == WSMsgType.ERROR:
-            raise ConnectionFailed()
+            raise ConnectionFailed
 
         if ws_msg.type != WSMsgType.TEXT:
             raise InvalidMessage(
