@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, cast
 
 from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_dumps, json_loads
@@ -27,12 +27,17 @@ class StorageController:
         self._save_lock: asyncio.Lock = asyncio.Lock()
 
     @property
-    def filename(self) -> str:
+    def filename(self) -> Path:
         """Return full path to (fabric-specific) storage file."""
-        return os.path.join(
+        return Path(
             self.server.storage_path,
             f"{self.server.device_controller.compressed_fabric_id}.json",
         )
+
+    @property
+    def filename_backup(self) -> Path:
+        """Return full path to (fabric-specific) storage backup file."""
+        return self.filename.with_suffix(".json.backup")
 
     async def start(self) -> None:
         """Async initialize of controller."""
@@ -100,11 +105,10 @@ class StorageController:
         assert not self._data, "Already loaded"
 
         def _load() -> dict:
-            for filename in self.filename, f"{self.filename}.backup":
+            for filename in self.filename, self.filename_backup:
                 LOGGER.debug("Loading persistent settings from %s", filename)
                 try:
-                    _filename = os.path.join(self.server.storage_path, filename)
-                    with open(_filename, "r", encoding="utf-8") as _file:
+                    with open(filename, "r", encoding="utf-8") as _file:
                         return cast(dict, json_loads(_file.read()))
                 except FileNotFoundError:
                     pass
@@ -147,12 +151,9 @@ class StorageController:
         assert self.server.loop is not None
 
         def do_save() -> None:
-            filename_backup = f"{self.filename}.backup"
             # make backup before we write a new file
-            if os.path.isfile(self.filename):
-                if os.path.isfile(filename_backup):
-                    os.remove(filename_backup)
-                os.rename(self.filename, filename_backup)
+            if self.filename.is_file():
+                self.filename.replace(self.filename_backup)
 
             with open(self.filename, "w", encoding="utf-8") as _file:
                 _file.write(json_dumps(self._data))
