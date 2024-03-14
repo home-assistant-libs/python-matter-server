@@ -168,7 +168,6 @@ ignore = [
   "COM812", # Conflict with the Ruff formatter
   "ISC001", # Conflict with the Ruff formatter
   "TCH003", # TEMPORARY DISABLED
-  "UP035", # TEMPORARY DISABLED
   "TCH002", # TEMPORARY DISABLED
   "TID252", # TEMPORARY DISABLED
   "N805", # TEMPORARY DISABLED

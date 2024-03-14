@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_dumps, json_loads
 
@@ -22,7 +22,7 @@ class StorageController:
     def __init__(self, server: "MatterServer") -> None:
         """Initialize storage controller."""
         self.server = server
-        self._data: Dict[str, Any] = {}
+        self._data: dict[str, Any] = {}
         self._timer_handle: asyncio.TimerHandle | None = None
         self._save_lock: asyncio.Lock = asyncio.Lock()
 
