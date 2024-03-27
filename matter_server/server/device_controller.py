@@ -141,6 +141,7 @@ class MatterDeviceController:
         orphaned_nodes: set[str] = set()
         for node_id_str, node_dict in nodes.items():
             node_id = int(node_id_str)
+            is_test_node = node_id >= 900000
             if node_dict is None:
                 # Non-initialized (left-over) node from a failed commissioning attempt.
                 # NOTE: This code can be removed in a future version
@@ -165,7 +166,8 @@ class MatterDeviceController:
                     interview_version=0,
                 )
             # always mark node as unavailable at startup until subscriptions are ready
-            node.available = False
+            # with the exception of manually loaded testnodes
+            node.available = is_test_node
             self._nodes[node_id] = node
         # cleanup orhpaned nodes from storage
         for node_id_str in orphaned_nodes:
