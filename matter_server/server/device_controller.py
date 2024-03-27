@@ -847,7 +847,55 @@ class MatterDeviceController:
 
         loop = cast(asyncio.AbstractEventLoop, self.server.loop)
 
-        # set-up the actual subscription
+        def attribute_updated(
+            path: Attribute.TypedAttributePath,
+            old_value: Any,
+            new_value: Any,
+        ) -> None:
+            node_logger.debug(
+                "Attribute updated: %s - old value: %s - new value: %s",
+                path,
+                old_value,
+                new_value,
+            )
+
+            # work out added/removed endpoints on bridges
+            if (
+                node.is_bridge
+                and path.Path.EndpointId == 0
+                and path.AttributeType == Clusters.Descriptor.Attributes.PartsList
+            ):
+                endpoints_removed = set(old_value or []) - set(new_value)
+                endpoints_added = set(new_value) - set(old_value or [])
+                if endpoints_removed:
+                    self._handle_endpoints_removed(node_id, endpoints_removed)
+                if endpoints_added:
+                    loop.create_task(
+                        self._handle_endpoints_added(node_id, endpoints_added)
+                    )
+                return
+
+            # work out if software version changed
+            if (
+                path.AttributeType == Clusters.BasicInformation.softwareVersion
+                and new_value != old_value
+            ):
+                # schedule a full interview of the node if the software version changed
+                loop.create_task(self.interview_node(node_id))
+
+            # store updated value in node attributes
+            attr_path = str(path.Path)
+            node.attributes[attr_path] = new_value
+
+            # schedule save to persistent storage
+            self._write_node_state(node_id)
+
+            # This callback is running in the CHIP stack thread
+            self.server.signal_event(
+                EventType.ATTRIBUTE_UPDATED,
+                # send data as tuple[node_id, attribute_path, new_value]
+                (node_id, attr_path, new_value),
+            )
 
         def attribute_updated_callback(
             path: Attribute.TypedAttributePath,
@@ -867,52 +915,7 @@ class MatterDeviceController:
             if old_value == new_value:
                 return
 
-            node_logger.debug(
-                "Attribute updated: %s - old value: %s - new value: %s",
-                path,
-                old_value,
-                new_value,
-            )
-
-            # work out added/removed endpoints on bridges
-            if (
-                node.is_bridge
-                and path.Path.EndpointId == 0
-                and path.AttributeType == Clusters.Descriptor.Attributes.PartsList
-            ):
-                endpoints_removed = set(old_value or []) - set(new_value)
-                endpoints_added = set(new_value) - set(old_value or [])
-                if endpoints_removed:
-                    loop.call_soon_threadsafe(
-                        self._handle_endpoints_removed, node_id, endpoints_removed
-                    )
-                if endpoints_added:
-                    loop.create_task(
-                        self._handle_endpoints_added(node_id, endpoints_added)
-                    )
-                return
-
-            # work out if software version changed
-            if (
-                path.AttributeType == Clusters.BasicInformation.softwareVersion
-                and new_value != old_value
-            ):
-                # schedule a full interview of the node if the software version changed
-                loop.create_task(self.interview_node(node_id))
-
-            # store updated value in node attributes
-            node.attributes[attr_path] = new_value
-
-            # schedule save to persistent storage
-            loop.call_soon_threadsafe(self._write_node_state, node_id)
-
-            # This callback is running in the CHIP stack thread
-            loop.call_soon_threadsafe(
-                self.server.signal_event,
-                EventType.ATTRIBUTE_UPDATED,
-                # send data as tuple[node_id, attribute_path, new_value]
-                (node_id, attr_path, new_value),
-            )
+            loop.call_soon_threadsafe(attribute_updated, path, old_value, new_value)
 
         def event_callback(
             data: Attribute.EventReadResult,
@@ -1006,6 +1009,7 @@ class MatterDeviceController:
             interval_ceiling = NODE_SUBSCRIPTION_CEILING_THREAD
         self._last_subscription_attempt[node_id] = 0
         async with self._get_node_lock(node_id):
+            # set-up the actual subscription
             sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
                 node_id,
                 attributes="*",
