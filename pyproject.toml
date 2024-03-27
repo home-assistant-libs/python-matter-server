@@ -40,15 +40,15 @@ server = [
 test = [
   "codespell==2.2.6",
   "isort==5.13.2",
-  "mypy==1.8.0",
-  "pre-commit==3.6.2",
+  "mypy==1.9.0",
+  "pre-commit==3.7.0",
   "pre-commit-hooks==4.5.0",
   "pylint==3.1.0",
-  "pytest==8.1.0",
-  "pytest-asyncio==0.23.5",
+  "pytest==8.1.1",
+  "pytest-asyncio==0.23.6",
   "pytest-aiohttp==1.0.5",
-  "pytest-cov==4.1.0",
-  "ruff==0.3.0",
+  "pytest-cov==5.0.0",
+  "ruff==0.3.4",
   "safety==3.0.1",
   "tomli==2.0.1",
 ]
@@ -168,7 +168,6 @@ ignore = [
   "COM812", # Conflict with the Ruff formatter
   "ISC001", # Conflict with the Ruff formatter
   "TCH003", # TEMPORARY DISABLED
-  "UP035", # TEMPORARY DISABLED
   "TCH002", # TEMPORARY DISABLED
   "TID252", # TEMPORARY DISABLED
   "N805", # TEMPORARY DISABLED
@@ -216,7 +215,6 @@ ignore = [
   "RUF012", # TEMPORARY DISABLED
   "TCH001", # TEMPORARY DISABLED
   "ANN102", # TEMPORARY DISABLED
-  "RSE102", # TEMPORARY DISABLED
   "B007", # TEMPORARY DISABLED
   "SIM102", # TEMPORARY DISABLED
   "C901", # TEMPORARY DISABLED
@@ -238,9 +236,6 @@ ignore = [
   "ARG002", # TEMPORARY DISABLED
   "S104", # TEMPORARY DISABLED
   "UP015", # TEMPORARY DISABLED
-  "PTH113", # TEMPORARY DISABLED
-  "PTH107", # TEMPORARY DISABLED
-  "PTH104", # TEMPORARY DISABLED
 ]
 
 select = ["ALL"]

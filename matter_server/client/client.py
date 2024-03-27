@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 import logging
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Callable, Dict, Final, Optional, cast
+from typing import TYPE_CHECKING, Any, Final, Optional, cast
 import uuid
 
 from aiohttp import ClientSession
@@ -62,8 +63,8 @@ class MatterClient:
         """Initialize the Client class."""
         self.connection = MatterClientConnection(ws_server_url, aiohttp_session)
         self.logger = logging.getLogger(__package__)
-        self._nodes: Dict[int, MatterNode] = {}
-        self._result_futures: Dict[str, asyncio.Future] = {}
+        self._nodes: dict[int, MatterNode] = {}
+        self._result_futures: dict[str, asyncio.Future] = {}
         self._subscribers: dict[str, list[Callable[[EventType, Any], None]]] = {}
         self._stop_called: bool = False
         self._loop: asyncio.AbstractEventLoop | None = None

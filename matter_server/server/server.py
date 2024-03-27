@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from functools import partial
 import ipaddress
 import logging
 import os
 from pathlib import Path
 import traceback
-from typing import TYPE_CHECKING, Any, Callable, Set, cast
+from typing import TYPE_CHECKING, Any, cast
 import weakref
 
 from aiohttp import web
@@ -125,7 +126,7 @@ class MatterServer:
         self.vendor_info = VendorInfo(self)
         # we dynamically register command handlers
         self.command_handlers: dict[str, APICommandHandler] = {}
-        self._subscribers: Set[EventCallBackType] = set()
+        self._subscribers: set[EventCallBackType] = set()
         self._register_api_commands()
 
     async def start(self) -> None:

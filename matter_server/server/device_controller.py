@@ -6,13 +6,14 @@ from __future__ import annotations
 
 import asyncio
 from collections import deque
+from collections.abc import Callable, Iterable
 from datetime import datetime
 from functools import partial
 import logging
 from pathlib import Path
 from random import randint
 import time
-from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from chip.ChipDeviceCtrl import DeviceProxyWrapper
 from chip.clusters import Attribute, Objects as Clusters

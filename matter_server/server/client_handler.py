@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from concurrent import futures
 from contextlib import suppress
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from aiohttp import WSMsgType, web
 import async_timeout
@@ -187,7 +188,7 @@ class WebsocketClientHandler:
             try:
                 args = parse_arguments(handler.signature, handler.type_hints, msg.args)
             except (TypeError, KeyError, ValueError) as err:
-                raise InvalidArguments() from err
+                raise InvalidArguments from err
             result = handler.target(**args)
             if asyncio.iscoroutine(result):
                 result = await result
