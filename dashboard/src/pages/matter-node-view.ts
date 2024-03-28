@@ -3,7 +3,7 @@ import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { MatterClient } from "../client/client";
 import "../components/ha-svg-icon";
-import { mdiArrowLeft, mdiChatProcessing } from "@mdi/js";
+import { mdiArrowLeft, mdiChatProcessing, mdiTrashCan } from "@mdi/js";
 import { MatterNode } from "../client/models/node";
 import {
   showAlertDialog,
@@ -29,8 +29,8 @@ class MatterNodeView extends LitElement {
         <p>Node not found!</p>
         <button
           @click=${() => {
-            history.back();
-          }}
+          history.back();
+        }}
         >
           Back
         </button>
@@ -50,6 +50,9 @@ class MatterNodeView extends LitElement {
         <div class="actions">
           <md-icon-button @click=${this._reinterview} title="Reinterview node">
             <ha-svg-icon .path=${mdiChatProcessing}></ha-svg-icon>
+          </md-icon-button>
+          <md-icon-button @click=${this._remove} title="Remove node">
+            <ha-svg-icon .path=${mdiTrashCan}></ha-svg-icon>
           </md-icon-button>
         </div>
       </div>
@@ -75,9 +78,31 @@ class MatterNodeView extends LitElement {
         title: "Reinterview node",
         text: "Success!",
       });
+      location.reload();
     } catch (err: any) {
       showAlertDialog(this, {
         title: "Failed to reinterview node",
+        text: err.message,
+      });
+    }
+  }
+
+  private async _remove() {
+    if (
+      !(await showPromptDialog(this, {
+        title: "Remove",
+        text: "Are you sure you want to remove this node?",
+        confirmText: "Remove",
+      }))
+    ) {
+      return;
+    }
+    try {
+      await this.client.removeNode(this.node!.node_id);
+      location.replace("#");
+    } catch (err: any) {
+      showAlertDialog(this, {
+        title: "Failed to remove node",
         text: err.message,
       });
     }
