@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 from base64 import b64decode
 import binascii
@@ -77,9 +78,31 @@ def parse_attribute_path(
 
 
 def dataclass_to_dict(obj_in: DataclassInstance) -> dict:
-    """Convert dataclass instance to dict."""
+    """
+    Convert dataclass instance to dict.
+
+    For small objects only this is async friendly.
+    For larger objects this must be run in the executor (see async_dataclass_to_dict).
+    """
 
     return asdict(
+        obj_in,
+        dict_factory=lambda x: {
+            # ensure the dict key is a string
+            str(k): v
+            for (k, v) in x
+        },
+    )
+
+
+async def async_dataclass_to_dict(obj_in: DataclassInstance) -> dict:
+    """
+    Convert dataclass instance to dict.
+
+    Async friendly version for large objects.
+    """
+    return await asyncio.to_thread(
+        asdict,
         obj_in,
         dict_factory=lambda x: {
             # ensure the dict key is a string
