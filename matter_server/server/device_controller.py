@@ -873,6 +873,7 @@ class MatterDeviceController:
             dump_data = cast(dict, json_loads(dump))
         except JSON_DECODE_EXCEPTIONS as err:
             raise InvalidArguments("Invalid json") from err
+        # the dump format we accept here is a Home Assistant diagnostics file
         # dump can either be a single dump or a full dump with multiple nodes
         dump_nodes: list[dict[str, Any]]
         if "node" in dump_data["data"]:
