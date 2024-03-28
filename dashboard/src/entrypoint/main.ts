@@ -5,11 +5,7 @@ async function main() {
 
   let url = "";
   // Detect if we're running in the (production) webserver included in the matter server or not.
-  if (location.href.includes(":5580")) {
-    // production server running inside the matter server
-    // Turn httpX url into wsX url and append "/ws"
-    url = "ws" + new URL("./ws", location.href).toString().substring(4);
-  } else {
+  if (location.href.includes(":5010")) {
     // development server, ask for url to matter server
     let storageUrl = localStorage.getItem("matterURL");
     if (!storageUrl) {
@@ -24,6 +20,14 @@ async function main() {
       localStorage.setItem("matterURL", storageUrl);
     }
     url = storageUrl;
+  }
+  else {
+    // assume production server running inside the matter server
+    // Turn httpX url into wsX url and append "/ws"
+    let baseUrl = window.location.origin + window.location.pathname;
+    if (baseUrl.endsWith('/')) { baseUrl = baseUrl.slice(0, -1); }
+    url = baseUrl.replace('http', 'ws') + '/ws';
+    console.log(`Connecting to Matter Server API using url: ${url}`);
   }
 
   const client = new MatterClient(url);
