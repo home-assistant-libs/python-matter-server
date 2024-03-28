@@ -37,9 +37,9 @@ from ..common.errors import (
 )
 from ..common.helpers.api import api_command
 from ..common.helpers.util import (
+    async_dataclass_to_dict,
     create_attribute_path_from_attribute,
     dataclass_from_dict,
-    dataclass_to_dict,
     parse_attribute_path,
     parse_value,
 )
@@ -536,7 +536,7 @@ class MatterDeviceController:
 
         # save updated node data
         self._nodes[node_id] = node
-        self._write_node_state(node_id, True)
+        asyncio.create_task(self._write_node_state(node_id, True))
         if is_new_node:
             # new node - first interview
             self.server.signal_event(EventType.NODE_ADDED, node)
@@ -616,7 +616,7 @@ class MatterDeviceController:
         read_atributes = parse_attributes_from_read_result(result.tlvAttributes)
         # update cached info in node attributes
         self._nodes[node_id].attributes.update(read_atributes)
-        self._write_node_state(node_id)
+        asyncio.create_task(self._write_node_state(node_id))
         return read_atributes
 
     @api_command(APICommand.WRITE_ATTRIBUTE)
@@ -888,7 +888,7 @@ class MatterDeviceController:
             node.attributes[attr_path] = new_value
 
             # schedule save to persistent storage
-            self._write_node_state(node_id)
+            asyncio.create_task(self._write_node_state(node_id))
 
             # This callback is running in the CHIP stack thread
             self.server.signal_event(
@@ -1224,7 +1224,7 @@ class MatterDeviceController:
                 {"node_id": node_id, "endpoint_id": endpoint_id},
             )
         # schedule save to persistent storage
-        self._write_node_state(node_id)
+        asyncio.create_task(self._write_node_state(node_id))
 
     async def _handle_endpoints_added(
         self, node_id: int, endpoints: Iterable[int]
@@ -1342,14 +1342,15 @@ class MatterDeviceController:
         elif state_change == ServiceStateChange.Removed:
             logger.debug("Commissionable Matter node disappeared: %s", info)
 
-    def _write_node_state(self, node_id: int, force: bool = False) -> None:
+    async def _write_node_state(self, node_id: int, force: bool = False) -> None:
         """Schedule the write of the current node state to persistent storage."""
         if node_id not in self._nodes:
             return  # guard
+
         node = self._nodes[node_id]
         self.server.storage.set(
             DATA_KEY_NODES,
-            value=dataclass_to_dict(node),
+            value=await async_dataclass_to_dict(node),
             subkey=str(node_id),
             force=force,
         )
