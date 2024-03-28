@@ -77,6 +77,10 @@ export interface APICommands {
     requestArgs: {};
     response: {};
   };
+  import_test_node: {
+    requestArgs: { dump: string; };
+    response: null;
+  };
 }
 
 export interface CommandMessage {
@@ -97,29 +101,15 @@ export interface ServerInfoMessage {
 
 interface ServerEventNodeAdded {
   event: "node_added";
-  data: {
-    node_id: number;
-    date_commissioned: string; // Dates will be strings in JSON
-    last_interview: string;
-    interview_version: number;
-    available: boolean;
-    is_bridge: boolean;
-    attributes: { [key: string]: any };
-    attribute_subscriptions: Array<
-      [number | null, number | null, number | null]
-    >;
-  };
+  data: MatterNode;
 }
 interface ServerEventNodeUpdated {
   event: "node_updated";
-  data: {
-    node_id: number;
-    // TODO other things?
-  };
+  data: MatterNode;
 }
 interface ServerEventNodeRemoved {
   event: "node_removed";
-  data: {};
+  data: number;
 }
 interface ServerEventNodeEvent {
   event: "node_event";
@@ -142,18 +132,8 @@ interface ServerEventEndpointRemoved {
   data: {};
 }
 
-export interface EventMessage {
-  receive_time: Date;
-  event:
-    | ServerEventNodeAdded
-    | ServerEventNodeUpdated
-    | ServerEventNodeRemoved
-    | ServerEventNodeEvent
-    | ServerEventAttributeUpdated
-    | ServerEventServerShutdown
-    | ServerEventEndpointAdded
-    | ServerEventEndpointRemoved;
-}
+export type EventMessage = ServerEventNodeAdded | ServerEventNodeUpdated | ServerEventNodeRemoved | ServerEventNodeEvent | ServerEventAttributeUpdated | ServerEventServerShutdown | ServerEventEndpointAdded | ServerEventEndpointRemoved
+
 
 export interface ResultMessageBase {
   message_id: string;

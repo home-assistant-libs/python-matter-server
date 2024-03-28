@@ -306,8 +306,8 @@ class MatterClient:
         mac_address = None
         attribute = Clusters.GeneralDiagnostics.Attributes.NetworkInterfaces
         network_interface: Clusters.GeneralDiagnostics.Structs.NetworkInterface
-        for network_interface in node.get_attribute_value(
-            0, cluster=None, attribute=attribute
+        for network_interface in (
+            node.get_attribute_value(0, cluster=None, attribute=attribute) or []
         ):
             # ignore invalid/non-operational interfaces
             if not network_interface.isOperational:
@@ -332,6 +332,11 @@ class MatterClient:
                 continue
             mac_address = convert_mac_address(network_interface.hardwareAddress)
             break
+        else:
+            self.logger.warning(
+                "Could not determine network_interface info for Node %s, "
+                "is it missing the GeneralDiagnostics/NetworkInterfaces Attribute?"
+            )
         # get thread/wifi specific info
         node_type = NodeType.UNKNOWN
         network_name = None

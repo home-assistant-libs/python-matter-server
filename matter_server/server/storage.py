@@ -87,9 +87,9 @@ class StorageController:
         if subkey:
             # we provide support for (1-level) nested dict
             self._data.setdefault(key, {})
-            self._data[key].pop(subkey)
+            self._data[key].pop(subkey, None)
         else:
-            self._data.pop(key)
+            self._data.pop(key, None)
         self.save(True)
 
     def __getitem__(self, key: str) -> Any:
