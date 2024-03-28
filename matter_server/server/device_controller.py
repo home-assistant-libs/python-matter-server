@@ -1189,8 +1189,7 @@ class MatterDeviceController:
             )
             time_start = time.time()
             async with self._get_node_lock(node_id):
-                return await self._call_sdk(
-                    self.chip_controller.GetConnectedDeviceSync,
+                return await self.chip_controller.GetConnectedDevice(
                     nodeid=node_id,
                     allowPASE=False,
                     timeoutMs=None,
