@@ -90,6 +90,10 @@ export class MatterClient {
     await this.sendCommand("interview_node", 0, { node_id: nodeId });
   }
 
+  async importTestNode(dump: string) {
+    await this.sendCommand("import_test_node", 0, { dump });
+  }
+
   async sendCommand<T extends keyof APICommands>(
     command: T,
     require_schema: number | undefined = undefined,
@@ -98,7 +102,7 @@ export class MatterClient {
     if (require_schema && this.serverInfo.schema_version < require_schema) {
       throw new InvalidServerVersion(
         "Command not available due to incompatible server version. Update the Matter " +
-          `Server to a version that supports at least api schema ${require_schema}.`
+        `Server to a version that supports at least api schema ${require_schema}.`
       );
     }
 
@@ -175,9 +179,16 @@ export class MatterClient {
   private _handleEventMessage(event: EventMessage) {
     console.log("Incoming event", event);
 
-    if (event.event.event === "node_added") {
-      const node = new MatterNode(event.event.data);
+    if (event.event === "node_added") {
+      const node = new MatterNode(event.data);
       this.nodes = { ...this.nodes, [node.node_id]: node };
+      this.fireEvent("nodes_changed");
+      return;
+    }
+    if (event.event === "node_removed") {
+      delete this.nodes[event.data];
+      this.nodes = { ...this.nodes };
+      console.log("node removed!")
       this.fireEvent("nodes_changed");
       return;
     }

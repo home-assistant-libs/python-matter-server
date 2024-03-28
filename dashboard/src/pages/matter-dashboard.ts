@@ -6,8 +6,9 @@ import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { MatterClient } from "../client/client";
 import "../components/ha-svg-icon";
-import { mdiChevronRight, mdiLogout } from "@mdi/js";
+import { mdiChevronRight, mdiLogout, mdiFile } from "@mdi/js";
 import memoizeOne from "memoize-one";
+import { showAlertDialog, showPromptDialog } from "../components/dialog-box/show-dialog-box";
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -34,6 +35,17 @@ class MatterDashboard extends LitElement {
       <div class="header">
         <div>Python Matter Server</div>
         <div class="actions">
+
+          <input
+            type="file"
+            id="fileElem"
+            accept=".json"
+            style="display:none" />
+          <md-icon-button @click=${this._uploadDiagnosticsDumpFile} title="Upload diagnostics dump">
+            <ha-svg-icon .path=${mdiFile}></ha-svg-icon>
+          </md-icon-button>
+
+
         ${isProductionServer
         ? ""
         : html`
@@ -81,6 +93,41 @@ class MatterDashboard extends LitElement {
   private _disconnect() {
     localStorage.removeItem("matterURL");
     location.reload();
+  }
+
+  private async _uploadDiagnosticsDumpFile() {
+    if (
+      !(await showPromptDialog(this, {
+        title: "Add test node",
+        text: "Do you want to add a test node from a diagnostics dump ?",
+        confirmText: "Select file",
+      }))
+    ) {
+      return;
+    }
+    const fileElem = this.shadowRoot!.getElementById('fileElem') as HTMLInputElement;
+    const handleInput = (event: Event) => {
+      fileElem!.removeEventListener('change', handleInput);
+      if (fileElem.files!.length > 0) {
+        const selectedFile = fileElem.files![0];
+        console.log(selectedFile);
+        var reader = new FileReader();
+        reader.readAsText(selectedFile, "UTF-8");
+        reader.onload = async () => {
+          try {
+            await this.client.importTestNode(reader.result?.toString() || '');
+          } catch (err: any) {
+            showAlertDialog(this, {
+              title: "Failed to import test node",
+              text: err.message,
+            });
+          }
+        }
+      }
+      event.preventDefault();
+    }
+    fileElem!.addEventListener('change', handleInput);
+    fileElem!.click();
   }
 
   static styles = css`
