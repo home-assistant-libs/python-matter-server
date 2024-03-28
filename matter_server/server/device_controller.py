@@ -39,7 +39,6 @@ from ..common.helpers.api import api_command
 from ..common.helpers.util import (
     create_attribute_path_from_attribute,
     dataclass_from_dict,
-    dataclass_to_dict,
     parse_attribute_path,
     parse_value,
 )
@@ -1348,7 +1347,7 @@ class MatterDeviceController:
         node = self._nodes[node_id]
         self.server.storage.set(
             DATA_KEY_NODES,
-            value=dataclass_to_dict(node),
+            value=node,
             subkey=str(node_id),
             force=force,
         )
