@@ -24,7 +24,10 @@ async function main() {
   else {
     // assume production server running inside the matter server
     // Turn httpX url into wsX url and append "/ws"
-    url = "ws" + new URL("./ws", location.href).toString().substring(4);
+    let baseUrl = window.location.origin + window.location.pathname;
+    if (baseUrl.endsWith('/')) { baseUrl = baseUrl.slice(0, -1); }
+    url = baseUrl.replace('http', 'ws') + '/ws';
+    console.log(`Connecting to Matter Server API using url: ${url}`);
   }
 
   const client = new MatterClient(url);
