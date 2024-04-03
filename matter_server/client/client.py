@@ -335,7 +335,8 @@ class MatterClient:
         else:
             self.logger.warning(
                 "Could not determine network_interface info for Node %s, "
-                "is it missing the GeneralDiagnostics/NetworkInterfaces Attribute?"
+                "is it missing the GeneralDiagnostics/NetworkInterfaces Attribute?",
+                node_id,
             )
         # get thread/wifi specific info
         node_type = NodeType.UNKNOWN
