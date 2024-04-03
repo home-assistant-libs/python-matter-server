@@ -24,6 +24,7 @@ from chip.native import PyChipError
 from zeroconf import BadTypeInNameException, IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
+from matter_server.common.const import VERBOSE_LOG_LEVEL
 from matter_server.common.models import CommissionableNodeData, CommissioningParameters
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
@@ -695,8 +696,8 @@ class MatterDeviceController:
             LOGGER.warning(
                 "Removing current fabric from device failed: %s",
                 str(err) or err.__class__.__name__,
-                # only log stacktrace if we have debug logging enabled
-                exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
+                # only log stacktrace if we have verbose logging enabled
+                exc_info=err if LOGGER.isEnabledFor(VERBOSE_LOG_LEVEL) else None,
             )
             return
         if (
@@ -851,7 +852,8 @@ class MatterDeviceController:
             old_value: Any,
             new_value: Any,
         ) -> None:
-            node_logger.debug(
+            node_logger.log(
+                VERBOSE_LOG_LEVEL,
                 "Attribute updated: %s - old value: %s - new value: %s",
                 path,
                 old_value,
@@ -922,8 +924,11 @@ class MatterDeviceController:
         ) -> None:
             # pylint: disable=unused-argument
             assert loop is not None
-            node_logger.debug(
-                "Received node event: %s - transaction: %s", data, transaction
+            node_logger.log(
+                VERBOSE_LOG_LEVEL,
+                "Received node event: %s - transaction: %s",
+                data,
+                transaction,
             )
             self._node_last_seen[node_id] = time.time()
             node_event = MatterNodeEvent(
@@ -1125,8 +1130,10 @@ class MatterDeviceController:
                     node_logger.warning(
                         "Setup for node failed: %s",
                         str(err) or err.__class__.__name__,
-                        # log full stack trace if debug logging is enabled
-                        exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
+                        # log full stack trace if verbose logging is enabled
+                        exc_info=err
+                        if LOGGER.isEnabledFor(VERBOSE_LOG_LEVEL)
+                        else None,
                     )
                     # NOTE: the node will be picked up by mdns discovery automatically
                     # when it comes available again.
@@ -1146,9 +1153,9 @@ class MatterDeviceController:
                         node_logger.warning(
                             "Setup for node failed: %s",
                             str(err) or err.__class__.__name__,
-                            # log full stack trace if debug logging is enabled
+                            # log full stack trace if verbose logging is enabled
                             exc_info=err
-                            if LOGGER.isEnabledFor(logging.DEBUG)
+                            if LOGGER.isEnabledFor(VERBOSE_LOG_LEVEL)
                             else None,
                         )
                         # NOTE: the node will be picked up by mdns discovery automatically
@@ -1162,8 +1169,10 @@ class MatterDeviceController:
                     node_logger.warning(
                         "Unable to subscribe to Node: %s",
                         str(err) or err.__class__.__name__,
-                        # log full stack trace if debug logging is enabled
-                        exc_info=err if LOGGER.isEnabledFor(logging.DEBUG) else None,
+                        # log full stack trace if verbose logging is enabled
+                        exc_info=err
+                        if LOGGER.isEnabledFor(VERBOSE_LOG_LEVEL)
+                        else None,
                     )
                     # NOTE: the node will be picked up by mdns discovery automatically
                     # when it becomes available again.
