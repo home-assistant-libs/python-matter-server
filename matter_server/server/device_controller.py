@@ -29,6 +29,7 @@ from matter_server.server.helpers.attributes import parse_attributes_from_read_r
 from matter_server.server.helpers.utils import ping_ip
 
 from ..common.errors import (
+    InvalidArguments,
     NodeCommissionFailed,
     NodeInterviewFailed,
     NodeNotExists,
@@ -36,6 +37,7 @@ from ..common.errors import (
     NodeNotResolving,
 )
 from ..common.helpers.api import api_command
+from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_loads
 from ..common.helpers.util import (
     create_attribute_path_from_attribute,
     dataclass_from_dict,
@@ -77,6 +79,7 @@ FALLBACK_NODE_SCANNER_INTERVAL = 1800
 MDNS_TYPE_OPERATIONAL_NODE = "_matter._tcp.local."
 MDNS_TYPE_COMMISSIONABLE_NODE = "_matterc._udp.local."
 
+TEST_NODE_START = 900000
 
 ROUTING_ROLE_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
     0, Clusters.ThreadNetworkDiagnostics.Attributes.RoutingRole
@@ -501,6 +504,14 @@ class MatterDeviceController:
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
 
+        if node_id >= TEST_NODE_START:
+            LOGGER.debug(
+                "interview_node called for test node %s",
+                node_id,
+            )
+            self.server.signal_event(EventType.NODE_UPDATED, self._nodes[node_id])
+            return
+
         try:
             LOGGER.info("Interviewing node: %s", node_id)
             async with self._get_node_lock(node_id):
@@ -566,6 +577,18 @@ class MatterDeviceController:
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
         command_cls = getattr(cluster_cls.Commands, command_name)
         command = dataclass_from_dict(command_cls, payload, allow_sdk_types=True)
+        if node_id >= TEST_NODE_START:
+            LOGGER.debug(
+                "send_device_command called for test node %s on endpoint_id: %s - "
+                "cluster_id: %s - command_name: %s - payload: %s\n%s",
+                node_id,
+                endpoint_id,
+                cluster_id,
+                command_name,
+                payload,
+                command,
+            )
+            return None
         async with self._get_node_lock(node_id):
             return await self.chip_controller.SendCommand(
                 nodeid=node_id,
@@ -593,6 +616,17 @@ class MatterDeviceController:
         if TYPE_CHECKING:
             assert self.server.loop
             assert self.chip_controller
+
+        if node_id >= TEST_NODE_START:
+            LOGGER.debug(
+                "read_attribute called for test node %s on path: %s - fabric_filtered: %s",
+                node_id,
+                attribute_path,
+                fabric_filtered,
+            )
+            if attribute_path in self._nodes[node_id].attributes:
+                return {attribute_path: self._nodes[node_id].attributes[attribute_path]}
+            return {}
 
         future = self.server.loop.create_future()
         device = await self._resolve_node(node_id)
@@ -641,6 +675,15 @@ class MatterDeviceController:
             value_type=attribute.attribute_type.Type,
             allow_sdk_types=True,
         )
+        if node_id >= TEST_NODE_START:
+            LOGGER.debug(
+                "write_attribute called for test node %s on path %s - value %s\n%s",
+                node_id,
+                attribute_path,
+                value,
+                attribute,
+            )
+            return None
         async with self._get_node_lock(node_id):
             return await self.chip_controller.WriteAttribute(
                 nodeid=node_id,
@@ -669,11 +712,13 @@ class MatterDeviceController:
             DATA_KEY_NODES,
             subkey=str(node_id),
         )
+
         LOGGER.info("Node ID %s successfully removed from Matter server.", node_id)
 
         self.server.signal_event(EventType.NODE_REMOVED, node_id)
 
-        assert node is not None
+        if node is None or node_id >= TEST_NODE_START:
+            return
 
         attribute_path = create_attribute_path_from_attribute(
             0,
@@ -731,6 +776,8 @@ class MatterDeviceController:
     async def ping_node(self, node_id: int, attempts: int = 1) -> NodePingResult:
         """Ping node on the currently known IP-adress(es)."""
         result: NodePingResult = {}
+        if node_id >= TEST_NODE_START:
+            return {"0.0.0.0": True, "0000:1111:2222:3333:4444": True}
         node = self._nodes.get(node_id)
         if node is None:
             raise NodeNotExists(
@@ -817,6 +864,29 @@ class MatterDeviceController:
         # cache this info for later use
         self._last_known_ip_addresses[node_id] = ip_adresses
         return ip_adresses if scoped else [x.split("%")[0] for x in ip_adresses]
+
+    @api_command(APICommand.IMPORT_TEST_NODE)
+    async def import_test_node(self, dump: str) -> None:
+        """Import test node(s) from a HA or Matter server diagnostics dump."""
+        try:
+            dump_data = cast(dict, json_loads(dump))
+        except JSON_DECODE_EXCEPTIONS as err:
+            raise InvalidArguments("Invalid json") from err
+        # the dump format we accept here is a Home Assistant diagnostics file
+        # dump can either be a single dump or a full dump with multiple nodes
+        dump_nodes: list[dict[str, Any]]
+        if "node" in dump_data["data"]:
+            dump_nodes = [dump_data["data"]["node"]]
+        else:
+            dump_nodes = dump_data["data"]["server"]["nodes"]
+        # node ids > 900000 are reserved for test nodes
+        next_test_node_id = max(*(x for x in self._nodes), TEST_NODE_START) + 1
+        for node_dict in dump_nodes:
+            node = dataclass_from_dict(MatterNodeData, node_dict, strict=True)
+            node.node_id = next_test_node_id
+            next_test_node_id += 1
+            self._nodes[node.node_id] = node
+            self.server.signal_event(EventType.NODE_ADDED, node)
 
     async def _subscribe_node(self, node_id: int) -> None:
         """
@@ -1344,6 +1414,8 @@ class MatterDeviceController:
         """Schedule the write of the current node state to persistent storage."""
         if node_id not in self._nodes:
             return  # guard
+        if node_id >= TEST_NODE_START:
+            return  # test nodes are stored in memory only
         node = self._nodes[node_id]
         self.server.storage.set(
             DATA_KEY_NODES,
