@@ -506,7 +506,7 @@ class MatterDeviceController:
             raise RuntimeError("Device Controller not initialized.")
 
         if node_id >= TEST_NODE_START:
-            LOGGER.info(
+            LOGGER.debug(
                 "interview_node called for test node %s",
                 node_id,
             )
@@ -579,7 +579,7 @@ class MatterDeviceController:
         command_cls = getattr(cluster_cls.Commands, command_name)
         command = dataclass_from_dict(command_cls, payload, allow_sdk_types=True)
         if node_id >= TEST_NODE_START:
-            LOGGER.info(
+            LOGGER.debug(
                 "send_device_command called for test node %s on endpoint_id: %s - "
                 "cluster_id: %s - command_name: %s - payload: %s\n%s",
                 node_id,
@@ -619,7 +619,7 @@ class MatterDeviceController:
             assert self.chip_controller
 
         if node_id >= TEST_NODE_START:
-            LOGGER.info(
+            LOGGER.debug(
                 "read_attribute called for test node %s on path: %s - fabric_filtered: %s",
                 node_id,
                 attribute_path,
@@ -677,7 +677,7 @@ class MatterDeviceController:
             allow_sdk_types=True,
         )
         if node_id >= TEST_NODE_START:
-            LOGGER.info(
+            LOGGER.debug(
                 "write_attribute called for test node %s on path %s - value %s\n%s",
                 node_id,
                 attribute_path,
