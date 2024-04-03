@@ -13,6 +13,7 @@ from aiohttp import WSMsgType, web
 import async_timeout
 from chip.exceptions import ChipStackError
 
+from matter_server.common.const import VERBOSE_LOG_LEVEL
 from matter_server.common.helpers.json import json_dumps, json_loads
 from matter_server.common.models import EventType
 
@@ -104,7 +105,7 @@ class WebsocketClientHandler:
                     self._logger.warning("Received non-Text message: %s", msg.data)
                     continue
 
-                self._logger.debug("Received: %s", msg.data)
+                self._logger.log(VERBOSE_LOG_LEVEL, "Received: %s", msg.data)
 
                 try:
                     command_msg = dataclass_from_dict(
@@ -114,7 +115,7 @@ class WebsocketClientHandler:
                     disconnect_warn = f"Received invalid JSON: {msg.data}"
                     break
 
-                self._logger.debug("Received %s", command_msg)
+                self._logger.log(VERBOSE_LOG_LEVEL, "Received %s", command_msg)
                 self._handle_command(command_msg)
 
         except asyncio.CancelledError:
@@ -126,7 +127,7 @@ class WebsocketClientHandler:
         finally:
             # Handle connection shutting down.
             if self._unsub_callback:
-                self._logger.debug("Unsubscribed from events")
+                self._logger.log(VERBOSE_LOG_LEVEL, "Unsubscribed from events")
                 self._unsub_callback()
 
             try:
@@ -147,7 +148,7 @@ class WebsocketClientHandler:
 
     def _handle_command(self, msg: CommandMessage) -> None:
         """Handle an incoming command from the client."""
-        self._logger.debug("Handling command %s", msg.command)
+        self._logger.log(VERBOSE_LOG_LEVEL, "Handling command %s", msg.command)
 
         # work out handler for the given path/command
         if msg.command == APICommand.START_LISTENING:
@@ -202,8 +203,8 @@ class WebsocketClientHandler:
                 "Error while handling: %s: %s",
                 message_str,
                 str(err) or err.__class__.__name__,
-                # only print the full stacktrace if debug logging is enabled
-                exc_info=err if self._logger.isEnabledFor(logging.DEBUG) else None,
+                # only print the full stacktrace if verbose logging is enabled
+                exc_info=err if self._logger.isEnabledFor(VERBOSE_LOG_LEVEL) else None,
             )
             self._send_message(ErrorResultMessage(msg.message_id, error_code, str(err)))
         except Exception as err:
