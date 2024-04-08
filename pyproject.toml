@@ -35,7 +35,7 @@ version = "0.0.0"
 server = [
   "home-assistant-chip-core==2024.3.2",
   "cryptography==42.0.5",
-  "zeroconf==0.131.0",
+  "zeroconf==0.132.0",
 ]
 test = [
   "codespell==2.2.6",
