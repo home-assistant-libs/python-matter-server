@@ -6,7 +6,9 @@ import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { MatterClient } from "../client/client";
 import "../components/ha-svg-icon";
-import { mdiChevronRight, mdiLogout, mdiFile } from "@mdi/js";
+import "./components/header";
+import "./components/footer";
+import { mdiChevronRight, mdiFile } from "@mdi/js";
 import memoizeOne from "memoize-one";
 import { showAlertDialog, showPromptDialog } from "../components/dialog-box/show-dialog-box";
 
@@ -29,31 +31,27 @@ class MatterDashboard extends LitElement {
 
   render() {
     const nodes = this.nodeEntries(this.nodes);
-    const isProductionServer = location.href.includes(":5580")
 
     return html`
-      <div class="header">
-        <div>Python Matter Server</div>
-        <div class="actions">
 
-          <input
-            type="file"
-            id="fileElem"
-            accept=".json"
-            style="display:none" />
-          <md-icon-button @click=${this._uploadDiagnosticsDumpFile} title="Upload diagnostics dump">
-            <ha-svg-icon .path=${mdiFile}></ha-svg-icon>
-          </md-icon-button>
+    <dashboard-header
+        title="Python Matter Server"
+        .actions=${[
+        {
+          label: "Upload diagnostics dump",
+          icon: mdiFile,
+          action: this._uploadDiagnosticsDumpFile
+        }
+      ]}
+      ></dashboard-header>
 
+      <!-- hidden file element for the upload diagnostics -->
+      <input
+        type="file"
+        id="fileElem"
+        accept=".json"
+        style="display:none" />
 
-        ${isProductionServer
-        ? ""
-        : html`
-          <md-icon-button @click=${this._disconnect}>
-            <ha-svg-icon .path=${mdiLogout}></ha-svg-icon>
-          </md-icon-button>
-          `}
-        </div>
       </div>
       <div class="container">
         <md-list>
@@ -67,33 +65,27 @@ class MatterDashboard extends LitElement {
           </md-list-item>
           <md-divider></md-divider>
           ${nodes.map(([id, node]) => {
-          return html`
+        return html`
               <md-list-item type="link" href=${`#node/${node.node_id}`}>
                 <span slot="start">${node.node_id}</span>
                 <div slot="headline">
                   ${node.vendorName} ${node.productName}
                   ${node.available
-              ? ""
-              : html`<span class="status">OFFLINE</span>`}
+            ? ""
+            : html`<span class="status">OFFLINE</span>`}
                 </div>
                 <div slot="supporting-text">${node.serialNumber}</div>
                 <ha-svg-icon slot="end" .path=${mdiChevronRight}></ha-svg-icon>
               </md-list-item>
             `;
-        })}
+      })}
         </md-list>
       </div>
-      <div class="footer">
-        Python Matter Server is a project by Nabu Casa.
-        <a href="https://www.nabucasa.com">Fund development</a>
-      </div>
+      <dashboard-footer />
     `;
   }
 
-  private _disconnect() {
-    localStorage.removeItem("matterURL");
-    location.reload();
-  }
+
 
   private async _uploadDiagnosticsDumpFile() {
     if (
@@ -136,25 +128,11 @@ class MatterDashboard extends LitElement {
       background-color: var(--md-sys-color-background);
       box-sizing: border-box;
       flex-direction: column;
-      min-height: 100vh;
-    }
-
-    .header {
-      background-color: var(--md-sys-color-primary);
-      color: var(--md-sys-color-on-primary);
-      --icon-primary-color: var(--md-sys-color-on-primary);
-      font-weight: 400;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-left: 16px;
-      padding-right: 8px;
-      height: 48px;
     }
 
     .container {
       padding: 16px;
-      max-width: 600px;
+      max-width: 95%;
       margin: 0 auto;
       flex: 1;
       width: 100%;
@@ -177,15 +155,5 @@ class MatterDashboard extends LitElement {
       font-size: 0.8em;
     }
 
-    .footer {
-      padding: 16px;
-      text-align: center;
-      font-size: 0.8em;
-      color: var(--md-sys-color-on-surface);
-    }
-
-    .footer a {
-      color: var(--md-sys-color-on-surface);
-    }
   `;
 }

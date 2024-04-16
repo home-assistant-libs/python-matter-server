@@ -188,7 +188,24 @@ export class MatterClient {
     if (event.event === "node_removed") {
       delete this.nodes[event.data];
       this.nodes = { ...this.nodes };
-      console.log("node removed!")
+      this.fireEvent("nodes_changed");
+      return;
+    }
+
+    if (event.event === "node_updated") {
+      const node = new MatterNode(event.data);
+      this.nodes = { ...this.nodes, [node.node_id]: node };
+      this.fireEvent("nodes_changed");
+      return;
+    }
+
+    if (event.event === "attribute_updated") {
+      const nodeId = (event.data as Array<any>)[0] as number;
+      const attributeKey = (event.data as Array<any>)[1] as string;
+      const attributeValue = (event.data as Array<any>)[2] as any;
+      const node = new MatterNode(this.nodes[nodeId]);
+      node.attributes[attributeKey] = attributeValue;
+      this.nodes = { ...this.nodes, [node.node_id]: node };
       this.fireEvent("nodes_changed");
       return;
     }

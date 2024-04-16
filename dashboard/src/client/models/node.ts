@@ -19,6 +19,10 @@ export class MatterNode {
     this.attribute_subscriptions = data.attribute_subscriptions;
   }
 
+  get nodeLabel(): string | undefined {
+    return this.attributes["0/40/5"];
+  }
+
   get vendorName(): string {
     return this.attributes["0/40/1"];
   }
