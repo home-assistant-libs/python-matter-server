@@ -79,7 +79,7 @@ export class ServerDetails extends LitElement {
     ) {
       return;
     }
-    const fileElem = this.shadowRoot!.getElementById('fileElem') as HTMLInputElement;
+    const fileElem = this.renderRoot.getElementById('fileElem') as HTMLInputElement;
     const handleInput = (event: Event) => {
       fileElem!.removeEventListener('change', handleInput);
       if (fileElem.files!.length > 0) {
