@@ -15,8 +15,6 @@ export class MatterClient {
     string,
     { resolve: (value: any) => void; reject: (reason?: any) => void }
   > = {};
-  // private _subscribers: Record<string, Array<(event: any, data: any) => void>> =
-  //   {};
   private msgId = 0;
   private eventListeners: Record<string, Array<() => void>> = {};
 

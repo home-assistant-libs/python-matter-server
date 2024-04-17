@@ -2,7 +2,7 @@ import { LitElement, html, PropertyValueMap } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { MatterClient } from "../client/client";
 import { MatterError } from "../client/exceptions";
-import "./matter-dashboard";
+import "./matter-server-view";
 import type { Route } from "../util/routing";
 import "./matter-cluster-view";
 import "./matter-endpoint-view";
@@ -90,6 +90,7 @@ class MatterDashboardApp extends LitElement {
       `;
     }
     if (this._route.prefix === "node") {
+      // node level
       return html`
         <matter-node-view
           .client=${this.client}
@@ -97,16 +98,12 @@ class MatterDashboardApp extends LitElement {
         ></matter-node-view>
       `;
     }
-    if (this._route.prefix === "server") {
-      return html`
-        <matter-server-view .client=${this.client}></matter-server-view>
-      `;
-    }
-    return html`<matter-dashboard
+    // root level: server overview
+    return html`<matter-server-view
       .client=${this.client}
       .nodes=${this.client.nodes}
       .route=${this._route}
-    ></matter-dashboard>`;
+    ></matter-server-view>`;
   }
 
   private _clearLocalStorage() {

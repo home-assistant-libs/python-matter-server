@@ -9,12 +9,9 @@ import { MatterClient } from "../client/client";
 import "../components/ha-svg-icon";
 import "./components/header";
 import "./components/node-details";
-import { mdiChatProcessing, mdiChevronRight, mdiTrashCan } from "@mdi/js";
+import { mdiChevronRight } from "@mdi/js";
 import { MatterNode } from "../client/models/node";
-import {
-  showAlertDialog,
-  showPromptDialog,
-} from "../components/dialog-box/show-dialog-box";
+
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -53,24 +50,13 @@ class MatterNodeView extends LitElement {
       <dashboard-header
         .title=${'Node ' + this.node.node_id}
         backButton="#"
-        .actions=${[
-        {
-          label: "Reinterview node",
-          icon: mdiChatProcessing,
-          action: this._reinterview
-        },
-        {
-          label: "Remove node",
-          icon: mdiTrashCan,
-          action: this._remove
-        }
-      ]}
       ></dashboard-header>
 
       <!-- node details section -->
       <div class="container">
       <node-details
           .node=${this.node}
+          .client=${this.client}
         ></node-details>
       </div>
 
@@ -82,9 +68,8 @@ class MatterNodeView extends LitElement {
                 <b>Endpoints</b>
             </div>
           </md-list-item>
-
           ${guard([this.node?.attributes.length], () => getUniqueEndpoints(this.node!).map((endPointId) => {
-        return html`
+      return html`
                 <md-list-item type="link" href=${`#node/${this.node!.node_id}/${endPointId}`}>
                   <div slot="headline">
                     Endpoint ${endPointId}
@@ -92,58 +77,12 @@ class MatterNodeView extends LitElement {
                   <ha-svg-icon slot="end" .path=${mdiChevronRight}></ha-svg-icon>
                 </md-list-item>
               `;
-      }))}
+    }))}
         </md-list>
       </div>
 
       <dashboard-footer />
       `;
-  }
-
-  private async _reinterview() {
-    if (
-      !(await showPromptDialog(this, {
-        title: "Reinterview",
-        text: "Are you sure you want to reinterview this node?",
-        confirmText: "Reinterview",
-      }))
-    ) {
-      return;
-    }
-    try {
-      await this.client.interviewNode(this.node!.node_id);
-      showAlertDialog(this, {
-        title: "Reinterview node",
-        text: "Success!",
-      });
-      location.reload();
-    } catch (err: any) {
-      showAlertDialog(this, {
-        title: "Failed to reinterview node",
-        text: err.message,
-      });
-    }
-  }
-
-  private async _remove() {
-    if (
-      !(await showPromptDialog(this, {
-        title: "Remove",
-        text: "Are you sure you want to remove this node?",
-        confirmText: "Remove",
-      }))
-    ) {
-      return;
-    }
-    try {
-      await this.client.removeNode(this.node!.node_id);
-      location.replace("#");
-    } catch (err: any) {
-      showAlertDialog(this, {
-        title: "Failed to remove node",
-        text: err.message,
-      });
-    }
   }
 
   static styles = css`

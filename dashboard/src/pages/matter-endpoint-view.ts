@@ -59,6 +59,7 @@ class MatterEndpointView extends LitElement {
       <div class="container">
       <node-details
           .node=${this.node}
+          .client=${this.client}
         ></node-details>
       </div>
 
@@ -67,7 +68,7 @@ class MatterEndpointView extends LitElement {
         <md-list>
           <md-list-item>
             <div slot="headline">
-                <b>Clusters on endpoint ${this.endpoint}</b>
+                <b>Clusters on Endpoint ${this.endpoint}</b>
             </div>
           </md-list-item>
           ${guard([this.node?.attributes.length], () => getUniqueClusters(this.node!, this.endpoint!).map((cluster) => {

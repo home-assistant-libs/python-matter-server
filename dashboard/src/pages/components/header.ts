@@ -9,7 +9,7 @@ import "../../components/ha-svg-icon";
 import { mdiArrowLeft, mdiLogout } from "@mdi/js";
 
 
-interface Action {
+interface HeaderAction {
   label: string;
   icon: string;
   action: void;
@@ -19,7 +19,7 @@ interface Action {
 export class DashboardHeader extends LitElement {
 
   @property() public backButton?: string;
-  @property() public actions?: Action[];
+  @property() public actions?: HeaderAction[];
 
   protected render() {
     const isProductionServer = location.href.includes(":5580") || location.href.includes("hassio_ingress");

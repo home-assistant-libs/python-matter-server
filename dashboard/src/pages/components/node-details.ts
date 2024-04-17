@@ -5,12 +5,22 @@ import "@material/web/list/list";
 import "@material/web/list/list-item";
 import "@material/web/divider/divider";
 import "@material/web/button/filled-button";
+import "@material/web/button/outlined-button";
+import "@material/web/button/text-button";
 import "../../components/ha-svg-icon";
 import { MatterNode } from "../../client/models/node";
-
+import { mdiChatProcessing, mdiTrashCan } from "@mdi/js";
+import "../../components/ha-svg-icon";
+import {
+  showAlertDialog,
+  showPromptDialog,
+} from "../../components/dialog-box/show-dialog-box";
+import { MatterClient } from "../../client/client";
 
 @customElement("node-details")
 export class NodeDetails extends LitElement {
+
+  public client!: MatterClient;
 
   @property() public node?: MatterNode;
 
@@ -46,11 +56,66 @@ export class NodeDetails extends LitElement {
           <span class="left">Serialnumber: </span>${this.node.serialNumber}
           </div>
         </md-list-item>
+        <md-list-item class="btn">
+          <span>
+            <md-outlined-button @click=${this._reinterview}>Interview node<ha-svg-icon slot="icon" .path=${mdiChatProcessing}></ha-svg-icon></md-outlined-button>
+            <md-outlined-button @click=${this._remove}>Remove node<ha-svg-icon slot="icon"  .path=${mdiTrashCan}></ha-svg-icon></md-outlined-button>
+          </md-list-item>
       </md-list>
   `;
   }
 
+  private async _reinterview() {
+    if (
+      !(await showPromptDialog(this, {
+        title: "Reinterview",
+        text: "Are you sure you want to reinterview this node?",
+        confirmText: "Reinterview",
+      }))
+    ) {
+      return;
+    }
+    try {
+      await this.client.interviewNode(this.node!.node_id);
+      showAlertDialog(this, {
+        title: "Reinterview node",
+        text: "Success!",
+      });
+      location.reload();
+    } catch (err: any) {
+      showAlertDialog(this, {
+        title: "Failed to reinterview node",
+        text: err.message,
+      });
+    }
+  }
+
+  private async _remove() {
+    if (
+      !(await showPromptDialog(this, {
+        title: "Remove",
+        text: "Are you sure you want to remove this node?",
+        confirmText: "Remove",
+      }))
+    ) {
+      return;
+    }
+    try {
+      await this.client.removeNode(this.node!.node_id);
+      location.replace("#");
+    } catch (err: any) {
+      showAlertDialog(this, {
+        title: "Failed to remove node",
+        text: err.message,
+      });
+    }
+  }
+
   static styles = css`
+
+  .btn {
+    --md-outlined-button-container-shape: 0px;
+  }
 
     .left {
       width: 30%;
