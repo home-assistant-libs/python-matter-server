@@ -46,9 +46,7 @@ class MatterEndpointView extends LitElement {
       return html`
         <p>Node or endpoint not found!</p>
         <button
-          @click=${() => {
-          history.back();
-        }}
+          @click=${this._goBack}
         >
           Back
         </button>
@@ -96,6 +94,10 @@ class MatterEndpointView extends LitElement {
         </md-list>
       </div>
     `;
+  }
+
+  private _goBack() {
+    history.back();
   }
 
   static styles = css`

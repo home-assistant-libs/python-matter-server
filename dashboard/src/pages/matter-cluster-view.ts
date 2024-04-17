@@ -46,9 +46,7 @@ class MatterClusterView extends LitElement {
       return html`
         <p>Node, endpoint or cluster not found!</p>
         <button
-          @click=${() => {
-          history.back();
-        }}
+          @click=${this._goBack}
         >
           Back
         </button>
@@ -106,6 +104,10 @@ class MatterClusterView extends LitElement {
       title: "Attribute value",
       text: JSON.stringify(value),
     });
+  }
+
+  private _goBack() {
+    history.back();
   }
 
   static styles = css`

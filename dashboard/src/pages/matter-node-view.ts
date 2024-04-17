@@ -36,9 +36,7 @@ class MatterNodeView extends LitElement {
       return html`
         <p>Node not found!</p>
         <button
-          @click=${() => {
-          history.back();
-        }}
+          @click=${this._goBack}
         >
           Back
         </button>
@@ -82,6 +80,10 @@ class MatterNodeView extends LitElement {
 
       <dashboard-footer />
       `;
+  }
+
+  private _goBack() {
+    history.back();
   }
 
   static styles = css`
