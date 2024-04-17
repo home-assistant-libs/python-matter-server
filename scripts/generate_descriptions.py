@@ -1,6 +1,9 @@
 """Generate descriptions.json for the dashboard."""
 
-import pathlib  # noqa: I001
+# NOTE: we need to do a wildcard import from models.clusters to include all
+# custom clusters in the output defined in that file
+# pylint: disable=wildcard-import, unused-wildcard-import, invalid-name
+import pathlib
 from typing import Any, Final
 
 from chip.clusters.ClusterObjects import (
@@ -10,10 +13,11 @@ from chip.clusters.ClusterObjects import (
     ClusterAttributeDescriptor,
 )
 
-# pylint: disable=wildcard-import, unused-wildcard-import, invalid-name
 from matter_server.client.models.clusters import *  # noqa: F403
-from matter_server.client.models.device_types import ALL_TYPES as DEVICE_TYPES
-from matter_server.client.models.device_types import DeviceType
+from matter_server.client.models.device_types import (
+    ALL_TYPES as DEVICE_TYPES,
+    DeviceType,
+)
 from matter_server.common.helpers.json import json_dumps
 
 OUTPUT_FILE: Final[pathlib.Path] = (
