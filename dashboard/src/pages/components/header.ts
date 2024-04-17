@@ -39,7 +39,7 @@ export class DashboardHeader extends LitElement {
       <div class="actions">
       ${this.actions?.map((action) => {
       return html`
-          <md-icon-button @click=${action.action} title=${action.label}>
+          <md-icon-button @click=${action.action} .title=${action.label}>
                 <ha-svg-icon .path=${action.icon}></ha-svg-icon>
             </md-icon-button>
           `
