@@ -11,6 +11,7 @@ import {
 export class MatterClient {
   public connection = new Connection(this.url);
   public nodes: Record<number, MatterNode> = {};
+  public serverBaseAddress = this.url.split("://")[1].split(":")[0] || '';
   private _result_futures: Record<
     string,
     { resolve: (value: any) => void; reject: (reason?: any) => void }
@@ -18,8 +19,9 @@ export class MatterClient {
   private msgId = 0;
   private eventListeners: Record<string, Array<() => void>> = {};
 
-  constructor(public url: string) {
+  constructor(public url: string, public isProduction: boolean) {
     this.url = url;
+    this.isProduction = isProduction;
   }
 
   get serverInfo() {

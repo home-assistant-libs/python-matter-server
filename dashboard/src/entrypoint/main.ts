@@ -4,8 +4,11 @@ async function main() {
   import("../pages/matter-dashboard-app");
 
   let url = "";
+
   // Detect if we're running in the (production) webserver included in the matter server or not.
-  if (location.href.includes(":5010")) {
+  const isProductionServer = location.href.includes(":5580") || location.href.includes("hassio_ingress");
+
+  if (!isProductionServer) {
     // development server, ask for url to matter server
     let storageUrl = localStorage.getItem("matterURL");
     if (!storageUrl) {
@@ -30,7 +33,7 @@ async function main() {
     console.log(`Connecting to Matter Server API using url: ${url}`);
   }
 
-  const client = new MatterClient(url);
+  const client = new MatterClient(url, isProductionServer);
 
   const dashboard = document.createElement("matter-dashboard-app");
   dashboard.client = client;

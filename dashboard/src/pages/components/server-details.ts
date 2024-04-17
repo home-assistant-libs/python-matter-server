@@ -1,5 +1,5 @@
 import "@material/web/iconbutton/icon-button";
-import { LitElement, css, html } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement } from "lit/decorators.js";
 import "@material/web/list/list";
 import "@material/web/list/list-item";
@@ -24,14 +24,11 @@ export class ServerDetails extends LitElement {
   protected render() {
     if (!this.client) return html``;
 
-    const isProductionServer = location.href.includes(":5580") || location.href.includes("hassio_ingress");
-    const serverAddressBase = this.client.url.split("://")[1].split(":")[0];
-
     return html`
       <md-list>
         <md-list-item>
             <div slot="headline">
-                <b>Python Matter Server ${isProductionServer ? '' : `(${serverAddressBase})`}</b>
+                <b>Python Matter Server ${this.client.isProduction ? '' : `(${this.client.serverBaseAddress})`}</b>
                 ${this.client.connection.connected
         ? nothing
         : html`<span class="status">OFFLINE</span>`}

@@ -9,9 +9,8 @@ import "../components/ha-svg-icon";
 import "./components/header";
 import "./components/server-details";
 import "./components/footer";
-import { mdiChevronRight, mdiFile } from "@mdi/js";
+import { mdiChevronRight } from "@mdi/js";
 import memoizeOne from "memoize-one";
-import { showAlertDialog, showPromptDialog } from "../components/dialog-box/show-dialog-box";
 
 declare global {
   interface HTMLElementTagNameMap {
