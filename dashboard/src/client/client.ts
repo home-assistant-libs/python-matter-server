@@ -135,6 +135,17 @@ export class MatterClient {
     await this.connection.connect((msg) => this._handleIncomingMessage(msg));
   }
 
+  disconnect(clearStorage = true) {
+    // disconnect from the server and clear the stored serveraddress
+    if (this.connection && this.connection.connected) {
+      this.connection.disconnect();
+    }
+    if (clearStorage) {
+      localStorage.removeItem("matterURL");
+      location.reload();
+    }
+  }
+
   async startListening() {
     await this.connect();
 

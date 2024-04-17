@@ -57,6 +57,7 @@ class MatterClusterView extends LitElement {
       <dashboard-header
         .title=${`Node ${this.node.node_id}  |  Endpoint ${this.endpoint}  |  Cluster ${this.cluster}`}
         .backButton=${`#node/${this.node.node_id}/${this.endpoint}`}
+        .client=${this.client}
       ></dashboard-header>
 
       <!-- node details section -->

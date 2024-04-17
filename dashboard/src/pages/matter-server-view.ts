@@ -36,6 +36,7 @@ class MatterServerView extends LitElement {
 
     <dashboard-header
         title="Python Matter Server"
+        .client=${this.client}
       ></dashboard-header>
 
       <!-- server details section -->

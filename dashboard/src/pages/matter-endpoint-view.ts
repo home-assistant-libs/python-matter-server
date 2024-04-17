@@ -57,6 +57,7 @@ class MatterEndpointView extends LitElement {
       <dashboard-header
         .title=${`Node ${this.node.node_id}  |  Endpoint ${this.endpoint}`}
         .backButton=${`#node/${this.node.node_id}`}
+        .client=${this.client}
       ></dashboard-header>
 
       <!-- node details section -->

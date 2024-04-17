@@ -46,6 +46,7 @@ class MatterNodeView extends LitElement {
     return html`
       <dashboard-header
         .title=${'Node ' + this.node.node_id}
+        .client=${this.client}
         backButton="#"
       ></dashboard-header>
 

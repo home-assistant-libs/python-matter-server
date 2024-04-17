@@ -65,7 +65,7 @@ class MatterDashboardApp extends LitElement {
     if (this._state === "error") {
       return html`
         <p>Error: ${this._error}</p>
-        <button @click=${this._clearLocalStorage}>Clear stored URL</button>
+        <button @click=${this.client.disconnect}>Clear stored URL</button>
       `;
     }
     if (this._route.prefix === "node" && this._route.path.length == 3) {
@@ -106,8 +106,4 @@ class MatterDashboardApp extends LitElement {
     ></matter-server-view>`;
   }
 
-  private _clearLocalStorage() {
-    localStorage.removeItem("matterURL");
-    location.reload();
-  }
 }

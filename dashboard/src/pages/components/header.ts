@@ -7,6 +7,7 @@ import "@material/web/divider/divider";
 import "@material/web/button/outlined-button";
 import "../../components/ha-svg-icon";
 import { mdiArrowLeft, mdiLogout } from "@mdi/js";
+import { MatterClient } from "../../client/client";
 
 
 interface HeaderAction {
@@ -20,6 +21,8 @@ export class DashboardHeader extends LitElement {
 
   @property() public backButton?: string;
   @property() public actions?: HeaderAction[];
+
+  public client?: MatterClient;
 
   protected render() {
     const isProductionServer = location.href.includes(":5580") || location.href.includes("hassio_ingress");
@@ -48,18 +51,13 @@ export class DashboardHeader extends LitElement {
       ${isProductionServer
         ? ""
         : html`
-          <md-icon-button @click=${this._disconnect}>
+          <md-icon-button @click=${this.client?.disconnect}>
             <ha-svg-icon .path=${mdiLogout}></ha-svg-icon>
           </md-icon-button>
           `}
       </div>
     </div>
     `;
-  }
-
-  private _disconnect() {
-    localStorage.removeItem("matterURL");
-    location.reload();
   }
 
   static styles = css`
