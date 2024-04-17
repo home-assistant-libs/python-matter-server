@@ -121,7 +121,10 @@ export class NodeDetails extends LitElement {
     }
     try {
       await this.client.removeNode(this.node!.node_id);
-      location.replace("#");
+      if (location.href.includes(`node/${this.node!.node_id}`)) {
+        // make sure to navigate back to the root if node details was opened
+        location.replace("#");
+      }
     } catch (err: any) {
       showAlertDialog(this, {
         title: "Failed to remove node",
