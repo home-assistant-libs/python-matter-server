@@ -46,7 +46,7 @@ export class NodeDetails extends LitElement {
             <div slot="headline">
                 <b>Node ${this.node.node_id} ${this.node.nodeLabel}</b>
                 ${this.node.available
-        ? ""
+        ? nothing
         : html`<span class="status">OFFLINE</span>`}
       </div>
         </md-list-item>
