@@ -62,7 +62,7 @@ class MatterServerView extends LitElement {
           ? ""
           : html`<span class="status">OFFLINE</span>`}
                 </div>
-                <div slot="supporting-text">${node.nodeLabel ? `${node.nodeLabel} | ` : ''} ${node.vendorName} | ${node.productName}</div>
+                <div slot="supporting-text">${node.nodeLabel ? `${node.nodeLabel} | ` : nothing} ${node.vendorName} | ${node.productName}</div>
                 <ha-svg-icon slot="end" .path=${mdiChevronRight}></ha-svg-icon>
               </md-list-item>
             `;
