@@ -2,7 +2,7 @@ import "@material/web/iconbutton/icon-button";
 import "@material/web/divider/divider";
 import "@material/web/list/list";
 import "@material/web/list/list-item";
-import { LitElement, css, html } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { MatterClient } from "../client/client";
 import "../components/ha-svg-icon";

@@ -58,6 +58,7 @@ export class ServerDetails extends LitElement {
       </md-list>
       <!-- hidden file element for the upload diagnostics -->
       <input
+        @change=${this._onFileInput}
         type="file"
         id="fileElem"
         accept=".json"
@@ -76,29 +77,29 @@ export class ServerDetails extends LitElement {
     ) {
       return;
     }
+    // @ts-ignore:next-line
     const fileElem = this.renderRoot.getElementById('fileElem') as HTMLInputElement;
-    const handleInput = (event: Event) => {
-      fileElem!.removeEventListener('change', handleInput);
-      if (fileElem.files!.length > 0) {
-        const selectedFile = fileElem.files![0];
-        console.log(selectedFile);
-        var reader = new FileReader();
-        reader.readAsText(selectedFile, "UTF-8");
-        reader.onload = async () => {
-          try {
-            await this.client.importTestNode(reader.result?.toString() || '');
-          } catch (err: any) {
-            showAlertDialog(this, {
-              title: "Failed to import test node",
-              text: err.message,
-            });
-          }
+    fileElem!.click();
+  }
+
+  private _onFileInput = (event: Event) => {
+    const fileElem = event.target as HTMLInputElement;
+    if (fileElem.files!.length > 0) {
+      const selectedFile = fileElem.files![0];
+      var reader = new FileReader();
+      reader.readAsText(selectedFile, "UTF-8");
+      reader.onload = async () => {
+        try {
+          await this.client!.importTestNode(reader.result?.toString() || '');
+        } catch (err: any) {
+          showAlertDialog(this, {
+            title: "Failed to import test node",
+            text: err.message,
+          });
         }
       }
-      event.preventDefault();
     }
-    fileElem!.addEventListener('change', handleInput);
-    fileElem!.click();
+    event.preventDefault();
   }
 
   static styles = css`
