@@ -19,13 +19,12 @@ declare global {
 
 function clusterAttributes(attributes: { [key: string]: any }, endpoint: number, cluster: number) {
   // extract unique clusters from the node attributes, as (sorted) array
-  const endpointClusters = Object.keys(attributes)
+  return Object.keys(attributes)
     .filter(key => key.startsWith(`${endpoint}/${cluster}`))
     .map((key) => {
       const attributeKey = Number(key.split('/')[2]);
       return { key: attributeKey, value: attributes[key] };
     }, []);
-  return endpointClusters;
 }
 
 @customElement("matter-cluster-view")
