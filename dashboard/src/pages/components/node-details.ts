@@ -69,9 +69,11 @@ export class NodeDetails extends LitElement {
           <div slot="supporting-text">
             <span class="left">Serialnumber: </span>${this.node.serialNumber}
           </div>
-          <div slot="supporting-text">
-            <span class="left">All device types: </span>${getNodeDeviceTypes(this.node).map(deviceType => { return deviceType.label }).join(" / ")}
-          </div>
+          ${this.node.is_bridge ? '' : html`
+            <div slot="supporting-text">
+              <span class="left">All device types: </span>${getNodeDeviceTypes(this.node).map(deviceType => { return deviceType.label }).join(" / ")}
+            </div>`
+      }
         </md-list-item>
         <md-list-item class="btn">
           <span>
