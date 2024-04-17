@@ -9,7 +9,7 @@ import { MatterClient } from "../client/client";
 import "../components/ha-svg-icon";
 import { mdiChevronRight } from "@mdi/js";
 import { MatterNode } from "../client/models/node";
-import { clusters } from "../client/models/descriptions";
+import { DeviceType, clusters, device_types } from "../client/models/descriptions";
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -22,6 +22,12 @@ function getUniqueClusters(node: MatterNode, endpoint: Number) {
     .filter(key => key.startsWith(`${endpoint.toString()}/`))
     .map(key => Number(key.split("/")[1]))))
     .sort((a, b) => { return a - b });
+}
+
+export function getEndpointDeviceTypes(node: MatterNode, endpoint: Number): DeviceType[] {
+  const rawValues: Record<string, number>[] | undefined = node.attributes[`${endpoint}/29/0`];
+  if (!rawValues) return [];
+  return rawValues.map((rawValue) => { return device_types[rawValue["0"] || rawValue["deviceType"]] })
 }
 
 @customElement("matter-endpoint-view")
@@ -70,6 +76,9 @@ class MatterEndpointView extends LitElement {
             <div slot="headline">
                 <b>Clusters on Endpoint ${this.endpoint}</b>
             </div>
+            <div slot="supporting-text">
+              Device Type(s): ${getEndpointDeviceTypes(this.node, this.endpoint).map(deviceType => { return deviceType.label }).join(" / ")}
+            </div>
           </md-list-item>
           ${guard([this.node?.attributes.length], () => getUniqueClusters(this.node!, this.endpoint!).map((cluster) => {
       return html`
@@ -78,8 +87,8 @@ class MatterEndpointView extends LitElement {
               ${clusters[cluster]?.label || 'Custom/Unknown Cluster'}
               </div>
               <div slot="supporting-text">
-              ClusterId ${cluster} (0x00${cluster.toString(16)})
-            </div>
+                ClusterId ${cluster} (0x00${cluster.toString(16)})
+              </div>
               <ha-svg-icon slot="end" .path=${mdiChevronRight}></ha-svg-icon>
             </md-list-item>
           `;

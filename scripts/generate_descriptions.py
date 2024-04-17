@@ -28,7 +28,7 @@ def generate_device_type_description(device_type: DeviceType) -> dict[str, Any]:
     """Generate a (human readable) description for a device type as dict."""
     return {
         "id": device_type.device_type,
-        "label": device_type.__doc__ or device_type.__name__,
+        "label": (device_type.__doc__ or device_type.__name__).replace(".", ""),
         "clusters": {x.id for x in device_type.clusters},
     }
 

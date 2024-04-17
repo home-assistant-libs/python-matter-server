@@ -25,7 +25,6 @@ function clusterAttributes(attributes: { [key: string]: any }, endpoint: number,
       const attributeKey = Number(key.split('/')[2]);
       return { key: attributeKey, value: attributes[key] };
     }, []);
-  console.log('endpointClusters', endpointClusters)
   return endpointClusters;
 }
 

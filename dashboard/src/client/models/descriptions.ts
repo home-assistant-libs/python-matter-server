@@ -24,7 +24,7 @@ export interface ClusterDescription {
 export const device_types: Record<number, DeviceType> = {
   "61441": {
     "id": 61441,
-    "label": "Orphan Clusters.",
+    "label": "Orphan Clusters",
     "clusters": [
       66,
       67,
@@ -34,7 +34,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "22": {
     "id": 22,
-    "label": "Root Node.",
+    "label": "Root Node",
     "clusters": [
       29,
       31,
@@ -59,7 +59,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "17": {
     "id": 17,
-    "label": "Power Source.",
+    "label": "Power Source",
     "clusters": [
       29,
       47
@@ -67,7 +67,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "18": {
     "id": 18,
-    "label": "OTA Requestor.",
+    "label": "OTA Requestor",
     "clusters": [
       42,
       29
@@ -75,7 +75,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "20": {
     "id": 20,
-    "label": "OTA Provider.",
+    "label": "OTA Provider",
     "clusters": [
       41,
       29
@@ -83,7 +83,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "14": {
     "id": 14,
-    "label": "Aggregator.",
+    "label": "Aggregator",
     "clusters": [
       29,
       37
@@ -91,7 +91,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "19": {
     "id": 19,
-    "label": "Bridged Device.",
+    "label": "Bridged Device",
     "clusters": [
       57,
       29,
@@ -101,7 +101,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "256": {
     "id": 256,
-    "label": "On/Off Light.",
+    "label": "On/Off Light",
     "clusters": [
       3,
       4,
@@ -113,7 +113,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "257": {
     "id": 257,
-    "label": "Dimmable Light.",
+    "label": "Dimmable Light",
     "clusters": [
       3,
       4,
@@ -126,7 +126,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "268": {
     "id": 268,
-    "label": "Color Temperature Light.",
+    "label": "Color Temperature Light",
     "clusters": [
       768,
       3,
@@ -139,7 +139,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "269": {
     "id": 269,
-    "label": "Extended Color Light.",
+    "label": "Extended Color Light",
     "clusters": [
       768,
       3,
@@ -152,7 +152,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "266": {
     "id": 266,
-    "label": "On/Off Plug-in Unit.",
+    "label": "On/Off Plug-in Unit",
     "clusters": [
       3,
       4,
@@ -164,7 +164,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "267": {
     "id": 267,
-    "label": "Dimmable Plug-in Unit.",
+    "label": "Dimmable Plug-in Unit",
     "clusters": [
       3,
       4,
@@ -176,24 +176,24 @@ export const device_types: Record<number, DeviceType> = {
   },
   "771": {
     "id": 771,
-    "label": "Pump.",
+    "label": "Pump",
     "clusters": [
       512,
       1026,
-      1027,
       3,
       4,
-      6,
-      1028,
-      8,
       5,
+      1028,
+      1027,
+      8,
+      6,
       29,
       30
     ]
   },
   "259": {
     "id": 259,
-    "label": "On/Off Light Switch.",
+    "label": "On/Off Light Switch",
     "clusters": [
       3,
       29,
@@ -202,7 +202,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "260": {
     "id": 260,
-    "label": "Dimmer Switch.",
+    "label": "Dimmer Switch",
     "clusters": [
       3,
       29,
@@ -211,7 +211,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "261": {
     "id": 261,
-    "label": "Color Dimmer Switch.",
+    "label": "Color Dimmer Switch",
     "clusters": [
       3,
       29,
@@ -220,7 +220,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "2112": {
     "id": 2112,
-    "label": "Control Bridge.",
+    "label": "Control Bridge",
     "clusters": [
       3,
       29,
@@ -229,7 +229,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "772": {
     "id": 772,
-    "label": "Pump Controller.",
+    "label": "Pump Controller",
     "clusters": [
       3,
       29,
@@ -238,7 +238,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "15": {
     "id": 15,
-    "label": "Generic Switch.",
+    "label": "Generic Switch",
     "clusters": [
       64,
       65,
@@ -249,16 +249,16 @@ export const device_types: Record<number, DeviceType> = {
   },
   "21": {
     "id": 21,
-    "label": "Contact Sensor.",
+    "label": "Contact Sensor",
     "clusters": [
-      29,
       3,
-      69
+      69,
+      29
     ]
   },
   "262": {
     "id": 262,
-    "label": "Light Sensor.",
+    "label": "Light Sensor",
     "clusters": [
       1024,
       3,
@@ -268,7 +268,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "263": {
     "id": 263,
-    "label": "Occupancy Sensor.",
+    "label": "Occupancy Sensor",
     "clusters": [
       3,
       29,
@@ -278,7 +278,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "770": {
     "id": 770,
-    "label": "Temperature Sensor.",
+    "label": "Temperature Sensor",
     "clusters": [
       1026,
       3,
@@ -287,16 +287,16 @@ export const device_types: Record<number, DeviceType> = {
   },
   "773": {
     "id": 773,
-    "label": "Pressure Sensor.",
+    "label": "Pressure Sensor",
     "clusters": [
-      1027,
       3,
+      1027,
       29
     ]
   },
   "774": {
     "id": 774,
-    "label": "Flow Sensor.",
+    "label": "Flow Sensor",
     "clusters": [
       3,
       1028,
@@ -305,16 +305,16 @@ export const device_types: Record<number, DeviceType> = {
   },
   "775": {
     "id": 775,
-    "label": "Humidity Sensor.",
+    "label": "Humidity Sensor",
     "clusters": [
-      1029,
+      29,
       3,
-      29
+      1029
     ]
   },
   "2128": {
     "id": 2128,
-    "label": "On/Off Sensor.",
+    "label": "On/Off Sensor",
     "clusters": [
       3,
       29,
@@ -323,7 +323,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "10": {
     "id": 10,
-    "label": "Door Lock.",
+    "label": "Door Lock",
     "clusters": [
       257,
       3,
@@ -332,7 +332,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "11": {
     "id": 11,
-    "label": "Door Lock Controller.",
+    "label": "Door Lock Controller",
     "clusters": [
       56,
       29,
@@ -341,7 +341,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "514": {
     "id": 514,
-    "label": "Window Covering.",
+    "label": "Window Covering",
     "clusters": [
       258,
       3,
@@ -352,7 +352,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "515": {
     "id": 515,
-    "label": "Window Covering Controller.",
+    "label": "Window Covering Controller",
     "clusters": [
       3,
       29,
@@ -361,7 +361,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "768": {
     "id": 768,
-    "label": "Heating/Cooling Unit.",
+    "label": "Heating/Cooling Unit",
     "clusters": [
       514,
       3,
@@ -375,13 +375,13 @@ export const device_types: Record<number, DeviceType> = {
   },
   "769": {
     "id": 769,
-    "label": "Thermostat.",
+    "label": "Thermostat",
     "clusters": [
       513,
       3,
       4,
-      516,
       5,
+      516,
       56,
       29,
       30
@@ -389,7 +389,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "43": {
     "id": 43,
-    "label": "Fan.",
+    "label": "Fan",
     "clusters": [
       514,
       3,
@@ -399,85 +399,85 @@ export const device_types: Record<number, DeviceType> = {
   },
   "35": {
     "id": 35,
-    "label": "Casting Video Player.",
+    "label": "Casting Video Player",
     "clusters": [
       1283,
       1284,
       1285,
-      6,
       1286,
+      1287,
       1288,
       1289,
       1290,
-      1287,
-      1292,
       1291,
+      1292,
+      6,
       1294,
       29
     ]
   },
   "40": {
     "id": 40,
-    "label": "Basic Video Player.",
+    "label": "Basic Video Player",
     "clusters": [
       1283,
       1284,
       1285,
-      6,
       1286,
+      1287,
       1288,
       1289,
-      1287,
+      6,
       1291,
       29
     ]
   },
   "41": {
     "id": 41,
-    "label": "Casting Video Client.",
+    "label": "Casting Video Client",
     "clusters": [
       1283,
       1284,
       1285,
-      6,
       1286,
-      8,
-      1289,
-      1290,
-      1288,
-      1292,
       1287,
-      1294,
-      1293,
+      8,
+      1288,
+      1290,
       1291,
+      1292,
+      1293,
+      1294,
+      1289,
       29,
-      30
+      30,
+      6
     ]
   },
   "42": {
     "id": 42,
-    "label": "Video Remote Control.",
+    "label": "Video Remote Control",
     "clusters": [
       1283,
       1284,
       1285,
-      6,
       1286,
-      8,
-      1289,
-      1290,
-      1288,
-      1292,
       1287,
-      1294,
+      8,
+      1288,
+      1290,
       1291,
+      1292,
+      1289,
+      1294,
+      6,
       29,
       30
     ]
   },
   "34": {
     "id": 34,
-    "label": "Speaker.",
+    "label": "Speaker",
     "clusters": [
       8,
       3,
@@ -487,7 +487,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "36": {
     "id": 36,
-    "label": "Content App.",
+    "label": "Content App",
     "clusters": [
       3,
       1284,
@@ -503,7 +503,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "39": {
     "id": 39,
-    "label": "Mode Select.",
+    "label": "Mode Select",
     "clusters": [
       80,
       3,
@@ -512,22 +512,22 @@ export const device_types: Record<number, DeviceType> = {
   },
   "114": {
     "id": 114,
-    "label": "Room Air Conditioner.",
+    "label": "Room Air Conditioner",
     "clusters": [
       513,
       514,
       3,
       4,
-      1029,
-      6,
       5,
+      1029,
       1026,
+      6,
       29
     ]
   },
   "118": {
     "id": 118,
-    "label": "Smoke CO Alarm.",
+    "label": "Smoke CO Alarm",
     "clusters": [
       1026,
       3,
@@ -541,7 +541,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "45": {
     "id": 45,
-    "label": "Air Purifier.",
+    "label": "Air Purifier",
     "clusters": [
       514,
       3,
@@ -553,19 +553,19 @@ export const device_types: Record<number, DeviceType> = {
   },
   "44": {
     "id": 44,
-    "label": "Air Quality Sensor.",
+    "label": "Air Quality Sensor",
     "clusters": [
       1026,
       3,
       1029,
       1066,
       1067,
-      1036,
-      1037,
+      1068,
+      1069,
       1070,
       1071,
-      1069,
-      1068,
+      1036,
+      1037,
       1043,
       1045,
       91,
@@ -574,7 +574,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "117": {
     "id": 117,
-    "label": "Dishwasher.",
+    "label": "Dishwasher",
     "clusters": [
       96,
       3,
@@ -587,7 +587,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "112": {
     "id": 112,
-    "label": "Refrigerator.",
+    "label": "Refrigerator",
     "clusters": [
       82,
       3,
@@ -597,7 +597,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "115": {
     "id": 115,
-    "label": "Laundry Washer.",
+    "label": "Laundry Washer",
     "clusters": [
       96,
       3,
@@ -610,7 +610,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "116": {
     "id": 116,
-    "label": "Robotic Vacuum Cleaner.",
+    "label": "Robotic Vacuum Cleaner",
     "clusters": [
       97,
       3,
@@ -621,7 +621,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "113": {
     "id": 113,
-    "label": "Temperature Controlled Cabinet.",
+    "label": "Temperature Controlled Cabinet",
     "clusters": [
       82,
       1026,
@@ -631,16 +631,16 @@ export const device_types: Record<number, DeviceType> = {
   },
   "0": {
     "id": 0,
-    "label": "All-clusters-app Server Example.",
+    "label": "All-clusters-app Server Example",
     "clusters": [
       768,
       257,
       1026,
-      259,
       3,
       4,
-      6,
       5,
+      6,
+      259,
       8,
       29,
       30
@@ -648,7 +648,7 @@ export const device_types: Record<number, DeviceType> = {
   },
   "61442": {
     "id": 61442,
-    "label": "Secondary Network Commissioning Device Type.",
+    "label": "Secondary Network Commissioning Device Type",
     "clusters": [
       49,
       29

@@ -16,6 +16,20 @@ import {
   showPromptDialog,
 } from "../../components/dialog-box/show-dialog-box";
 import { MatterClient } from "../../client/client";
+import { getEndpointDeviceTypes } from "../matter-endpoint-view";
+import { DeviceType } from "../../client/models/descriptions";
+
+
+function getNodeDeviceTypes(node: MatterNode): DeviceType[] {
+  const uniqueEndpoints = new Set(Object.keys(node!.attributes).map(key => Number(key.split("/")[0])))
+  const allDeviceTypes: Set<DeviceType> = new Set();
+  uniqueEndpoints.forEach(endpointId => {
+    getEndpointDeviceTypes(node, endpointId).forEach(deviceType => {
+      allDeviceTypes.add(deviceType);
+    })
+  });
+  return Array.from(allDeviceTypes);
+}
 
 @customElement("node-details")
 export class NodeDetails extends LitElement {
@@ -38,22 +52,25 @@ export class NodeDetails extends LitElement {
         </md-list-item>
         <md-list-item>
           <div slot="supporting-text">
-            <div class="left">VendorName: </div>${this.node.vendorName}
+            <span class="left">VendorName: </div>${this.node.vendorName}
           </div>
           <div slot="supporting-text">
-          <div class="left">productName: </div>${this.node.productName}
+            <span class="left">productName: </div>${this.node.productName}
           </div>
           <div slot="supporting-text">
-          <span class="left">Commissioned: </span>${this.node.date_commissioned}
+            <span class="left">Commissioned: </span>${this.node.date_commissioned}
           </div>
           <div slot="supporting-text">
-          <span class="left">Last interviewed: </span>${this.node.last_interview}
+            <span class="left">Last interviewed: </span>${this.node.last_interview}
           </div>
           <div slot="supporting-text">
-          <span class="left">Is bridge: </span>${this.node.is_bridge}
+            <span class="left">Is bridge: </span>${this.node.is_bridge}
           </div>
           <div slot="supporting-text">
-          <span class="left">Serialnumber: </span>${this.node.serialNumber}
+            <span class="left">Serialnumber: </span>${this.node.serialNumber}
+          </div>
+          <div slot="supporting-text">
+            <span class="left">All device types: </span>${getNodeDeviceTypes(this.node).map(deviceType => { return deviceType.label }).join(" / ")}
           </div>
         </md-list-item>
         <md-list-item class="btn">
@@ -123,6 +140,12 @@ export class NodeDetails extends LitElement {
     }
     .whitespace {
       height: 15px;
+    }
+
+    .status {
+      color: var(--danger-color);
+      font-weight: bold;
+      font-size: 0.8em;
     }
 
   `;

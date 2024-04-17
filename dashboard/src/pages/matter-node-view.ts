@@ -12,7 +12,6 @@ import "./components/node-details";
 import { mdiChevronRight } from "@mdi/js";
 import { MatterNode } from "../client/models/node";
 
-
 declare global {
   interface HTMLElementTagNameMap {
     "matter-node-view": MatterNodeView;
