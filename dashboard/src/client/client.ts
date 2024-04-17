@@ -198,9 +198,7 @@ export class MatterClient {
     }
 
     if (event.event === "attribute_updated") {
-      const nodeId = (event.data as Array<any>)[0] as number;
-      const attributeKey = (event.data as Array<any>)[1] as string;
-      const attributeValue = (event.data as Array<any>)[2] as any;
+      const [nodeId, attributeKey, attributeValue] = event.data;
       const node = new MatterNode(this.nodes[nodeId]);
       node.attributes[attributeKey] = attributeValue;
       this.nodes = { ...this.nodes, [node.node_id]: node };
