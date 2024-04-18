@@ -2,8 +2,10 @@ import { LitElement, html, PropertyValueMap } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { MatterClient } from "../client/client";
 import { MatterError } from "../client/exceptions";
-import "./matter-dashboard";
+import "./matter-server-view";
 import type { Route } from "../util/routing";
+import "./matter-cluster-view";
+import "./matter-endpoint-view";
 import "./matter-node-view";
 import "./matter-server-view";
 
@@ -17,7 +19,7 @@ declare global {
 class MatterDashboardApp extends LitElement {
   @state() private _route: Route = {
     prefix: "",
-    path: "",
+    path: [],
   };
 
   public client!: MatterClient;
@@ -46,14 +48,10 @@ class MatterDashboardApp extends LitElement {
 
     // Handle history changes
     const updateRoute = () => {
-      let [part1, part2] = location.hash.substring(1).split("/", 2);
-      if (part2 === undefined) {
-        part2 = part1;
-        part1 = "";
-      }
+      const pathParts = location.hash.substring(1).split("/");
       this._route = {
-        prefix: part1,
-        path: part2,
+        prefix: pathParts.length == 1 ? "" : pathParts[0],
+        path: pathParts.length == 1 ? pathParts : pathParts.slice(1)
       };
     };
     window.addEventListener("hashchange", updateRoute);
@@ -67,31 +65,45 @@ class MatterDashboardApp extends LitElement {
     if (this._state === "error") {
       return html`
         <p>Error: ${this._error}</p>
-        <button @click=${this._clearLocalStorage}>Clear stored URL</button>
+        <button @click=${this.client.disconnect}>Clear stored URL</button>
+      `;
+    }
+    if (this._route.prefix === "node" && this._route.path.length == 3) {
+      // cluster level
+      return html`
+        <matter-cluster-view
+          .client=${this.client}
+          .node=${this.client.nodes[parseInt(this._route.path[0], 10)]}
+          .endpoint=${parseInt(this._route.path[1], 10)}
+          .cluster=${parseInt(this._route.path[2], 10)}
+        ></matter-cluster-view>
+      `;
+    }
+    if (this._route.prefix === "node" && this._route.path.length == 2) {
+      // endpoint level
+      return html`
+        <matter-endpoint-view
+          .client=${this.client}
+          .node=${this.client.nodes[parseInt(this._route.path[0], 10)]}
+          .endpoint=${parseInt(this._route.path[1], 10)}
+        ></matter-endpoint-view>
       `;
     }
     if (this._route.prefix === "node") {
+      // node level
       return html`
         <matter-node-view
           .client=${this.client}
-          .node=${this.client.nodes[parseInt(this._route.path, 10)]}
+          .node=${this.client.nodes[parseInt(this._route.path[0], 10)]}
         ></matter-node-view>
       `;
     }
-    if (this._route.path === "server") {
-      return html`
-        <matter-server-view .client=${this.client}></matter-server-view>
-      `;
-    }
-    return html`<matter-dashboard
+    // root level: server overview
+    return html`<matter-server-view
       .client=${this.client}
       .nodes=${this.client.nodes}
       .route=${this._route}
-    ></matter-dashboard>`;
+    ></matter-server-view>`;
   }
 
-  private _clearLocalStorage() {
-    localStorage.removeItem("matterURL");
-    location.reload();
-  }
 }

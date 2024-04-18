@@ -117,7 +117,7 @@ interface ServerEventNodeEvent {
 }
 interface ServerEventAttributeUpdated {
   event: "attribute_updated";
-  data: {};
+  data: [number, string, any];
 }
 interface ServerEventServerShutdown {
   event: "server_shutdown";

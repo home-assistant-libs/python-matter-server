@@ -1,9 +1,16 @@
 import "@material/web/iconbutton/icon-button";
-import { LitElement, css, html } from "lit";
-import { customElement } from "lit/decorators.js";
+import "@material/web/divider/divider";
+import "@material/web/list/list";
+import "@material/web/list/list-item";
+import { LitElement, css, html, nothing } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { MatterClient } from "../client/client";
 import "../components/ha-svg-icon";
-import { mdiArrowLeft } from "@mdi/js";
+import "./components/header";
+import "./components/server-details";
+import "./components/footer";
+import { mdiChevronRight } from "@mdi/js";
+import memoizeOne from "memoize-one";
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -15,24 +22,61 @@ declare global {
 class MatterServerView extends LitElement {
   public client!: MatterClient;
 
-  render() {
-    return html`
-      <div class="header">
-        <a href="#">
-          <md-icon-button>
-            <ha-svg-icon .path=${mdiArrowLeft}></ha-svg-icon>
-          </md-icon-button>
-        </a>
+  @property()
+  public nodes!: MatterClient["nodes"];
 
-        <div>Matter Server</div>
-        <div class="flex"></div>
-        <div class="actions"></div>
-      </div>
+  private nodeEntries = memoizeOne((nodes: this["nodes"]) =>
+    Object.entries(nodes)
+  );
+
+  render() {
+    const nodes = this.nodeEntries(this.nodes);
+
+    return html`
+
+    <dashboard-header
+        title="Python Matter Server"
+        .client=${this.client}
+      ></dashboard-header>
+
+      <!-- server details section -->
       <div class="container">
-        <pre>${JSON.stringify(this.client.serverInfo, undefined, 2)}</pre>
+      <server-details
+          .client=${this.client}
+        ></server-details>
       </div>
+
+      <!-- Nodes listing -->
+      <div class="container">
+        <md-list>
+          <md-list-item>
+            <div slot="headline">
+                <b>Nodes</b>
+            </div>
+          </md-list-item>
+          ${nodes.map(([id, node]) => {
+      return html`
+              <md-list-item type="link" href=${`#node/${node.node_id}`}>
+                <div slot="headline">
+                Node ${node.node_id}
+                  ${node.available
+          ? ""
+          : html`<span class="status">OFFLINE</span>`}
+                </div>
+                <div slot="supporting-text">${node.nodeLabel ? `${node.nodeLabel} | ` : nothing} ${node.vendorName} | ${node.productName}</div>
+                <ha-svg-icon slot="end" .path=${mdiChevronRight}></ha-svg-icon>
+              </md-list-item>
+            `;
+    })}
+        </md-list>
+      </div>
+      <dashboard-footer />
     `;
   }
+
+
+
+
 
   static styles = css`
     :host {
@@ -40,33 +84,32 @@ class MatterServerView extends LitElement {
       background-color: var(--md-sys-color-background);
       box-sizing: border-box;
       flex-direction: column;
-      min-height: 100vh;
-    }
-
-    .header {
-      background-color: var(--md-sys-color-primary);
-      color: var(--md-sys-color-on-primary);
-      --icon-primary-color: var(--md-sys-color-on-primary);
-      font-weight: 400;
-      display: flex;
-      align-items: center;
-      padding-right: 8px;
-      height: 48px;
-    }
-
-    md-icon-button {
-      margin-right: 8px;
-    }
-
-    .flex {
-      flex: 1;
     }
 
     .container {
       padding: 16px;
-      max-width: 600px;
+      max-width: 95%;
       margin: 0 auto;
       flex: 1;
+      width: 100%;
     }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 16px 0;
+      }
+    }
+
+    span[slot="start"] {
+      width: 40px;
+      text-align: center;
+    }
+
+    .status {
+      color: var(--danger-color);
+      font-weight: bold;
+      font-size: 0.8em;
+    }
+
   `;
 }

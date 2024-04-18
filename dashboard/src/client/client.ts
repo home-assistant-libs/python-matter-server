@@ -11,17 +11,17 @@ import {
 export class MatterClient {
   public connection = new Connection(this.url);
   public nodes: Record<number, MatterNode> = {};
+  public serverBaseAddress = this.url.split("://")[1].split(":")[0] || '';
   private _result_futures: Record<
     string,
     { resolve: (value: any) => void; reject: (reason?: any) => void }
   > = {};
-  // private _subscribers: Record<string, Array<(event: any, data: any) => void>> =
-  //   {};
   private msgId = 0;
   private eventListeners: Record<string, Array<() => void>> = {};
 
-  constructor(public url: string) {
+  constructor(public url: string, public isProduction: boolean) {
     this.url = url;
+    this.isProduction = isProduction;
   }
 
   get serverInfo() {
@@ -135,6 +135,17 @@ export class MatterClient {
     await this.connection.connect((msg) => this._handleIncomingMessage(msg));
   }
 
+  disconnect(clearStorage = true) {
+    // disconnect from the server and clear the stored serveraddress
+    if (this.connection && this.connection.connected) {
+      this.connection.disconnect();
+    }
+    if (clearStorage) {
+      localStorage.removeItem("matterURL");
+      location.reload();
+    }
+  }
+
   async startListening() {
     await this.connect();
 
@@ -188,7 +199,22 @@ export class MatterClient {
     if (event.event === "node_removed") {
       delete this.nodes[event.data];
       this.nodes = { ...this.nodes };
-      console.log("node removed!")
+      this.fireEvent("nodes_changed");
+      return;
+    }
+
+    if (event.event === "node_updated") {
+      const node = new MatterNode(event.data);
+      this.nodes = { ...this.nodes, [node.node_id]: node };
+      this.fireEvent("nodes_changed");
+      return;
+    }
+
+    if (event.event === "attribute_updated") {
+      const [nodeId, attributeKey, attributeValue] = event.data;
+      const node = new MatterNode(this.nodes[nodeId]);
+      node.attributes[attributeKey] = attributeValue;
+      this.nodes = { ...this.nodes, [node.node_id]: node };
       this.fireEvent("nodes_changed");
       return;
     }

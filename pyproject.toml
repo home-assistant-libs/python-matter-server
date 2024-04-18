@@ -57,7 +57,7 @@ matter-server = "matter_server.server.__main__:main"
 
 [tool.codespell]
 ignore-words-list = "requestor"
-skip = "dashboard/package-lock.json,tests/fixtures/nodes/lighting-example-app.json"
+skip = "dashboard/package-lock.json,tests/fixtures/nodes/lighting-example-app.json,dashboard/src/client/models/descriptions.ts"
 
 [tool.setuptools]
 include-package-data = true

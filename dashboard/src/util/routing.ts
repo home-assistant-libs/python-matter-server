@@ -1,4 +1,4 @@
 export interface Route {
   prefix: string;
-  path: string;
+  path: string[];
 }
