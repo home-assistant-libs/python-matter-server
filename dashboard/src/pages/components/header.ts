@@ -1,5 +1,5 @@
 import "@material/web/iconbutton/icon-button";
-import { LitElement, css, html } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import "@material/web/list/list";
 import "@material/web/list/list-item";
@@ -25,7 +25,7 @@ export class DashboardHeader extends LitElement {
   public client?: MatterClient;
 
   protected render() {
-    const isProductionServer = location.href.includes(":5580") || location.href.includes("hassio_ingress");
+
     return html`
       <div class="header">
 
@@ -48,8 +48,8 @@ export class DashboardHeader extends LitElement {
           `
     })}
       <!-- optional logout button -->
-      ${isProductionServer
-        ? ""
+      ${this.client?.isProduction
+        ? nothing
         : html`
           <md-icon-button @click=${this.client?.disconnect}>
             <ha-svg-icon .path=${mdiLogout}></ha-svg-icon>
