@@ -10,7 +10,7 @@ All rights reserved.
 import asyncio
 from datetime import UTC, datetime, timedelta
 import logging
-from os import makedirs
+import os
 from pathlib import Path
 import re
 
@@ -162,7 +162,13 @@ async def fetch_certificates(
     loop = asyncio.get_running_loop()
 
     if not paa_root_cert_dir.is_dir():
-        await loop.run_in_executor(None, makedirs, paa_root_cert_dir)
+
+        def _make_root_cert_dir(paa_root_cert_dir: Path) -> None:
+            paa_root_cert_dir.mkdir(parents=True)
+            # Clear mtime to make sure code retries if first fetch fails.
+            os.utime(paa_root_cert_dir, (0, 0))
+
+        await loop.run_in_executor(None, _make_root_cert_dir, paa_root_cert_dir)
     else:
         stat = await loop.run_in_executor(None, paa_root_cert_dir.stat)
         last_fetch = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
