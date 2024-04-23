@@ -19,6 +19,7 @@ from chip.ChipDeviceCtrl import DeviceProxyWrapper
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
+from chip.discovery import DiscoveryType
 from chip.exceptions import ChipStackError
 from chip.native import PyChipError
 from zeroconf import BadTypeInNameException, IPVersion, ServiceStateChange, Zeroconf
@@ -256,7 +257,9 @@ class MatterDeviceController:
                 self.chip_controller.CommissionWithCode,
                 setupPayload=code,
                 nodeid=node_id,
-                networkOnly=network_only,
+                discoveryType=DiscoveryType.DISCOVERY_NETWORK_ONLY
+                if network_only
+                else DiscoveryType.DISCOVERY_ALL,
             )
             if result and result.is_success:
                 break
