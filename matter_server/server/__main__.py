@@ -14,6 +14,7 @@ from typing import Final
 from aiorun import run
 import coloredlogs
 
+from matter_server.common.const import VERBOSE_LOG_LEVEL
 from matter_server.server import stack
 
 from .server import MatterServer
@@ -71,7 +72,7 @@ parser.add_argument(
     "--log-level",
     type=str,
     default="info",
-    help="Global logging level. Example --log-level debug, default=info, possible=(critical, error, warning, info, debug)",
+    help="Global logging level. Example --log-level debug, default=info, possible=(critical, error, warning, info, debug, verbose)",
 )
 parser.add_argument(
     "--log-level-sdk",
@@ -124,6 +125,7 @@ def _setup_logging() -> None:
 
     logging.basicConfig(level=args.log_level.upper())
     logger = logging.getLogger()
+    logging.addLevelName(VERBOSE_LOG_LEVEL, "VERBOSE")
 
     # setup file handler
     if args.log_file:
@@ -140,7 +142,7 @@ def _setup_logging() -> None:
     stack.init_logging(args.log_level_sdk.upper())
     logger.setLevel(args.log_level.upper())
 
-    if not logger.isEnabledFor(logging.DEBUG):
+    if not logger.isEnabledFor(VERBOSE_LOG_LEVEL):
         logging.getLogger("PersistentStorage").setLevel(logging.WARNING)
         # Temporary disable the logger of chip.clusters.Attribute because it now logs
         # an error on every custom attribute that couldn't be parsed which confuses people.
