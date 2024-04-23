@@ -72,7 +72,7 @@ parser.add_argument(
     "--log-level",
     type=str,
     default="info",
-    help="Global logging level. Example --log-level debug, default=info, possible=(critical, error, warning, info, debug)",
+    help="Global logging level. Example --log-level debug, default=info, possible=(critical, error, warning, info, debug, verbose)",
 )
 parser.add_argument(
     "--log-level-sdk",
