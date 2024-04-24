@@ -220,7 +220,7 @@ class MatterClient:
 
         node = self.get_node(node_id)
 
-        # refresh node's fabrics if the node is available so w ehave the latest info
+        # refresh node's fabrics if the node is available so we have the latest info
         if node.available:
             await self.refresh_attribute(
                 node_id,
