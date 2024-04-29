@@ -21,7 +21,7 @@ dependencies = [
   "coloredlogs",
   "dacite",
   "orjson",
-  "home-assistant-chip-clusters==2024.4.0",
+  "home-assistant-chip-clusters==2024.4.1",
 ]
 description = "Python Matter WebSocket Server"
 license = {text = "Apache-2.0"}
