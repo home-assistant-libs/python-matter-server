@@ -8,7 +8,10 @@ import xmltodict
 
 REPO_ROOT = pathlib.Path(__file__).parent.parent
 
-DEVICE_XML = "https://raw.githubusercontent.com/project-chip/connectedhomeip/master/src/app/zap-templates/zcl/data-model/chip/matter-devices.xml"
+DEVICE_XML = (
+    "https://raw.githubusercontent.com/project-chip/connectedhomeip"
+    "/master/src/app/zap-templates/zcl/data-model/chip/matter-devices.xml"
+)
 
 OUTPUT_PYTHON = REPO_ROOT / "matter_server/client/models/device_types.py"
 
