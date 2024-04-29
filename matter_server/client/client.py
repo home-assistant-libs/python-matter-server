@@ -18,6 +18,7 @@ from matter_server.common.errors import ERROR_MAP, NodeNotExists
 from ..common.helpers.util import (
     convert_ip_address,
     convert_mac_address,
+    create_attribute_path_from_attribute,
     dataclass_from_dict,
     dataclass_to_dict,
 )
@@ -218,6 +219,16 @@ class MatterClient:
         """
 
         node = self.get_node(node_id)
+
+        # refresh node's fabrics if the node is available so we have the latest info
+        if node.available:
+            await self.refresh_attribute(
+                node_id,
+                create_attribute_path_from_attribute(
+                    0, Clusters.OperationalCredentials.Attributes.Fabrics
+                ),
+            )
+
         fabrics: list[
             Clusters.OperationalCredentials.Structs.FabricDescriptorStruct
         ] = node.get_attribute_value(

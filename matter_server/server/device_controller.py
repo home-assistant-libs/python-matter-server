@@ -66,7 +66,7 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
-NODE_SUBSCRIPTION_CEILING_WIFI = 30
+NODE_SUBSCRIPTION_CEILING_WIFI = 60
 NODE_SUBSCRIPTION_CEILING_THREAD = 60
 NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 600
 MAX_COMMISSION_RETRIES = 3
@@ -1090,8 +1090,6 @@ class MatterDeviceController:
                 events=[("*", 1)],
                 returnClusterObject=False,
                 reportInterval=(interval_floor, interval_ceiling),
-                fabricFiltered=False,
-                keepSubscriptions=True,
                 autoResubscribe=True,
             )
 
