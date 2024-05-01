@@ -7,7 +7,7 @@ from typing import Optional
 
 import pytest
 
-from matter_server.common.helpers.util import dataclass_from_dict
+from matter_server.common.helpers.util import dataclass_from_dict, parse_value
 
 
 class MatterIntEnum(IntEnum):
@@ -77,6 +77,7 @@ def test_dataclass_from_dict():
     raw["b"] = 2
     res = dataclass_from_dict(BasicModel, raw)
     assert res.b == 2.0
+
     # test datetime string
     assert isinstance(res.f, datetime.datetime)
     assert res.f.month == 12
@@ -107,3 +108,6 @@ def test_dataclass_from_dict():
     # test extra keys not silently ignored in strict mode
     with pytest.raises(KeyError):
         dataclass_from_dict(BasicModel, raw2, strict=True)
+    # test int gets converted to bytes
+    res = parse_value("int_value_that_should_be_bytes", 5, bytes)
+    assert isinstance(res, bytes)

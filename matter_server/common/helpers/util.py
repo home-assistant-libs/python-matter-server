@@ -220,6 +220,9 @@ def parse_value(
             # unfortunately sometimes the data is malformed
             # as it is not super important we ignore it (for now)
             return b""
+    # handle value typed/specified as bytes but parsed as integer in the tlv parser
+    if value_type is bytes and isinstance(value, int):
+        return bytes(value)
 
     # Matter SDK specific types
     if value_type is uint and (
