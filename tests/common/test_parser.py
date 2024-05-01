@@ -77,7 +77,6 @@ def test_dataclass_from_dict():
     raw["b"] = 2
     res = dataclass_from_dict(BasicModel, raw)
     assert res.b == 2.0
-
     # test datetime string
     assert isinstance(res.f, datetime.datetime)
     assert res.f.month == 12
