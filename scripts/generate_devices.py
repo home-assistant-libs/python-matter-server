@@ -1,14 +1,17 @@
 """Generate device types from matter-devices.xml."""
 
 import pathlib
+import urllib.request
 
 import black
 import xmltodict
 
 REPO_ROOT = pathlib.Path(__file__).parent.parent
 
-CHIP_ROOT = REPO_ROOT / "../../project-chip/connectedhomeip"
-DEVICE_XML = CHIP_ROOT / "src/app/zap-templates/zcl/data-model/chip/matter-devices.xml"
+DEVICE_XML = (
+    "https://raw.githubusercontent.com/project-chip/connectedhomeip"
+    "/master/src/app/zap-templates/zcl/data-model/chip/matter-devices.xml"
+)
 
 OUTPUT_PYTHON = REPO_ROOT / "matter_server/client/models/device_types.py"
 
@@ -42,7 +45,9 @@ def gen_cls_name(name: str):
 
 def main():
     """Generate device types from matter-devices.xml."""
-    data = xmltodict.parse(DEVICE_XML.read_text())
+    with urllib.request.urlopen(DEVICE_XML) as response:  # noqa: S310
+        xml_data = response.read().decode("utf-8")
+    data = xmltodict.parse(xml_data)
     output = [
         '''
 """

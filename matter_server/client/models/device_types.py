@@ -31,7 +31,7 @@ class DeviceType:
         return self.device_type
 
 
-class OrphanClusters(DeviceType, device_type=0xF001):
+class OrphanClusters(DeviceType, device_type=0xFFF10001):
     """Orphan Clusters."""
 
     clusters = {
@@ -65,6 +65,7 @@ class RootNode(DeviceType, device_type=0x0016):
         all_clusters.EthernetNetworkDiagnostics,
         all_clusters.WiFiNetworkDiagnostics,
         all_clusters.ThreadNetworkDiagnostics,
+        all_clusters.IcdManagement,
     }
 
 
@@ -74,6 +75,17 @@ class PowerSource(DeviceType, device_type=0x0011):
     clusters = {
         all_clusters.Descriptor,
         all_clusters.PowerSource,
+    }
+
+
+class ElectricalSensor(DeviceType, device_type=0x0510):
+    """Electrical Sensor."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.PowerTopology,
+        all_clusters.ElectricalEnergyMeasurement,
+        all_clusters.ElectricalPowerMeasurement,
     }
 
 
@@ -122,7 +134,7 @@ class OnOffLight(DeviceType, device_type=0x0100):
         all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.ScenesManagement,
         all_clusters.OnOff,
         all_clusters.LevelControl,
     }
@@ -136,7 +148,7 @@ class DimmableLight(DeviceType, device_type=0x0101):
         all_clusters.Descriptor,
         all_clusters.Binding,
         all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.ScenesManagement,
         all_clusters.OnOff,
         all_clusters.LevelControl,
     }
@@ -149,7 +161,7 @@ class ColorTemperatureLight(DeviceType, device_type=0x010C):
         all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.ScenesManagement,
         all_clusters.OnOff,
         all_clusters.LevelControl,
         all_clusters.ColorControl,
@@ -163,7 +175,7 @@ class ExtendedColorLight(DeviceType, device_type=0x010D):
         all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.ScenesManagement,
         all_clusters.OnOff,
         all_clusters.LevelControl,
         all_clusters.ColorControl,
@@ -177,7 +189,7 @@ class OnOffPlugInUnit(DeviceType, device_type=0x010A):
         all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.ScenesManagement,
         all_clusters.OnOff,
         all_clusters.LevelControl,
     }
@@ -190,7 +202,7 @@ class DimmablePlugInUnit(DeviceType, device_type=0x010B):
         all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.ScenesManagement,
         all_clusters.OnOff,
         all_clusters.LevelControl,
     }
@@ -204,7 +216,7 @@ class Pump(DeviceType, device_type=0x0303):
         all_clusters.Descriptor,
         all_clusters.Binding,
         all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.ScenesManagement,
         all_clusters.OnOff,
         all_clusters.PumpConfigurationAndControl,
         all_clusters.LevelControl,
@@ -384,7 +396,7 @@ class WindowCovering(DeviceType, device_type=0x0202):
     clusters = {
         all_clusters.Identify,
         all_clusters.Descriptor,
-        all_clusters.Scenes,
+        all_clusters.ScenesManagement,
         all_clusters.Groups,
         all_clusters.WindowCovering,
     }
@@ -408,7 +420,7 @@ class HeatingCoolingUnit(DeviceType, device_type=0x0300):
         all_clusters.Descriptor,
         all_clusters.Binding,
         all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.ScenesManagement,
         all_clusters.FanControl,
         all_clusters.LevelControl,
         all_clusters.OnOff,
@@ -422,7 +434,7 @@ class Thermostat(DeviceType, device_type=0x0301):
         all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.Binding,
-        all_clusters.Scenes,
+        all_clusters.ScenesManagement,
         all_clusters.Groups,
         all_clusters.Thermostat,
         all_clusters.TimeSynchronization,
@@ -569,8 +581,9 @@ class RoomAirConditioner(DeviceType, device_type=0x0072):
         all_clusters.OnOff,
         all_clusters.Descriptor,
         all_clusters.Groups,
-        all_clusters.Scenes,
+        all_clusters.ScenesManagement,
         all_clusters.Thermostat,
+        all_clusters.ThermostatUserInterfaceConfiguration,
         all_clusters.FanControl,
         all_clusters.TemperatureMeasurement,
         all_clusters.RelativeHumidityMeasurement,
@@ -589,6 +602,7 @@ class SmokeCoAlarm(DeviceType, device_type=0x0076):
         all_clusters.TemperatureMeasurement,
         all_clusters.CarbonMonoxideConcentrationMeasurement,
         all_clusters.PowerSource,
+        all_clusters.Descriptor,
     }
 
 
@@ -641,6 +655,28 @@ class Dishwasher(DeviceType, device_type=0x0075):
     }
 
 
+class Oven(DeviceType, device_type=0x007B):
+    """Oven."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.Descriptor,
+    }
+
+
+class MicrowaveOven(DeviceType, device_type=0x0079):
+    """Microwave Oven."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.Descriptor,
+        all_clusters.FanControl,
+        all_clusters.MicrowaveOvenMode,
+        all_clusters.MicrowaveOvenControl,
+        all_clusters.OperationalState,
+    }
+
+
 class Refrigerator(DeviceType, device_type=0x0070):
     """Refrigerator."""
 
@@ -666,6 +702,32 @@ class LaundryWasher(DeviceType, device_type=0x0073):
     }
 
 
+class LaundryDryer(DeviceType, device_type=0x007C):
+    """Laundry Dryer."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.Descriptor,
+        all_clusters.OnOff,
+        all_clusters.LaundryWasherMode,
+        all_clusters.LaundryDryerControls,
+        all_clusters.TemperatureControl,
+        all_clusters.OperationalState,
+    }
+
+
+class ExtractorHood(DeviceType, device_type=0x007A):
+    """Extractor Hood."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.Descriptor,
+        all_clusters.HepaFilterMonitoring,
+        all_clusters.ActivatedCarbonFilterMonitoring,
+        all_clusters.FanControl,
+    }
+
+
 class RoboticVacuumCleaner(DeviceType, device_type=0x0074):
     """Robotic Vacuum Cleaner."""
 
@@ -686,10 +748,63 @@ class TemperatureControlledCabinet(DeviceType, device_type=0x0071):
         all_clusters.TemperatureControl,
         all_clusters.TemperatureMeasurement,
         all_clusters.RefrigeratorAndTemperatureControlledCabinetMode,
+        all_clusters.OvenMode,
+        all_clusters.OvenCavityOperationalState,
     }
 
 
-class AllClustersAppServerExample(DeviceType, device_type=0x0000):
+class WaterFreezeDetector(DeviceType, device_type=0x0041):
+    """Water Freeze Detector."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.BooleanState,
+        all_clusters.BooleanStateConfiguration,
+        all_clusters.Descriptor,
+    }
+
+
+class WaterValve(DeviceType, device_type=0x0042):
+    """Water Valve."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.ValveConfigurationAndControl,
+        all_clusters.Descriptor,
+    }
+
+
+class WaterLeakDetector(DeviceType, device_type=0x0043):
+    """Water Leak Detector."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.BooleanState,
+        all_clusters.BooleanStateConfiguration,
+        all_clusters.Descriptor,
+    }
+
+
+class RainSensor(DeviceType, device_type=0x0044):
+    """Rain Sensor."""
+
+    clusters = {
+        all_clusters.Identify,
+        all_clusters.BooleanState,
+        all_clusters.BooleanStateConfiguration,
+        all_clusters.Descriptor,
+    }
+
+
+class NetworkInfrastructureManager(DeviceType, device_type=0xFFF10010):
+    """Network Infrastructure Manager."""
+
+    clusters = {
+        all_clusters.Descriptor,
+    }
+
+
+class AllClustersAppServerExample(DeviceType, device_type=0xFFF10003):
     """All-clusters-app Server Example."""
 
     clusters = {
@@ -702,15 +817,47 @@ class AllClustersAppServerExample(DeviceType, device_type=0x0000):
         all_clusters.Groups,
         all_clusters.LevelControl,
         all_clusters.OnOff,
-        all_clusters.Scenes,
+        all_clusters.ScenesManagement,
         all_clusters.TemperatureMeasurement,
     }
 
 
-class SecondaryNetworkCommissioningDeviceType(DeviceType, device_type=0xF002):
+class SecondaryNetworkCommissioningDeviceType(DeviceType, device_type=0xFFF10002):
     """Secondary Network Commissioning Device Type."""
 
     clusters = {
         all_clusters.NetworkCommissioning,
         all_clusters.Descriptor,
+    }
+
+
+class Cooktop(DeviceType, device_type=0x0078):
+    """Cooktop."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.Identify,
+        all_clusters.OnOff,
+    }
+
+
+class CookSurface(DeviceType, device_type=0x0077):
+    """Cook Surface."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.TemperatureControl,
+        all_clusters.TemperatureMeasurement,
+    }
+
+
+class Evse(DeviceType, device_type=0x050C):
+    """EVSE."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.Identify,
+        all_clusters.EnergyEvse,
+        all_clusters.EnergyEvseMode,
+        all_clusters.TemperatureMeasurement,
     }
