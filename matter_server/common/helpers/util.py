@@ -220,9 +220,13 @@ def parse_value(
             # unfortunately sometimes the data is malformed
             # as it is not super important we ignore it (for now)
             return b""
-    # handle value typed/specified as bytes but parsed as integer in the tlv parser
-    if value_type is bytes and isinstance(value, int):
-        return value.to_bytes(4, "big")
+
+    # handle NOCStruct.noc which is typed/specified as bytes but parsed
+    # as integer in the tlv parser somehow.
+    # https://github.com/home-assistant/core/issues/113279
+    # https://github.com/home-assistant/core/issues/116304
+    if name == "NOCStruct.noc" and not isinstance(value, bytes):
+        return b""
 
     # Matter SDK specific types
     if value_type is uint and (

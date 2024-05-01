@@ -107,6 +107,6 @@ def test_dataclass_from_dict():
     # test extra keys not silently ignored in strict mode
     with pytest.raises(KeyError):
         dataclass_from_dict(BasicModel, raw2, strict=True)
-    # test int gets converted to bytes
-    res = parse_value("int_value_that_should_be_bytes", 5, bytes)
-    assert res == b"\x00\x00\x00\x05"
+    # test NOCStruct.noc edge case
+    res = parse_value("NOCStruct.noc", 5, bytes)
+    assert res == b""
