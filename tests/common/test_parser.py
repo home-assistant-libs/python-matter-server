@@ -7,7 +7,7 @@ from typing import Optional
 
 import pytest
 
-from matter_server.common.helpers.util import dataclass_from_dict
+from matter_server.common.helpers.util import dataclass_from_dict, parse_value
 
 
 class MatterIntEnum(IntEnum):
@@ -107,3 +107,6 @@ def test_dataclass_from_dict():
     # test extra keys not silently ignored in strict mode
     with pytest.raises(KeyError):
         dataclass_from_dict(BasicModel, raw2, strict=True)
+    # test NOCStruct.noc edge case
+    res = parse_value("NOCStruct.noc", 5, bytes)
+    assert res == b""
