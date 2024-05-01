@@ -110,4 +110,4 @@ def test_dataclass_from_dict():
         dataclass_from_dict(BasicModel, raw2, strict=True)
     # test int gets converted to bytes
     res = parse_value("int_value_that_should_be_bytes", 5, bytes)
-    assert isinstance(res, bytes)
+    assert res == b"\x00\x00\x00\x05"

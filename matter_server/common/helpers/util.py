@@ -222,7 +222,7 @@ def parse_value(
             return b""
     # handle value typed/specified as bytes but parsed as integer in the tlv parser
     if value_type is bytes and isinstance(value, int):
-        return bytes(value)
+        return value.to_bytes(4, "big")
 
     # Matter SDK specific types
     if value_type is uint and (
