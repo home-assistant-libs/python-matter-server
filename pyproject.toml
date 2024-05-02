@@ -158,16 +158,12 @@ ignore = [
   "FIX002", # Just annoying, not really useful
   "PLR2004", # Just annoying, not really useful
   "PD011", # Just annoying, not really useful
-  "TCH001", # Just annoying, not really useful
-  "TCH003", # Just annoying, not really useful
   "S101", # assert is often used to satisfy type checking
   "TD002", # Just annoying, not really useful
   "TD003", # Just annoying, not really useful
   "TD004", # Just annoying, not really useful
   "COM812", # Conflict with the Ruff formatter
   "ISC001", # Conflict with the Ruff formatter
-  "TCH003", # TEMPORARY DISABLED
-  "TCH002", # TEMPORARY DISABLED
   "TID252", # TEMPORARY DISABLED
   "N805", # TEMPORARY DISABLED
   "EXE002", # TEMPORARY DISABLED
@@ -212,7 +208,6 @@ ignore = [
   "N801", # TEMPORARY DISABLED
   "N813", # TEMPORARY DISABLED
   "RUF012", # TEMPORARY DISABLED
-  "TCH001", # TEMPORARY DISABLED
   "ANN102", # TEMPORARY DISABLED
   "B007", # TEMPORARY DISABLED
   "SIM102", # TEMPORARY DISABLED

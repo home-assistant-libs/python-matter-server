@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
 from concurrent import futures
 from contextlib import suppress
 import logging
@@ -15,7 +14,6 @@ from chip.exceptions import ChipStackError
 
 from matter_server.common.const import VERBOSE_LOG_LEVEL
 from matter_server.common.helpers.json import json_dumps, json_loads
-from matter_server.common.models import EventType
 
 from ..common.errors import InvalidArguments, InvalidCommand, MatterError
 from ..common.helpers.api import parse_arguments
@@ -30,6 +28,10 @@ from ..common.models import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from matter_server.common.models import EventType
+
     from ..common.helpers.api import APICommandHandler
     from .server import MatterServer
 

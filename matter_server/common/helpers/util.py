@@ -25,15 +25,15 @@ from typing import (
     get_type_hints,
 )
 
-from chip.clusters.ClusterObjects import (
-    ClusterAttributeDescriptor,
-    ClusterObjectDescriptor,
-)
 from chip.clusters.Types import Nullable
 from chip.tlv import float32, uint
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
+    from chip.clusters.ClusterObjects import (
+        ClusterAttributeDescriptor,
+        ClusterObjectDescriptor,
+    )
 
     _T = TypeVar("_T", bound=DataclassInstance)
 

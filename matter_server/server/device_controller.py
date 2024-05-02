@@ -6,22 +6,18 @@ from __future__ import annotations
 
 import asyncio
 from collections import deque
-from collections.abc import Callable, Iterable
 from datetime import datetime
 from functools import partial
 import logging
-from pathlib import Path
 from random import randint
 import time
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
-from chip.ChipDeviceCtrl import DeviceProxyWrapper
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.discovery import DiscoveryType
 from chip.exceptions import ChipStackError
-from chip.native import PyChipError
 from zeroconf import BadTypeInNameException, IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
@@ -57,7 +53,11 @@ from .const import DATA_MODEL_SCHEMA_VERSION
 from .helpers.paa_certificates import fetch_certificates
 
 if TYPE_CHECKING:
-    from chip.ChipDeviceCtrl import ChipDeviceController
+    from collections.abc import Callable, Iterable
+    from pathlib import Path
+
+    from chip.ChipDeviceCtrl import ChipDeviceController, DeviceProxyWrapper
+    from chip.native import PyChipError
 
     from .server import MatterServer
 

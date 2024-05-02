@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 import logging
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from chip.clusters import Objects as Clusters
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS
@@ -15,7 +15,6 @@ from matter_server.common.helpers.util import (
     parse_attribute_path,
     parse_value,
 )
-from matter_server.common.models import MatterNodeData
 
 from .device_types import (
     ALL_TYPES as DEVICE_TYPES,
@@ -24,6 +23,9 @@ from .device_types import (
     DeviceType,
     RootNode,
 )
+
+if TYPE_CHECKING:
+    from matter_server.common.models import MatterNodeData
 
 LOGGER = logging.getLogger(__name__)
 

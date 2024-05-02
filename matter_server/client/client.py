@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
 import logging
-from types import TracebackType
 from typing import TYPE_CHECKING, Any, Final, Optional, cast
 import uuid
 
-from aiohttp import ClientSession
 from chip.clusters import Objects as Clusters
 from chip.clusters.Types import NullValue
 
@@ -50,6 +47,10 @@ from .models.node import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from types import TracebackType
+
+    from aiohttp import ClientSession
     from chip.clusters.Objects import ClusterCommand
 
 SUB_WILDCARD: Final = "*"
