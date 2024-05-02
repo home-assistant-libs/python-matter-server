@@ -91,7 +91,7 @@ async def write_paa_root_cert(
         None,
         _write,
         paa_root_cert_dir,
-        filename_base,
+        f"{filename_base}_{ski.digest.hex()}",
         pem_certificate,
         der_certificate,
     )
