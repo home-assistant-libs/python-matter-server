@@ -19,7 +19,6 @@ dependencies = [
   "aiorun",
   "async-timeout",
   "coloredlogs",
-  "dacite",
   "orjson",
   "home-assistant-chip-clusters==2024.4.1",
 ]
@@ -38,7 +37,6 @@ server = [
   "async-timeout==4.0.3",
   "coloredlogs==15.0.1",
   "cryptography==42.0.5",
-  "dacite==1.8.1",
   "orjson==3.9.15",
   "zeroconf==0.132.2",
   "home-assistant-chip-core==2024.4.1",
