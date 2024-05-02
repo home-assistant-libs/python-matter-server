@@ -77,6 +77,11 @@ def chip_stack_fixture() -> Generator[MagicMock, None, None]:
 @pytest.fixture(name="certificate_authority_manager")
 def certificate_authority_manager_fixture() -> Generator[MagicMock, None, None]:
     """Return a mocked certificate authority manager."""
+
+    # Necessary for patching within tests
+    # pylint: disable=unused-import,import-outside-toplevel
+    import chip.CertificateAuthority  # noqa: F401
+
     with patch(
         "matter_server.server.stack.chip.CertificateAuthority.CertificateAuthorityManager",
         autospec=True,
