@@ -50,13 +50,11 @@ async def write_paa_root_cert(
         # handle PEM certificate file
         file_path_pem = paa_root_cert_dir.joinpath(f"{filename_base}.pem")
         LOGGER.debug("Writing PEM certificate %s", file_path_pem)
-        with open(file_path_pem, "w+", encoding="utf-8") as outfile:
-            outfile.write(pem_certificate)
+        file_path_pem.write_text(pem_certificate)
         # handle DER certificate file (converted from PEM)
         file_path_der = paa_root_cert_dir.joinpath(f"{filename_base}.der")
         LOGGER.debug("Writing DER certificate %s", file_path_der)
-        with open(file_path_der, "wb+") as outfile:
-            outfile.write(der_certificate)
+        file_path_der.write_bytes(der_certificate)
 
     filename_base = base_name + re.sub(
         "[^a-zA-Z0-9_-]", "", re.sub("[=, ]", "_", subject)
@@ -82,7 +80,8 @@ async def write_paa_root_cert(
     ski_formatted = ":".join(f"{byte:02X}" for byte in ski.digest)
     if ski_formatted in CERT_SUBJECT_KEY_IDS:
         LOGGER.debug(
-            "Skipping, certificate with the same subject key identifier already stored."
+            "Skipping '%s', certificate with the same subject key identifier already stored.",
+            subject,
         )
         return False
     CERT_SUBJECT_KEY_IDS.add(ski_formatted)
