@@ -19,7 +19,6 @@ dependencies = [
   "aiorun",
   "async-timeout",
   "coloredlogs",
-  "dacite",
   "orjson",
   "home-assistant-chip-clusters==2024.4.1",
 ]
@@ -33,9 +32,14 @@ version = "0.0.0"
 
 [project.optional-dependencies]
 server = [
-  "home-assistant-chip-core==2024.4.1",
+  "aiohttp==3.9.5",
+  "aiorun==2023.7.2",
+  "async-timeout==4.0.3",
+  "coloredlogs==15.0.1",
   "cryptography==42.0.5",
+  "orjson==3.9.15",
   "zeroconf==0.132.2",
+  "home-assistant-chip-core==2024.4.1",
 ]
 test = [
   "codespell==2.2.6",
