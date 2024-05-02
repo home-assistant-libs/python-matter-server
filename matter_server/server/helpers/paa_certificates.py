@@ -10,7 +10,6 @@ All rights reserved.
 import asyncio
 from datetime import UTC, datetime, timedelta
 import logging
-import os
 from pathlib import Path
 import re
 import warnings
@@ -187,23 +186,32 @@ async def fetch_certificates(
 ) -> int:
     """Fetch PAA Certificates."""
     loop = asyncio.get_running_loop()
+    paa_root_cert_dir_version = paa_root_cert_dir / ".version"
 
-    if not paa_root_cert_dir.is_dir():
+    def _check_paa_root_dir(
+        paa_root_cert_dir: Path, paa_root_cert_dir_version: Path
+    ) -> datetime | None:
+        """Return timestamp of last fetch or None if a initial download is required."""
+        if paa_root_cert_dir.is_dir():
+            if paa_root_cert_dir_version.exists():
+                stat = paa_root_cert_dir_version.stat()
+                return datetime.fromtimestamp(stat.st_mtime, tz=UTC)
 
-        def _make_root_cert_dir(paa_root_cert_dir: Path) -> None:
-            paa_root_cert_dir.mkdir(parents=True)
-            # Clear mtime to make sure code retries if first fetch fails.
-            os.utime(paa_root_cert_dir, (0, 0))
+            # Old certificate store version, delete all files
+            LOGGER.info("Old PAA root certificate store found, removing certificates.")
+            for path in paa_root_cert_dir.iterdir():
+                if not path.is_dir():
+                    path.unlink()
+        else:
+            paa_root_cert_dir.mkdir()
+        return None
 
-        await loop.run_in_executor(None, _make_root_cert_dir, paa_root_cert_dir)
-    else:
-        stat = await loop.run_in_executor(None, paa_root_cert_dir.stat)
-        last_fetch = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
-        if last_fetch > datetime.now(tz=UTC) - timedelta(days=1):
-            LOGGER.info(
-                "Skip fetching certificates (already fetched within the last 24h)."
-            )
-            return 0
+    last_fetch = await loop.run_in_executor(
+        None, _check_paa_root_dir, paa_root_cert_dir, paa_root_cert_dir_version
+    )
+    if last_fetch and last_fetch > datetime.now(tz=UTC) - timedelta(days=1):
+        LOGGER.info("Skip fetching certificates (already fetched within the last 24h).")
+        return 0
 
     total_fetch_count = 0
 
@@ -231,6 +239,6 @@ async def fetch_certificates(
     if fetch_test_certificates:
         total_fetch_count += await fetch_git_certificates(paa_root_cert_dir)
 
-    await loop.run_in_executor(None, paa_root_cert_dir.touch)
+    await loop.run_in_executor(None, paa_root_cert_dir_version.write_text, "1")
 
     return fetch_count
