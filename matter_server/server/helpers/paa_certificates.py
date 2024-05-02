@@ -48,12 +48,12 @@ async def write_paa_root_cert(
         der_certificate: bytes,
     ) -> None:
         # handle PEM certificate file
-        file_path_pem = paa_root_cert_dir.joinpath(filename_base + ".pem")
+        file_path_pem = paa_root_cert_dir.joinpath(f"{filename_base}.pem")
         LOGGER.debug("Writing PEM certificate %s", file_path_pem)
         with open(file_path_pem, "w+", encoding="utf-8") as outfile:
             outfile.write(pem_certificate)
         # handle DER certificate file (converted from PEM)
-        file_path_der = paa_root_cert_dir.joinpath(filename_base + ".der")
+        file_path_der = paa_root_cert_dir.joinpath(f"{filename_base}.der")
         LOGGER.debug("Writing DER certificate %s", file_path_der)
         with open(file_path_der, "wb+") as outfile:
             outfile.write(der_certificate)
