@@ -10,13 +10,14 @@ All rights reserved.
 import asyncio
 from datetime import UTC, datetime, timedelta
 import logging
-import os
 from pathlib import Path
 import re
+import warnings
 
 from aiohttp import ClientError, ClientSession
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
+from cryptography.utils import CryptographyDeprecationWarning
 
 # Git repo details
 OWNER = "project-chip"
@@ -29,90 +30,116 @@ TEST_URL = "https://on.test-net.dcl.csa-iot.org"
 GIT_URL = f"https://raw.githubusercontent.com/{OWNER}/{REPO}/master/{PATH}"
 
 
-LAST_CERT_IDS: set[str] = set()
+# Subject Key Identifier of certificates. The Subject Key Identifier is a mandatory
+# X.509 extensions for Matter uniquely identifying the public key of PAA certificates.
+CERT_SUBJECT_KEY_IDS: set[str] = set()
 
 
 async def write_paa_root_cert(
-    paa_root_cert_dir: Path, certificate: str, subject: str
-) -> None:
+    paa_root_cert_dir: Path, base_name: str, pem_certificate: str, subject: str
+) -> bool:
     """Write certificate from string to file."""
 
-    def _write() -> None:
-        filename_base = "dcld_mirror_" + re.sub(
-            "[^a-zA-Z0-9_-]", "", re.sub("[=, ]", "_", subject)
-        )
-        filepath_base = paa_root_cert_dir.joinpath(filename_base)
+    def _write(
+        paa_root_cert_dir: Path,
+        filename_base: str,
+        pem_certificate: str,
+        der_certificate: bytes,
+    ) -> None:
         # handle PEM certificate file
-        file_path_pem = f"{filepath_base}.pem"
-        LOGGER.debug("Writing certificate %s", file_path_pem)
-        with open(file_path_pem, "w+", encoding="utf-8") as outfile:
-            outfile.write(certificate)
+        file_path_pem = paa_root_cert_dir.joinpath(f"{filename_base}.pem")
+        LOGGER.debug("Writing PEM certificate %s", file_path_pem)
+        file_path_pem.write_text(pem_certificate)
         # handle DER certificate file (converted from PEM)
-        pem_certificate = x509.load_pem_x509_certificate(certificate.encode())
-        file_path_der = f"{filepath_base}.der"
-        LOGGER.debug("Writing certificate %s", file_path_der)
-        with open(file_path_der, "wb+") as outfile:
-            der_certificate = pem_certificate.public_bytes(serialization.Encoding.DER)
-            outfile.write(der_certificate)
+        file_path_der = paa_root_cert_dir.joinpath(f"{filename_base}.der")
+        LOGGER.debug("Writing DER certificate %s", file_path_der)
+        file_path_der.write_bytes(der_certificate)
 
-    return await asyncio.get_running_loop().run_in_executor(None, _write)
+    filename_base = base_name + re.sub(
+        "[^a-zA-Z0-9_-]", "", re.sub("[=, ]", "_", subject)
+    )
+
+    # Some certificates lead to a warning from the cryptography library:
+    # CryptographyDeprecationWarning: The parsed certificate contains a
+    # NULL parameter value in its signature algorithm parameters.
+    with warnings.catch_warnings():
+        if LOGGER.isEnabledFor(logging.DEBUG):
+            # Use always so warnings are printed for each offending cert.
+            warnings.simplefilter("always", CryptographyDeprecationWarning)
+        else:
+            # Ignore the warnings generally. The problem has been reported to the CSA
+            # via Slack.
+            warnings.simplefilter("ignore", CryptographyDeprecationWarning)
+
+        cert = x509.load_pem_x509_certificate(pem_certificate.encode())
+
+    ski: x509.SubjectKeyIdentifier = cert.extensions.get_extension_for_class(
+        x509.SubjectKeyIdentifier
+    ).value
+    ski_formatted = ":".join(f"{byte:02X}" for byte in ski.digest)
+    if ski_formatted in CERT_SUBJECT_KEY_IDS:
+        LOGGER.debug(
+            "Skipping '%s', certificate with the same subject key identifier already stored.",
+            subject,
+        )
+        return False
+    CERT_SUBJECT_KEY_IDS.add(ski_formatted)
+
+    der_certificate = cert.public_bytes(serialization.Encoding.DER)
+
+    await asyncio.get_running_loop().run_in_executor(
+        None,
+        _write,
+        paa_root_cert_dir,
+        f"{filename_base}_{ski.digest.hex()}",
+        pem_certificate,
+        der_certificate,
+    )
+
+    return True
 
 
 async def fetch_dcl_certificates(
     paa_root_cert_dir: Path,
-    fetch_test_certificates: bool = True,
-    fetch_production_certificates: bool = True,
+    base_name: str,
+    base_url: str,
 ) -> int:
     """Fetch DCL PAA Certificates."""
-    LOGGER.info("Fetching the latest PAA root certificates from DCL.")
     fetch_count: int = 0
-    base_urls = set()
-    # determine which url's need to be queried.
-    # if we're going to fetch both prod and test, do test first
-    # so any duplicates will be overwritten/preferred by the production version.
 
-    # NOTE: While Matter is in BETA we fetch the test certificates by default
-    if fetch_test_certificates:
-        base_urls.add(TEST_URL)
-    if fetch_production_certificates:
-        base_urls.add(PRODUCTION_URL)
     try:
         async with ClientSession(raise_for_status=True) as http_session:
-            for url_base in base_urls:
-                # fetch the paa certificates list
-                async with http_session.get(
-                    f"{url_base}/dcl/pki/root-certificates"
-                ) as response:
+            # fetch the paa certificates list
+            async with http_session.get(
+                f"{base_url}/dcl/pki/root-certificates"
+            ) as response:
+                result = await response.json()
+            paa_list = result["approvedRootCertificates"]["certs"]
+            # grab each certificate
+            for paa in paa_list:
+                # do not fetch a certificate if we already fetched it
+                if paa["subjectKeyId"] in CERT_SUBJECT_KEY_IDS:
+                    continue
+                url = f"{base_url}/dcl/pki/certificates/{paa['subject']}/{paa['subjectKeyId']}"
+                LOGGER.debug("Downloading certificate from %s", url)
+                async with http_session.get(url) as response:
                     result = await response.json()
-                paa_list = result["approvedRootCertificates"]["certs"]
-                # grab each certificate
-                for paa in paa_list:
-                    # do not fetch a certificate if we already fetched it
-                    if paa["subjectKeyId"] in LAST_CERT_IDS:
-                        continue
-                    async with http_session.get(
-                        f"{url_base}/dcl/pki/certificates/{paa['subject']}/{paa['subjectKeyId']}"
-                    ) as response:
-                        result = await response.json()
 
-                    certificate_data: dict = result["approvedCertificates"]["certs"][0]
-                    certificate: str = certificate_data["pemCert"]
-                    subject = certificate_data["subjectAsText"]
-                    certificate = certificate.rstrip("\n")
-
-                    await write_paa_root_cert(
-                        paa_root_cert_dir,
-                        certificate,
-                        subject,
-                    )
-                    LAST_CERT_IDS.add(paa["subjectKeyId"])
+                certificate_data: dict = result["approvedCertificates"]["certs"][0]
+                certificate: str = certificate_data["pemCert"]
+                subject = certificate_data["subjectAsText"]
+                certificate = certificate.rstrip("\n")
+                if await write_paa_root_cert(
+                    paa_root_cert_dir,
+                    base_name,
+                    certificate,
+                    subject,
+                ):
                     fetch_count += 1
     except (ClientError, TimeoutError) as err:
         LOGGER.warning(
             "Fetching latest certificates failed: error %s", err, exc_info=err
         )
-    else:
-        LOGGER.info("Fetched %s PAA root certificates from DCL.", fetch_count)
 
     return fetch_count
 
@@ -136,13 +163,12 @@ async def fetch_git_certificates(paa_root_cert_dir: Path) -> int:
                 git_certs = {item["name"].split(".")[0] for item in contents}
             # Fetch certificates
             for cert in git_certs:
-                if cert in LAST_CERT_IDS:
-                    continue
                 async with http_session.get(f"{GIT_URL}/{cert}.pem") as response:
                     certificate = await response.text()
-                await write_paa_root_cert(paa_root_cert_dir, certificate, cert)
-                LAST_CERT_IDS.add(cert)
-                fetch_count += 1
+                if await write_paa_root_cert(
+                    paa_root_cert_dir, "git_", certificate, cert
+                ):
+                    fetch_count += 1
     except (ClientError, TimeoutError) as err:
         LOGGER.warning(
             "Fetching latest certificates failed: error %s", err, exc_info=err
@@ -160,33 +186,59 @@ async def fetch_certificates(
 ) -> int:
     """Fetch PAA Certificates."""
     loop = asyncio.get_running_loop()
+    paa_root_cert_dir_version = paa_root_cert_dir / ".version"
 
-    if not paa_root_cert_dir.is_dir():
+    def _check_paa_root_dir(
+        paa_root_cert_dir: Path, paa_root_cert_dir_version: Path
+    ) -> datetime | None:
+        """Return timestamp of last fetch or None if a initial download is required."""
+        if paa_root_cert_dir.is_dir():
+            if paa_root_cert_dir_version.exists():
+                stat = paa_root_cert_dir_version.stat()
+                return datetime.fromtimestamp(stat.st_mtime, tz=UTC)
 
-        def _make_root_cert_dir(paa_root_cert_dir: Path) -> None:
-            paa_root_cert_dir.mkdir(parents=True)
-            # Clear mtime to make sure code retries if first fetch fails.
-            os.utime(paa_root_cert_dir, (0, 0))
+            # Old certificate store version, delete all files
+            LOGGER.info("Old PAA root certificate store found, removing certificates.")
+            for path in paa_root_cert_dir.iterdir():
+                if not path.is_dir():
+                    path.unlink()
+        else:
+            paa_root_cert_dir.mkdir()
+        return None
 
-        await loop.run_in_executor(None, _make_root_cert_dir, paa_root_cert_dir)
-    else:
-        stat = await loop.run_in_executor(None, paa_root_cert_dir.stat)
-        last_fetch = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
-        if last_fetch > datetime.now(tz=UTC) - timedelta(days=1):
-            LOGGER.info(
-                "Skip fetching certificates (already fetched within the last 24h)."
-            )
-            return 0
-
-    fetch_count = await fetch_dcl_certificates(
-        paa_root_cert_dir=paa_root_cert_dir,
-        fetch_test_certificates=fetch_test_certificates,
-        fetch_production_certificates=fetch_production_certificates,
+    last_fetch = await loop.run_in_executor(
+        None, _check_paa_root_dir, paa_root_cert_dir, paa_root_cert_dir_version
     )
+    if last_fetch and last_fetch > datetime.now(tz=UTC) - timedelta(days=1):
+        LOGGER.info("Skip fetching certificates (already fetched within the last 24h).")
+        return 0
+
+    total_fetch_count = 0
+
+    LOGGER.info("Fetching the latest PAA root certificates from DCL.")
+
+    # Determine which url's need to be queried.
+    if fetch_production_certificates:
+        fetch_count = await fetch_dcl_certificates(
+            paa_root_cert_dir=paa_root_cert_dir,
+            base_name="dcld_production_",
+            base_url=PRODUCTION_URL,
+        )
+        LOGGER.info("Fetched %s PAA root certificates from DCL.", fetch_count)
+        total_fetch_count += fetch_count
 
     if fetch_test_certificates:
-        fetch_count += await fetch_git_certificates(paa_root_cert_dir)
+        fetch_count = await fetch_dcl_certificates(
+            paa_root_cert_dir=paa_root_cert_dir,
+            base_name="dcld_test_",
+            base_url=TEST_URL,
+        )
+        LOGGER.info("Fetched %s PAA root certificates from Test DCL.", fetch_count)
+        total_fetch_count += fetch_count
 
-    await loop.run_in_executor(None, paa_root_cert_dir.touch)
+    if fetch_test_certificates:
+        total_fetch_count += await fetch_git_certificates(paa_root_cert_dir)
+
+    await loop.run_in_executor(None, paa_root_cert_dir_version.write_text, "1")
 
     return fetch_count
