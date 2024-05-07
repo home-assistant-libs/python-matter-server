@@ -4,6 +4,7 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
+from chip.CertificateAuthority import CertificateAuthorityManager
 from chip.ChipStack import ChipStack
 import chip.logging
 from chip.logging import (
@@ -17,7 +18,7 @@ from chip.logging.types import LogRedirectCallback_t
 import chip.native
 
 if TYPE_CHECKING:
-    from chip.CertificateAuthority import CertificateAuthorityManager
+    from chip.FabricAdmin import FabricAdmin
 
     from .server import MatterServer
 
@@ -112,9 +113,7 @@ class MatterStack:
         # Initialize Certificate Authority Manager
         # yeah this is a bit weird just to prevent a circular import in the underlying SDK
         self.certificate_authority_manager: CertificateAuthorityManager = (
-            chip.CertificateAuthority.CertificateAuthorityManager(
-                chipStack=self._chip_stack
-            )
+            CertificateAuthorityManager(chipStack=self._chip_stack)
         )
         self.certificate_authority_manager.LoadAuthoritiesFromStorage()
 
@@ -131,7 +130,7 @@ class MatterStack:
                 admin.vendorId == server.vendor_id
                 and admin.fabricId == server.fabric_id
             ):
-                self.fabric_admin = admin
+                self.fabric_admin: FabricAdmin = admin
                 break
         else:
             self.fabric_admin = cert_auth.NewFabricAdmin(
