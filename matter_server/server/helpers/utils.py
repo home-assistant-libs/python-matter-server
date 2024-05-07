@@ -16,7 +16,7 @@ async def ping_ip(ip_address: str, timeout: int = 2, attempts: int = 1) -> bool:
         # macos does not have support for -W (timeout) on ping6 ?!
         cmd = f"ping6 -c 1 {ip_address}"
     elif is_ipv6:
-        cmd = f"ping6 -c 1 -W {timeout} {ip_address}"
+        cmd = f"ping -6 -c 1 -W {timeout} {ip_address}"
     else:
         cmd = f"ping -c 1 -W {timeout} {ip_address}"
     while attempts:
