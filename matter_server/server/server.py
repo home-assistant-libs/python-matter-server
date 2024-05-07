@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
 from functools import partial
 import ipaddress
 import logging
@@ -35,6 +34,9 @@ from .device_controller import MatterDeviceController
 from .stack import MatterStack
 from .storage import StorageController
 from .vendor_info import VendorInfo
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 DASHBOARD_DIR = Path(__file__).parent.joinpath("../dashboard/").resolve()
 DASHBOARD_DIR_EXISTS = DASHBOARD_DIR.exists()

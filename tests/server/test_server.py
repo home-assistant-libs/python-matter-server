@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, Generator
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,6 +10,9 @@ import pytest
 from matter_server.common.helpers.api import parse_arguments
 from matter_server.common.models import APICommand
 from matter_server.server.server import MatterServer
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Generator
 
 pytestmark = pytest.mark.usefixtures(
     "application",
@@ -74,6 +77,11 @@ def chip_stack_fixture() -> Generator[MagicMock, None, None]:
 @pytest.fixture(name="certificate_authority_manager")
 def certificate_authority_manager_fixture() -> Generator[MagicMock, None, None]:
     """Return a mocked certificate authority manager."""
+
+    # Necessary for patching within tests
+    # pylint: disable=unused-import,import-outside-toplevel
+    import chip.CertificateAuthority  # noqa: F401
+
     with patch(
         "matter_server.server.stack.chip.CertificateAuthority.CertificateAuthorityManager",
         autospec=True,
