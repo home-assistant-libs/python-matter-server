@@ -4,7 +4,7 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-from chip.CertificateAuthority import CertificateAuthorityManager
+import chip.CertificateAuthority
 from chip.ChipStack import ChipStack
 import chip.logging
 from chip.logging import (
@@ -112,8 +112,8 @@ class MatterStack:
 
         # Initialize Certificate Authority Manager
         # yeah this is a bit weird just to prevent a circular import in the underlying SDK
-        self.certificate_authority_manager: CertificateAuthorityManager = (
-            CertificateAuthorityManager(chipStack=self._chip_stack)
+        self.certificate_authority_manager: chip.CertificateAuthority.CertificateAuthorityManager = chip.CertificateAuthority.CertificateAuthorityManager(
+            chipStack=self._chip_stack
         )
         self.certificate_authority_manager.LoadAuthoritiesFromStorage()
 
