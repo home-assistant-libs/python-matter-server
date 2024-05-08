@@ -1111,7 +1111,16 @@ class MatterDeviceController:
         # pylint: disable=protected-access
         tlv_attributes = sub._readTransaction._cache.attributeTLVCache
         node.attributes.update(parse_attributes_from_read_result(tlv_attributes))
-        node_logger.info("Subscription succeeded")
+
+        report_interval_floor, report_interval_ceiling = (
+            sub.GetReportingIntervalsSeconds()
+        )
+        node_logger.info(
+            "Subscription succeeded with report interval [%d, %d]",
+            report_interval_floor,
+            report_interval_ceiling,
+        )
+
         self._node_last_seen[node_id] = time.time()
         self.server.signal_event(EventType.NODE_UPDATED, node)
 
