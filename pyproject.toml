@@ -33,7 +33,7 @@ version = "0.0.0"
 [project.optional-dependencies]
 server = [
   "aiohttp==3.9.5",
-  "aiorun==2023.7.2",
+  "aiorun==2024.5.1",
   "async-timeout==4.0.3",
   "coloredlogs==15.0.1",
   "cryptography==42.0.6",
