@@ -32,4 +32,5 @@ RUN \
 VOLUME ["/data"]
 EXPOSE 5580
 
-ENTRYPOINT ["matter-server", "--storage-path", "/data"]
+ENTRYPOINT [ "matter-server" ]
+CMD [ "--storage-path", "/data", "--paa-root-cert-dir", "/data/credentials" ]
