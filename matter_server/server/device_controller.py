@@ -32,6 +32,7 @@ from matter_server.common.models import CommissionableNodeData, CommissioningPar
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
 from matter_server.server.ota.dcl import check_updates
+from matter_server.server.ota.provider import ExternalOtaProvider
 from matter_server.server.sdk import ChipDeviceControllerWrapper
 
 from ..common.errors import (
@@ -149,6 +150,7 @@ class MatterDeviceController:
         self._polled_attributes: dict[int, set[str]] = {}
         self._custom_attribute_poller_timer: asyncio.TimerHandle | None = None
         self._custom_attribute_poller_task: asyncio.Task | None = None
+        self._ota_provider = ExternalOtaProvider()
 
     async def initialize(self) -> None:
         """Initialize the device controller."""
@@ -922,6 +924,7 @@ class MatterDeviceController:
             )
 
             # Add to OTA provider
+            await self._ota_provider.download_update(update)
 
         return update
 
