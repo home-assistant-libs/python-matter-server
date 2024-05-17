@@ -221,6 +221,9 @@ class MatterDeviceController:
 
         # shutdown the sdk device controller
         await self._chip_device_controller.shutdown()
+        # shutdown the OTA Provider
+        if self._ota_provider:
+            await self._ota_provider.stop()
         LOGGER.debug("Stopped.")
 
     @property
@@ -903,6 +906,13 @@ class MatterDeviceController:
         node_logger = LOGGER.getChild(f"node_{node_id}")
         node = self._nodes[node_id]
 
+        if self.chip_controller is None:
+            raise RuntimeError("Device Controller not initialized.")
+
+        if not self._ota_provider:
+            LOGGER.warning("No OTA provider found, updates not possible.")
+            return None
+
         node_logger.debug("Check for updates.")
         vid = cast(int, node.attributes.get(BASIC_INFORMATION_VENDOR_ID_ATTRIBUTE_PATH))
         pid = cast(
@@ -916,15 +926,39 @@ class MatterDeviceController:
         )
 
         update = await check_updates(node_id, vid, pid, software_version)
-        if update and "otaUrl" in update and len(update["otaUrl"]) > 0:
-            node_logger.info(
-                "New software update found: %s (current %s). Preparing updates...",
-                update["softwareVersionString"],
-                software_version_string,
-            )
+        if not update:
+            node_logger.info("No new update found.")
+            return None
 
-            # Add to OTA provider
-            await self._ota_provider.download_update(update)
+        if "otaUrl" not in update:
+            node_logger.warning("Update found, but no OTA URL provided.")
+            return None
+
+        node_logger.info(
+            "New software update found: %s (current %s). Preparing updates...",
+            update["softwareVersionString"],
+            software_version_string,
+        )
+
+        # Add to OTA provider
+        await self._ota_provider.download_update(update)
+
+        self._ota_provider.start()
+
+        # Wait for OTA provider to be ready
+        # TODO: Detect when OTA provider is ready
+        await asyncio.sleep(2)
+
+        await self.chip_controller.SendCommand(
+            nodeid=node_id,
+            endpoint=0,
+            payload=Clusters.OtaSoftwareUpdateRequestor.Commands.AnnounceOTAProvider(
+                providerNodeID=32,
+                vendorID=0,  # TODO: Use Server Vendor ID
+                announcementReason=Clusters.OtaSoftwareUpdateRequestor.Enums.AnnouncementReasonEnum.kUpdateAvailable,
+                endpoint=0,
+            ),
+        )
 
         return update
 
