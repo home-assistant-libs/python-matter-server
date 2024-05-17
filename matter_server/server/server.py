@@ -30,7 +30,11 @@ from ..common.models import (
     ServerInfoMessage,
 )
 from ..server.client_handler import WebsocketClientHandler
-from .const import DEFAULT_PAA_ROOT_CERTS_DIR, MIN_SCHEMA_VERSION
+from .const import (
+    DEFAULT_OTA_PROVIDER_DIR,
+    DEFAULT_PAA_ROOT_CERTS_DIR,
+    MIN_SCHEMA_VERSION,
+)
 from .device_controller import MatterDeviceController
 from .stack import MatterStack
 from .storage import StorageController
@@ -91,12 +95,12 @@ def mount_websocket(server: MatterServer, path: str) -> None:
 class MatterServer:
     """Serve Matter stack over WebSockets."""
 
-    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-instance-attributes,too-many-arguments
 
     _runner: web.AppRunner | None = None
     _http: MultiHostTCPSite | None = None
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         storage_path: str,
         vendor_id: int,
@@ -107,6 +111,7 @@ class MatterServer:
         paa_root_cert_dir: Path | None = None,
         enable_test_net_dcl: bool = False,
         bluetooth_adapter_id: int | None = None,
+        ota_provider_dir: Path | None = None,
     ) -> None:
         """Initialize the Matter Server."""
         self.storage_path = storage_path
@@ -121,6 +126,10 @@ class MatterServer:
             self.paa_root_cert_dir = Path(paa_root_cert_dir).absolute()
         self.enable_test_net_dcl = enable_test_net_dcl
         self.bluetooth_enabled = bluetooth_adapter_id is not None
+        if ota_provider_dir is None:
+            self.ota_provider_dir = DEFAULT_OTA_PROVIDER_DIR
+        else:
+            self.ota_provider_dir = Path(ota_provider_dir).absolute()
         self.logger = logging.getLogger(__name__)
         self.app = web.Application()
         self.loop: asyncio.AbstractEventLoop | None = None
@@ -165,7 +174,9 @@ class MatterServer:
 
         # Initialize our (intermediate) device controller which keeps track
         # of Matter devices and their subscriptions.
-        self._device_controller = MatterDeviceController(self, self.paa_root_cert_dir)
+        self._device_controller = MatterDeviceController(
+            self, self.paa_root_cert_dir, self.ota_provider_dir
+        )
         self._register_api_commands()
 
         await self._device_controller.initialize()

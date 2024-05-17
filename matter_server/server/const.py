@@ -20,3 +20,5 @@ DEFAULT_PAA_ROOT_CERTS_DIR: Final[pathlib.Path] = (
     .parent.resolve()
     .joinpath("credentials/development/paa-root-certs")
 )
+
+DEFAULT_OTA_PROVIDER_DIR: Final[pathlib.Path] = pathlib.Path().cwd().joinpath("updates")

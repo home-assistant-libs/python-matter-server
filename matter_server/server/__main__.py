@@ -116,6 +116,12 @@ parser.add_argument(
     nargs="+",
     help="List of node IDs to show logs from (applies only to server logs).",
 )
+parser.add_argument(
+    "--ota-provider-dir",
+    type=str,
+    default=None,
+    help="Directory where OTA Provider stores software updates and configuration.",
+)
 
 args = parser.parse_args()
 
@@ -216,6 +222,7 @@ def main() -> None:
         args.paa_root_cert_dir,
         args.enable_test_net_dcl,
         args.bluetooth_adapter,
+        args.ota_provider_dir,
     )
 
     async def handle_stop(loop: asyncio.AbstractEventLoop) -> None:
