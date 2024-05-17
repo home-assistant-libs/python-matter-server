@@ -203,7 +203,7 @@ async def fetch_certificates(
                 if not path.is_dir():
                     path.unlink()
         else:
-            paa_root_cert_dir.mkdir()
+            paa_root_cert_dir.mkdir(parents=True)
         return None
 
     last_fetch = await loop.run_in_executor(
