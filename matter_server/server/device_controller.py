@@ -31,6 +31,7 @@ from matter_server.common.custom_clusters import check_polled_attributes
 from matter_server.common.models import CommissionableNodeData, CommissioningParameters
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
+from matter_server.server.ota.dcl import check_updates
 from matter_server.server.sdk import ChipDeviceControllerWrapper
 
 from ..common.errors import (
@@ -91,9 +92,20 @@ ROUTING_ROLE_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
 DESCRIPTOR_PARTS_LIST_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
     0, Clusters.Descriptor.Attributes.PartsList
 )
+BASIC_INFORMATION_VENDOR_ID_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
+    0, Clusters.BasicInformation.Attributes.VendorID
+)
+BASIC_INFORMATION_PRODUCT_ID_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
+    0, Clusters.BasicInformation.Attributes.ProductID
+)
 BASIC_INFORMATION_SOFTWARE_VERSION_ATTRIBUTE_PATH = (
     create_attribute_path_from_attribute(
         0, Clusters.BasicInformation.Attributes.SoftwareVersion
+    )
+)
+BASIC_INFORMATION_SOFTWARE_VERSION_STRING_ATTRIBUTE_PATH = (
+    create_attribute_path_from_attribute(
+        0, Clusters.BasicInformation.Attributes.SoftwareVersionString
     )
 )
 
@@ -875,6 +887,43 @@ class MatterDeviceController:
             next_test_node_id += 1
             self._nodes[node.node_id] = node
             self.server.signal_event(EventType.NODE_ADDED, node)
+
+    @api_command(APICommand.UPDATE_NODE)
+    async def update_node(self, node_id: int) -> dict | None:
+        """
+        Check if there is an update for a particular node.
+
+        Reads the current software version and checks the DCL if there is an update
+        available. If there is an update available, the command returns the version
+        information of the latest update available.
+        """
+
+        node_logger = LOGGER.getChild(f"node_{node_id}")
+        node = self._nodes[node_id]
+
+        node_logger.debug("Check for updates.")
+        vid = cast(int, node.attributes.get(BASIC_INFORMATION_VENDOR_ID_ATTRIBUTE_PATH))
+        pid = cast(
+            int, node.attributes.get(BASIC_INFORMATION_PRODUCT_ID_ATTRIBUTE_PATH)
+        )
+        software_version = cast(
+            int, node.attributes.get(BASIC_INFORMATION_SOFTWARE_VERSION_ATTRIBUTE_PATH)
+        )
+        software_version_string = node.attributes.get(
+            BASIC_INFORMATION_SOFTWARE_VERSION_STRING_ATTRIBUTE_PATH
+        )
+
+        update = await check_updates(node_id, vid, pid, software_version)
+        if update and "otaUrl" in update and len(update["otaUrl"]) > 0:
+            node_logger.info(
+                "New software update found: %s (current %s). Preparing updates...",
+                update["softwareVersionString"],
+                software_version_string,
+            )
+
+            # Add to OTA provider
+
+        return update
 
     async def _subscribe_node(self, node_id: int) -> None:
         """
