@@ -1,4 +1,4 @@
-"""Various models and helpers for (custom) Matter clusters."""
+"""Definitions for custom (vendor specific) Matter clusters."""
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -17,7 +17,21 @@ from chip.tlv import float32
 
 
 @dataclass
-class EveEnergyCluster(Cluster):
+class CustomCluster:
+    """Base model for a vendor specific custom cluster."""
+
+    should_poll: bool = False  # should the entire cluster be polled for state changes?
+
+
+@dataclass
+class CustomClusterAttribute:
+    """Base model for a vendor specific custom cluster attribute."""
+
+    should_poll: bool = False  # should this attribute be polled ?
+
+
+@dataclass
+class EveEnergyCluster(Cluster, CustomCluster):
     """Custom (vendor-specific) cluster for Eve Energy plug."""
 
     id: ClassVar[int] = 0x130AFC01
@@ -55,7 +69,7 @@ class EveEnergyCluster(Cluster):
         """Attributes for the EveEnergy Cluster."""
 
         @dataclass
-        class Watt(ClusterAttributeDescriptor):
+        class Watt(ClusterAttributeDescriptor, CustomClusterAttribute):
             """Watt Attribute within the EveEnergy Cluster."""
 
             @ChipUtility.classproperty
@@ -76,7 +90,7 @@ class EveEnergyCluster(Cluster):
             value: float32 = 0
 
         @dataclass
-        class WattAccumulated(ClusterAttributeDescriptor):
+        class WattAccumulated(ClusterAttributeDescriptor, CustomClusterAttribute):
             """WattAccumulated Attribute within the EveEnergy Cluster."""
 
             @ChipUtility.classproperty
@@ -97,7 +111,9 @@ class EveEnergyCluster(Cluster):
             value: float32 = 0
 
         @dataclass
-        class wattAccumulatedControlPoint(ClusterAttributeDescriptor):
+        class wattAccumulatedControlPoint(
+            ClusterAttributeDescriptor, CustomClusterAttribute
+        ):
             """wattAccumulatedControlPoint Attribute within the EveEnergy Cluster."""
 
             @ChipUtility.classproperty
@@ -118,7 +134,7 @@ class EveEnergyCluster(Cluster):
             value: float32 = 0
 
         @dataclass
-        class Voltage(ClusterAttributeDescriptor):
+        class Voltage(ClusterAttributeDescriptor, CustomClusterAttribute):
             """Voltage Attribute within the EveEnergy Cluster."""
 
             @ChipUtility.classproperty
@@ -139,7 +155,7 @@ class EveEnergyCluster(Cluster):
             value: float32 = 0
 
         @dataclass
-        class Current(ClusterAttributeDescriptor):
+        class Current(ClusterAttributeDescriptor, CustomClusterAttribute):
             """Current Attribute within the EveEnergy Cluster."""
 
             @ChipUtility.classproperty
