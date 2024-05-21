@@ -779,22 +779,6 @@ class MatterDeviceController:
                 result.statusCode,
             )
 
-    @api_command(APICommand.SUBSCRIBE_ATTRIBUTE)
-    async def subscribe_attribute(
-        self, node_id: int, attribute_path: str | list[str]
-    ) -> None:
-        """
-        Subscribe to given AttributePath(s).
-
-        Either supply a single attribute path or a list of paths.
-        The given attribute path(s) will be added to the list of attributes that
-        are watched for the given node. This is persistent over restarts.
-        """
-        LOGGER.debug(
-            "The subscribe_attribute command has been deprecated and will be removed from"
-            " a future version. You no longer need to call this to subscribe to attribute changes."
-        )
-
     @api_command(APICommand.PING_NODE)
     async def ping_node(self, node_id: int, attempts: int = 1) -> NodePingResult:
         """Ping node on the currently known IP-adress(es)."""

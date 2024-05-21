@@ -42,7 +42,6 @@ class APICommand(str, Enum):
     DEVICE_COMMAND = "device_command"
     REMOVE_NODE = "remove_node"
     GET_VENDOR_NAMES = "get_vendor_names"
-    SUBSCRIBE_ATTRIBUTE = "subscribe_attribute"
     READ_ATTRIBUTE = "read_attribute"
     WRITE_ATTRIBUTE = "write_attribute"
     PING_NODE = "ping_node"
