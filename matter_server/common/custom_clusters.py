@@ -31,10 +31,11 @@ class CustomClusterAttribute:
 
 
 @dataclass
-class EveEnergyCluster(Cluster, CustomCluster):
-    """Custom (vendor-specific) cluster for Eve Energy plug."""
+class EveCluster(Cluster, CustomCluster):
+    """Custom (vendor-specific) cluster for Eve."""
 
     id: ClassVar[int] = 0x130AFC01
+    should_poll = True
 
     @ChipUtility.classproperty
     def descriptor(cls) -> ClusterObjectDescriptor:
@@ -66,11 +67,11 @@ class EveEnergyCluster(Cluster, CustomCluster):
     current: float32 | None = None
 
     class Attributes:
-        """Attributes for the EveEnergy Cluster."""
+        """Attributes for the Eve Cluster."""
 
         @dataclass
         class Watt(ClusterAttributeDescriptor, CustomClusterAttribute):
-            """Watt Attribute within the EveEnergy Cluster."""
+            """Watt Attribute within the Eve Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -91,7 +92,7 @@ class EveEnergyCluster(Cluster, CustomCluster):
 
         @dataclass
         class WattAccumulated(ClusterAttributeDescriptor, CustomClusterAttribute):
-            """WattAccumulated Attribute within the EveEnergy Cluster."""
+            """WattAccumulated Attribute within the Eve Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -114,7 +115,7 @@ class EveEnergyCluster(Cluster, CustomCluster):
         class wattAccumulatedControlPoint(
             ClusterAttributeDescriptor, CustomClusterAttribute
         ):
-            """wattAccumulatedControlPoint Attribute within the EveEnergy Cluster."""
+            """wattAccumulatedControlPoint Attribute within the Eve Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -135,7 +136,7 @@ class EveEnergyCluster(Cluster, CustomCluster):
 
         @dataclass
         class Voltage(ClusterAttributeDescriptor, CustomClusterAttribute):
-            """Voltage Attribute within the EveEnergy Cluster."""
+            """Voltage Attribute within the Eve Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -156,7 +157,7 @@ class EveEnergyCluster(Cluster, CustomCluster):
 
         @dataclass
         class Current(ClusterAttributeDescriptor, CustomClusterAttribute):
-            """Current Attribute within the EveEnergy Cluster."""
+            """Current Attribute within the Eve Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
