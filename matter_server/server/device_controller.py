@@ -1553,6 +1553,8 @@ class MatterDeviceController:
                     )
                 # polling attributes is heavy on network traffic, so we throttle it a bit
                 await asyncio.sleep(5)
+        # reschedule self to run at next interval
+        self._schedule_custom_attributes_poller()
 
     def _schedule_custom_attributes_poller(self) -> None:
         """Schedule running the custom clusters/attributes poller at X interval."""
