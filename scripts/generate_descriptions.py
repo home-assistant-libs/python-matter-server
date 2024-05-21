@@ -13,7 +13,6 @@ from chip.clusters.ClusterObjects import (
     ClusterAttributeDescriptor,
 )
 
-from matter_server.client.models.clusters import *  # noqa: F403
 from matter_server.client.models.device_types import (
     ALL_TYPES as DEVICE_TYPES,
     DeviceType,
