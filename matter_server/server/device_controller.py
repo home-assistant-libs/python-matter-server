@@ -605,33 +605,58 @@ class MatterDeviceController:
 
     @api_command(APICommand.READ_ATTRIBUTE)
     async def read_attribute(
-        self, node_id: int, attribute_path: str, fabric_filtered: bool = False
+        self,
+        node_id: int,
+        attribute_path: str | list[str],
+        fabric_filtered: bool = False,
     ) -> dict[str, Any]:
-        """Read one or more attribute(s) on a node by specifying an attributepath."""
+        """
+        Read one or more attribute(s) on a node by specifying an attributepath.
+
+        The attribute path can be a single string or a list of strings.
+        The attribute path may contain wildcards (*) for cluster and/or attribute id.
+
+        The return type is a dictionary with the attribute path as key and the value as value.
+        """
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         if (node := self._nodes.get(node_id)) is None or not node.available:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
-        endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
-        # Read a list of attributes and/or events from a target node.
-        # This is basically a re-implementation of the chip controller's Read function
-        # but one that allows us to send/request custom attributes.
+        attribute_paths = (
+            attribute_path if isinstance(attribute_path, list) else [attribute_path]
+        )
 
         if TYPE_CHECKING:
             assert self.server.loop
             assert self.chip_controller
 
+        # handle test node
         if node_id >= TEST_NODE_START:
             LOGGER.debug(
-                "read_attribute called for test node %s on path: %s - fabric_filtered: %s",
+                "read_attribute called for test node %s on path(s): %s - fabric_filtered: %s",
                 node_id,
-                attribute_path,
+                str(attribute_paths),
                 fabric_filtered,
             )
-            if attribute_path in self._nodes[node_id].attributes:
-                return {attribute_path: self._nodes[node_id].attributes[attribute_path]}
-            return {}
+            return {
+                attr_path: self._nodes[node_id].attributes.get(attr_path)
+                for attr_path in attribute_paths
+            }
 
+        # parse text based attribute paths into the SDK Attribute Path objects
+        attributes: list[Attribute.AttributePath] = []
+        for attr_path in attribute_paths:
+            endpoint_id, cluster_id, attribute_id = parse_attribute_path(attr_path)
+            attributes.append(
+                Attribute.AttributePath(
+                    EndpointId=endpoint_id,
+                    ClusterId=cluster_id,
+                    AttributeId=attribute_id,
+                )
+            )
+        # Read a list of attributes and/or events from a target node.
+        # This is basically a re-implementation of the chip controller's Read function
+        # but one that allows us to send/request custom attributes.
         future = self.server.loop.create_future()
         device = await self._resolve_node(node_id)
         async with self._get_node_lock(node_id):
@@ -640,13 +665,7 @@ class MatterDeviceController:
                 eventLoop=self.server.loop,
                 device=device.deviceProxy,
                 devCtrl=self.chip_controller,
-                attributes=[
-                    Attribute.AttributePath(
-                        EndpointId=endpoint_id,
-                        ClusterId=cluster_id,
-                        AttributeId=attribute_id,
-                    )
-                ],
+                attributes=attributes,
                 fabricFiltered=fabric_filtered,
             ).raise_on_error()
             result: Attribute.AsyncReadTransaction.ReadResponse = await future
