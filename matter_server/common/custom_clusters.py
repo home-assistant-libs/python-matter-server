@@ -1,7 +1,9 @@
-"""Various models and helpers for (custom) Matter clusters."""
+"""Definitions for custom (vendor specific) Matter clusters."""
+
+from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from chip import ChipUtility
 from chip.clusters.ClusterObjects import (
@@ -12,15 +14,53 @@ from chip.clusters.ClusterObjects import (
 )
 from chip.tlv import float32
 
+from matter_server.common.helpers.util import parse_attribute_path
+
+if TYPE_CHECKING:
+    from matter_server.common.models import MatterNodeData
+
+
 # pylint: disable=invalid-name,arguments-renamed,no-self-argument
 # mypy: ignore_errors=true
 
 
+ALL_CUSTOM_CLUSTERS: dict[int, Cluster] = {}
+ALL_CUSTOM_ATTRIBUTES: dict[int, dict[int, ClusterAttributeDescriptor]] = {}
+
+
 @dataclass
-class EveEnergyCluster(Cluster):
-    """Custom (vendor-specific) cluster for Eve Energy plug."""
+class CustomClusterMixin:
+    """Base model for a vendor specific custom cluster."""
+
+    id: ClassVar[int]  # cluster id
+    should_poll: bool = False  # should the entire cluster be polled for state changes?
+
+    def __init_subclass__(cls: Cluster, *args, **kwargs) -> None:
+        """Register a subclass."""
+        super().__init_subclass__(*args, **kwargs)
+        ALL_CUSTOM_CLUSTERS[cls.id] = cls
+
+
+@dataclass
+class CustomClusterAttributeMixin:
+    """Base model for a vendor specific custom cluster attribute."""
+
+    should_poll: bool = False  # should this attribute be polled ?
+
+    def __init_subclass__(cls: ClusterAttributeDescriptor, *args, **kwargs) -> None:
+        """Register a subclass."""
+        super().__init_subclass__(*args, **kwargs)
+        if cls.cluster_id not in ALL_CUSTOM_ATTRIBUTES:
+            ALL_CUSTOM_ATTRIBUTES[cls.cluster_id] = {}
+        ALL_CUSTOM_ATTRIBUTES[cls.cluster_id][cls.attribute_id] = cls
+
+
+@dataclass
+class EveCluster(Cluster, CustomClusterMixin):
+    """Custom (vendor-specific) cluster for Eve - Vendor ID 4874 (0x130a)."""
 
     id: ClassVar[int] = 0x130AFC01
+    should_poll = True
 
     @ChipUtility.classproperty
     def descriptor(cls) -> ClusterObjectDescriptor:
@@ -52,11 +92,11 @@ class EveEnergyCluster(Cluster):
     current: float32 | None = None
 
     class Attributes:
-        """Attributes for the EveEnergy Cluster."""
+        """Attributes for the Eve Cluster."""
 
         @dataclass
-        class Watt(ClusterAttributeDescriptor):
-            """Watt Attribute within the EveEnergy Cluster."""
+        class Watt(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """Watt Attribute within the Eve Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -76,8 +116,8 @@ class EveEnergyCluster(Cluster):
             value: float32 = 0
 
         @dataclass
-        class WattAccumulated(ClusterAttributeDescriptor):
-            """WattAccumulated Attribute within the EveEnergy Cluster."""
+        class WattAccumulated(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """WattAccumulated Attribute within the Eve Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -97,8 +137,10 @@ class EveEnergyCluster(Cluster):
             value: float32 = 0
 
         @dataclass
-        class wattAccumulatedControlPoint(ClusterAttributeDescriptor):
-            """wattAccumulatedControlPoint Attribute within the EveEnergy Cluster."""
+        class wattAccumulatedControlPoint(
+            ClusterAttributeDescriptor, CustomClusterAttributeMixin
+        ):
+            """wattAccumulatedControlPoint Attribute within the Eve Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -118,8 +160,8 @@ class EveEnergyCluster(Cluster):
             value: float32 = 0
 
         @dataclass
-        class Voltage(ClusterAttributeDescriptor):
-            """Voltage Attribute within the EveEnergy Cluster."""
+        class Voltage(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """Voltage Attribute within the Eve Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -139,8 +181,8 @@ class EveEnergyCluster(Cluster):
             value: float32 = 0
 
         @dataclass
-        class Current(ClusterAttributeDescriptor):
-            """Current Attribute within the EveEnergy Cluster."""
+        class Current(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """Current Attribute within the Eve Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -158,3 +200,22 @@ class EveEnergyCluster(Cluster):
                 return ClusterObjectFieldDescriptor(Type=float32)
 
             value: float32 = 0
+
+
+def check_polled_attributes(node_data: MatterNodeData) -> set[str]:
+    """Check if custom attributes are present in the node data that need to be polled."""
+    attributes_to_poll: set[str] = set()
+    for attr_path in node_data.attributes:
+        endpoint_id, cluster_id, attribute_id = parse_attribute_path(attr_path)
+        if not (custom_cluster := ALL_CUSTOM_CLUSTERS.get(cluster_id)):
+            continue
+        if custom_cluster.should_poll:
+            # the entire cluster needs to be polled
+            attributes_to_poll.add(f"{endpoint_id}/{cluster_id}/*")
+            continue
+        if (
+            custom_attribute := ALL_CUSTOM_ATTRIBUTES[cluster_id].get(attribute_id)
+        ) and custom_attribute.should_poll:
+            # this attribute needs to be polled
+            attributes_to_poll.add(attr_path)
+    return attributes_to_poll

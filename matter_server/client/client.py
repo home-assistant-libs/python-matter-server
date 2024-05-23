@@ -463,18 +463,15 @@ class MatterClient:
     async def read_attribute(
         self,
         node_id: int,
-        attribute_path: str,
+        attribute_path: str | list[str],
     ) -> dict[str, Any]:
         """Read one or more attribute(s) on a node by specifying an attributepath."""
         updated_values = await self.send_command(
             APICommand.READ_ATTRIBUTE,
-            require_schema=4,
+            require_schema=9,
             node_id=node_id,
             attribute_path=attribute_path,
         )
-        if not isinstance(updated_values, dict):
-            # can happen is the server is running schema < 8
-            return {attribute_path: updated_values}
         return cast(dict[str, Any], updated_values)
 
     async def refresh_attribute(
@@ -509,23 +506,6 @@ class MatterClient:
     async def interview_node(self, node_id: int) -> None:
         """Interview a node."""
         await self.send_command(APICommand.INTERVIEW_NODE, node_id=node_id)
-
-    async def subscribe_attribute(
-        self, node_id: int, attribute_path: str | list[str]
-    ) -> None:
-        """
-        Subscribe to given AttributePath(s).
-
-        Either supply a single attribute path or a list of paths.
-        The given attribute path(s) will be added to the list of attributes that
-        are watched for the given node. This is persistent over restarts.
-        """
-        await self.send_command(
-            APICommand.SUBSCRIBE_ATTRIBUTE,
-            require_schema=4,
-            node_id=node_id,
-            attribute_path=attribute_path,
-        )
 
     async def send_command(
         self,

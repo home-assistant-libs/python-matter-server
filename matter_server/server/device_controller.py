@@ -22,6 +22,7 @@ from zeroconf import BadTypeInNameException, IPVersion, ServiceStateChange, Zero
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
 from matter_server.common.const import VERBOSE_LOG_LEVEL
+from matter_server.common.custom_clusters import check_polled_attributes
 from matter_server.common.models import CommissionableNodeData, CommissioningParameters
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
@@ -77,6 +78,7 @@ NODE_PING_TIMEOUT = 10
 NODE_PING_TIMEOUT_BATTERY_POWERED = 60
 NODE_MDNS_BACKOFF = 610  # must be higher than (highest) sub ceiling
 FALLBACK_NODE_SCANNER_INTERVAL = 1800
+CUSTOM_ATTRIBUTES_POLLER_INTERVAL = 30
 
 MDNS_TYPE_OPERATIONAL_NODE = "_matter._tcp.local."
 MDNS_TYPE_COMMISSIONABLE_NODE = "_matterc._udp.local."
@@ -122,6 +124,9 @@ class MatterDeviceController:
         self._node_setup_throttle = asyncio.Semaphore(5)
         self._mdns_event_timer: dict[str, asyncio.TimerHandle] = {}
         self._node_lock: dict[int, asyncio.Lock] = {}
+        self._polled_attributes: dict[int, set[str]] = {}
+        self._custom_attribute_poller_timer: asyncio.TimerHandle | None = None
+        self._custom_attribute_poller_task: asyncio.Task | None = None
 
     async def initialize(self, paa_root_cert_dir: Path) -> None:
         """Async initialize of controller."""
@@ -605,33 +610,58 @@ class MatterDeviceController:
 
     @api_command(APICommand.READ_ATTRIBUTE)
     async def read_attribute(
-        self, node_id: int, attribute_path: str, fabric_filtered: bool = False
+        self,
+        node_id: int,
+        attribute_path: str | list[str],
+        fabric_filtered: bool = False,
     ) -> dict[str, Any]:
-        """Read one or more attribute(s) on a node by specifying an attributepath."""
+        """
+        Read one or more attribute(s) on a node by specifying an attributepath.
+
+        The attribute path can be a single string or a list of strings.
+        The attribute path may contain wildcards (*) for cluster and/or attribute id.
+
+        The return type is a dictionary with the attribute path as key and the value as value.
+        """
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
         if (node := self._nodes.get(node_id)) is None or not node.available:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
-        endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
-        # Read a list of attributes and/or events from a target node.
-        # This is basically a re-implementation of the chip controller's Read function
-        # but one that allows us to send/request custom attributes.
+        attribute_paths = (
+            attribute_path if isinstance(attribute_path, list) else [attribute_path]
+        )
 
         if TYPE_CHECKING:
             assert self.server.loop
             assert self.chip_controller
 
+        # handle test node
         if node_id >= TEST_NODE_START:
             LOGGER.debug(
-                "read_attribute called for test node %s on path: %s - fabric_filtered: %s",
+                "read_attribute called for test node %s on path(s): %s - fabric_filtered: %s",
                 node_id,
-                attribute_path,
+                str(attribute_paths),
                 fabric_filtered,
             )
-            if attribute_path in self._nodes[node_id].attributes:
-                return {attribute_path: self._nodes[node_id].attributes[attribute_path]}
-            return {}
+            return {
+                attr_path: self._nodes[node_id].attributes.get(attr_path)
+                for attr_path in attribute_paths
+            }
 
+        # parse text based attribute paths into the SDK Attribute Path objects
+        attributes: list[Attribute.AttributePath] = []
+        for attr_path in attribute_paths:
+            endpoint_id, cluster_id, attribute_id = parse_attribute_path(attr_path)
+            attributes.append(
+                Attribute.AttributePath(
+                    EndpointId=endpoint_id,
+                    ClusterId=cluster_id,
+                    AttributeId=attribute_id,
+                )
+            )
+        # Read a list of attributes and/or events from a target node.
+        # This is basically a re-implementation of the chip controller's Read function
+        # but one that allows us to send/request custom attributes.
         future = self.server.loop.create_future()
         device = await self._resolve_node(node_id)
         async with self._get_node_lock(node_id):
@@ -640,20 +670,26 @@ class MatterDeviceController:
                 eventLoop=self.server.loop,
                 device=device.deviceProxy,
                 devCtrl=self.chip_controller,
-                attributes=[
-                    Attribute.AttributePath(
-                        EndpointId=endpoint_id,
-                        ClusterId=cluster_id,
-                        AttributeId=attribute_id,
-                    )
-                ],
+                attributes=attributes,
                 fabricFiltered=fabric_filtered,
             ).raise_on_error()
             result: Attribute.AsyncReadTransaction.ReadResponse = await future
         read_atributes = parse_attributes_from_read_result(result.tlvAttributes)
-        # update cached info in node attributes
-        self._nodes[node_id].attributes.update(read_atributes)
-        self._write_node_state(node_id)
+        # update cached info in node attributes and signal events for updated attributes
+        values_changed = False
+        for attr_path, value in read_atributes.items():
+            if node.attributes.get(attr_path) != value:
+                node.attributes[attr_path] = value
+                self.server.signal_event(
+                    EventType.ATTRIBUTE_UPDATED,
+                    # send data as tuple[node_id, attribute_path, new_value]
+                    (node_id, attr_path, value),
+                )
+
+                values_changed = True
+        # schedule writing of the node state if any values changed
+        if values_changed:
+            self._write_node_state(node_id)
         return read_atributes
 
     @api_command(APICommand.WRITE_ATTRIBUTE)
@@ -759,22 +795,6 @@ class MatterDeviceController:
                 "Removing current fabric from device failed with status code %d.",
                 result.statusCode,
             )
-
-    @api_command(APICommand.SUBSCRIBE_ATTRIBUTE)
-    async def subscribe_attribute(
-        self, node_id: int, attribute_path: str | list[str]
-    ) -> None:
-        """
-        Subscribe to given AttributePath(s).
-
-        Either supply a single attribute path or a list of paths.
-        The given attribute path(s) will be added to the list of attributes that
-        are watched for the given node. This is persistent over restarts.
-        """
-        LOGGER.debug(
-            "The subscribe_attribute command has been deprecated and will be removed from"
-            " a future version. You no longer need to call this to subscribe to attribute changes."
-        )
 
     @api_command(APICommand.PING_NODE)
     async def ping_node(self, node_id: int, attempts: int = 1) -> NodePingResult:
@@ -1220,7 +1240,6 @@ class MatterDeviceController:
                     return
 
                 # (re)interview node (only) if needed
-
                 if (
                     # re-interview if we dont have any node attributes (empty node)
                     not node_data.attributes
@@ -1256,6 +1275,13 @@ class MatterDeviceController:
                     )
                     # NOTE: the node will be picked up by mdns discovery automatically
                     # when it becomes available again.
+                    return
+
+                # check if this node has any custom clusters that need to be polled
+                if polled_attributes := check_polled_attributes(node_data):
+                    self._polled_attributes[node_id] = polled_attributes
+                    self._schedule_custom_attributes_poller()
+
             finally:
                 log_timers[node_id].cancel()
                 self._nodes_in_setup.discard(node_id)
@@ -1500,3 +1526,55 @@ class MatterDeviceController:
         if node_id not in self._node_lock:
             self._node_lock[node_id] = asyncio.Lock()
         return self._node_lock[node_id]
+
+    async def _custom_attributes_poller(self) -> None:
+        """Poll custom clusters/attributes for changes."""
+        for node_id, polled_attributes in self._polled_attributes.items():
+            node = self._nodes[node_id]
+            if not node.available:
+                continue
+            for attribute_path in polled_attributes:
+                try:
+                    # try to read the attribute(s) - this will fire an event if the value changed
+                    async with self._get_node_lock(node_id):
+                        await self.read_attribute(
+                            node_id, attribute_path, fabric_filtered=False
+                        )
+                except (ChipStackError, NodeNotReady) as err:
+                    LOGGER.warning(
+                        "Polling custom attribute %s for node %s failed: %s",
+                        attribute_path,
+                        node_id,
+                        str(err) or err.__class__.__name__,
+                        # log full stack trace if verbose logging is enabled
+                        exc_info=err
+                        if LOGGER.isEnabledFor(VERBOSE_LOG_LEVEL)
+                        else None,
+                    )
+                # polling attributes is heavy on network traffic, so we throttle it a bit
+                await asyncio.sleep(2)
+        # reschedule self to run at next interval
+        self._schedule_custom_attributes_poller()
+
+    def _schedule_custom_attributes_poller(self) -> None:
+        """Schedule running the custom clusters/attributes poller at X interval."""
+        if existing := self._custom_attribute_poller_timer:
+            existing.cancel()
+
+        def run_custom_attributes_poller() -> None:
+            self._custom_attribute_poller_timer = None
+            if (existing := self._custom_attribute_poller_task) and not existing.done():
+                existing.cancel()
+            self._custom_attribute_poller_task = asyncio.create_task(
+                self._custom_attributes_poller()
+            )
+
+        # no need to schedule the poll if we have no (more) custom attributes to poll
+        if not self._polled_attributes:
+            return
+
+        if TYPE_CHECKING:
+            assert self.server.loop
+        self._custom_attribute_poller_timer = self.server.loop.call_later(
+            CUSTOM_ATTRIBUTES_POLLER_INTERVAL, run_custom_attributes_poller
+        )
