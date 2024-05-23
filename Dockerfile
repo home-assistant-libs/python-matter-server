@@ -9,6 +9,7 @@ RUN \
     set -x \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
+        curl \
         libuv1 \
         zlib1g \
         libjson-c5 \
@@ -24,6 +25,21 @@ RUN \
         /usr/src/*
 
 ARG PYTHON_MATTER_SERVER
+
+ENV chip_example_url "https://github.com/agners/matter-linux-example-apps/releases/download/v1.3.0.0"
+ARG TARGETPLATFORM
+
+RUN \
+    set -x \
+    && echo "${TARGETPLATFORM}" \
+    && if [ "${TARGETPLATFORM}" = "linux/amd64" ]; then \
+        curl -Lo /usr/local/bin/chip-ota-provider-app "${chip_example_url}/chip-ota-provider-app-x86-64"; \
+    elif [ "${TARGETPLATFORM}" = "linux/arm64" ]; then \
+        curl -Lo /usr/local/bin/chip-ota-provider-app "${chip_example_url}/chip-ota-provider-app-aarch64"; \
+    else \
+        exit 1; \
+    fi \
+    && chmod +x /usr/local/bin/chip-ota-provider-app
 
 # hadolint ignore=DL3013
 RUN \
