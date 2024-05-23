@@ -1552,7 +1552,7 @@ class MatterDeviceController:
                         else None,
                     )
                 # polling attributes is heavy on network traffic, so we throttle it a bit
-                await asyncio.sleep(5)
+                await asyncio.sleep(2)
         # reschedule self to run at next interval
         self._schedule_custom_attributes_poller()
 
