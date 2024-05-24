@@ -42,7 +42,7 @@ class NodeNotReady(MatterError):
 
 
 class NodeNotResolving(MatterError):
-    """Error raised when resolving the node fails."""
+    """Error raised when no CASE session could be established."""
 
     error_code = 4
 
