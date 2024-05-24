@@ -11,6 +11,8 @@ HARDCODED_UPDATES: dict[tuple[int, int], dict] = {
         "softwareVersionString": "2.0",
         "cdVersionNumber": 1,
         "softwareVersionValid": True,
+        "otaChecksum": "7qcyvg2kPmKZaDLIk8C7Vyteqf4DI73x0tFZkmPALCo=",
+        "otaChecksumType": 1,
         "minApplicableSoftwareVersion": 1,
         "maxApplicableSoftwareVersion": 1,
         "otaUrl": "https://github.com/agners/matter-linux-example-apps/releases/download/v1.3.0.0/chip-ota-requestor-app-x86-64.ota",

@@ -1,8 +1,10 @@
 """Handling Matter OTA provider."""
 
 import asyncio
+from base64 import b64encode
 from dataclasses import asdict, dataclass
 import functools
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -12,6 +14,7 @@ from urllib.parse import unquote, urlparse
 
 from aiohttp import ClientError, ClientSession
 
+from matter_server.common.errors import UpdateError
 from matter_server.common.helpers.util import dataclass_from_dict
 
 if TYPE_CHECKING:
@@ -20,6 +23,22 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 DEFAULT_UPDATES_PATH: Final[Path] = Path("updates")
+
+# From Matter SDK src/app/ota_image_tool.py
+CHECHKSUM_TYPES: Final[dict[int, str]] = {
+    1: "sha256",
+    2: "sha256_128",
+    3: "sha256_120",
+    4: "sha256_96",
+    5: "sha256_64",
+    6: "sha256_32",
+    7: "sha384",
+    8: "sha512",
+    9: "sha3_224",
+    10: "sha3_256",
+    11: "sha3_384",
+    12: "sha3_512",
+}
 
 
 @dataclass
@@ -231,11 +250,22 @@ class ExternalOtaProvider:
         )
 
         file_path = DEFAULT_UPDATES_PATH / file_name
-        if await loop.run_in_executor(None, file_path.exists):
-            LOGGER.info("File '%s' exists already, skipping download.", file_name)
-            return
 
         try:
+            checksum_alg = None
+            if (
+                "otaChecksum" in update_desc
+                and "otaChecksumType" in update_desc
+                and update_desc["otaChecksumType"] in CHECHKSUM_TYPES
+            ):
+                checksum_alg = hashlib.new(
+                    CHECHKSUM_TYPES[update_desc["otaChecksumType"]]
+                )
+            else:
+                LOGGER.warning(
+                    "No OTA checksum type or not supported, OTA will not be checked."
+                )
+
             async with ClientSession(raise_for_status=True) as session:
                 # fetch the paa certificates list
                 LOGGER.debug("Download update from '%s'.", url)
@@ -246,8 +276,21 @@ class ExternalOtaProvider:
                             if not chunk:
                                 break
                             await loop.run_in_executor(None, f.write, chunk)
+                            if checksum_alg:
+                                checksum_alg.update(chunk)
 
-                # TODO: Check against otaChecksum
+                # Download finished, check checksum if necessary
+                if checksum_alg:
+                    checksum = b64encode(checksum_alg.digest()).decode("ascii")
+                    if checksum != update_desc["otaChecksum"]:
+                        LOGGER.error(
+                            "Checksum mismatch for file '%s', expected: %s, got: %s",
+                            file_name,
+                            update_desc["otaChecksum"],
+                            checksum,
+                        )
+                        await loop.run_in_executor(None, file_path.unlink)
+                        raise UpdateError("Checksum mismatch!")
 
                 LOGGER.info(
                     "File '%s' downloaded to '%s'", file_name, DEFAULT_UPDATES_PATH
