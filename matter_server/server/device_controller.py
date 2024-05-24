@@ -671,7 +671,7 @@ class MatterDeviceController:
         # This is basically a re-implementation of the chip controller's Read function
         # but one that allows us to send/request custom attributes.
         future = self.server.loop.create_future()
-        device = await self._resolve_node(node_id)
+        device = await self._find_or_establish_case_session(node_id)
         async with self._get_node_lock(node_id):
             Attribute.Read(
                 future=future,
@@ -1233,7 +1233,7 @@ class MatterDeviceController:
 
                 # try to resolve the node using the sdk first before do anything else
                 try:
-                    await self._resolve_node(node_id=node_id)
+                    await self._find_or_establish_case_session(node_id=node_id)
                 except NodeNotResolving as err:
                     node_logger.warning(
                         "Setup for node failed: %s",
@@ -1294,42 +1294,45 @@ class MatterDeviceController:
                 log_timers[node_id].cancel()
                 self._nodes_in_setup.discard(node_id)
 
-    async def _resolve_node(
-        self, node_id: int, retries: int = 2, attempt: int = 1
+    async def _find_or_establish_case_session(
+        self, node_id: int, retries: int = 2
     ) -> DeviceProxyWrapper:
-        """Resolve a Node on the network."""
-        log_level = logging.DEBUG if attempt == 1 else logging.INFO
+        """Attempt to establish a CASE session with target Node."""
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
-        try:
-            LOGGER.log(
-                log_level,
-                "Attempting to resolve node %s... (attempt %s of %s)",
-                node_id,
-                attempt,
-                retries,
-            )
-            time_start = time.time()
-            async with self._get_node_lock(node_id):
-                return await self.chip_controller.GetConnectedDevice(
-                    nodeid=node_id,
-                    allowPASE=False,
-                    timeoutMs=None,
+
+        node_logger = LOGGER.getChild(f"node_{node_id}")
+        attempt = 1
+
+        while attempt <= retries:
+            try:
+                node_logger.log(
+                    logging.DEBUG if attempt == 1 else logging.INFO,
+                    "Attempting to establish CASE session... (attempt %s of %s)",
+                    attempt,
+                    retries,
                 )
-        except ChipStackError as err:
-            if attempt >= retries:
-                # when we're out of retries, raise NodeNotResolving
-                raise NodeNotResolving(f"Unable to resolve Node {node_id}") from err
-            await asyncio.sleep(2 + attempt)
-            # retry the resolve
-            return await self._resolve_node(
-                node_id=node_id, retries=retries, attempt=attempt + 1
-            )
-        finally:
-            resolve_time_seconds = int(time.time() - time_start)
-            LOGGER.debug(
-                "Resolving node %s took %s seconds", node_id, resolve_time_seconds
-            )
+                time_start = time.time()
+                async with self._get_node_lock(node_id):
+                    return await self.chip_controller.GetConnectedDevice(
+                        nodeid=node_id,
+                        allowPASE=False,
+                        timeoutMs=None,
+                    )
+            except ChipStackError as err:
+                if attempt >= retries:
+                    # when we're out of retries, raise NodeNotResolving
+                    raise NodeNotResolving(
+                        f"Unable to establish CASE session with Node {node_id}"
+                    ) from err
+                await asyncio.sleep(2 + attempt)
+            finally:
+                node_logger.debug(
+                    "Establishing CASE session took %.1f seconds",
+                    time.time() - time_start,
+                )
+            attempt += 1
+        return None
 
     def _handle_endpoints_removed(self, node_id: int, endpoints: Iterable[int]) -> None:
         """Handle callback for when bridge endpoint(s) get deleted."""
