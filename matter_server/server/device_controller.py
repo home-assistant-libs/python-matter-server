@@ -32,7 +32,7 @@ from matter_server.common.custom_clusters import check_polled_attributes
 from matter_server.common.models import CommissionableNodeData, CommissioningParameters
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
-from matter_server.server.ota.dcl import check_updates
+from matter_server.server.ota.dcl import check_for_update
 from matter_server.server.ota.provider import ExternalOtaProvider
 from matter_server.server.sdk import ChipDeviceControllerWrapper
 
@@ -928,7 +928,7 @@ class MatterDeviceController:
             BASIC_INFORMATION_SOFTWARE_VERSION_STRING_ATTRIBUTE_PATH
         )
 
-        update = await check_updates(node_id, vid, pid, software_version)
+        update = await check_for_update(vid, pid, software_version)
         if not update:
             node_logger.info("No new update found.")
             return None
