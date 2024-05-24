@@ -43,6 +43,8 @@ from ..common.errors import (
     NodeNotExists,
     NodeNotReady,
     NodeNotResolving,
+    UpdateCheckError,
+    UpdateError,
 )
 from ..common.helpers.api import api_command
 from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_loads
@@ -921,19 +923,15 @@ class MatterDeviceController:
 
         update = await self._check_node_update(node_id, software_version)
         if update is None:
-            logging.error(
-                "Software version %d is not available for node %d",
-                software_version,
-                node_id,
+            raise UpdateCheckError(
+                f"Software version {software_version} is not available for node {node_id}."
             )
-            return None
 
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
 
         if not self._ota_provider:
-            LOGGER.warning("No OTA provider found, updates not possible.")
-            return None
+            raise UpdateError("No OTA provider found, updates not possible.")
 
         # Add update to the OTA provider
         await self._ota_provider.download_update(update)
@@ -1011,26 +1009,33 @@ class MatterDeviceController:
                     )
                 )
                 if write_result[0].Status != Status.Success:
-                    logging.error("Failed writing adjusted OTA Provider App ACL.")
+                    logging.error(
+                        "Failed writing adjusted OTA Provider App ACL: Status %s.",
+                        str(write_result[0].Status),
+                    )
                     await self.remove_node(ota_provider_node_id)
-                    return None
+                    raise UpdateError("Error while setting up OTA Provider.")
             except ChipStackError as ex:
                 logging.exception("Failed adjusting OTA Provider App ACL.", exc_info=ex)
                 await self.remove_node(ota_provider_node_id)
-            else:
-                self._ota_provider.set_node_id(ota_provider_node_id)
+                raise UpdateError("Error while setting up OTA Provider.") from ex
+
+            self._ota_provider.set_node_id(ota_provider_node_id)
 
         # Notify node about the new update!
-        await self.chip_controller.SendCommand(
-            nodeid=node_id,
-            endpoint=0,
-            payload=Clusters.OtaSoftwareUpdateRequestor.Commands.AnnounceOTAProvider(
-                providerNodeID=ota_provider_node_id,
-                vendorID=0,  # TODO: Use Server Vendor ID
-                announcementReason=Clusters.OtaSoftwareUpdateRequestor.Enums.AnnouncementReasonEnum.kUpdateAvailable,
+        try:
+            await self.chip_controller.SendCommand(
+                nodeid=node_id,
                 endpoint=0,
-            ),
-        )
+                payload=Clusters.OtaSoftwareUpdateRequestor.Commands.AnnounceOTAProvider(
+                    providerNodeID=ota_provider_node_id,
+                    vendorID=self.server.vendor_id,
+                    announcementReason=Clusters.OtaSoftwareUpdateRequestor.Enums.AnnouncementReasonEnum.kUpdateAvailable,
+                    endpoint=ExternalOtaProvider.ENDPOINT_ID,
+                ),
+            )
+        except ChipStackError as ex:
+            raise UpdateError("Error while announcing OTA Provider to node.") from ex
 
         return update
 
@@ -1062,8 +1067,7 @@ class MatterDeviceController:
             return None
 
         if "otaUrl" not in update:
-            node_logger.warning("Update found, but no OTA URL provided.")
-            return None
+            raise UpdateCheckError("Update found, but no OTA URL provided.")
 
         node_logger.info(
             "New software update found: %s (current %s).",

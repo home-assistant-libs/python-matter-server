@@ -5,6 +5,7 @@ from typing import Any, cast
 
 from aiohttp import ClientError, ClientSession
 
+from matter_server.common.errors import UpdateCheckError
 from matter_server.server.helpers import DCL_PRODUCTION_URL
 
 LOGGER = logging.getLogger(__name__)
@@ -92,5 +93,4 @@ async def check_for_update(
         return None
 
     except (ClientError, TimeoutError) as err:
-        LOGGER.error("Fetching software version failed: error %s", err, exc_info=err)
-    return None
+        raise UpdateCheckError("Fetching software version failed.") from err

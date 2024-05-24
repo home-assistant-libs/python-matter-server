@@ -54,6 +54,8 @@ class ExternalOtaProvider:
     for devices.
     """
 
+    ENDPOINT_ID: Final[int] = 0
+
     def __init__(self, ota_provider_dir: Path) -> None:
         """Initialize the OTA provider."""
         self._ota_provider_dir: Path = ota_provider_dir

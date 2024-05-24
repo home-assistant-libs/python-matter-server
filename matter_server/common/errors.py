@@ -77,6 +77,18 @@ class InvalidCommand(MatterError):
     error_code = 9
 
 
+class UpdateCheckError(MatterError):
+    """Error raised when there was an error during searching for updates."""
+
+    error_code = 10
+
+
+class UpdateError(MatterError):
+    """Error raised when there was an error during applying updates."""
+
+    error_code = 11
+
+
 def exception_from_error_code(error_code: int) -> type[MatterError]:
     """Return correct Exception class from error_code."""
     return ERROR_MAP.get(error_code, MatterError)
