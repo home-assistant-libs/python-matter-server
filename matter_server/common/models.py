@@ -47,6 +47,7 @@ class APICommand(str, Enum):
     PING_NODE = "ping_node"
     GET_NODE_IP_ADDRESSES = "get_node_ip_addresses"
     IMPORT_TEST_NODE = "import_test_node"
+    CHECK_NODE_UPDATE = "check_node_update"
     UPDATE_NODE = "update_node"
 
 

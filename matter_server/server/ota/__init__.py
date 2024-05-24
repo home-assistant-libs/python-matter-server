@@ -19,10 +19,18 @@ HARDCODED_UPDATES: dict[tuple[int, int], dict] = {
 
 
 async def check_for_update(
-    vid: int, pid: int, current_software_version: int
+    vid: int,
+    pid: int,
+    current_software_version: int,
+    requested_software_version: int | None = None,
 ) -> None | dict:
     """Check for software updates."""
     if (vid, pid) in HARDCODED_UPDATES:
-        return HARDCODED_UPDATES[(vid, pid)]
+        update = HARDCODED_UPDATES[(vid, pid)]
+        if (
+            requested_software_version is None
+            or update["softwareVersion"] == requested_software_version
+        ):
+            return update
 
     return await dcl.check_for_update(vid, pid, current_software_version)

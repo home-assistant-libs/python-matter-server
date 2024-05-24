@@ -896,8 +896,8 @@ class MatterDeviceController:
             self._nodes[node.node_id] = node
             self.server.signal_event(EventType.NODE_ADDED, node)
 
-    @api_command(APICommand.UPDATE_NODE)
-    async def update_node(self, node_id: int) -> dict | None:
+    @api_command(APICommand.CHECK_NODE_UPDATE)
+    async def check_node_update(self, node_id: int) -> dict | None:
         """
         Check if there is an update for a particular node.
 
@@ -906,8 +906,27 @@ class MatterDeviceController:
         information of the latest update available.
         """
 
-        node_logger = LOGGER.getChild(f"node_{node_id}")
-        node = self._nodes[node_id]
+        return await self._check_node_update(node_id)
+
+    @api_command(APICommand.UPDATE_NODE)
+    async def update_node(self, node_id: int, software_version: int) -> dict | None:
+        """
+        Update a node to a new software version.
+
+        This command checks if the requested software version is indeed still available
+        and if so, it will start the update process. The update process will be handled
+        by the built-in OTA provider. The OTA provider will download the update and
+        notify the node about the new update.
+        """
+
+        update = await self._check_node_update(node_id, software_version)
+        if update is None:
+            logging.error(
+                "Software version %d is not available for node %d",
+                software_version,
+                node_id,
+            )
+            return None
 
         if self.chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
@@ -916,34 +935,7 @@ class MatterDeviceController:
             LOGGER.warning("No OTA provider found, updates not possible.")
             return None
 
-        node_logger.debug("Check for updates.")
-        vid = cast(int, node.attributes.get(BASIC_INFORMATION_VENDOR_ID_ATTRIBUTE_PATH))
-        pid = cast(
-            int, node.attributes.get(BASIC_INFORMATION_PRODUCT_ID_ATTRIBUTE_PATH)
-        )
-        software_version = cast(
-            int, node.attributes.get(BASIC_INFORMATION_SOFTWARE_VERSION_ATTRIBUTE_PATH)
-        )
-        software_version_string = node.attributes.get(
-            BASIC_INFORMATION_SOFTWARE_VERSION_STRING_ATTRIBUTE_PATH
-        )
-
-        update = await check_for_update(vid, pid, software_version)
-        if not update:
-            node_logger.info("No new update found.")
-            return None
-
-        if "otaUrl" not in update:
-            node_logger.warning("Update found, but no OTA URL provided.")
-            return None
-
-        node_logger.info(
-            "New software update found: %s (current %s). Preparing updates...",
-            update["softwareVersionString"],
-            software_version_string,
-        )
-
-        # Add to OTA provider
+        # Add update to the OTA provider
         await self._ota_provider.download_update(update)
 
         ota_provider_node_id = self._ota_provider.get_node_id()
@@ -1040,6 +1032,44 @@ class MatterDeviceController:
             ),
         )
 
+        return update
+
+    async def _check_node_update(
+        self,
+        node_id: int,
+        requested_software_version: int | None = None,
+    ) -> dict | None:
+        node_logger = LOGGER.getChild(f"node_{node_id}")
+        node = self._nodes[node_id]
+
+        node_logger.debug("Check for updates.")
+        vid = cast(int, node.attributes.get(BASIC_INFORMATION_VENDOR_ID_ATTRIBUTE_PATH))
+        pid = cast(
+            int, node.attributes.get(BASIC_INFORMATION_PRODUCT_ID_ATTRIBUTE_PATH)
+        )
+        software_version = cast(
+            int, node.attributes.get(BASIC_INFORMATION_SOFTWARE_VERSION_ATTRIBUTE_PATH)
+        )
+        software_version_string = node.attributes.get(
+            BASIC_INFORMATION_SOFTWARE_VERSION_STRING_ATTRIBUTE_PATH
+        )
+
+        update = await check_for_update(
+            vid, pid, software_version, requested_software_version
+        )
+        if not update:
+            node_logger.info("No new update found.")
+            return None
+
+        if "otaUrl" not in update:
+            node_logger.warning("Update found, but no OTA URL provided.")
+            return None
+
+        node_logger.info(
+            "New software update found: %s (current %s).",
+            update["softwareVersionString"],
+            software_version_string,
+        )
         return update
 
     async def _subscribe_node(self, node_id: int) -> None:
