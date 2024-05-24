@@ -88,6 +88,14 @@ TEST_NODE_START = 900000
 ROUTING_ROLE_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
     0, Clusters.ThreadNetworkDiagnostics.Attributes.RoutingRole
 )
+DESCRIPTOR_PARTS_LIST_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
+    0, Clusters.Descriptor.Attributes.PartsList
+)
+BASIC_INFORMATION_SOFTWARE_VERSION_ATTRIBUTE_PATH = (
+    create_attribute_path_from_attribute(
+        0, Clusters.BasicInformation.Attributes.SoftwareVersion
+    )
+)
 
 
 # pylint: disable=too-many-lines,too-many-locals,too-many-statements,too-many-branches,too-many-instance-attributes
@@ -941,7 +949,7 @@ class MatterDeviceController:
         loop = cast(asyncio.AbstractEventLoop, self.server.loop)
 
         def attribute_updated(
-            path: Attribute.TypedAttributePath,
+            path: Attribute.AttributePath,
             old_value: Any,
             new_value: Any,
         ) -> None:
@@ -954,11 +962,7 @@ class MatterDeviceController:
             )
 
             # work out added/removed endpoints on bridges
-            if (
-                node.is_bridge
-                and path.Path.EndpointId == 0
-                and path.AttributeType == Clusters.Descriptor.Attributes.PartsList
-            ):
+            if node.is_bridge and str(path) == DESCRIPTOR_PARTS_LIST_ATTRIBUTE_PATH:
                 endpoints_removed = set(old_value or []) - set(new_value)
                 endpoints_added = set(new_value) - set(old_value or [])
                 if endpoints_removed:
@@ -971,15 +975,14 @@ class MatterDeviceController:
 
             # work out if software version changed
             if (
-                path.AttributeType == Clusters.BasicInformation.softwareVersion
+                str(path) == BASIC_INFORMATION_SOFTWARE_VERSION_ATTRIBUTE_PATH
                 and new_value != old_value
             ):
                 # schedule a full interview of the node if the software version changed
                 loop.create_task(self.interview_node(node_id))
 
             # store updated value in node attributes
-            attr_path = str(path.Path)
-            node.attributes[attr_path] = new_value
+            node.attributes[str(path)] = new_value
 
             # schedule save to persistent storage
             self._write_node_state(node_id)
@@ -988,22 +991,21 @@ class MatterDeviceController:
             self.server.signal_event(
                 EventType.ATTRIBUTE_UPDATED,
                 # send data as tuple[node_id, attribute_path, new_value]
-                (node_id, attr_path, new_value),
+                (node_id, str(path), new_value),
             )
 
         def attribute_updated_callback(
-            path: Attribute.TypedAttributePath,
+            path: Attribute.AttributePath,
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
             self._node_last_seen[node_id] = time.time()
-            new_value = transaction.GetAttribute(path)
+            new_value = transaction.GetTLVAttribute(path)
             # failsafe: ignore ValueDecodeErrors
             # these are set by the SDK if parsing the value failed miserably
             if isinstance(new_value, ValueDecodeFailure):
                 return
 
-            attr_path = str(path.Path)
-            old_value = node.attributes.get(attr_path)
+            old_value = node.attributes.get(str(path))
 
             # return early if the value did not actually change at all
             if old_value == new_value:
@@ -1116,7 +1118,15 @@ class MatterDeviceController:
                 autoResubscribe=True,
             )
 
-        sub.SetAttributeUpdateCallback(attribute_updated_callback)
+        if not isinstance(sub, Attribute.SubscriptionTransaction):
+            # Aborted setups result in ReadResult instead of SubscriptionTransaction
+            # Probably a bug: https://github.com/project-chip/connectedhomeip/issues/33570
+            node_logger.warning("Subscription setup failed.")
+            return
+
+        # Make sure to clear default handler which prints to stdout
+        sub.SetAttributeUpdateCallback(None)
+        sub.SetRawAttributeUpdateCallback(attribute_updated_callback)
         sub.SetEventUpdateCallback(event_callback)
         sub.SetErrorCallback(error_callback)
         sub.SetResubscriptionAttemptedCallback(resubscription_attempted)
@@ -1127,9 +1137,7 @@ class MatterDeviceController:
         self._subscriptions[node_id] = sub
         node.available = True
         # update attributes with current state from read request
-        # NOTE: Make public method upstream for retrieving the attributeTLVCache
-        # pylint: disable=protected-access
-        tlv_attributes = sub._readTransaction._cache.attributeTLVCache
+        tlv_attributes = sub.GetTLVAttributes()
         node.attributes.update(parse_attributes_from_read_result(tlv_attributes))
 
         report_interval_floor, report_interval_ceiling = (

@@ -144,11 +144,6 @@ def _setup_logging() -> None:
 
     if not logger.isEnabledFor(VERBOSE_LOG_LEVEL):
         logging.getLogger("PersistentStorage").setLevel(logging.WARNING)
-        # Temporary disable the logger of chip.clusters.Attribute because it now logs
-        # an error on every custom attribute that couldn't be parsed which confuses people.
-        # We can restore the default log level again when we've patched the device controller
-        # to handle the raw attribute data to deal with custom clusters.
-        logging.getLogger("chip.clusters.Attribute").setLevel(logging.CRITICAL)
         # (temporary) raise the log level of zeroconf as its a logs an annoying
         # warning at startup while trying to bind to a loopback IPv6 interface
         logging.getLogger("zeroconf").setLevel(logging.ERROR)
