@@ -32,7 +32,7 @@ from matter_server.common.custom_clusters import check_polled_attributes
 from matter_server.common.models import CommissionableNodeData, CommissioningParameters
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
-from matter_server.server.ota.dcl import check_for_update
+from matter_server.server.ota import check_for_update
 from matter_server.server.ota.provider import ExternalOtaProvider
 from matter_server.server.sdk import ChipDeviceControllerWrapper
 

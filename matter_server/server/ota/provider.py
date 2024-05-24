@@ -225,7 +225,7 @@ class ExternalOtaProvider:
 
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
-            None, functools.partial(DEFAULT_UPDATES_PATH.mkdir, exists_ok=True)
+            None, functools.partial(DEFAULT_UPDATES_PATH.mkdir, exist_ok=True)
         )
 
         file_path = DEFAULT_UPDATES_PATH / file_name
@@ -236,7 +236,7 @@ class ExternalOtaProvider:
         try:
             async with ClientSession(raise_for_status=True) as session:
                 # fetch the paa certificates list
-                logging.debug("Download update from f{url}.")
+                LOGGER.debug("Download update from '%s'.", url)
                 async with session.get(url) as response:
                     with file_path.open("wb") as f:
                         while True:
