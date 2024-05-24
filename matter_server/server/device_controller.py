@@ -671,7 +671,7 @@ class MatterDeviceController:
         # This is basically a re-implementation of the chip controller's Read function
         # but one that allows us to send/request custom attributes.
         future = self.server.loop.create_future()
-        device = await self._establish_case_session(node_id)
+        device = await self._find_or_establish_case_session(node_id)
         async with self._get_node_lock(node_id):
             Attribute.Read(
                 future=future,
@@ -1233,7 +1233,7 @@ class MatterDeviceController:
 
                 # try to resolve the node using the sdk first before do anything else
                 try:
-                    await self._establish_case_session(node_id=node_id)
+                    await self._find_or_establish_case_session(node_id=node_id)
                 except NodeNotResolving as err:
                     node_logger.warning(
                         "Setup for node failed: %s",
@@ -1294,7 +1294,7 @@ class MatterDeviceController:
                 log_timers[node_id].cancel()
                 self._nodes_in_setup.discard(node_id)
 
-    async def _establish_case_session(
+    async def _find_or_establish_case_session(
         self, node_id: int, retries: int = 2
     ) -> DeviceProxyWrapper:
         """Attempt to establish a CASE session with target Node."""
