@@ -1124,6 +1124,7 @@ class MatterDeviceController:
             node_logger.warning("Subscription setup failed.")
             return
 
+        # Make sure to clear default handler which prints to stdout
         sub.SetAttributeUpdateCallback(None)
         sub.SetRawAttributeUpdateCallback(attribute_updated_callback)
         sub.SetEventUpdateCallback(event_callback)
