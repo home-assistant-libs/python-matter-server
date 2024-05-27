@@ -93,4 +93,6 @@ async def check_for_update(
         return None
 
     except (ClientError, TimeoutError) as err:
-        raise UpdateCheckError("Fetching software version failed.") from err
+        raise UpdateCheckError(
+            f"Fetching software versions from DCL for device with vendor id {vid} product id {pid} failed."
+        ) from err
