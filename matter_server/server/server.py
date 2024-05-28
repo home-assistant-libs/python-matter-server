@@ -15,6 +15,7 @@ import weakref
 from aiohttp import web
 
 from matter_server.server.helpers.custom_web_runner import MultiHostTCPSite
+from matter_server.server.helpers.paa_certificates import fetch_certificates
 
 from ..common.const import SCHEMA_VERSION
 from ..common.errors import VersionMismatch
@@ -29,8 +30,12 @@ from ..common.models import (
     ServerInfoMessage,
 )
 from ..server.client_handler import WebsocketClientHandler
-from .const import DEFAULT_PAA_ROOT_CERTS_DIR, MIN_SCHEMA_VERSION
+from .const import (
+    DEFAULT_PAA_ROOT_CERTS_DIR,
+    MIN_SCHEMA_VERSION,
+)
 from .device_controller import MatterDeviceController
+from .device_controller_api import MatterDeviceControllerAPI
 from .stack import MatterStack
 from .storage import StorageController
 from .vendor_info import VendorInfo
@@ -123,7 +128,10 @@ class MatterServer:
         self.stack = MatterStack(self)
         # Initialize our (intermediate) device controller which keeps track
         # of Matter devices and their subscriptions.
-        self.device_controller = MatterDeviceController(self)
+        self.device_controller = MatterDeviceController(self, self.paa_root_cert_dir)
+        self.device_controller_api = MatterDeviceControllerAPI(
+            self, self.device_controller
+        )
         self.storage = StorageController(self)
         self.vendor_info = VendorInfo(self)
         # we dynamically register command handlers
@@ -142,9 +150,14 @@ class MatterServer:
         self.loop = asyncio.get_running_loop()
         self.loop.set_exception_handler(_global_loop_exception_handler)
         self.loop.set_debug(os.environ.get("PYTHONDEBUG", "") != "")
-        await self.device_controller.initialize(self.paa_root_cert_dir)
+
+        # (re)fetch all PAA certificates once at startup
+        # NOTE: this must be done before initializing the controller
+        await fetch_certificates(self.paa_root_cert_dir)
+
+        await self.device_controller.initialize()
         await self.storage.start()
-        await self.device_controller.start()
+        await self.device_controller_api.start()
         await self.vendor_info.start()
         mount_websocket(self, "/ws")
         self.app.router.add_route("GET", "/info", self._handle_info)
@@ -183,7 +196,7 @@ class MatterServer:
         await self._runner.cleanup()
         await self.app.shutdown()
         await self.app.cleanup()
-        await self.device_controller.stop()
+        await self.device_controller_api.stop()
         await self.storage.stop()
         self.stack.shutdown()
         self.logger.debug("Cleanup complete")
@@ -222,8 +235,8 @@ class MatterServer:
         """Return a full dump of the server (for diagnostics)."""
         return ServerDiagnostics(
             info=self.get_info(),
-            nodes=self.device_controller.get_nodes(),
-            events=list(self.device_controller.event_history),
+            nodes=self.device_controller_api.get_nodes(),
+            events=list(self.device_controller_api.event_history),
         )
 
     def signal_event(self, evt: EventType, data: Any = None) -> None:
@@ -275,7 +288,7 @@ class MatterServer:
 
     def _register_api_commands(self) -> None:
         """Register all methods decorated as api_command."""
-        for cls in (self, self.device_controller, self.vendor_info):
+        for cls in (self, self.device_controller_api, self.vendor_info):
             for attr_name in dir(cls):
                 if attr_name.startswith("__"):
                     continue

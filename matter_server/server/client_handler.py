@@ -176,7 +176,7 @@ class WebsocketClientHandler:
     def _handle_start_listening_command(self, msg: CommandMessage) -> None:
         """Send a full dump of all nodes once and start receiving events."""
         assert self._unsub_callback is None, "Listen command already called!"
-        all_nodes = self.server.device_controller.get_nodes()
+        all_nodes = self.server.device_controller_api.get_nodes()
         self._send_message(SuccessResultMessage(msg.message_id, all_nodes))
 
         def handle_event(evt: EventType, data: Any) -> None:

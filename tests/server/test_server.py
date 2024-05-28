@@ -102,7 +102,7 @@ def storage_controller_fixture() -> Generator[MagicMock, None, None]:
 def fetch_certificates_fixture() -> Generator[MagicMock, None, None]:
     """Return a mocked fetch certificates."""
     with patch(
-        "matter_server.server.device_controller.fetch_certificates", autospec=True
+        "matter_server.server.server.fetch_certificates", autospec=True
     ) as fetch_certificates:
         yield fetch_certificates
 
