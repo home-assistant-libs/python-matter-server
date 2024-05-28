@@ -3,6 +3,7 @@
 import asyncio
 from base64 import b64encode
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 import functools
 import hashlib
 import json
@@ -13,6 +14,7 @@ from typing import TYPE_CHECKING, Final
 from urllib.parse import unquote, urlparse
 
 from aiohttp import ClientError, ClientSession
+from aiohttp.client_exceptions import InvalidURL
 
 from matter_server.common.errors import UpdateError
 from matter_server.common.helpers.util import dataclass_from_dict
@@ -143,7 +145,9 @@ class ExternalOtaProvider:
 
         self._get_ota_provider_image_list().otaProviderNodeId = node_id
 
-    async def _start_ota_provider(self) -> None:
+    async def start(self) -> None:
+        """Start the OTA Provider."""
+
         def _write_ota_provider_image_list_json(
             ota_provider_image_list_file: Path,
             ota_provider_image_list: OtaProviderImageList,
@@ -174,16 +178,19 @@ class ExternalOtaProvider:
             str(self._ota_provider_image_list_file),
         ]
 
+        timestamp = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
+        log_file_path = self._ota_provider_dir / f"ota_provider_{timestamp}.log"
+
+        log_file = await loop.run_in_executor(None, log_file_path.open, "w")
+
         LOGGER.info("Starting OTA Provider")
         self._ota_provider_proc = await asyncio.create_subprocess_exec(
-            *ota_provider_cmd
+            *ota_provider_cmd, stdout=log_file, stderr=log_file
         )
 
-    def start(self) -> None:
-        """Start the OTA Provider."""
-
-        loop = asyncio.get_event_loop()
-        self._ota_provider_task = loop.create_task(self._start_ota_provider())
+        self._ota_provider_task = loop.create_task(
+            self._ota_provider_proc.communicate()
+        )
 
     async def reset(self) -> None:
         """Reset the OTA Provider App state."""
@@ -293,12 +300,15 @@ class ExternalOtaProvider:
                         raise UpdateError("Checksum mismatch!")
 
                 LOGGER.info(
-                    "File '%s' downloaded to '%s'", file_name, DEFAULT_UPDATES_PATH
+                    "Update file '%s' downloaded to '%s'",
+                    file_name,
+                    DEFAULT_UPDATES_PATH,
                 )
 
-        except (ClientError, TimeoutError) as err:
+        except (InvalidURL, ClientError, TimeoutError) as err:
             LOGGER.error(
                 "Fetching software version failed: error %s", err, exc_info=err
             )
+            raise UpdateError("Fetching software version failed") from err
 
         await self.add_update(update_desc, file_path)

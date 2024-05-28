@@ -16,7 +16,8 @@ HARDCODED_UPDATES: dict[tuple[int, int], dict] = {
         "minApplicableSoftwareVersion": 1,
         "maxApplicableSoftwareVersion": 1,
         "otaUrl": "https://github.com/agners/matter-linux-example-apps/releases/download/v1.3.0.0/chip-ota-requestor-app-x86-64.ota",
-    }
+        "releaseNotesUrl": "https://github.com/agners/matter-linux-example-apps/releases/tag/v1.3.0.0",
+    },
 }
 
 
