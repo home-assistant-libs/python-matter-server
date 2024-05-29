@@ -1404,25 +1404,23 @@ class MatterDeviceController:
             node = self._nodes[node_id]
             if not node.available:
                 continue
-            for attribute_path in self._polled_attributes[node_id].copy():
-                try:
-                    # try to read the attribute(s) - this will fire an event if the value changed
-                    await self.read_attribute(
-                        node_id, attribute_path, fabric_filtered=False
-                    )
-                except (ChipStackError, NodeNotReady) as err:
-                    LOGGER.warning(
-                        "Polling custom attribute %s for node %s failed: %s",
-                        attribute_path,
-                        node_id,
-                        str(err) or err.__class__.__name__,
-                        # log full stack trace if verbose logging is enabled
-                        exc_info=err
-                        if LOGGER.isEnabledFor(VERBOSE_LOG_LEVEL)
-                        else None,
-                    )
-                # polling attributes is heavy on network traffic, so we throttle it a bit
-                await asyncio.sleep(2)
+            attribute_paths = list(self._polled_attributes[node_id])
+            try:
+                # try to read the attribute(s) - this will fire an event if the value changed
+                await self.read_attribute(
+                    node_id, attribute_paths, fabric_filtered=False
+                )
+            except (ChipStackError, NodeNotReady) as err:
+                LOGGER.warning(
+                    "Polling custom attribute(s) %s for node %s failed: %s",
+                    ",".join(attribute_paths),
+                    node_id,
+                    str(err) or err.__class__.__name__,
+                    # log full stack trace if verbose logging is enabled
+                    exc_info=err if LOGGER.isEnabledFor(VERBOSE_LOG_LEVEL) else None,
+                )
+            # polling attributes is heavy on network traffic, so we throttle it a bit
+            await asyncio.sleep(2)
         # reschedule self to run at next interval
         self._schedule_custom_attributes_poller()
 
