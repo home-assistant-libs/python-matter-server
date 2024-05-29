@@ -168,7 +168,7 @@ class ChipDeviceControllerWrapper:
     ) -> CommissioningParameters:
         """Open a commissioning window to commission a device present on this controller to another."""
         async with self._get_node_lock(node_id):
-            await self._call_sdk(
+            return await self._call_sdk(
                 self._chip_controller.OpenCommissioningWindow,
                 nodeid=node_id,
                 timeout=timeout,
