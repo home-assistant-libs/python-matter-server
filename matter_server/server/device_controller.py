@@ -111,7 +111,9 @@ class MatterDeviceController:
         """Initialize the device controller."""
         self.server = server
 
-        self._device_controller = ChipDeviceControllerWrapper(server, paa_root_cert_dir)
+        self._chip_device_controller = ChipDeviceControllerWrapper(
+            server, paa_root_cert_dir
+        )
 
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: deque[Attribute.EventReadResult] = deque(maxlen=25)
@@ -138,7 +140,7 @@ class MatterDeviceController:
     async def initialize(self) -> None:
         """Initialize the device controller."""
         self._compressed_fabric_id = (
-            await self._device_controller.get_compressed_fabric_id()
+            await self._chip_device_controller.get_compressed_fabric_id()
         )
         self._fabric_id_hex = hex(self._compressed_fabric_id)[2:]
 
@@ -203,7 +205,7 @@ class MatterDeviceController:
             await self._aiozc.async_close()
 
         # shutdown the sdk device controller
-        await self._device_controller.shutdown()
+        await self._chip_device_controller.shutdown()
         LOGGER.debug("Stopped.")
 
     @property
@@ -265,7 +267,7 @@ class MatterDeviceController:
             )
             result: (
                 PyChipError | None
-            ) = await self._device_controller.commission_with_code(
+            ) = await self._chip_device_controller.commission_with_code(
                 node_id,
                 code,
                 DiscoveryType.DISCOVERY_NETWORK_ONLY
@@ -344,7 +346,7 @@ class MatterDeviceController:
                     attempts,
                     MAX_COMMISSION_RETRIES,
                 )
-                result = await self._device_controller.commission_on_network(
+                result = await self._chip_device_controller.commission_on_network(
                     node_id, setup_pin_code, filter_type, filter
                 )
             else:
@@ -355,7 +357,7 @@ class MatterDeviceController:
                     attempts,
                     MAX_COMMISSION_RETRIES,
                 )
-                result = await self._device_controller.commission_ip(
+                result = await self._chip_device_controller.commission_ip(
                     node_id, setup_pin_code, ip_addr
                 )
             if result and result.is_success:
@@ -393,14 +395,14 @@ class MatterDeviceController:
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
         """Set WiFi credentials for commissioning to a (new) device."""
 
-        await self._device_controller.set_wifi_credentials(ssid, credentials)
+        await self._chip_device_controller.set_wifi_credentials(ssid, credentials)
         self._wifi_credentials_set = True
 
     @api_command(APICommand.SET_THREAD_DATASET)
     async def set_thread_operational_dataset(self, dataset: str) -> None:
         """Set Thread Operational dataset in the stack."""
 
-        await self._device_controller.set_thread_operational_dataset(dataset)
+        await self._chip_device_controller.set_thread_operational_dataset(dataset)
         self._thread_credentials_set = True
 
     @api_command(APICommand.OPEN_COMMISSIONING_WINDOW)
@@ -427,7 +429,7 @@ class MatterDeviceController:
         if discriminator is None:
             discriminator = randint(0, 4095)  # noqa: S311
 
-        sdk_result = await self._device_controller.open_commissioning_window(
+        sdk_result = await self._chip_device_controller.open_commissioning_window(
             node_id,
             timeout,
             iteration,
@@ -452,7 +454,7 @@ class MatterDeviceController:
         self,
     ) -> list[CommissionableNodeData]:
         """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
-        sdk_result = await self._device_controller.discover_commissionable_nodes()
+        sdk_result = await self._chip_device_controller.discover_commissionable_nodes()
         if sdk_result is None:
             return []
         # ensure list
@@ -494,7 +496,7 @@ class MatterDeviceController:
         try:
             LOGGER.info("Interviewing node: %s", node_id)
             read_response: Attribute.AsyncReadTransaction.ReadResponse = (
-                await self._device_controller.read_attribute(
+                await self._chip_device_controller.read_attribute(
                     node_id,
                     [()],
                     fabric_filtered=False,
@@ -565,7 +567,7 @@ class MatterDeviceController:
                 command,
             )
             return None
-        return await self._device_controller.send_command(
+        return await self._chip_device_controller.send_command(
             node_id,
             endpoint_id,
             command,
@@ -620,7 +622,7 @@ class MatterDeviceController:
                 )
             )
 
-        result = await self._device_controller.read(
+        result = await self._chip_device_controller.read(
             node_id,
             attributes,
             fabric_filtered,
@@ -675,7 +677,7 @@ class MatterDeviceController:
                 attribute,
             )
             return None
-        return await self._device_controller.write_attribute(
+        return await self._chip_device_controller.write_attribute(
             node_id, [(endpoint_id, attribute)]
         )
 
@@ -690,7 +692,7 @@ class MatterDeviceController:
         LOGGER.info("Removing Node ID %s.", node_id)
 
         # shutdown any existing subscriptions
-        await self._device_controller.shutdown_subscription(node_id)
+        await self._chip_device_controller.shutdown_subscription(node_id)
 
         node = self._nodes.pop(node_id)
         self.server.storage.remove(
@@ -714,7 +716,7 @@ class MatterDeviceController:
             return
         result: Clusters.OperationalCredentials.Commands.NOCResponse | None = None
         try:
-            result = await self._device_controller.send_command(
+            result = await self._chip_device_controller.send_command(
                 node_id=node_id,
                 endpoint_id=0,
                 command=Clusters.OperationalCredentials.Commands.RemoveFabric(
@@ -786,7 +788,9 @@ class MatterDeviceController:
 
         # retrieve the currently connected/used address which is used
         # by the sdk for communicating with the device
-        if sdk_result := await self._device_controller.get_address_and_port(node_id):
+        if sdk_result := await self._chip_device_controller.get_address_and_port(
+            node_id
+        ):
             active_address = sdk_result[0]
             node_logger.info(
                 "The SDK is communicating with the device using %s", active_address
@@ -870,7 +874,7 @@ class MatterDeviceController:
         node = self._nodes[node_id]
 
         # Shutdown existing subscriptions for this node first
-        await self._device_controller.shutdown_subscription(node_id)
+        await self._chip_device_controller.shutdown_subscription(node_id)
 
         loop = cast(asyncio.AbstractEventLoop, self.server.loop)
 
@@ -1035,7 +1039,7 @@ class MatterDeviceController:
         self._last_subscription_attempt[node_id] = 0
         # set-up the actual subscription
         sub: Attribute.SubscriptionTransaction = (
-            await self._device_controller.read_attribute(
+            await self._chip_device_controller.read_attribute(
                 node_id,
                 [()],
                 events=[("*", 1)],
@@ -1099,7 +1103,7 @@ class MatterDeviceController:
             )
             node_name = f"Node {node_id} ({node_model})"
             # get current IP the sdk is using to communicate with the device
-            if sdk_ip_info := await self._device_controller.get_address_and_port(
+            if sdk_ip_info := await self._chip_device_controller.get_address_and_port(
                 node_id
             ):
                 ip_address = sdk_ip_info[0]
@@ -1134,7 +1138,7 @@ class MatterDeviceController:
 
                 # try to resolve the node using the sdk first before do anything else
                 try:
-                    await self._device_controller.find_or_establish_case_session(
+                    await self._chip_device_controller.find_or_establish_case_session(
                         node_id=node_id
                     )
                 except NodeNotResolving as err:
@@ -1293,7 +1297,7 @@ class MatterDeviceController:
             # prevent duplicate setup actions
             return
 
-        if not self._device_controller.node_has_subscription(node_id):
+        if not self._chip_device_controller.node_has_subscription(node_id):
             logger.info("Node %s discovered on MDNS", node_id)
         elif (now - last_seen) > NODE_MDNS_BACKOFF:
             # node came back online after being offline for a while or restarted
@@ -1346,7 +1350,7 @@ class MatterDeviceController:
     async def _node_offline(self, node_id: int) -> None:
         """Mark node as offline."""
         # shutdown existing subscriptions
-        await self._device_controller.shutdown_subscription(node_id)
+        await self._chip_device_controller.shutdown_subscription(node_id)
         # mark node as unavailable (if it wasn't already)
         node = self._nodes[node_id]
         if not node.available:
