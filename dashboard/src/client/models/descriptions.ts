@@ -28,8 +28,8 @@ export const device_types: Record<number, DeviceType> = {
     "clusters": [
       66,
       67,
-      68,
-      28
+      28,
+      68
     ]
   },
   "22": {
@@ -191,13 +191,13 @@ export const device_types: Record<number, DeviceType> = {
     "clusters": [
       512,
       98,
-      1026,
-      1028,
-      1027,
-      6,
-      4,
-      8,
       3,
+      4,
+      1028,
+      6,
+      1027,
+      8,
+      1026,
       29,
       30
     ]
@@ -262,9 +262,9 @@ export const device_types: Record<number, DeviceType> = {
     "id": 21,
     "label": "Contact Sensor",
     "clusters": [
-      29,
       3,
-      69
+      69,
+      29
     ]
   },
   "262": {
@@ -300,8 +300,8 @@ export const device_types: Record<number, DeviceType> = {
     "id": 773,
     "label": "Pressure Sensor",
     "clusters": [
-      1027,
       3,
+      1027,
       29
     ]
   },
@@ -354,9 +354,9 @@ export const device_types: Record<number, DeviceType> = {
     "id": 514,
     "label": "Window Covering",
     "clusters": [
+      258,
       98,
       3,
-      258,
       4,
       29
     ]
@@ -375,9 +375,9 @@ export const device_types: Record<number, DeviceType> = {
     "label": "Heating/Cooling Unit",
     "clusters": [
       514,
-      98,
-      4,
       3,
+      4,
+      98,
       6,
       8,
       29,
@@ -391,8 +391,8 @@ export const device_types: Record<number, DeviceType> = {
       513,
       98,
       3,
-      516,
       4,
+      516,
       56,
       29,
       30
@@ -415,14 +415,14 @@ export const device_types: Record<number, DeviceType> = {
       1283,
       1284,
       1285,
-      1286,
       6,
       1287,
+      1288,
       1289,
       1290,
       1291,
-      1288,
       1292,
+      1286,
       1294,
       29
     ]
@@ -434,11 +434,11 @@ export const device_types: Record<number, DeviceType> = {
       1283,
       1284,
       1285,
-      1286,
       6,
       1287,
-      1289,
       1288,
+      1289,
+      1286,
       1291,
       29
     ]
@@ -450,17 +450,17 @@ export const device_types: Record<number, DeviceType> = {
       1283,
       1284,
       1285,
-      1286,
       6,
       1287,
-      1289,
+      1288,
+      8,
       1290,
       1291,
       1292,
-      1293,
+      1289,
       1294,
-      1288,
-      8,
+      1286,
+      1293,
       29,
       30
     ]
@@ -472,16 +472,16 @@ export const device_types: Record<number, DeviceType> = {
       1283,
       1284,
       1285,
-      1286,
       6,
       1287,
-      1289,
+      1288,
+      8,
       1290,
       1291,
       1292,
-      1288,
+      1289,
       1294,
-      8,
+      1286,
       29,
       30
     ]
@@ -527,13 +527,13 @@ export const device_types: Record<number, DeviceType> = {
     "clusters": [
       513,
       514,
+      3,
+      4,
+      516,
+      6,
+      1029,
       98,
       1026,
-      1029,
-      6,
-      516,
-      4,
-      3,
       29
     ]
   },
@@ -573,11 +573,11 @@ export const device_types: Record<number, DeviceType> = {
       1066,
       1067,
       1068,
-      1036,
       1037,
       1070,
-      1071,
+      1036,
       1069,
+      1071,
       1043,
       1045,
       91,
@@ -740,11 +740,11 @@ export const device_types: Record<number, DeviceType> = {
       768,
       257,
       98,
-      259,
-      1026,
-      4,
-      6,
       3,
+      4,
+      259,
+      6,
+      1026,
       8,
       29,
       30
