@@ -31,7 +31,9 @@ OUTPUT_FILE: Final[pathlib.Path] = (
 )
 
 ALL_CLUSTERS = {**SDK_ALL_CLUSTERS, **ALL_CUSTOM_CLUSTERS}
-ALL_ATTRIBUTES = {**SDK_ALL_ATTRIBUTES, **ALL_CUSTOM_ATTRIBUTES}
+ALL_ATTRIBUTES = SDK_ALL_ATTRIBUTES
+for cluster_id, attributes in ALL_CUSTOM_ATTRIBUTES.items():
+    ALL_ATTRIBUTES[cluster_id] = attributes
 
 
 def generate_device_type_description(device_type: DeviceType) -> dict[str, Any]:
