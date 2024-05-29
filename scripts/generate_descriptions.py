@@ -7,8 +7,8 @@ import pathlib
 from typing import Any, Final
 
 from chip.clusters.ClusterObjects import (
-    ALL_ATTRIBUTES,
-    ALL_CLUSTERS,
+    ALL_ATTRIBUTES as SDK_ALL_ATTRIBUTES,
+    ALL_CLUSTERS as SDK_ALL_CLUSTERS,
     Cluster,
     ClusterAttributeDescriptor,
 )
@@ -16,6 +16,10 @@ from chip.clusters.ClusterObjects import (
 from matter_server.client.models.device_types import (
     ALL_TYPES as DEVICE_TYPES,
     DeviceType,
+)
+from matter_server.common.custom_clusters import (
+    ALL_CUSTOM_ATTRIBUTES,
+    ALL_CUSTOM_CLUSTERS,
 )
 from matter_server.common.helpers.json import json_dumps
 
@@ -25,6 +29,9 @@ OUTPUT_FILE: Final[pathlib.Path] = (
     .parent.resolve()
     .joinpath("dashboard/src/client/models/descriptions.ts")
 )
+
+ALL_CLUSTERS = {**SDK_ALL_CLUSTERS, **ALL_CUSTOM_CLUSTERS}
+ALL_ATTRIBUTES = {**SDK_ALL_ATTRIBUTES, **ALL_CUSTOM_ATTRIBUTES}
 
 
 def generate_device_type_description(device_type: DeviceType) -> dict[str, Any]:

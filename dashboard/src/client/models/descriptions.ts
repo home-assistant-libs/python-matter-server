@@ -190,14 +190,14 @@ export const device_types: Record<number, DeviceType> = {
     "label": "Pump",
     "clusters": [
       512,
-      98,
-      3,
-      4,
-      1028,
-      6,
-      1027,
-      8,
       1026,
+      1027,
+      1028,
+      4,
+      6,
+      3,
+      8,
+      98,
       29,
       30
     ]
@@ -262,9 +262,9 @@ export const device_types: Record<number, DeviceType> = {
     "id": 21,
     "label": "Contact Sensor",
     "clusters": [
+      29,
       3,
-      69,
-      29
+      69
     ]
   },
   "262": {
@@ -300,8 +300,8 @@ export const device_types: Record<number, DeviceType> = {
     "id": 773,
     "label": "Pressure Sensor",
     "clusters": [
-      3,
       1027,
+      3,
       29
     ]
   },
@@ -355,9 +355,9 @@ export const device_types: Record<number, DeviceType> = {
     "label": "Window Covering",
     "clusters": [
       258,
-      98,
       3,
       4,
+      98,
       29
     ]
   },
@@ -415,14 +415,14 @@ export const device_types: Record<number, DeviceType> = {
       1283,
       1284,
       1285,
-      6,
+      1286,
       1287,
       1288,
       1289,
       1290,
       1291,
       1292,
-      1286,
+      6,
       1294,
       29
     ]
@@ -434,11 +434,11 @@ export const device_types: Record<number, DeviceType> = {
       1283,
       1284,
       1285,
-      6,
+      1286,
       1287,
       1288,
       1289,
-      1286,
+      6,
       1291,
       29
     ]
@@ -450,17 +450,17 @@ export const device_types: Record<number, DeviceType> = {
       1283,
       1284,
       1285,
-      6,
-      1287,
-      1288,
-      8,
-      1290,
-      1291,
-      1292,
-      1289,
-      1294,
       1286,
+      1287,
+      8,
+      1289,
+      1290,
+      1288,
+      1291,
       1293,
+      1292,
+      6,
+      1294,
       29,
       30
     ]
@@ -472,16 +472,16 @@ export const device_types: Record<number, DeviceType> = {
       1283,
       1284,
       1285,
-      6,
+      1286,
       1287,
-      1288,
       8,
+      1289,
       1290,
+      1288,
       1291,
       1292,
-      1289,
+      6,
       1294,
-      1286,
       29,
       30
     ]
@@ -526,14 +526,14 @@ export const device_types: Record<number, DeviceType> = {
     "label": "Room Air Conditioner",
     "clusters": [
       513,
+      1026,
       514,
-      3,
       4,
+      1029,
       516,
       6,
-      1029,
+      3,
       98,
-      1026,
       29
     ]
   },
@@ -572,12 +572,12 @@ export const device_types: Record<number, DeviceType> = {
       1029,
       1066,
       1067,
-      1068,
+      1036,
       1037,
       1070,
-      1036,
-      1069,
       1071,
+      1069,
+      1068,
       1043,
       1045,
       91,
@@ -591,10 +591,10 @@ export const device_types: Record<number, DeviceType> = {
       96,
       3,
       6,
-      93,
+      29,
       86,
       89,
-      29
+      93
     ]
   },
   "123": {
@@ -739,12 +739,12 @@ export const device_types: Record<number, DeviceType> = {
     "clusters": [
       768,
       257,
-      98,
-      3,
-      4,
-      259,
-      6,
       1026,
+      259,
+      4,
+      3,
+      6,
+      98,
       8,
       29,
       30
@@ -12559,6 +12559,42 @@ export const clusters: Record<number, ClusterDescription> = {
         "cluster_id": 4294048800,
         "label": "ClusterRevision",
         "type": "uint"
+      }
+    }
+  },
+  "319486977": {
+    "id": 319486977,
+    "label": "EveCluster",
+    "attributes": {
+      "319422474": {
+        "id": 319422474,
+        "cluster_id": 319486977,
+        "label": "Watt",
+        "type": "float32"
+      },
+      "319422475": {
+        "id": 319422475,
+        "cluster_id": 319486977,
+        "label": "WattAccumulated",
+        "type": "float32"
+      },
+      "319422478": {
+        "id": 319422478,
+        "cluster_id": 319486977,
+        "label": "WattAccumulatedControlPoint",
+        "type": "float32"
+      },
+      "319422472": {
+        "id": 319422472,
+        "cluster_id": 319486977,
+        "label": "Voltage",
+        "type": "float32"
+      },
+      "319422473": {
+        "id": 319422473,
+        "cluster_id": 319486977,
+        "label": "Current",
+        "type": "float32"
       }
     }
   }
