@@ -1400,11 +1400,11 @@ class MatterDeviceController:
 
     async def _custom_attributes_poller(self) -> None:
         """Poll custom clusters/attributes for changes."""
-        for node_id, polled_attributes in self._polled_attributes.items():
+        for node_id in tuple(self._polled_attributes):
             node = self._nodes[node_id]
             if not node.available:
                 continue
-            for attribute_path in polled_attributes:
+            for attribute_path in self._polled_attributes[node_id].copy():
                 try:
                     # try to read the attribute(s) - this will fire an event if the value changed
                     await self.read_attribute(
