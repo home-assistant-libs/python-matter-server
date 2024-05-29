@@ -22,8 +22,8 @@ export interface ClusterDescription {
 
 
 export const device_types: Record<number, DeviceType> = {
-  "61441": {
-    "id": 61441,
+  "4293984257": {
+    "id": 4293984257,
     "label": "Orphan Clusters",
     "clusters": [
       66,
@@ -54,7 +54,8 @@ export const device_types: Record<number, DeviceType> = {
       56,
       60,
       62,
-      63
+      63,
+      70
     ]
   },
   "17": {
@@ -63,6 +64,16 @@ export const device_types: Record<number, DeviceType> = {
     "clusters": [
       29,
       47
+    ]
+  },
+  "1296": {
+    "id": 1296,
+    "label": "Electrical Sensor",
+    "clusters": [
+      144,
+      145,
+      156,
+      29
     ]
   },
   "18": {
@@ -103,9 +114,9 @@ export const device_types: Record<number, DeviceType> = {
     "id": 256,
     "label": "On/Off Light",
     "clusters": [
+      98,
       3,
       4,
-      5,
       6,
       8,
       29
@@ -115,9 +126,9 @@ export const device_types: Record<number, DeviceType> = {
     "id": 257,
     "label": "Dimmable Light",
     "clusters": [
+      98,
       3,
       4,
-      5,
       6,
       8,
       29,
@@ -129,9 +140,9 @@ export const device_types: Record<number, DeviceType> = {
     "label": "Color Temperature Light",
     "clusters": [
       768,
+      98,
       3,
       4,
-      5,
       6,
       8,
       29
@@ -142,9 +153,9 @@ export const device_types: Record<number, DeviceType> = {
     "label": "Extended Color Light",
     "clusters": [
       768,
+      98,
       3,
       4,
-      5,
       6,
       8,
       29
@@ -154,9 +165,9 @@ export const device_types: Record<number, DeviceType> = {
     "id": 266,
     "label": "On/Off Plug-in Unit",
     "clusters": [
+      98,
       3,
       4,
-      5,
       6,
       8,
       29
@@ -166,9 +177,9 @@ export const device_types: Record<number, DeviceType> = {
     "id": 267,
     "label": "Dimmable Plug-in Unit",
     "clusters": [
+      98,
       3,
       4,
-      5,
       6,
       8,
       29
@@ -179,14 +190,14 @@ export const device_types: Record<number, DeviceType> = {
     "label": "Pump",
     "clusters": [
       512,
+      98,
       1026,
-      3,
-      4,
-      5,
       1028,
       1027,
-      8,
       6,
+      4,
+      8,
+      3,
       29,
       30
     ]
@@ -251,9 +262,9 @@ export const device_types: Record<number, DeviceType> = {
     "id": 21,
     "label": "Contact Sensor",
     "clusters": [
+      29,
       3,
-      69,
-      29
+      69
     ]
   },
   "262": {
@@ -289,8 +300,8 @@ export const device_types: Record<number, DeviceType> = {
     "id": 773,
     "label": "Pressure Sensor",
     "clusters": [
-      3,
       1027,
+      3,
       29
     ]
   },
@@ -343,10 +354,10 @@ export const device_types: Record<number, DeviceType> = {
     "id": 514,
     "label": "Window Covering",
     "clusters": [
-      258,
+      98,
       3,
+      258,
       4,
-      5,
       29
     ]
   },
@@ -364,9 +375,9 @@ export const device_types: Record<number, DeviceType> = {
     "label": "Heating/Cooling Unit",
     "clusters": [
       514,
-      3,
+      98,
       4,
-      5,
+      3,
       6,
       8,
       29,
@@ -378,10 +389,10 @@ export const device_types: Record<number, DeviceType> = {
     "label": "Thermostat",
     "clusters": [
       513,
+      98,
       3,
-      4,
-      5,
       516,
+      4,
       56,
       29,
       30
@@ -405,13 +416,13 @@ export const device_types: Record<number, DeviceType> = {
       1284,
       1285,
       1286,
+      6,
       1287,
-      1288,
       1289,
       1290,
       1291,
+      1288,
       1292,
-      6,
       1294,
       29
     ]
@@ -424,10 +435,10 @@ export const device_types: Record<number, DeviceType> = {
       1284,
       1285,
       1286,
-      1287,
-      1288,
-      1289,
       6,
+      1287,
+      1289,
+      1288,
       1291,
       29
     ]
@@ -440,18 +451,18 @@ export const device_types: Record<number, DeviceType> = {
       1284,
       1285,
       1286,
+      6,
       1287,
-      8,
-      1288,
+      1289,
       1290,
       1291,
       1292,
       1293,
       1294,
-      1289,
+      1288,
+      8,
       29,
-      30,
-      6
+      30
     ]
   },
   "42": {
@@ -462,15 +473,15 @@ export const device_types: Record<number, DeviceType> = {
       1284,
       1285,
       1286,
+      6,
       1287,
-      8,
-      1288,
+      1289,
       1290,
       1291,
       1292,
-      1289,
+      1288,
       1294,
-      6,
+      8,
       29,
       30
     ]
@@ -516,12 +527,13 @@ export const device_types: Record<number, DeviceType> = {
     "clusters": [
       513,
       514,
-      3,
-      4,
-      5,
-      1029,
+      98,
       1026,
+      1029,
       6,
+      516,
+      4,
+      3,
       29
     ]
   },
@@ -561,11 +573,11 @@ export const device_types: Record<number, DeviceType> = {
       1066,
       1067,
       1068,
-      1069,
-      1070,
-      1071,
       1036,
       1037,
+      1070,
+      1071,
+      1069,
       1043,
       1045,
       91,
@@ -579,10 +591,30 @@ export const device_types: Record<number, DeviceType> = {
       96,
       3,
       6,
-      29,
+      93,
       86,
       89,
-      93
+      29
+    ]
+  },
+  "123": {
+    "id": 123,
+    "label": "Oven",
+    "clusters": [
+      3,
+      29
+    ]
+  },
+  "121": {
+    "id": 121,
+    "label": "Microwave Oven",
+    "clusters": [
+      96,
+      514,
+      3,
+      29,
+      94,
+      95
     ]
   },
   "112": {
@@ -608,6 +640,30 @@ export const device_types: Record<number, DeviceType> = {
       29
     ]
   },
+  "124": {
+    "id": 124,
+    "label": "Laundry Dryer",
+    "clusters": [
+      96,
+      3,
+      6,
+      74,
+      81,
+      86,
+      29
+    ]
+  },
+  "122": {
+    "id": 122,
+    "label": "Extractor Hood",
+    "clusters": [
+      514,
+      3,
+      113,
+      114,
+      29
+    ]
+  },
   "116": {
     "id": 116,
     "label": "Robotic Vacuum Cleaner",
@@ -623,34 +679,111 @@ export const device_types: Record<number, DeviceType> = {
     "id": 113,
     "label": "Temperature Controlled Cabinet",
     "clusters": [
-      82,
       1026,
-      29,
-      86
+      72,
+      73,
+      82,
+      86,
+      29
     ]
   },
-  "0": {
-    "id": 0,
+  "65": {
+    "id": 65,
+    "label": "Water Freeze Detector",
+    "clusters": [
+      128,
+      3,
+      69,
+      29
+    ]
+  },
+  "66": {
+    "id": 66,
+    "label": "Water Valve",
+    "clusters": [
+      129,
+      3,
+      29
+    ]
+  },
+  "67": {
+    "id": 67,
+    "label": "Water Leak Detector",
+    "clusters": [
+      128,
+      3,
+      69,
+      29
+    ]
+  },
+  "68": {
+    "id": 68,
+    "label": "Rain Sensor",
+    "clusters": [
+      128,
+      3,
+      69,
+      29
+    ]
+  },
+  "4293984272": {
+    "id": 4293984272,
+    "label": "Network Infrastructure Manager",
+    "clusters": [
+      29
+    ]
+  },
+  "4293984259": {
+    "id": 4293984259,
     "label": "All-clusters-app Server Example",
     "clusters": [
       768,
       257,
-      1026,
-      3,
-      4,
-      5,
-      6,
+      98,
       259,
+      1026,
+      4,
+      6,
+      3,
       8,
       29,
       30
     ]
   },
-  "61442": {
-    "id": 61442,
+  "4293984258": {
+    "id": 4293984258,
     "label": "Secondary Network Commissioning Device Type",
     "clusters": [
       49,
+      29
+    ]
+  },
+  "120": {
+    "id": 120,
+    "label": "Cooktop",
+    "clusters": [
+      3,
+      29,
+      6
+    ]
+  },
+  "119": {
+    "id": 119,
+    "label": "Cook Surface",
+    "clusters": [
+      1026,
+      29,
+      86
+    ]
+  },
+  "1292": {
+    "id": 1292,
+    "label": "EVSE",
+    "clusters": [
+      1026,
+      3,
+      157,
+      153,
       29
     ]
   }
@@ -754,96 +887,6 @@ export const clusters: Record<number, ClusterDescription> = {
       "65533": {
         "id": 65533,
         "cluster_id": 4,
-        "label": "ClusterRevision",
-        "type": "uint"
-      }
-    }
-  },
-  "5": {
-    "id": 5,
-    "label": "Scenes",
-    "attributes": {
-      "0": {
-        "id": 0,
-        "cluster_id": 5,
-        "label": "SceneCount",
-        "type": "uint"
-      },
-      "1": {
-        "id": 1,
-        "cluster_id": 5,
-        "label": "CurrentScene",
-        "type": "uint"
-      },
-      "2": {
-        "id": 2,
-        "cluster_id": 5,
-        "label": "CurrentGroup",
-        "type": "uint"
-      },
-      "3": {
-        "id": 3,
-        "cluster_id": 5,
-        "label": "SceneValid",
-        "type": "bool"
-      },
-      "4": {
-        "id": 4,
-        "cluster_id": 5,
-        "label": "NameSupport",
-        "type": "uint"
-      },
-      "5": {
-        "id": 5,
-        "cluster_id": 5,
-        "label": "LastConfiguredBy",
-        "type": "Union[NoneType, Nullable, uint]"
-      },
-      "6": {
-        "id": 6,
-        "cluster_id": 5,
-        "label": "SceneTableSize",
-        "type": "uint"
-      },
-      "7": {
-        "id": 7,
-        "cluster_id": 5,
-        "label": "RemainingCapacity",
-        "type": "uint"
-      },
-      "65528": {
-        "id": 65528,
-        "cluster_id": 5,
-        "label": "GeneratedCommandList",
-        "type": "List[uint]"
-      },
-      "65529": {
-        "id": 65529,
-        "cluster_id": 5,
-        "label": "AcceptedCommandList",
-        "type": "List[uint]"
-      },
-      "65530": {
-        "id": 65530,
-        "cluster_id": 5,
-        "label": "EventList",
-        "type": "List[uint]"
-      },
-      "65531": {
-        "id": 65531,
-        "cluster_id": 5,
-        "label": "AttributeList",
-        "type": "List[uint]"
-      },
-      "65532": {
-        "id": 65532,
-        "cluster_id": 5,
-        "label": "FeatureMap",
-        "type": "uint"
-      },
-      "65533": {
-        "id": 65533,
-        "cluster_id": 5,
         "label": "ClusterRevision",
         "type": "uint"
       }
@@ -1620,6 +1663,18 @@ export const clusters: Record<number, ClusterDescription> = {
         "cluster_id": 40,
         "label": "ProductAppearance",
         "type": "Optional[BasicInformation.Structs.ProductAppearanceStruct]"
+      },
+      "21": {
+        "id": 21,
+        "cluster_id": 40,
+        "label": "SpecificationVersion",
+        "type": "uint"
+      },
+      "22": {
+        "id": 22,
+        "cluster_id": 40,
+        "label": "MaxPathsPerInvoke",
+        "type": "uint"
       },
       "65528": {
         "id": 65528,
@@ -2490,12 +2545,6 @@ export const clusters: Record<number, ClusterDescription> = {
         "cluster_id": 51,
         "label": "TestEventTriggersEnabled",
         "type": "bool"
-      },
-      "9": {
-        "id": 9,
-        "cluster_id": 51,
-        "label": "AverageWearCount",
-        "type": "Optional[uint]"
       },
       "65528": {
         "id": 65528,
@@ -4081,6 +4130,12 @@ export const clusters: Record<number, ClusterDescription> = {
         "label": "UserActiveModeTriggerInstruction",
         "type": "Optional[str]"
       },
+      "8": {
+        "id": 8,
+        "cluster_id": 70,
+        "label": "OperatingMode",
+        "type": "Optional[IcdManagement.Enums.OperatingModeEnum]"
+      },
       "65528": {
         "id": 65528,
         "cluster_id": 70,
@@ -4114,6 +4169,264 @@ export const clusters: Record<number, ClusterDescription> = {
       "65533": {
         "id": 65533,
         "cluster_id": 70,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "71": {
+    "id": 71,
+    "label": "Timer",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 71,
+        "label": "SetTime",
+        "type": "uint"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 71,
+        "label": "TimeRemaining",
+        "type": "uint"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 71,
+        "label": "TimerState",
+        "type": "aenum TimerStatusEnum"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 71,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 71,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 71,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 71,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 71,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 71,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "72": {
+    "id": 72,
+    "label": "OvenCavityOperationalState",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 72,
+        "label": "PhaseList",
+        "type": "Union[Nullable, List[str]]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 72,
+        "label": "CurrentPhase",
+        "type": "Union[Nullable, uint]"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 72,
+        "label": "CountdownTime",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 72,
+        "label": "OperationalStateList",
+        "type": "List[OvenCavityOperationalState.Structs.OperationalStateStruct]"
+      },
+      "4": {
+        "id": 4,
+        "cluster_id": 72,
+        "label": "OperationalState",
+        "type": "aenum OperationalStateEnum"
+      },
+      "5": {
+        "id": 5,
+        "cluster_id": 72,
+        "label": "OperationalError",
+        "type": "OvenCavityOperationalState.Structs.ErrorStateStruct"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 72,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 72,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 72,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 72,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 72,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 72,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "73": {
+    "id": 73,
+    "label": "OvenMode",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 73,
+        "label": "SupportedModes",
+        "type": "List[OvenMode.Structs.ModeOptionStruct]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 73,
+        "label": "CurrentMode",
+        "type": "uint"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 73,
+        "label": "StartUpMode",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 73,
+        "label": "OnMode",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 73,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 73,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 73,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 73,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 73,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 73,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "74": {
+    "id": 74,
+    "label": "LaundryDryerControls",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 74,
+        "label": "SupportedDrynessLevels",
+        "type": "List[LaundryDryerControls.Enums.DrynessLevelEnum]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 74,
+        "label": "SelectedDrynessLevel",
+        "type": "Union[Nullable, LaundryDryerControls.Enums.DrynessLevelEnum]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 74,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 74,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 74,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 74,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 74,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 74,
         "label": "ClusterRevision",
         "type": "uint"
       }
@@ -4411,12 +4724,6 @@ export const clusters: Record<number, ClusterDescription> = {
         "label": "CurrentMode",
         "type": "uint"
       },
-      "3": {
-        "id": 3,
-        "cluster_id": 84,
-        "label": "OnMode",
-        "type": "Union[NoneType, Nullable, uint]"
-      },
       "65528": {
         "id": 65528,
         "cluster_id": 84,
@@ -4470,12 +4777,6 @@ export const clusters: Record<number, ClusterDescription> = {
         "cluster_id": 85,
         "label": "CurrentMode",
         "type": "uint"
-      },
-      "3": {
-        "id": 3,
-        "cluster_id": 85,
-        "label": "OnMode",
-        "type": "Union[NoneType, Nullable, uint]"
       },
       "65528": {
         "id": 65528,
@@ -4953,6 +5254,156 @@ export const clusters: Record<number, ClusterDescription> = {
       }
     }
   },
+  "94": {
+    "id": 94,
+    "label": "MicrowaveOvenMode",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 94,
+        "label": "SupportedModes",
+        "type": "List[MicrowaveOvenMode.Structs.ModeOptionStruct]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 94,
+        "label": "CurrentMode",
+        "type": "uint"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 94,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 94,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 94,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 94,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 94,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 94,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "95": {
+    "id": 95,
+    "label": "MicrowaveOvenControl",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 95,
+        "label": "CookTime",
+        "type": "uint"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 95,
+        "label": "MaxCookTime",
+        "type": "uint"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 95,
+        "label": "PowerSetting",
+        "type": "Optional[uint]"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 95,
+        "label": "MinPower",
+        "type": "Optional[uint]"
+      },
+      "4": {
+        "id": 4,
+        "cluster_id": 95,
+        "label": "MaxPower",
+        "type": "Optional[uint]"
+      },
+      "5": {
+        "id": 5,
+        "cluster_id": 95,
+        "label": "PowerStep",
+        "type": "Optional[uint]"
+      },
+      "6": {
+        "id": 6,
+        "cluster_id": 95,
+        "label": "SupportedWatts",
+        "type": "Optional[List[uint]]"
+      },
+      "7": {
+        "id": 7,
+        "cluster_id": 95,
+        "label": "SelectedWattIndex",
+        "type": "Optional[uint]"
+      },
+      "8": {
+        "id": 8,
+        "cluster_id": 95,
+        "label": "WattRating",
+        "type": "Optional[uint]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 95,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 95,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 95,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 95,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 95,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 95,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
   "96": {
     "id": 96,
     "label": "OperationalState",
@@ -5109,6 +5560,66 @@ export const clusters: Record<number, ClusterDescription> = {
       }
     }
   },
+  "98": {
+    "id": 98,
+    "label": "ScenesManagement",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 98,
+        "label": "LastConfiguredBy",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 98,
+        "label": "SceneTableSize",
+        "type": "uint"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 98,
+        "label": "FabricSceneInfo",
+        "type": "List[ScenesManagement.Structs.SceneInfoStruct]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 98,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 98,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 98,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 98,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 98,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 98,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
   "113": {
     "id": 113,
     "label": "HepaFilterMonitoring",
@@ -5260,6 +5771,1110 @@ export const clusters: Record<number, ClusterDescription> = {
       "65533": {
         "id": 65533,
         "cluster_id": 114,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "128": {
+    "id": 128,
+    "label": "BooleanStateConfiguration",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 128,
+        "label": "CurrentSensitivityLevel",
+        "type": "Optional[uint]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 128,
+        "label": "SupportedSensitivityLevels",
+        "type": "Optional[uint]"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 128,
+        "label": "DefaultSensitivityLevel",
+        "type": "Optional[uint]"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 128,
+        "label": "AlarmsActive",
+        "type": "Optional[uint]"
+      },
+      "4": {
+        "id": 4,
+        "cluster_id": 128,
+        "label": "AlarmsSuppressed",
+        "type": "Optional[uint]"
+      },
+      "5": {
+        "id": 5,
+        "cluster_id": 128,
+        "label": "AlarmsEnabled",
+        "type": "Optional[uint]"
+      },
+      "6": {
+        "id": 6,
+        "cluster_id": 128,
+        "label": "AlarmsSupported",
+        "type": "Optional[uint]"
+      },
+      "7": {
+        "id": 7,
+        "cluster_id": 128,
+        "label": "SensorFault",
+        "type": "Optional[uint]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 128,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 128,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 128,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 128,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 128,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 128,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "129": {
+    "id": 129,
+    "label": "ValveConfigurationAndControl",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 129,
+        "label": "OpenDuration",
+        "type": "Union[Nullable, uint]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 129,
+        "label": "DefaultOpenDuration",
+        "type": "Union[Nullable, uint]"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 129,
+        "label": "AutoCloseTime",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 129,
+        "label": "RemainingDuration",
+        "type": "Union[Nullable, uint]"
+      },
+      "4": {
+        "id": 4,
+        "cluster_id": 129,
+        "label": "CurrentState",
+        "type": "Union[Nullable, ValveConfigurationAndControl.Enums.ValveStateEnum]"
+      },
+      "5": {
+        "id": 5,
+        "cluster_id": 129,
+        "label": "TargetState",
+        "type": "Union[Nullable, ValveConfigurationAndControl.Enums.ValveStateEnum]"
+      },
+      "6": {
+        "id": 6,
+        "cluster_id": 129,
+        "label": "CurrentLevel",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "7": {
+        "id": 7,
+        "cluster_id": 129,
+        "label": "TargetLevel",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "8": {
+        "id": 8,
+        "cluster_id": 129,
+        "label": "DefaultOpenLevel",
+        "type": "Optional[uint]"
+      },
+      "9": {
+        "id": 9,
+        "cluster_id": 129,
+        "label": "ValveFault",
+        "type": "Optional[uint]"
+      },
+      "10": {
+        "id": 10,
+        "cluster_id": 129,
+        "label": "LevelStep",
+        "type": "Optional[uint]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 129,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 129,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 129,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 129,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 129,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 129,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "144": {
+    "id": 144,
+    "label": "ElectricalPowerMeasurement",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 144,
+        "label": "PowerMode",
+        "type": "aenum PowerModeEnum"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 144,
+        "label": "NumberOfMeasurementTypes",
+        "type": "uint"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 144,
+        "label": "Accuracy",
+        "type": "List[ElectricalPowerMeasurement.Structs.MeasurementAccuracyStruct]"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 144,
+        "label": "Ranges",
+        "type": "Optional[List[ElectricalPowerMeasurement.Structs.MeasurementRangeStruct]]"
+      },
+      "4": {
+        "id": 4,
+        "cluster_id": 144,
+        "label": "Voltage",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "5": {
+        "id": 5,
+        "cluster_id": 144,
+        "label": "ActiveCurrent",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "6": {
+        "id": 6,
+        "cluster_id": 144,
+        "label": "ReactiveCurrent",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "7": {
+        "id": 7,
+        "cluster_id": 144,
+        "label": "ApparentCurrent",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "8": {
+        "id": 8,
+        "cluster_id": 144,
+        "label": "ActivePower",
+        "type": "Union[Nullable, int]"
+      },
+      "9": {
+        "id": 9,
+        "cluster_id": 144,
+        "label": "ReactivePower",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "10": {
+        "id": 10,
+        "cluster_id": 144,
+        "label": "ApparentPower",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "11": {
+        "id": 11,
+        "cluster_id": 144,
+        "label": "RMSVoltage",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "12": {
+        "id": 12,
+        "cluster_id": 144,
+        "label": "RMSCurrent",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "13": {
+        "id": 13,
+        "cluster_id": 144,
+        "label": "RMSPower",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "14": {
+        "id": 14,
+        "cluster_id": 144,
+        "label": "Frequency",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "15": {
+        "id": 15,
+        "cluster_id": 144,
+        "label": "HarmonicCurrents",
+        "type": "Union[NoneType, Nullable, List[ElectricalPowerMeasurement.Structs.HarmonicMeasurementStruct]]"
+      },
+      "16": {
+        "id": 16,
+        "cluster_id": 144,
+        "label": "HarmonicPhases",
+        "type": "Union[NoneType, Nullable, List[ElectricalPowerMeasurement.Structs.HarmonicMeasurementStruct]]"
+      },
+      "17": {
+        "id": 17,
+        "cluster_id": 144,
+        "label": "PowerFactor",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "18": {
+        "id": 18,
+        "cluster_id": 144,
+        "label": "NeutralCurrent",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 144,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 144,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 144,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 144,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 144,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 144,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "145": {
+    "id": 145,
+    "label": "ElectricalEnergyMeasurement",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 145,
+        "label": "Accuracy",
+        "type": "ElectricalEnergyMeasurement.Structs.MeasurementAccuracyStruct"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 145,
+        "label": "CumulativeEnergyImported",
+        "type": "Union[NoneType, Nullable, ElectricalEnergyMeasurement.Structs.EnergyMeasurementStruct]"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 145,
+        "label": "CumulativeEnergyExported",
+        "type": "Union[NoneType, Nullable, ElectricalEnergyMeasurement.Structs.EnergyMeasurementStruct]"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 145,
+        "label": "PeriodicEnergyImported",
+        "type": "Union[NoneType, Nullable, ElectricalEnergyMeasurement.Structs.EnergyMeasurementStruct]"
+      },
+      "4": {
+        "id": 4,
+        "cluster_id": 145,
+        "label": "PeriodicEnergyExported",
+        "type": "Union[NoneType, Nullable, ElectricalEnergyMeasurement.Structs.EnergyMeasurementStruct]"
+      },
+      "5": {
+        "id": 5,
+        "cluster_id": 145,
+        "label": "CumulativeEnergyReset",
+        "type": "Union[NoneType, Nullable, ElectricalEnergyMeasurement.Structs.CumulativeEnergyResetStruct]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 145,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 145,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 145,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 145,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 145,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 145,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "150": {
+    "id": 150,
+    "label": "DemandResponseLoadControl",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 150,
+        "label": "LoadControlPrograms",
+        "type": "List[DemandResponseLoadControl.Structs.LoadControlProgramStruct]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 150,
+        "label": "NumberOfLoadControlPrograms",
+        "type": "uint"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 150,
+        "label": "Events",
+        "type": "List[DemandResponseLoadControl.Structs.LoadControlEventStruct]"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 150,
+        "label": "ActiveEvents",
+        "type": "List[DemandResponseLoadControl.Structs.LoadControlEventStruct]"
+      },
+      "4": {
+        "id": 4,
+        "cluster_id": 150,
+        "label": "NumberOfEventsPerProgram",
+        "type": "uint"
+      },
+      "5": {
+        "id": 5,
+        "cluster_id": 150,
+        "label": "NumberOfTransitions",
+        "type": "uint"
+      },
+      "6": {
+        "id": 6,
+        "cluster_id": 150,
+        "label": "DefaultRandomStart",
+        "type": "uint"
+      },
+      "7": {
+        "id": 7,
+        "cluster_id": 150,
+        "label": "DefaultRandomDuration",
+        "type": "uint"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 150,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 150,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 150,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 150,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 150,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 150,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "151": {
+    "id": 151,
+    "label": "Messages",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 151,
+        "label": "Messages",
+        "type": "List[Messages.Structs.MessageStruct]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 151,
+        "label": "ActiveMessageIDs",
+        "type": "List[bytes]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 151,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 151,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 151,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 151,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 151,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 151,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "152": {
+    "id": 152,
+    "label": "DeviceEnergyManagement",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 152,
+        "label": "ESAType",
+        "type": "aenum ESATypeEnum"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 152,
+        "label": "ESACanGenerate",
+        "type": "bool"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 152,
+        "label": "ESAState",
+        "type": "aenum ESAStateEnum"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 152,
+        "label": "AbsMinPower",
+        "type": "int"
+      },
+      "4": {
+        "id": 4,
+        "cluster_id": 152,
+        "label": "AbsMaxPower",
+        "type": "int"
+      },
+      "5": {
+        "id": 5,
+        "cluster_id": 152,
+        "label": "PowerAdjustmentCapability",
+        "type": "Union[NoneType, Nullable, List[DeviceEnergyManagement.Structs.PowerAdjustStruct]]"
+      },
+      "6": {
+        "id": 6,
+        "cluster_id": 152,
+        "label": "Forecast",
+        "type": "Union[NoneType, Nullable, DeviceEnergyManagement.Structs.ForecastStruct]"
+      },
+      "7": {
+        "id": 7,
+        "cluster_id": 152,
+        "label": "OptOutState",
+        "type": "Optional[DeviceEnergyManagement.Enums.OptOutStateEnum]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 152,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 152,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 152,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 152,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 152,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 152,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "153": {
+    "id": 153,
+    "label": "EnergyEvse",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 153,
+        "label": "State",
+        "type": "Union[Nullable, EnergyEvse.Enums.StateEnum]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 153,
+        "label": "SupplyState",
+        "type": "aenum SupplyStateEnum"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 153,
+        "label": "FaultState",
+        "type": "aenum FaultStateEnum"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 153,
+        "label": "ChargingEnabledUntil",
+        "type": "Union[Nullable, uint]"
+      },
+      "4": {
+        "id": 4,
+        "cluster_id": 153,
+        "label": "DischargingEnabledUntil",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "5": {
+        "id": 5,
+        "cluster_id": 153,
+        "label": "CircuitCapacity",
+        "type": "int"
+      },
+      "6": {
+        "id": 6,
+        "cluster_id": 153,
+        "label": "MinimumChargeCurrent",
+        "type": "int"
+      },
+      "7": {
+        "id": 7,
+        "cluster_id": 153,
+        "label": "MaximumChargeCurrent",
+        "type": "int"
+      },
+      "8": {
+        "id": 8,
+        "cluster_id": 153,
+        "label": "MaximumDischargeCurrent",
+        "type": "Optional[int]"
+      },
+      "9": {
+        "id": 9,
+        "cluster_id": 153,
+        "label": "UserMaximumChargeCurrent",
+        "type": "Optional[int]"
+      },
+      "10": {
+        "id": 10,
+        "cluster_id": 153,
+        "label": "RandomizationDelayWindow",
+        "type": "Optional[uint]"
+      },
+      "35": {
+        "id": 35,
+        "cluster_id": 153,
+        "label": "NextChargeStartTime",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "36": {
+        "id": 36,
+        "cluster_id": 153,
+        "label": "NextChargeTargetTime",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "37": {
+        "id": 37,
+        "cluster_id": 153,
+        "label": "NextChargeRequiredEnergy",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "38": {
+        "id": 38,
+        "cluster_id": 153,
+        "label": "NextChargeTargetSoC",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "39": {
+        "id": 39,
+        "cluster_id": 153,
+        "label": "ApproximateEVEfficiency",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "48": {
+        "id": 48,
+        "cluster_id": 153,
+        "label": "StateOfCharge",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "49": {
+        "id": 49,
+        "cluster_id": 153,
+        "label": "BatteryCapacity",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "50": {
+        "id": 50,
+        "cluster_id": 153,
+        "label": "VehicleID",
+        "type": "Union[NoneType, Nullable, str]"
+      },
+      "64": {
+        "id": 64,
+        "cluster_id": 153,
+        "label": "SessionID",
+        "type": "Union[Nullable, uint]"
+      },
+      "65": {
+        "id": 65,
+        "cluster_id": 153,
+        "label": "SessionDuration",
+        "type": "Union[Nullable, uint]"
+      },
+      "66": {
+        "id": 66,
+        "cluster_id": 153,
+        "label": "SessionEnergyCharged",
+        "type": "Union[Nullable, int]"
+      },
+      "67": {
+        "id": 67,
+        "cluster_id": 153,
+        "label": "SessionEnergyDischarged",
+        "type": "Union[NoneType, Nullable, int]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 153,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 153,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 153,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 153,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 153,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 153,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "155": {
+    "id": 155,
+    "label": "EnergyPreference",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 155,
+        "label": "EnergyBalances",
+        "type": "Optional[List[EnergyPreference.Structs.BalanceStruct]]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 155,
+        "label": "CurrentEnergyBalance",
+        "type": "Optional[uint]"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 155,
+        "label": "EnergyPriorities",
+        "type": "Optional[List[EnergyPreference.Enums.EnergyPriorityEnum]]"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 155,
+        "label": "LowPowerModeSensitivities",
+        "type": "Optional[List[EnergyPreference.Structs.BalanceStruct]]"
+      },
+      "4": {
+        "id": 4,
+        "cluster_id": 155,
+        "label": "CurrentLowPowerModeSensitivity",
+        "type": "Optional[uint]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 155,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 155,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 155,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 155,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 155,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 155,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "156": {
+    "id": 156,
+    "label": "PowerTopology",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 156,
+        "label": "AvailableEndpoints",
+        "type": "Optional[List[uint]]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 156,
+        "label": "ActiveEndpoints",
+        "type": "Optional[List[uint]]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 156,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 156,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 156,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 156,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 156,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 156,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "157": {
+    "id": 157,
+    "label": "EnergyEvseMode",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 157,
+        "label": "SupportedModes",
+        "type": "List[EnergyEvseMode.Structs.ModeOptionStruct]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 157,
+        "label": "CurrentMode",
+        "type": "uint"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 157,
+        "label": "StartUpMode",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 157,
+        "label": "OnMode",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 157,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 157,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 157,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 157,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 157,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 157,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "159": {
+    "id": 159,
+    "label": "DeviceEnergyManagementMode",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 159,
+        "label": "SupportedModes",
+        "type": "List[DeviceEnergyManagementMode.Structs.ModeOptionStruct]"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 159,
+        "label": "CurrentMode",
+        "type": "uint"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 159,
+        "label": "StartUpMode",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 159,
+        "label": "OnMode",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 159,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 159,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 159,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 159,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 159,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 159,
         "label": "ClusterRevision",
         "type": "uint"
       }
@@ -5483,6 +7098,60 @@ export const clusters: Record<number, ClusterDescription> = {
         "id": 53,
         "cluster_id": 257,
         "label": "ExpiringUserTimeout",
+        "type": "Optional[uint]"
+      },
+      "128": {
+        "id": 128,
+        "cluster_id": 257,
+        "label": "AliroReaderVerificationKey",
+        "type": "Union[NoneType, Nullable, bytes]"
+      },
+      "129": {
+        "id": 129,
+        "cluster_id": 257,
+        "label": "AliroReaderGroupIdentifier",
+        "type": "Union[NoneType, Nullable, bytes]"
+      },
+      "130": {
+        "id": 130,
+        "cluster_id": 257,
+        "label": "AliroReaderGroupSubIdentifier",
+        "type": "Optional[bytes]"
+      },
+      "131": {
+        "id": 131,
+        "cluster_id": 257,
+        "label": "AliroExpeditedTransactionSupportedProtocolVersions",
+        "type": "Optional[List[bytes]]"
+      },
+      "132": {
+        "id": 132,
+        "cluster_id": 257,
+        "label": "AliroGroupResolvingKey",
+        "type": "Union[NoneType, Nullable, bytes]"
+      },
+      "133": {
+        "id": 133,
+        "cluster_id": 257,
+        "label": "AliroSupportedBLEUWBProtocolVersions",
+        "type": "Optional[List[bytes]]"
+      },
+      "134": {
+        "id": 134,
+        "cluster_id": 257,
+        "label": "AliroBLEAdvertisingVersion",
+        "type": "Optional[uint]"
+      },
+      "135": {
+        "id": 135,
+        "cluster_id": 257,
+        "label": "NumberOfAliroCredentialIssuerKeysSupported",
+        "type": "Optional[uint]"
+      },
+      "136": {
+        "id": 136,
+        "cluster_id": 257,
+        "label": "NumberOfAliroEndpointKeysSupported",
         "type": "Optional[uint]"
       },
       "65528": {
@@ -6113,25 +7782,25 @@ export const clusters: Record<number, ClusterDescription> = {
         "id": 27,
         "cluster_id": 513,
         "label": "ControlSequenceOfOperation",
-        "type": "aenum ThermostatControlSequence"
+        "type": "aenum ControlSequenceOfOperationEnum"
       },
       "28": {
         "id": 28,
         "cluster_id": 513,
         "label": "SystemMode",
-        "type": "uint"
+        "type": "aenum SystemModeEnum"
       },
       "30": {
         "id": 30,
         "cluster_id": 513,
         "label": "ThermostatRunningMode",
-        "type": "Optional[uint]"
+        "type": "Optional[Thermostat.Enums.ThermostatRunningModeEnum]"
       },
       "32": {
         "id": 32,
         "cluster_id": 513,
         "label": "StartOfWeek",
-        "type": "Optional[uint]"
+        "type": "Optional[Thermostat.Enums.StartOfWeekEnum]"
       },
       "33": {
         "id": 33,
@@ -6149,7 +7818,7 @@ export const clusters: Record<number, ClusterDescription> = {
         "id": 35,
         "cluster_id": 513,
         "label": "TemperatureSetpointHold",
-        "type": "Optional[uint]"
+        "type": "Optional[Thermostat.Enums.TemperatureSetpointHoldEnum]"
       },
       "36": {
         "id": 36,
@@ -6173,7 +7842,7 @@ export const clusters: Record<number, ClusterDescription> = {
         "id": 48,
         "cluster_id": 513,
         "label": "SetpointChangeSource",
-        "type": "Optional[uint]"
+        "type": "Optional[Thermostat.Enums.SetpointChangeSourceEnum]"
       },
       "49": {
         "id": 49,
@@ -6233,7 +7902,7 @@ export const clusters: Record<number, ClusterDescription> = {
         "id": 64,
         "cluster_id": 513,
         "label": "ACType",
-        "type": "Optional[uint]"
+        "type": "Optional[Thermostat.Enums.ACTypeEnum]"
       },
       "65": {
         "id": 65,
@@ -6245,13 +7914,13 @@ export const clusters: Record<number, ClusterDescription> = {
         "id": 66,
         "cluster_id": 513,
         "label": "ACRefrigerantType",
-        "type": "Optional[uint]"
+        "type": "Optional[Thermostat.Enums.ACRefrigerantTypeEnum]"
       },
       "67": {
         "id": 67,
         "cluster_id": 513,
         "label": "ACCompressorType",
-        "type": "Optional[uint]"
+        "type": "Optional[Thermostat.Enums.ACCompressorTypeEnum]"
       },
       "68": {
         "id": 68,
@@ -6263,7 +7932,7 @@ export const clusters: Record<number, ClusterDescription> = {
         "id": 69,
         "cluster_id": 513,
         "label": "ACLouverPosition",
-        "type": "Optional[uint]"
+        "type": "Optional[Thermostat.Enums.ACLouverPositionEnum]"
       },
       "70": {
         "id": 70,
@@ -6275,7 +7944,91 @@ export const clusters: Record<number, ClusterDescription> = {
         "id": 71,
         "cluster_id": 513,
         "label": "ACCapacityformat",
+        "type": "Optional[Thermostat.Enums.ACCapacityFormatEnum]"
+      },
+      "72": {
+        "id": 72,
+        "cluster_id": 513,
+        "label": "PresetTypes",
+        "type": "Optional[List[Thermostat.Structs.PresetTypeStruct]]"
+      },
+      "73": {
+        "id": 73,
+        "cluster_id": 513,
+        "label": "ScheduleTypes",
+        "type": "Optional[List[Thermostat.Structs.ScheduleTypeStruct]]"
+      },
+      "74": {
+        "id": 74,
+        "cluster_id": 513,
+        "label": "NumberOfPresets",
         "type": "Optional[uint]"
+      },
+      "75": {
+        "id": 75,
+        "cluster_id": 513,
+        "label": "NumberOfSchedules",
+        "type": "Optional[uint]"
+      },
+      "76": {
+        "id": 76,
+        "cluster_id": 513,
+        "label": "NumberOfScheduleTransitions",
+        "type": "Optional[uint]"
+      },
+      "77": {
+        "id": 77,
+        "cluster_id": 513,
+        "label": "NumberOfScheduleTransitionPerDay",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "78": {
+        "id": 78,
+        "cluster_id": 513,
+        "label": "ActivePresetHandle",
+        "type": "Union[NoneType, Nullable, bytes]"
+      },
+      "79": {
+        "id": 79,
+        "cluster_id": 513,
+        "label": "ActiveScheduleHandle",
+        "type": "Union[NoneType, Nullable, bytes]"
+      },
+      "80": {
+        "id": 80,
+        "cluster_id": 513,
+        "label": "Presets",
+        "type": "Optional[List[Thermostat.Structs.PresetStruct]]"
+      },
+      "81": {
+        "id": 81,
+        "cluster_id": 513,
+        "label": "Schedules",
+        "type": "Optional[List[Thermostat.Structs.ScheduleStruct]]"
+      },
+      "82": {
+        "id": 82,
+        "cluster_id": 513,
+        "label": "PresetsSchedulesEditable",
+        "type": "Optional[bool]"
+      },
+      "83": {
+        "id": 83,
+        "cluster_id": 513,
+        "label": "TemperatureSetpointHoldPolicy",
+        "type": "Optional[uint]"
+      },
+      "84": {
+        "id": 84,
+        "cluster_id": 513,
+        "label": "SetpointHoldExpiryTimestamp",
+        "type": "Union[NoneType, Nullable, uint]"
+      },
+      "85": {
+        "id": 85,
+        "cluster_id": 513,
+        "label": "QueuedPreset",
+        "type": "Union[NoneType, Nullable, Thermostat.Structs.QueuedPresetStruct]"
       },
       "65528": {
         "id": 65528,
@@ -6437,19 +8190,19 @@ export const clusters: Record<number, ClusterDescription> = {
         "id": 0,
         "cluster_id": 516,
         "label": "TemperatureDisplayMode",
-        "type": "uint"
+        "type": "aenum TemperatureDisplayModeEnum"
       },
       "1": {
         "id": 1,
         "cluster_id": 516,
         "label": "KeypadLockout",
-        "type": "uint"
+        "type": "aenum KeypadLockoutEnum"
       },
       "2": {
         "id": 2,
         "cluster_id": 516,
         "label": "ScheduleProgrammingVisibility",
-        "type": "Optional[uint]"
+        "type": "Optional[ThermostatUserInterfaceConfiguration.Enums.ScheduleProgrammingVisibilityEnum]"
       },
       "65528": {
         "id": 65528,
@@ -8539,6 +10292,12 @@ export const clusters: Record<number, ClusterDescription> = {
         "label": "MACAddress",
         "type": "Optional[str]"
       },
+      "1": {
+        "id": 1,
+        "cluster_id": 1283,
+        "label": "LinkLocalAddress",
+        "type": "Optional[bytes]"
+      },
       "65528": {
         "id": 65528,
         "cluster_id": 1283,
@@ -8736,6 +10495,30 @@ export const clusters: Record<number, ClusterDescription> = {
         "cluster_id": 1286,
         "label": "SeekRangeStart",
         "type": "Union[NoneType, Nullable, uint]"
+      },
+      "7": {
+        "id": 7,
+        "cluster_id": 1286,
+        "label": "ActiveAudioTrack",
+        "type": "Union[NoneType, Nullable, MediaPlayback.Structs.TrackStruct]"
+      },
+      "8": {
+        "id": 8,
+        "cluster_id": 1286,
+        "label": "AvailableAudioTracks",
+        "type": "Union[NoneType, Nullable, List[MediaPlayback.Structs.TrackStruct]]"
+      },
+      "9": {
+        "id": 9,
+        "cluster_id": 1286,
+        "label": "ActiveTextTrack",
+        "type": "Union[NoneType, Nullable, MediaPlayback.Structs.TrackStruct]"
+      },
+      "10": {
+        "id": 10,
+        "cluster_id": 1286,
+        "label": "AvailableTextTracks",
+        "type": "Union[NoneType, Nullable, List[MediaPlayback.Structs.TrackStruct]]"
       },
       "65528": {
         "id": 65528,
@@ -9202,6 +10985,138 @@ export const clusters: Record<number, ClusterDescription> = {
       "65533": {
         "id": 65533,
         "cluster_id": 1294,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "1295": {
+    "id": 1295,
+    "label": "ContentControl",
+    "attributes": {
+      "0": {
+        "id": 0,
+        "cluster_id": 1295,
+        "label": "Enabled",
+        "type": "bool"
+      },
+      "1": {
+        "id": 1,
+        "cluster_id": 1295,
+        "label": "OnDemandRatings",
+        "type": "Optional[List[ContentControl.Structs.RatingNameStruct]]"
+      },
+      "2": {
+        "id": 2,
+        "cluster_id": 1295,
+        "label": "OnDemandRatingThreshold",
+        "type": "Optional[str]"
+      },
+      "3": {
+        "id": 3,
+        "cluster_id": 1295,
+        "label": "ScheduledContentRatings",
+        "type": "Optional[List[ContentControl.Structs.RatingNameStruct]]"
+      },
+      "4": {
+        "id": 4,
+        "cluster_id": 1295,
+        "label": "ScheduledContentRatingThreshold",
+        "type": "Optional[str]"
+      },
+      "5": {
+        "id": 5,
+        "cluster_id": 1295,
+        "label": "ScreenDailyTime",
+        "type": "Optional[uint]"
+      },
+      "6": {
+        "id": 6,
+        "cluster_id": 1295,
+        "label": "RemainingScreenTime",
+        "type": "Optional[uint]"
+      },
+      "7": {
+        "id": 7,
+        "cluster_id": 1295,
+        "label": "BlockUnrated",
+        "type": "bool"
+      },
+      "65528": {
+        "id": 65528,
+        "cluster_id": 1295,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 1295,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 1295,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 1295,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 1295,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 1295,
+        "label": "ClusterRevision",
+        "type": "uint"
+      }
+    }
+  },
+  "1296": {
+    "id": 1296,
+    "label": "ContentAppObserver",
+    "attributes": {
+      "65528": {
+        "id": 65528,
+        "cluster_id": 1296,
+        "label": "GeneratedCommandList",
+        "type": "List[uint]"
+      },
+      "65529": {
+        "id": 65529,
+        "cluster_id": 1296,
+        "label": "AcceptedCommandList",
+        "type": "List[uint]"
+      },
+      "65530": {
+        "id": 65530,
+        "cluster_id": 1296,
+        "label": "EventList",
+        "type": "List[uint]"
+      },
+      "65531": {
+        "id": 65531,
+        "cluster_id": 1296,
+        "label": "AttributeList",
+        "type": "List[uint]"
+      },
+      "65532": {
+        "id": 65532,
+        "cluster_id": 1296,
+        "label": "FeatureMap",
+        "type": "uint"
+      },
+      "65533": {
+        "id": 65533,
+        "cluster_id": 1296,
         "label": "ClusterRevision",
         "type": "uint"
       }
@@ -10548,6 +12463,12 @@ export const clusters: Record<number, ClusterDescription> = {
         "cluster_id": 4294048773,
         "label": "ClusterRevision",
         "type": "uint"
+      },
+      "4294070017": {
+        "id": 4294070017,
+        "cluster_id": 4294048773,
+        "label": "MeiInt8u",
+        "type": "uint"
       }
     }
   },
@@ -10638,42 +12559,6 @@ export const clusters: Record<number, ClusterDescription> = {
         "cluster_id": 4294048800,
         "label": "ClusterRevision",
         "type": "uint"
-      }
-    }
-  },
-  "319486977": {
-    "id": 319486977,
-    "label": "EveEnergyCluster",
-    "attributes": {
-      "319422474": {
-        "id": 319422474,
-        "cluster_id": 319486977,
-        "label": "Watt",
-        "type": "float32"
-      },
-      "319422475": {
-        "id": 319422475,
-        "cluster_id": 319486977,
-        "label": "WattAccumulated",
-        "type": "float32"
-      },
-      "319422478": {
-        "id": 319422478,
-        "cluster_id": 319486977,
-        "label": "wattAccumulatedControlPoint",
-        "type": "float32"
-      },
-      "319422472": {
-        "id": 319422472,
-        "cluster_id": 319486977,
-        "label": "Voltage",
-        "type": "float32"
-      },
-      "319422473": {
-        "id": 319422473,
-        "cluster_id": 319486977,
-        "label": "Current",
-        "type": "float32"
       }
     }
   }
