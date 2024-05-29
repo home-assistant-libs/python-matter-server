@@ -190,7 +190,8 @@ class ChipDeviceControllerWrapper:
         self,
         node_id: int,
         attributes: list[
-            None  # Empty tuple, all wildcard
+            None
+            | tuple[()]  # Empty tuple, all wildcard
             | tuple[int]  # Endpoint
             |
             # Wildcard endpoint, Cluster id present
@@ -207,7 +208,8 @@ class ChipDeviceControllerWrapper:
         ]
         | None = None,
         events: list[
-            None  # Empty tuple, all wildcard
+            None
+            | tuple[()]  # Empty tuple, all wildcard
             | tuple[str, int]  # all wildcard with urgency set
             | tuple[int, int]  # Endpoint,
             |

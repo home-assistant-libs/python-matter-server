@@ -496,7 +496,7 @@ class MatterDeviceController:
             read_response: Attribute.AsyncReadTransaction.ReadResponse = (
                 await self._device_controller.read_attribute(
                     node_id,
-                    None,
+                    [()],
                     fabric_filtered=False,
                 )
             )
@@ -1037,7 +1037,7 @@ class MatterDeviceController:
         sub: Attribute.SubscriptionTransaction = (
             await self._device_controller.read_attribute(
                 node_id,
-                None,
+                [()],
                 events=[("*", 1)],
                 return_cluster_objects=False,
                 report_interval=(interval_floor, interval_ceiling),
