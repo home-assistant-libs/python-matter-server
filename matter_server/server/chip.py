@@ -1,4 +1,9 @@
-"""Controller that Manages Matter devices."""
+"""Module to wrap Python CHIP SDK classes.
+
+This module contains wrapper for the official Matter/CHIP SDK classes. The goal is to
+make the classes easier to use in asyncio environment and our use case in general. It
+also makes the API more pythonic where possible.
+"""
 
 from __future__ import annotations
 
@@ -39,8 +44,7 @@ class AsyncChipDeviceController:
     """Class exposing CHIP/Matter devices controller features.
 
     This class is responsible for managing the Matter devices. It should be seen mostly
-    as a wrapper of the ChipDeviceController class provided by the Matter SDK with some
-    additional logic to make the controller easier to use in our asyncio program.
+    as a wrapper of the ChipDeviceController class provided by the Matter/CHIP SDK.
     """
 
     compressed_fabric_id: int
@@ -95,8 +99,6 @@ class AsyncChipDeviceController:
 
     async def get_compressed_fabric_id(self) -> int:
         """Get the compressed fabric id."""
-        if self._chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
         return await self._call_sdk(self._chip_controller.GetCompressedFabricId)
 
     async def shutdown(self) -> None:
