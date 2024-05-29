@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import AttributeWriteResult
+from chip.discovery import FilterType
 from chip.exceptions import ChipStackError
 
 from ..common.errors import (
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
         CommissioningParameters,
         DeviceProxyWrapper,
     )
-    from chip.discovery import DiscoveryType, FilterType
+    from chip.discovery import DiscoveryType
     from chip.native import PyChipError
 
     from .server import MatterServer
@@ -119,13 +120,13 @@ class ChipDeviceControllerWrapper:
         self,
         node_id: int,
         setup_pin_code: int,
-        disc_filter_type: FilterType,
-        disc_filter: Any,
+        disc_filter_type: FilterType = FilterType.NONE,
+        disc_filter: Any = None,
     ) -> PyChipError:
         """Commission a device on the network."""
         return await self._call_sdk(
             self._chip_controller.CommissionOnNetwork,
-            nodeid=node_id,
+            nodeId=node_id,
             setupPinCode=setup_pin_code,
             filterType=disc_filter_type,
             filter=disc_filter,
@@ -230,7 +231,11 @@ class ChipDeviceControllerWrapper:
         report_interval: tuple[int, int] | None = None,
         fabric_filtered: bool = True,
         auto_resubscribe: bool = True,
-    ) -> Attribute.SubscriptionTransaction | Any | None:
+    ) -> (
+        Attribute.SubscriptionTransaction
+        | Attribute.AsyncReadTransaction.ReadResponse
+        | None
+    ):
         """Read an attribute on a node."""
         async with self._get_node_lock(node_id):
             result = await self._chip_controller.Read(
