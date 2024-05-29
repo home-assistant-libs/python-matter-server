@@ -30,12 +30,12 @@ from ..common.models import (
     ServerInfoMessage,
 )
 from ..server.client_handler import WebsocketClientHandler
-from .chip import AsyncChipDeviceController
 from .const import (
     DEFAULT_PAA_ROOT_CERTS_DIR,
     MIN_SCHEMA_VERSION,
 )
 from .device_controller import MatterDeviceController
+from .sdk import ChipDeviceControllerWrapper
 from .stack import MatterStack
 from .storage import StorageController
 from .vendor_info import VendorInfo
@@ -128,7 +128,7 @@ class MatterServer:
         self.stack = MatterStack(self)
         # Initialize our (intermediate) device controller which keeps track
         # of Matter devices and their subscriptions.
-        self._chip_device_controller = AsyncChipDeviceController(
+        self._chip_device_controller = ChipDeviceControllerWrapper(
             self, self.paa_root_cert_dir
         )
         self._device_controller = MatterDeviceController(
@@ -142,13 +142,13 @@ class MatterServer:
         self._register_api_commands()
 
     @property
-    def chip_device_controller(self) -> AsyncChipDeviceController:
-        """Return the device controller."""
+    def chip_device_controller(self) -> ChipDeviceControllerWrapper:
+        """Return the asyncio capable CHIP device controller."""
         return self._chip_device_controller
 
     @property
     def device_controller(self) -> MatterDeviceController:
-        """Return the device controller API class."""
+        """Return the main Matter device controller."""
         return self._device_controller
 
     async def start(self) -> None:

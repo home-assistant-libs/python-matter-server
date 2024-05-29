@@ -1,7 +1,7 @@
 """Matter Device Controller implementation.
 
 This module implements the Matter Device Controller WebSocket API. Compared to the
-`AsyncChipDeviceController` class it adds the WebSocket specific sauce and adds more
+`ChipDeviceControllerWrapper` class it adds the WebSocket specific sauce and adds more
 features which are not part of the Python Matter Device Controller per-se, e.g.
 pinging a device.
 """
@@ -60,7 +60,7 @@ if TYPE_CHECKING:
 
     from chip.native import PyChipError
 
-    from matter_server.server.chip import AsyncChipDeviceController
+    from matter_server.server.sdk import ChipDeviceControllerWrapper
 
     from .server import MatterServer
 
@@ -107,7 +107,7 @@ class MatterDeviceController:
     def __init__(
         self,
         server: MatterServer,
-        device_controller: AsyncChipDeviceController,
+        device_controller: ChipDeviceControllerWrapper,
     ):
         """Initialize the device controller."""
         self.server = server

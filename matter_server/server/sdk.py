@@ -40,7 +40,7 @@ _T = TypeVar("_T")
 LOGGER = logging.getLogger(__name__)
 
 
-class AsyncChipDeviceController:
+class ChipDeviceControllerWrapper:
     """Class exposing CHIP/Matter devices controller features.
 
     This class is responsible for managing the Matter devices. It should be seen mostly
