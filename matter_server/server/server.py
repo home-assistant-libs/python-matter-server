@@ -35,7 +35,6 @@ from .const import (
     MIN_SCHEMA_VERSION,
 )
 from .device_controller import MatterDeviceController
-from .sdk import ChipDeviceControllerWrapper
 from .stack import MatterStack
 from .storage import StorageController
 from .vendor_info import VendorInfo
@@ -128,23 +127,13 @@ class MatterServer:
         self.stack = MatterStack(self)
         # Initialize our (intermediate) device controller which keeps track
         # of Matter devices and their subscriptions.
-        self._chip_device_controller = ChipDeviceControllerWrapper(
-            self, self.paa_root_cert_dir
-        )
-        self._device_controller = MatterDeviceController(
-            self, self._chip_device_controller
-        )
+        self._device_controller = MatterDeviceController(self, self.paa_root_cert_dir)
         self.storage = StorageController(self)
         self.vendor_info = VendorInfo(self)
         # we dynamically register command handlers
         self.command_handlers: dict[str, APICommandHandler] = {}
         self._subscribers: set[EventCallBackType] = set()
         self._register_api_commands()
-
-    @property
-    def chip_device_controller(self) -> ChipDeviceControllerWrapper:
-        """Return the asyncio capable CHIP device controller."""
-        return self._chip_device_controller
 
     @property
     def device_controller(self) -> MatterDeviceController:
@@ -167,7 +156,7 @@ class MatterServer:
         # NOTE: this must be done before initializing the controller
         await fetch_certificates(self.paa_root_cert_dir)
 
-        await self._chip_device_controller.initialize()
+        await self._device_controller.initialize()
         await self.storage.start()
         await self._device_controller.start()
         await self.vendor_info.start()
@@ -231,15 +220,15 @@ class MatterServer:
     @api_command(APICommand.SERVER_INFO)
     def get_info(self) -> ServerInfoMessage:
         """Return (version)info of the Matter Server."""
-        assert self._chip_device_controller.compressed_fabric_id is not None
+        assert self._device_controller.compressed_fabric_id is not None
         return ServerInfoMessage(
             fabric_id=self.fabric_id,
-            compressed_fabric_id=self._chip_device_controller.compressed_fabric_id,
+            compressed_fabric_id=self._device_controller.compressed_fabric_id,
             schema_version=SCHEMA_VERSION,
             min_supported_schema_version=MIN_SCHEMA_VERSION,
             sdk_version=chip_clusters_version(),
-            wifi_credentials_set=self._chip_device_controller.wifi_credentials_set,
-            thread_credentials_set=self._chip_device_controller.thread_credentials_set,
+            wifi_credentials_set=self._device_controller.wifi_credentials_set,
+            thread_credentials_set=self._device_controller.thread_credentials_set,
         )
 
     @api_command(APICommand.SERVER_DIAGNOSTICS)

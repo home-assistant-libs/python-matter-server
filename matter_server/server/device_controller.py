@@ -29,6 +29,7 @@ from matter_server.common.custom_clusters import check_polled_attributes
 from matter_server.common.models import CommissionableNodeData, CommissioningParameters
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
+from matter_server.server.sdk import ChipDeviceControllerWrapper
 
 from ..common.errors import (
     InvalidArguments,
@@ -57,10 +58,9 @@ from .const import DATA_MODEL_SCHEMA_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from pathlib import Path
 
     from chip.native import PyChipError
-
-    from matter_server.server.sdk import ChipDeviceControllerWrapper
 
     from .server import MatterServer
 
@@ -97,8 +97,7 @@ BASIC_INFORMATION_SOFTWARE_VERSION_ATTRIBUTE_PATH = (
     )
 )
 
-
-# pylint: disable=too-many-lines,too-many-instance-attributes
+# pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods
 
 
 class MatterDeviceController:
@@ -107,20 +106,25 @@ class MatterDeviceController:
     def __init__(
         self,
         server: MatterServer,
-        device_controller: ChipDeviceControllerWrapper,
+        paa_root_cert_dir: Path,
     ):
         """Initialize the device controller."""
         self.server = server
-        self._device_controller = device_controller
+
+        self._device_controller = ChipDeviceControllerWrapper(server, paa_root_cert_dir)
+
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: deque[Attribute.EventReadResult] = deque(maxlen=25)
+        self._compressed_fabric_id: int | None = None
+        self._fabric_id_hex: str | None = None
+        self._wifi_credentials_set: bool = False
+        self._thread_credentials_set: bool = False
         self._nodes_in_setup: set[int] = set()
         self._node_last_seen: dict[int, float] = {}
         self._nodes: dict[int, MatterNodeData] = {}
         self._last_known_ip_addresses: dict[int, list[str]] = {}
         self._last_subscription_attempt: dict[int, int] = {}
         self._known_commissioning_params: dict[int, CommissioningParameters] = {}
-        self.compressed_fabric_id: int | None = None
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
         self._fallback_node_scanner_timer: asyncio.TimerHandle | None = None
@@ -130,6 +134,13 @@ class MatterDeviceController:
         self._polled_attributes: dict[int, set[str]] = {}
         self._custom_attribute_poller_timer: asyncio.TimerHandle | None = None
         self._custom_attribute_poller_task: asyncio.Task | None = None
+
+    async def initialize(self) -> None:
+        """Initialize the device controller."""
+        self._compressed_fabric_id = (
+            await self._device_controller.get_compressed_fabric_id()
+        )
+        self._fabric_id_hex = hex(self._compressed_fabric_id)[2:]
 
     async def start(self) -> None:
         """Handle logic on controller start."""
@@ -194,6 +205,21 @@ class MatterDeviceController:
         # shutdown the sdk device controller
         await self._device_controller.shutdown()
         LOGGER.debug("Stopped.")
+
+    @property
+    def compressed_fabric_id(self) -> int | None:
+        """Return the compressed fabric id."""
+        return self._compressed_fabric_id
+
+    @property
+    def wifi_credentials_set(self) -> bool:
+        """Return if WiFi credentials have been set."""
+        return self._wifi_credentials_set
+
+    @property
+    def thread_credentials_set(self) -> bool:
+        """Return if Thread operational dataset as been set."""
+        return self._thread_credentials_set
 
     @api_command(APICommand.GET_NODES)
     def get_nodes(self, only_available: bool = False) -> list[MatterNodeData]:
@@ -368,12 +394,14 @@ class MatterDeviceController:
         """Set WiFi credentials for commissioning to a (new) device."""
 
         await self._device_controller.set_wifi_credentials(ssid, credentials)
+        self._wifi_credentials_set = True
 
     @api_command(APICommand.SET_THREAD_DATASET)
     async def set_thread_operational_dataset(self, dataset: str) -> None:
         """Set Thread Operational dataset in the stack."""
 
         await self._device_controller.set_thread_operational_dataset(dataset)
+        self._thread_credentials_set = True
 
     @api_command(APICommand.OPEN_COMMISSIONING_WINDOW)
     async def open_commissioning_window(
@@ -1231,7 +1259,7 @@ class MatterDeviceController:
             return
 
         if service_type == MDNS_TYPE_OPERATIONAL_NODE:
-            if self._device_controller.fabric_id_hex not in name.lower():
+            if self._fabric_id_hex is None or self._fabric_id_hex not in name.lower():
                 # filter out messages that are not for our fabric
                 return
         # process the event with a debounce timer

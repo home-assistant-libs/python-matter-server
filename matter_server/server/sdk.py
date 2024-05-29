@@ -55,9 +55,6 @@ class ChipDeviceControllerWrapper:
         """Initialize the device controller."""
         self.server = server
 
-        self.wifi_credentials_set: bool = False
-        self.thread_credentials_set: bool = False
-
         self._node_lock: dict[int, asyncio.Lock] = {}
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
 
@@ -90,12 +87,6 @@ class ChipDeviceControllerWrapper:
                 partial(target, *args, **kwargs),
             ),
         )
-
-    async def initialize(self) -> None:
-        """Async initialize of controller."""
-        self.compressed_fabric_id = await self.get_compressed_fabric_id()
-
-        self.fabric_id_hex = hex(self.compressed_fabric_id)[2:]
 
     async def get_compressed_fabric_id(self) -> int:
         """Get the compressed fabric id."""
@@ -156,16 +147,12 @@ class ChipDeviceControllerWrapper:
             credentials=credentials,
         )
 
-        self.wifi_credentials_set = True
-
     async def set_thread_operational_dataset(self, dataset: str) -> None:
         """Set Thread operational dataset to use on commissioning."""
         await self._call_sdk(
             self._chip_controller.SetThreadOperationalDataset,
             threadOperationalDataset=bytes.fromhex(dataset),
         )
-
-        self.thread_credentials_set = True
 
     async def open_commissioning_window(
         self,
