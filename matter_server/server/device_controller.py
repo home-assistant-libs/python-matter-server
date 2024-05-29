@@ -119,8 +119,6 @@ class MatterDeviceController:
         self._last_known_ip_addresses: dict[int, list[str]] = {}
         self._last_subscription_attempt: dict[int, int] = {}
         self._known_commissioning_params: dict[int, CommissioningParameters] = {}
-        self.wifi_credentials_set: bool = False
-        self.thread_credentials_set: bool = False
         self.compressed_fabric_id: int | None = None
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None

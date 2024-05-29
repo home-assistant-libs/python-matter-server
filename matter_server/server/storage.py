@@ -31,7 +31,7 @@ class StorageController:
         """Return full path to (fabric-specific) storage file."""
         return Path(
             self.server.storage_path,
-            f"{self.server.device_controller.compressed_fabric_id}.json",
+            f"{self.server.chip_device_controller.compressed_fabric_id}.json",
         )
 
     @property
