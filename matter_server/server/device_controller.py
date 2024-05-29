@@ -78,7 +78,7 @@ NODE_PING_TIMEOUT = 10
 NODE_PING_TIMEOUT_BATTERY_POWERED = 60
 NODE_MDNS_BACKOFF = 610  # must be higher than (highest) sub ceiling
 FALLBACK_NODE_SCANNER_INTERVAL = 1800
-CUSTOM_ATTRIBUTES_POLLER_INTERVAL = 30
+CUSTOM_ATTRIBUTES_POLLER_INTERVAL = 10
 
 MDNS_TYPE_OPERATIONAL_NODE = "_matter._tcp.local."
 MDNS_TYPE_COMMISSIONABLE_NODE = "_matterc._udp.local."
@@ -1400,11 +1400,11 @@ class MatterDeviceController:
 
     async def _custom_attributes_poller(self) -> None:
         """Poll custom clusters/attributes for changes."""
-        for node_id, polled_attributes in self._polled_attributes.items():
+        for node_id in tuple(self._polled_attributes):
             node = self._nodes[node_id]
             if not node.available:
                 continue
-            for attribute_path in polled_attributes:
+            for attribute_path in self._polled_attributes[node_id].copy():
                 try:
                     # try to read the attribute(s) - this will fire an event if the value changed
                     await self.read_attribute(
