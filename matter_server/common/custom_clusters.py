@@ -60,7 +60,6 @@ class EveCluster(Cluster, CustomClusterMixin):
     """Custom (vendor-specific) cluster for Eve - Vendor ID 4874 (0x130a)."""
 
     id: ClassVar[int] = 0x130AFC01
-    should_poll = True
 
     @ChipUtility.classproperty
     def descriptor(cls) -> ClusterObjectDescriptor:
@@ -98,6 +97,8 @@ class EveCluster(Cluster, CustomClusterMixin):
         class Watt(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """Watt Attribute within the Eve Cluster."""
 
+            should_poll = True
+
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
                 """Return cluster id."""
@@ -119,6 +120,8 @@ class EveCluster(Cluster, CustomClusterMixin):
         class WattAccumulated(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """WattAccumulated Attribute within the Eve Cluster."""
 
+            should_poll = True
+
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
                 """Return cluster id."""
@@ -137,10 +140,12 @@ class EveCluster(Cluster, CustomClusterMixin):
             value: float32 = 0
 
         @dataclass
-        class wattAccumulatedControlPoint(
+        class WattAccumulatedControlPoint(
             ClusterAttributeDescriptor, CustomClusterAttributeMixin
         ):
             """wattAccumulatedControlPoint Attribute within the Eve Cluster."""
+
+            should_poll = True
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -163,6 +168,8 @@ class EveCluster(Cluster, CustomClusterMixin):
         class Voltage(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """Voltage Attribute within the Eve Cluster."""
 
+            should_poll = True
+
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
                 """Return cluster id."""
@@ -183,6 +190,8 @@ class EveCluster(Cluster, CustomClusterMixin):
         @dataclass
         class Current(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """Current Attribute within the Eve Cluster."""
+
+            should_poll = True
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -213,9 +222,8 @@ def check_polled_attributes(node_data: MatterNodeData) -> set[str]:
             # the entire cluster needs to be polled
             attributes_to_poll.add(f"{endpoint_id}/{cluster_id}/*")
             continue
-        if (
-            custom_attribute := ALL_CUSTOM_ATTRIBUTES[cluster_id].get(attribute_id)
-        ) and custom_attribute.should_poll:
+        custom_attribute = ALL_CUSTOM_ATTRIBUTES[cluster_id].get(attribute_id)
+        if custom_attribute and custom_attribute.should_poll:
             # this attribute needs to be polled
             attributes_to_poll.add(attr_path)
     return attributes_to_poll
