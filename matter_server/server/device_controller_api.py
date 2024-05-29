@@ -1,4 +1,10 @@
-"""API for controller that Manages Matter devices."""
+"""API for controller that Manages Matter devices.
+
+This module implements the Matter Device Controller WebSocket API. Compared to the
+`MatterDeviceController` class it adds the WebSocket specific sauce and adds more
+features which are not part of the Python Matter Device Controller per-se, e.g.
+pinging a device.
+"""
 
 # pylint: disable=too-many-lines,too-many-instance-attributes
 
