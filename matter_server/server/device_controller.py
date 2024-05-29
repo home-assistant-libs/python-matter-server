@@ -1,17 +1,20 @@
-"""Controller that Manages Matter devices."""
+"""Matter Device Controller implementation.
 
-# pylint: disable=too-many-lines
+This module implements the Matter Device Controller WebSocket API. Compared to the
+`ChipDeviceControllerWrapper` class it adds the WebSocket specific sauce and adds more
+features which are not part of the Python Matter Device Controller per-se, e.g.
+pinging a device.
+"""
 
 from __future__ import annotations
 
 import asyncio
 from collections import deque
 from datetime import datetime
-from functools import partial
 import logging
 from random import randint
 import time
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
@@ -26,6 +29,7 @@ from matter_server.common.custom_clusters import check_polled_attributes
 from matter_server.common.models import CommissionableNodeData, CommissioningParameters
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
+from matter_server.server.sdk import ChipDeviceControllerWrapper
 
 from ..common.errors import (
     InvalidArguments,
@@ -51,18 +55,14 @@ from ..common.models import (
     NodePingResult,
 )
 from .const import DATA_MODEL_SCHEMA_VERSION
-from .helpers.paa_certificates import fetch_certificates
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Iterable
     from pathlib import Path
 
-    from chip.ChipDeviceCtrl import ChipDeviceController, DeviceProxyWrapper
     from chip.native import PyChipError
 
     from .server import MatterServer
-
-_T = TypeVar("_T")
 
 DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
@@ -97,60 +97,52 @@ BASIC_INFORMATION_SOFTWARE_VERSION_ATTRIBUTE_PATH = (
     )
 )
 
-
-# pylint: disable=too-many-lines,too-many-locals,too-many-statements,too-many-branches,too-many-instance-attributes
+# pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods
 
 
 class MatterDeviceController:
     """Class that manages the Matter devices."""
 
-    chip_controller: ChipDeviceController | None
-    fabric_id_hex: str
-
     def __init__(
         self,
         server: MatterServer,
+        paa_root_cert_dir: Path,
     ):
         """Initialize the device controller."""
         self.server = server
+
+        self._chip_device_controller = ChipDeviceControllerWrapper(
+            server, paa_root_cert_dir
+        )
+
         # we keep the last events in memory so we can include them in the diagnostics dump
         self.event_history: deque[Attribute.EventReadResult] = deque(maxlen=25)
-        self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
+        self._compressed_fabric_id: int | None = None
+        self._fabric_id_hex: str | None = None
+        self._wifi_credentials_set: bool = False
+        self._thread_credentials_set: bool = False
         self._nodes_in_setup: set[int] = set()
         self._node_last_seen: dict[int, float] = {}
         self._nodes: dict[int, MatterNodeData] = {}
         self._last_known_ip_addresses: dict[int, list[str]] = {}
         self._last_subscription_attempt: dict[int, int] = {}
         self._known_commissioning_params: dict[int, CommissioningParameters] = {}
-        self.wifi_credentials_set: bool = False
-        self.thread_credentials_set: bool = False
-        self.compressed_fabric_id: int | None = None
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
         self._fallback_node_scanner_timer: asyncio.TimerHandle | None = None
         self._fallback_node_scanner_task: asyncio.Task | None = None
         self._node_setup_throttle = asyncio.Semaphore(5)
         self._mdns_event_timer: dict[str, asyncio.TimerHandle] = {}
-        self._node_lock: dict[int, asyncio.Lock] = {}
         self._polled_attributes: dict[int, set[str]] = {}
         self._custom_attribute_poller_timer: asyncio.TimerHandle | None = None
         self._custom_attribute_poller_task: asyncio.Task | None = None
 
-    async def initialize(self, paa_root_cert_dir: Path) -> None:
-        """Async initialize of controller."""
-        # (re)fetch all PAA certificates once at startup
-        # NOTE: this must be done before initializing the controller
-        await fetch_certificates(paa_root_cert_dir)
-
-        # Instantiate the underlying ChipDeviceController instance on the Fabric
-        self.chip_controller = self.server.stack.fabric_admin.NewController(
-            paaTrustStorePath=str(paa_root_cert_dir)
+    async def initialize(self) -> None:
+        """Initialize the device controller."""
+        self._compressed_fabric_id = (
+            await self._chip_device_controller.get_compressed_fabric_id()
         )
-        self.compressed_fabric_id = cast(
-            int, await self._call_sdk(self.chip_controller.GetCompressedFabricId)
-        )
-        self.fabric_id_hex = hex(self.compressed_fabric_id)[2:]
-        LOGGER.debug("CHIP Device Controller Initialized")
+        self._fabric_id_hex = hex(self._compressed_fabric_id)[2:]
 
     async def start(self) -> None:
         """Handle logic on controller start."""
@@ -202,8 +194,6 @@ class MatterDeviceController:
 
     async def stop(self) -> None:
         """Handle logic on server stop."""
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
         # shutdown (and cleanup) mdns browser and fallback node scanner
         if self._aiobrowser:
             await self._aiobrowser.async_cancel()
@@ -213,13 +203,25 @@ class MatterDeviceController:
             scan_task.cancel()
         if self._aiozc:
             await self._aiozc.async_close()
-        # unsubscribe all node subscriptions
-        for sub in self._subscriptions.values():
-            await self._call_sdk(sub.Shutdown)
-        self._subscriptions = {}
+
         # shutdown the sdk device controller
-        await self._call_sdk(self.chip_controller.Shutdown)
+        await self._chip_device_controller.shutdown()
         LOGGER.debug("Stopped.")
+
+    @property
+    def compressed_fabric_id(self) -> int | None:
+        """Return the compressed fabric id."""
+        return self._compressed_fabric_id
+
+    @property
+    def wifi_credentials_set(self) -> bool:
+        """Return if WiFi credentials have been set."""
+        return self._wifi_credentials_set
+
+    @property
+    def thread_credentials_set(self) -> bool:
+        """Return if Thread operational dataset as been set."""
+        return self._thread_credentials_set
 
     @api_command(APICommand.GET_NODES)
     def get_nodes(self, only_available: bool = False) -> list[MatterNodeData]:
@@ -249,9 +251,6 @@ class MatterDeviceController:
 
         :return: The NodeInfo of the commissioned device.
         """
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
-
         node_id = self._get_next_node_id()
 
         attempts = 0
@@ -266,11 +265,12 @@ class MatterDeviceController:
                 attempts,
                 MAX_COMMISSION_RETRIES,
             )
-            result: PyChipError | None = await self._call_sdk(
-                self.chip_controller.CommissionWithCode,
-                setupPayload=code,
-                nodeid=node_id,
-                discoveryType=DiscoveryType.DISCOVERY_NETWORK_ONLY
+            result: (
+                PyChipError | None
+            ) = await self._chip_device_controller.commission_with_code(
+                node_id,
+                code,
+                DiscoveryType.DISCOVERY_NETWORK_ONLY
                 if network_only
                 else DiscoveryType.DISCOVERY_ALL,
             )
@@ -327,9 +327,6 @@ class MatterDeviceController:
 
         Returns full NodeInfo once complete.
         """
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
-
         node_id = self._get_next_node_id()
         if ip_addr is not None:
             ip_addr = self.server.scope_ipv6_lla(ip_addr)
@@ -349,12 +346,8 @@ class MatterDeviceController:
                     attempts,
                     MAX_COMMISSION_RETRIES,
                 )
-                result = await self._call_sdk(
-                    self.chip_controller.CommissionOnNetwork,
-                    nodeId=node_id,
-                    setupPinCode=setup_pin_code,
-                    filterType=filter_type,
-                    filter=filter,
+                result = await self._chip_device_controller.commission_on_network(
+                    node_id, setup_pin_code, filter_type, filter
                 )
             else:
                 LOGGER.info(
@@ -364,11 +357,8 @@ class MatterDeviceController:
                     attempts,
                     MAX_COMMISSION_RETRIES,
                 )
-                result = await self._call_sdk(
-                    self.chip_controller.CommissionIP,
-                    nodeid=node_id,
-                    setupPinCode=setup_pin_code,
-                    ipaddr=ip_addr,
+                result = await self._chip_device_controller.commission_ip(
+                    node_id, setup_pin_code, ip_addr
                 )
             if result and result.is_success:
                 break
@@ -404,29 +394,16 @@ class MatterDeviceController:
     @api_command(APICommand.SET_WIFI_CREDENTIALS)
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
         """Set WiFi credentials for commissioning to a (new) device."""
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
 
-        await self._call_sdk(
-            self.chip_controller.SetWiFiCredentials,
-            ssid=ssid,
-            credentials=credentials,
-        )
-
-        self.wifi_credentials_set = True
+        await self._chip_device_controller.set_wifi_credentials(ssid, credentials)
+        self._wifi_credentials_set = True
 
     @api_command(APICommand.SET_THREAD_DATASET)
     async def set_thread_operational_dataset(self, dataset: str) -> None:
         """Set Thread Operational dataset in the stack."""
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
 
-        await self._call_sdk(
-            self.chip_controller.SetThreadOperationalDataset,
-            threadOperationalDataset=bytes.fromhex(dataset),
-        )
-
-        self.thread_credentials_set = True
+        await self._chip_device_controller.set_thread_operational_dataset(dataset)
+        self._thread_credentials_set = True
 
     @api_command(APICommand.OPEN_COMMISSIONING_WINDOW)
     async def open_commissioning_window(
@@ -441,9 +418,6 @@ class MatterDeviceController:
 
         Returns code to use as discriminator.
         """
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
-
         if (node := self._nodes.get(node_id)) is None or not node.available:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
 
@@ -455,15 +429,13 @@ class MatterDeviceController:
         if discriminator is None:
             discriminator = randint(0, 4095)  # noqa: S311
 
-        async with self._get_node_lock(node_id):
-            sdk_result = await self._call_sdk(
-                self.chip_controller.OpenCommissioningWindow,
-                nodeid=node_id,
-                timeout=timeout,
-                iteration=iteration,
-                discriminator=discriminator,
-                option=option,
-            )
+        sdk_result = await self._chip_device_controller.open_commissioning_window(
+            node_id,
+            timeout,
+            iteration,
+            discriminator,
+            option,
+        )
         self._known_commissioning_params[node_id] = params = CommissioningParameters(
             setup_pin_code=sdk_result.setupPinCode,
             setup_manual_code=sdk_result.setupManualCode,
@@ -482,12 +454,7 @@ class MatterDeviceController:
         self,
     ) -> list[CommissionableNodeData]:
         """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
-
-        sdk_result = await self._call_sdk(
-            self.chip_controller.DiscoverCommissionableNodes,
-        )
+        sdk_result = await self._chip_device_controller.discover_commissionable_nodes()
         if sdk_result is None:
             return []
         # ensure list
@@ -518,9 +485,6 @@ class MatterDeviceController:
     @api_command(APICommand.INTERVIEW_NODE)
     async def interview_node(self, node_id: int) -> None:
         """Interview a node."""
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
-
         if node_id >= TEST_NODE_START:
             LOGGER.debug(
                 "interview_node called for test node %s",
@@ -531,14 +495,13 @@ class MatterDeviceController:
 
         try:
             LOGGER.info("Interviewing node: %s", node_id)
-            async with self._get_node_lock(node_id):
-                read_response: Attribute.AsyncReadTransaction.ReadResponse = (
-                    await self.chip_controller.Read(
-                        nodeid=node_id,
-                        attributes="*",
-                        fabricFiltered=False,
-                    )
+            read_response: Attribute.AsyncReadTransaction.ReadResponse = (
+                await self._chip_device_controller.read_attribute(
+                    node_id,
+                    [()],
+                    fabric_filtered=False,
                 )
+            )
         except ChipStackError as err:
             raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
 
@@ -587,8 +550,6 @@ class MatterDeviceController:
         interaction_timeout_ms: int | None = None,
     ) -> Any:
         """Send a command to a Matter node/device."""
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
         if (node := self._nodes.get(node_id)) is None or not node.available:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
         cluster_cls: Cluster = ALL_CLUSTERS[cluster_id]
@@ -606,15 +567,14 @@ class MatterDeviceController:
                 command,
             )
             return None
-        async with self._get_node_lock(node_id):
-            return await self.chip_controller.SendCommand(
-                nodeid=node_id,
-                endpoint=endpoint_id,
-                payload=command,
-                responseType=response_type,
-                timedRequestTimeoutMs=timed_request_timeout_ms,
-                interactionTimeoutMs=interaction_timeout_ms,
-            )
+        return await self._chip_device_controller.send_command(
+            node_id,
+            endpoint_id,
+            command,
+            response_type,
+            timed_request_timeout_ms,
+            interaction_timeout_ms,
+        )
 
     @api_command(APICommand.READ_ATTRIBUTE)
     async def read_attribute(
@@ -631,17 +591,11 @@ class MatterDeviceController:
 
         The return type is a dictionary with the attribute path as key and the value as value.
         """
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
         if (node := self._nodes.get(node_id)) is None or not node.available:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
         attribute_paths = (
             attribute_path if isinstance(attribute_path, list) else [attribute_path]
         )
-
-        if TYPE_CHECKING:
-            assert self.server.loop
-            assert self.chip_controller
 
         # handle test node
         if node_id >= TEST_NODE_START:
@@ -667,21 +621,12 @@ class MatterDeviceController:
                     AttributeId=attribute_id,
                 )
             )
-        # Read a list of attributes and/or events from a target node.
-        # This is basically a re-implementation of the chip controller's Read function
-        # but one that allows us to send/request custom attributes.
-        future = self.server.loop.create_future()
-        device = await self._find_or_establish_case_session(node_id)
-        async with self._get_node_lock(node_id):
-            Attribute.Read(
-                future=future,
-                eventLoop=self.server.loop,
-                device=device.deviceProxy,
-                devCtrl=self.chip_controller,
-                attributes=attributes,
-                fabricFiltered=fabric_filtered,
-            ).raise_on_error()
-            result: Attribute.AsyncReadTransaction.ReadResponse = await future
+
+        result = await self._chip_device_controller.read(
+            node_id,
+            attributes,
+            fabric_filtered,
+        )
         read_atributes = parse_attributes_from_read_result(result.tlvAttributes)
         # update cached info in node attributes and signal events for updated attributes
         values_changed = False
@@ -708,11 +653,11 @@ class MatterDeviceController:
         value: Any,
     ) -> Any:
         """Write an attribute(value) on a target node."""
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
         if (node := self._nodes.get(node_id)) is None or not node.available:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attribute_path)
+        if endpoint_id is None:
+            raise InvalidArguments(f"Invalid attribute path: {attribute_path}")
         attribute = cast(
             Clusters.ClusterAttributeDescriptor,
             ALL_ATTRIBUTES[cluster_id][attribute_id](),
@@ -732,18 +677,13 @@ class MatterDeviceController:
                 attribute,
             )
             return None
-        async with self._get_node_lock(node_id):
-            return await self.chip_controller.WriteAttribute(
-                nodeid=node_id,
-                attributes=[(endpoint_id, attribute)],
-            )
+        return await self._chip_device_controller.write_attribute(
+            node_id, [(endpoint_id, attribute)]
+        )
 
     @api_command(APICommand.REMOVE_NODE)
     async def remove_node(self, node_id: int) -> None:
         """Remove a Matter node/device from the fabric."""
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
-
         if node_id not in self._nodes:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or has not been interviewed."
@@ -752,8 +692,7 @@ class MatterDeviceController:
         LOGGER.info("Removing Node ID %s.", node_id)
 
         # shutdown any existing subscriptions
-        if sub := self._subscriptions.pop(node_id, None):
-            await self._call_sdk(sub.Shutdown)
+        await self._chip_device_controller.shutdown_subscription(node_id)
 
         node = self._nodes.pop(node_id)
         self.server.storage.remove(
@@ -777,10 +716,10 @@ class MatterDeviceController:
             return
         result: Clusters.OperationalCredentials.Commands.NOCResponse | None = None
         try:
-            result = await self.chip_controller.SendCommand(
-                nodeid=node_id,
-                endpoint=0,
-                payload=Clusters.OperationalCredentials.Commands.RemoveFabric(
+            result = await self._chip_device_controller.send_command(
+                node_id=node_id,
+                endpoint_id=0,
+                command=Clusters.OperationalCredentials.Commands.RemoveFabric(
                     fabricIndex=fabric_index,
                 ),
             )
@@ -849,10 +788,8 @@ class MatterDeviceController:
 
         # retrieve the currently connected/used address which is used
         # by the sdk for communicating with the device
-        if TYPE_CHECKING:
-            assert self.chip_controller is not None
-        if sdk_result := await self._call_sdk(
-            self.chip_controller.GetAddressAndPort, nodeid=node_id
+        if sdk_result := await self._chip_device_controller.get_address_and_port(
+            node_id
         ):
             active_address = sdk_result[0]
             node_logger.info(
@@ -928,9 +865,6 @@ class MatterDeviceController:
         you will receive all (subscribed) node events and attribute updates.
         """
         # pylint: disable=too-many-locals,too-many-statements
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
-
         if self._nodes.get(node_id) is None:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or has not been interviewed."
@@ -939,12 +873,8 @@ class MatterDeviceController:
         node_logger = LOGGER.getChild(f"node_{node_id}")
         node = self._nodes[node_id]
 
-        # check if we already have setup subscriptions for this node,
-        # if so, we need to unsubscribe
-        if prev_sub := self._subscriptions.get(node_id, None):
-            node_logger.info("Unsubscribing from existing subscription.")
-            await self._call_sdk(prev_sub.Shutdown)
-            del self._subscriptions[node_id]
+        # Shutdown existing subscriptions for this node first
+        await self._chip_device_controller.shutdown_subscription(node_id)
 
         loop = cast(asyncio.AbstractEventLoop, self.server.loop)
 
@@ -1107,22 +1037,17 @@ class MatterDeviceController:
         else:
             interval_ceiling = NODE_SUBSCRIPTION_CEILING_THREAD
         self._last_subscription_attempt[node_id] = 0
-        async with self._get_node_lock(node_id):
-            # set-up the actual subscription
-            sub: Attribute.SubscriptionTransaction = await self.chip_controller.Read(
+        # set-up the actual subscription
+        sub: Attribute.SubscriptionTransaction = (
+            await self._chip_device_controller.read_attribute(
                 node_id,
-                attributes="*",
+                [()],
                 events=[("*", 1)],
-                returnClusterObject=False,
-                reportInterval=(interval_floor, interval_ceiling),
-                autoResubscribe=True,
+                return_cluster_objects=False,
+                report_interval=(interval_floor, interval_ceiling),
+                auto_resubscribe=True,
             )
-
-        if not isinstance(sub, Attribute.SubscriptionTransaction):
-            # Aborted setups result in ReadResult instead of SubscriptionTransaction
-            # Probably a bug: https://github.com/project-chip/connectedhomeip/issues/33570
-            node_logger.warning("Subscription setup failed.")
-            return
+        )
 
         # Make sure to clear default handler which prints to stdout
         sub.SetAttributeUpdateCallback(None)
@@ -1132,9 +1057,6 @@ class MatterDeviceController:
         sub.SetResubscriptionAttemptedCallback(resubscription_attempted)
         sub.SetResubscriptionSucceededCallback(resubscription_succeeded)
 
-        # if we reach this point, it means the node could be resolved
-        # and the initial subscription succeeded, mark the node available.
-        self._subscriptions[node_id] = sub
         node.available = True
         # update attributes with current state from read request
         tlv_attributes = sub.GetTLVAttributes()
@@ -1158,24 +1080,6 @@ class MatterDeviceController:
         self.server.storage.set(DATA_KEY_LAST_NODE_ID, next_node_id, force=True)
         return next_node_id
 
-    async def _call_sdk(
-        self,
-        target: Callable[..., _T],
-        *args: Any,
-        **kwargs: Any,
-    ) -> _T:
-        """Call function on the SDK in executor and return result."""
-        if self.server.loop is None:
-            raise RuntimeError("Server not started.")
-
-        return cast(
-            _T,
-            await self.server.loop.run_in_executor(
-                None,
-                partial(target, *args, **kwargs),
-            ),
-        )
-
     async def _setup_node(self, node_id: int) -> None:
         """Handle set-up of subscriptions and interview (if needed) for known/discovered node."""
         if node_id not in self._nodes:
@@ -1188,19 +1092,20 @@ class MatterDeviceController:
         node_data = self._nodes[node_id]
         log_timers: dict[int, asyncio.TimerHandle] = {}
 
-        def log_node_long_setup(time_start: float) -> None:
+        async def log_node_long_setup(time_start: float) -> None:
             """Temporary measure to track a locked-up SDK issue in some (special) circumstances."""
             time_mins = int((time.time() - time_start) / 60)
             if TYPE_CHECKING:
                 assert self.server.loop
-                assert self.chip_controller
             # get productlabel or modelname from raw attributes
             node_model = node_data.attributes.get(
                 "0/40/14", node_data.attributes.get("0/40/3", "")
             )
             node_name = f"Node {node_id} ({node_model})"
             # get current IP the sdk is using to communicate with the device
-            if sdk_ip_info := self.chip_controller.GetAddressAndPort(node_id):
+            if sdk_ip_info := await self._chip_device_controller.get_address_and_port(
+                node_id
+            ):
                 ip_address = sdk_ip_info[0]
             else:
                 ip_address = "unknown"
@@ -1217,7 +1122,7 @@ class MatterDeviceController:
             )
             # reschedule itself
             log_timers[node_id] = self.server.loop.call_later(
-                15 * 60, log_node_long_setup, time_start
+                15 * 60, lambda: asyncio.create_task(log_node_long_setup(time_start))
             )
 
         async with self._node_setup_throttle:
@@ -1226,14 +1131,16 @@ class MatterDeviceController:
             if TYPE_CHECKING:
                 assert self.server.loop
             log_timers[node_id] = self.server.loop.call_later(
-                15 * 60, log_node_long_setup, time_start
+                15 * 60, lambda: asyncio.create_task(log_node_long_setup(time_start))
             )
             try:
                 node_logger.info("Setting-up node...")
 
                 # try to resolve the node using the sdk first before do anything else
                 try:
-                    await self._find_or_establish_case_session(node_id=node_id)
+                    await self._chip_device_controller.find_or_establish_case_session(
+                        node_id=node_id
+                    )
                 except NodeNotResolving as err:
                     node_logger.warning(
                         "Setup for node failed: %s",
@@ -1293,46 +1200,6 @@ class MatterDeviceController:
             finally:
                 log_timers[node_id].cancel()
                 self._nodes_in_setup.discard(node_id)
-
-    async def _find_or_establish_case_session(
-        self, node_id: int, retries: int = 2
-    ) -> DeviceProxyWrapper:
-        """Attempt to establish a CASE session with target Node."""
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
-
-        node_logger = LOGGER.getChild(f"node_{node_id}")
-        attempt = 1
-
-        while attempt <= retries:
-            try:
-                node_logger.log(
-                    logging.DEBUG if attempt == 1 else logging.INFO,
-                    "Attempting to establish CASE session... (attempt %s of %s)",
-                    attempt,
-                    retries,
-                )
-                time_start = time.time()
-                async with self._get_node_lock(node_id):
-                    return await self.chip_controller.GetConnectedDevice(
-                        nodeid=node_id,
-                        allowPASE=False,
-                        timeoutMs=None,
-                    )
-            except ChipStackError as err:
-                if attempt >= retries:
-                    # when we're out of retries, raise NodeNotResolving
-                    raise NodeNotResolving(
-                        f"Unable to establish CASE session with Node {node_id}"
-                    ) from err
-                await asyncio.sleep(2 + attempt)
-            finally:
-                node_logger.debug(
-                    "Establishing CASE session took %.1f seconds",
-                    time.time() - time_start,
-                )
-            attempt += 1
-        return None
 
     def _handle_endpoints_removed(self, node_id: int, endpoints: Iterable[int]) -> None:
         """Handle callback for when bridge endpoint(s) get deleted."""
@@ -1396,7 +1263,7 @@ class MatterDeviceController:
             return
 
         if service_type == MDNS_TYPE_OPERATIONAL_NODE:
-            if self.fabric_id_hex not in name.lower():
+            if self._fabric_id_hex is None or self._fabric_id_hex not in name.lower():
                 # filter out messages that are not for our fabric
                 return
         # process the event with a debounce timer
@@ -1430,7 +1297,7 @@ class MatterDeviceController:
             # prevent duplicate setup actions
             return
 
-        if node_id not in self._subscriptions:
+        if not self._chip_device_controller.node_has_subscription(node_id):
             logger.info("Node %s discovered on MDNS", node_id)
         elif (now - last_seen) > NODE_MDNS_BACKOFF:
             # node came back online after being offline for a while or restarted
@@ -1483,8 +1350,7 @@ class MatterDeviceController:
     async def _node_offline(self, node_id: int) -> None:
         """Mark node as offline."""
         # shutdown existing subscriptions
-        if sub := self._subscriptions.pop(node_id, None):
-            await self._call_sdk(sub.Shutdown)
+        await self._chip_device_controller.shutdown_subscription(node_id)
         # mark node as unavailable (if it wasn't already)
         node = self._nodes[node_id]
         if not node.available:
@@ -1532,12 +1398,6 @@ class MatterDeviceController:
             FALLBACK_NODE_SCANNER_INTERVAL, run_fallback_node_scanner
         )
 
-    def _get_node_lock(self, node_id: int) -> asyncio.Lock:
-        """Return lock for given node."""
-        if node_id not in self._node_lock:
-            self._node_lock[node_id] = asyncio.Lock()
-        return self._node_lock[node_id]
-
     async def _custom_attributes_poller(self) -> None:
         """Poll custom clusters/attributes for changes."""
         for node_id, polled_attributes in self._polled_attributes.items():
@@ -1547,10 +1407,9 @@ class MatterDeviceController:
             for attribute_path in polled_attributes:
                 try:
                     # try to read the attribute(s) - this will fire an event if the value changed
-                    async with self._get_node_lock(node_id):
-                        await self.read_attribute(
-                            node_id, attribute_path, fabric_filtered=False
-                        )
+                    await self.read_attribute(
+                        node_id, attribute_path, fabric_filtered=False
+                    )
                 except (ChipStackError, NodeNotReady) as err:
                     LOGGER.warning(
                         "Polling custom attribute %s for node %s failed: %s",
