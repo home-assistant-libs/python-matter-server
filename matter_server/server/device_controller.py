@@ -159,7 +159,7 @@ class MatterDeviceController:
         self._polled_attributes: dict[int, set[str]] = {}
         self._custom_attribute_poller_timer: asyncio.TimerHandle | None = None
         self._custom_attribute_poller_task: asyncio.Task | None = None
-        self._ota_provider = ExternalOtaProvider(ota_provider_dir)
+        self._ota_provider = ExternalOtaProvider(server.vendor_id, ota_provider_dir)
 
     async def initialize(self) -> None:
         """Initialize the device controller."""
@@ -932,12 +932,6 @@ class MatterDeviceController:
                 f"Software version {software_version} is not available for node {node_id}."
             )
 
-        if self.chip_controller is None:
-            raise RuntimeError("Device Controller not initialized.")
-
-        if not self._ota_provider:
-            raise UpdateError("No OTA provider found, updates not possible")
-
         if self._ota_provider.is_busy():
             raise UpdateError(
                 "No OTA provider currently busy, updates currently not possible"
@@ -948,7 +942,7 @@ class MatterDeviceController:
 
         # Make sure any previous instances get stopped
         await self._ota_provider.start_update(
-            self,
+            self._chip_device_controller,
             node_id,
         )
 
