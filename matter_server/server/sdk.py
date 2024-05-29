@@ -30,7 +30,7 @@ if TYPE_CHECKING:
         CommissioningParameters,
         DeviceProxyWrapper,
     )
-    from chip.discovery import DiscoveryType
+    from chip.discovery import DiscoveryType, FilterType
     from chip.native import PyChipError
 
     from .server import MatterServer
@@ -102,10 +102,13 @@ class ChipDeviceControllerWrapper:
         await self._call_sdk(self._chip_controller.Shutdown)
 
     async def commission_with_code(
-        self, setup_payload: str, node_id: int, discovery_type: DiscoveryType
+        self,
+        node_id: int,
+        setup_payload: str,
+        discovery_type: DiscoveryType,
     ) -> PyChipError:
         """Commission a device using a QR Code or Manual Pairing Code."""
-        return self._call_sdk(
+        return await self._call_sdk(
             self._chip_controller.CommissionWithCode,
             setupPayload=setup_payload,
             nodeid=node_id,
@@ -116,11 +119,11 @@ class ChipDeviceControllerWrapper:
         self,
         node_id: int,
         setup_pin_code: int,
-        disc_filter_type: int,
+        disc_filter_type: FilterType,
         disc_filter: Any,
     ) -> PyChipError:
         """Commission a device on the network."""
-        return self._call_sdk(
+        return await self._call_sdk(
             self._chip_controller.CommissionOnNetwork,
             nodeid=node_id,
             setupPinCode=setup_pin_code,
@@ -132,7 +135,7 @@ class ChipDeviceControllerWrapper:
         self, node_id: int, setup_pin_code: int, ip_addr: str
     ) -> PyChipError:
         """Commission a device using an IP address."""
-        return self._call_sdk(
+        return await self._call_sdk(
             self._chip_controller.CommissionIP,
             nodeid=node_id,
             setupPinCode=setup_pin_code,

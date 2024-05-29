@@ -266,8 +266,8 @@ class MatterDeviceController:
             result: (
                 PyChipError | None
             ) = await self._device_controller.commission_with_code(
-                code,
                 node_id,
+                code,
                 DiscoveryType.DISCOVERY_NETWORK_ONLY
                 if network_only
                 else DiscoveryType.DISCOVERY_ALL,
