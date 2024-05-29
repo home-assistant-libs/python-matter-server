@@ -1,12 +1,10 @@
-"""API for controller that Manages Matter devices.
+"""Matter Device Controller implementation.
 
 This module implements the Matter Device Controller WebSocket API. Compared to the
 `AsyncChipDeviceController` class it adds the WebSocket specific sauce and adds more
 features which are not part of the Python Matter Device Controller per-se, e.g.
 pinging a device.
 """
-
-# pylint: disable=too-many-lines,too-many-instance-attributes
 
 from __future__ import annotations
 
@@ -98,6 +96,9 @@ BASIC_INFORMATION_SOFTWARE_VERSION_ATTRIBUTE_PATH = (
         0, Clusters.BasicInformation.Attributes.SoftwareVersion
     )
 )
+
+
+# pylint: disable=too-many-lines,too-many-instance-attributes
 
 
 class MatterDeviceController:
