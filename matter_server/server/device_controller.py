@@ -36,7 +36,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class MatterDeviceController:
-    """Class exposes a Matter devices controller features.
+    """Class exposing Matter devices controller features.
 
     This class is responsible for managing the Matter devices. It should be seen mostly
     as a wrapper of the ChipDeviceController class provided by the Matter SDK with some
