@@ -59,7 +59,7 @@ class ChipDeviceControllerWrapper:
 
         self._node_lock: dict[int, asyncio.Lock] = {}
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
-        self._sdk_non_entrant_executer = ThreadPoolExecutor(max_workers=1)
+        self._sdk_non_entrant_executor = ThreadPoolExecutor(max_workers=1)
 
         # Instantiate the underlying ChipDeviceController instance on the Fabric
         self._chip_controller = self.server.stack.fabric_admin.NewController(
@@ -107,7 +107,7 @@ class ChipDeviceControllerWrapper:
         **kwargs: Any,
     ) -> _T:
         return await self._call_sdk_executor(
-            self._sdk_non_entrant_executer, target, *args, **kwargs
+            self._sdk_non_entrant_executor, target, *args, **kwargs
         )
 
     async def get_compressed_fabric_id(self) -> int:
