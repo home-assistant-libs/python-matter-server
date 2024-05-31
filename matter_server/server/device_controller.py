@@ -693,6 +693,7 @@ class MatterDeviceController:
 
         # shutdown any existing subscriptions
         await self._chip_device_controller.shutdown_subscription(node_id)
+        self._polled_attributes.pop(node_id, None)
 
         node = self._nodes.pop(node_id)
         self.server.storage.remove(
