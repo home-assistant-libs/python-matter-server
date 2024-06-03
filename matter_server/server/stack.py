@@ -8,10 +8,11 @@ import chip.CertificateAuthority
 from chip.ChipStack import ChipStack
 import chip.logging
 from chip.logging import (
-    ERROR_CATEGORY_DETAIL,
-    ERROR_CATEGORY_ERROR,
-    ERROR_CATEGORY_NONE,
-    ERROR_CATEGORY_PROGRESS,
+    LOG_CATEGORY_AUTOMATION,
+    LOG_CATEGORY_DETAIL,
+    LOG_CATEGORY_ERROR,
+    LOG_CATEGORY_NONE,
+    LOG_CATEGORY_PROGRESS,
 )
 from chip.logging.library_handle import _GetLoggingLibraryHandle
 from chip.logging.types import LogRedirectCallback_t
@@ -45,13 +46,13 @@ def _redirect_to_python_logging(
     # unknown/None as critical.
     level = logging.CRITICAL
 
-    if category == ERROR_CATEGORY_ERROR:
+    if category == LOG_CATEGORY_ERROR:
         level = CHIP_ERROR
-    elif category == ERROR_CATEGORY_PROGRESS:
+    elif category == LOG_CATEGORY_PROGRESS:
         level = CHIP_PROGRESS
-    elif category == ERROR_CATEGORY_DETAIL:
+    elif category == LOG_CATEGORY_DETAIL:
         level = CHIP_DETAIL
-    elif category == 4:  # TODO: Add automation level to upstream Python bindings
+    elif category == LOG_CATEGORY_AUTOMATION:
         level = CHIP_AUTOMATION
 
     logger.log(level, "%s", message)
@@ -62,15 +63,15 @@ def init_logging(category: str) -> None:
 
     _LOGGER.info("Initializing CHIP/Matter Logging...")
     global _category_num  # pylint: disable=global-statement  # noqa: PLW0603
-    _category_num = ERROR_CATEGORY_NONE
+    _category_num = LOG_CATEGORY_NONE
     if category == "ERROR":
-        _category_num = ERROR_CATEGORY_ERROR
+        _category_num = LOG_CATEGORY_ERROR
     elif category == "PROGRESS":
-        _category_num = ERROR_CATEGORY_PROGRESS
+        _category_num = LOG_CATEGORY_PROGRESS
     elif category == "DETAIL":
-        _category_num = ERROR_CATEGORY_DETAIL
+        _category_num = LOG_CATEGORY_DETAIL
     elif category == "AUTOMATION":
-        _category_num = 4
+        _category_num = LOG_CATEGORY_AUTOMATION
 
     logging.addLevelName(CHIP_ERROR, "CHIP_ERROR")
     logging.addLevelName(CHIP_PROGRESS, "CHIP_PROGRESS")
