@@ -107,7 +107,6 @@ class MatterStack:
 
         self._chip_stack = ChipStack(
             persistentStoragePath=storage_file,
-            installDefaultLogHandler=False,
             enableServerInteractions=False,
         )
 
