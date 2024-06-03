@@ -358,7 +358,9 @@ class MatterClient:
                 0, Clusters.ThreadNetworkDiagnostics
             )
             if isinstance(thread_cluster.networkName, bytes):
-                network_name = thread_cluster.networkName.decode("utf-8")
+                network_name = thread_cluster.networkName.decode(
+                    "utf-8", errors="replace"
+                )
             elif thread_cluster.networkName != NullValue:
                 network_name = thread_cluster.networkName
             # parse routing role to (diagnostics) node type
@@ -390,7 +392,7 @@ class MatterClient:
             )
         ):
             if isinstance(last_network_id, bytes):
-                network_name = last_network_id.decode("utf-8")
+                network_name = last_network_id.decode("utf-8", errors="replace")
             elif last_network_id != NullValue:
                 network_name = last_network_id
         # last resort to get the (wifi) networkname;
@@ -407,7 +409,7 @@ class MatterClient:
                 if not network.connected:
                     continue
                 if isinstance(network.networkID, bytes):
-                    network_name = network.networkID.decode("utf-8")
+                    network_name = network.networkID.decode("utf-8", errors="replace")
                     break
                 if network.networkID != NullValue:
                     network_name = network.networkID
