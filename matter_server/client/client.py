@@ -357,28 +357,28 @@ class MatterClient:
             thread_cluster: Clusters.ThreadNetworkDiagnostics = node.get_cluster(
                 0, Clusters.ThreadNetworkDiagnostics
             )
-            if isinstance(thread_cluster.networkName, bytes):
-                network_name = thread_cluster.networkName.decode(
-                    "utf-8", errors="replace"
-                )
-            elif thread_cluster.networkName != NullValue:
-                network_name = thread_cluster.networkName
-            # parse routing role to (diagnostics) node type
-            if (
-                thread_cluster.routingRole
-                == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kSleepyEndDevice
-            ):
-                node_type = NodeType.SLEEPY_END_DEVICE
-            if thread_cluster.routingRole in (
-                Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kLeader,
-                Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kRouter,
-            ):
-                node_type = NodeType.ROUTING_END_DEVICE
-            elif (
-                thread_cluster.routingRole
-                == Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum.kEndDevice
-            ):
-                node_type = NodeType.END_DEVICE
+            if thread_cluster:
+                if isinstance(thread_cluster.networkName, bytes):
+                    network_name = thread_cluster.networkName.decode(
+                        "utf-8", errors="replace"
+                    )
+                elif thread_cluster.networkName != NullValue:
+                    network_name = thread_cluster.networkName
+
+                # parse routing role to (diagnostics) node type
+                RoutingRole = Clusters.ThreadNetworkDiagnostics.Enums.RoutingRoleEnum  # noqa: N806
+                if thread_cluster.routingRole == RoutingRole.kSleepyEndDevice:
+                    node_type = NodeType.SLEEPY_END_DEVICE
+                elif thread_cluster.routingRole in (
+                    RoutingRole.kLeader,
+                    RoutingRole.kRouter,
+                ):
+                    node_type = NodeType.ROUTING_END_DEVICE
+                elif thread_cluster.routingRole in (
+                    RoutingRole.kEndDevice,
+                    RoutingRole.kReed,
+                ):
+                    node_type = NodeType.END_DEVICE
         elif network_type == NetworkType.WIFI:
             node_type = NodeType.END_DEVICE
         # use lastNetworkID from NetworkCommissioning cluster as fallback to get the network name
