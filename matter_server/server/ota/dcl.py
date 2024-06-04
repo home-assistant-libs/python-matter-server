@@ -32,9 +32,15 @@ async def _get_software_version(vid: int, pid: int, software_version: int) -> An
 
 
 async def _check_update_version(
-    vid: int, pid: int, version: int, current_software_version: int
+    vid: int,
+    pid: int,
+    current_software_version: int,
+    requested_software_version: int,
+    requested_software_version_string: str | None = None,
 ) -> None | dict:
-    version_res: dict = await _get_software_version(vid, pid, version)
+    version_res: dict = await _get_software_version(
+        vid, pid, requested_software_version
+    )
     if not isinstance(version_res, dict):
         raise TypeError("Unexpected DCL response.")
 
@@ -42,6 +48,14 @@ async def _check_update_version(
         raise ValueError("Unexpected DCL response.")
 
     version_candidate: dict = cast(dict, version_res["modelVersion"])
+
+    # If we are looking for a specific version by string, check if it matches
+    if (
+        requested_software_version_string is not None
+        and version_candidate["softwareVersionString"]
+        != requested_software_version_string
+    ):
+        return None
 
     # Check minApplicableSoftwareVersion/maxApplicableSoftwareVersion
     min_sw_version = version_candidate["minApplicableSoftwareVersion"]
@@ -59,13 +73,14 @@ async def check_for_update(
     vid: int,
     pid: int,
     current_software_version: int,
-    requested_software_version: int | None = None,
+    requested_software_version: int | str | None = None,
 ) -> None | dict:
     """Check if there is a software update available on the DCL."""
     try:
-        if requested_software_version is not None:
+        # If a specific version as integer is requested, just fetch it (and hope it exists)
+        if isinstance(requested_software_version, int):
             return await _check_update_version(
-                vid, pid, requested_software_version, current_software_version
+                vid, pid, current_software_version, requested_software_version
             )
 
         # Get all versions and check each one of them.
@@ -78,7 +93,7 @@ async def check_for_update(
             if version > current_software_version
         ]
 
-        # Check if there is a newer software version available
+        # Check if there is a newer software version available, no downgrade possible
         if not newer_software_versions:
             LOGGER.info("No newer software version available.")
             return None
@@ -86,7 +101,7 @@ async def check_for_update(
         # Check if latest firmware is applicable, and backtrack from there
         for version in sorted(newer_software_versions, reverse=True):
             if version_candidate := await _check_update_version(
-                vid, pid, version, current_software_version
+                vid, pid, current_software_version, version, requested_software_version
             ):
                 return version_candidate
             LOGGER.debug("Software version %d not applicable.", version)

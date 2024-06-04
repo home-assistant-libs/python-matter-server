@@ -915,7 +915,9 @@ class MatterDeviceController:
         return await self._check_node_update(node_id)
 
     @api_command(APICommand.UPDATE_NODE)
-    async def update_node(self, node_id: int, software_version: int) -> dict | None:
+    async def update_node(
+        self, node_id: int, software_version: int | str
+    ) -> dict | None:
         """
         Update a node to a new software version.
 
@@ -945,7 +947,7 @@ class MatterDeviceController:
     async def _check_node_update(
         self,
         node_id: int,
-        requested_software_version: int | None = None,
+        requested_software_version: int | str | None = None,
     ) -> dict | None:
         node_logger = LOGGER.getChild(f"node_{node_id}")
         node = self._nodes[node_id]

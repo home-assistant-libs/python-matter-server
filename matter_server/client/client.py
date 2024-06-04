@@ -523,7 +523,11 @@ class MatterClient:
         )
         return cast(dict[str, Any], node_update)
 
-    async def update_node(self, node_id: int, software_version: int) -> None:
+    async def update_node(
+        self,
+        node_id: int,
+        software_version: int | str,
+    ) -> None:
         """Start node update to a particular version."""
         await self.send_command(
             APICommand.UPDATE_NODE, node_id=node_id, software_version=software_version
