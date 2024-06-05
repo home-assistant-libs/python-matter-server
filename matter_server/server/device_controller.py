@@ -973,6 +973,10 @@ class MatterDeviceController:
                 data=data.Data,
             )
             self.event_history.append(node_event)
+
+            if isinstance(data.Data, Clusters.BasicInformation.Events.ShutDown):
+                self._loop.call_soon_threadsafe(self._node_unavailable, node_id)
+
             self._loop.call_soon_threadsafe(
                 self.server.signal_event, EventType.NODE_EVENT, node_event
             )
@@ -1005,9 +1009,7 @@ class MatterDeviceController:
                 node.available
                 and resubscription_attempt >= NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE
             ):
-                node.available = False
-                self.server.signal_event(EventType.NODE_UPDATED, node)
-                LOGGER.info("Marked node %s as unavailable", node_id)
+                self._node_unavailable(node_id)
             if (
                 not node.available
                 and nextResubscribeIntervalMsec > NODE_RESUBSCRIBE_TIMEOUT_OFFLINE
@@ -1344,6 +1346,16 @@ class MatterDeviceController:
             subkey=str(node_id),
             force=force,
         )
+
+    def _node_unavailable(self, node_id: int) -> None:
+        """Mark node as unavailable."""
+        # mark node as unavailable (if it wasn't already)
+        node = self._nodes[node_id]
+        if not node.available:
+            return
+        node.available = False
+        self.server.signal_event(EventType.NODE_UPDATED, node)
+        LOGGER.info("Marked node %s as unavailable", node_id)
 
     async def _node_offline(self, node_id: int) -> None:
         """Mark node as offline."""
