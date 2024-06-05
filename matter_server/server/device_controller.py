@@ -919,6 +919,9 @@ class MatterDeviceController:
         notify the node about the new update.
         """
 
+        node_logger = LOGGER.getChild(f"node_{node_id}")
+        node_logger.info("Update to software version %r", software_version)
+
         update = await self._check_node_update(node_id, software_version)
         if update is None:
             raise UpdateCheckError(
@@ -932,6 +935,7 @@ class MatterDeviceController:
 
         await ota_provider.initialize()
 
+        node_logger.info("Downloading update from '%s'", update["otaUrl"])
         await ota_provider.download_update(update)
 
         self._attribute_update_callbacks.setdefault(node_id, []).append(
@@ -940,6 +944,7 @@ class MatterDeviceController:
 
         try:
             # Make sure any previous instances get stopped
+            node_logger.info("Starting update using OTA Provider.")
             await ota_provider.start_update(
                 self._chip_device_controller,
                 node_id,

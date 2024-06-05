@@ -75,7 +75,7 @@ class ExternalOtaProvider:
         self._ota_file_path: Path | None = None
         self._ota_provider_proc: Process | None = None
         self._ota_provider_task: asyncio.Task | None = None
-        self._ota_done: asyncio.Event = asyncio.Event()
+        self._ota_done: asyncio.Future = asyncio.Future()
         self._ota_target_node_id: int | None = None
 
     async def initialize(self) -> None:
@@ -161,11 +161,9 @@ class ExternalOtaProvider:
                     "Failed writing adjusted OTA Provider App ACL: Status %s.",
                     str(write_result[0].Status),
                 )
-                await self.stop()
                 raise UpdateError("Error while setting up OTA Provider.")
         except ChipStackError as ex:
             logging.exception("Failed adjusting OTA Provider App ACL.", exc_info=ex)
-            await self.stop()
             raise UpdateError("Error while setting up OTA Provider.") from ex
 
     async def start_update(
@@ -239,8 +237,11 @@ class ExternalOtaProvider:
                     "Error while announcing OTA Provider to node."
                 ) from ex
 
-            await self._ota_done.wait()
+            LOGGER.info("Waiting for target node update state change")
+            await self._ota_done
+            LOGGER.info("OTA update finished successfully")
         finally:
+            LOGGER.info("Cleaning up OTA provider")
             await self.stop()
             self._ota_target_node_id = None
 
@@ -345,30 +346,28 @@ class ExternalOtaProvider:
     ) -> None:
         """Check the update state of a node and take appropriate action."""
 
-        LOGGER.info("Update state changed: %s, %s %s", str(path), old_value, new_value)
         if str(path) != OTA_SOFTWARE_UPDATE_REQUESTOR_UPDATE_STATE_ATTRIBUTE_PATH:
             return
 
-        update_state = cast(
-            Clusters.OtaSoftwareUpdateRequestor.Enums.UpdateStateEnum, new_value
-        )
+        UpdateState = Clusters.OtaSoftwareUpdateRequestor.Enums.UpdateStateEnum  # noqa: N806
 
-        old_update_state = cast(
-            Clusters.OtaSoftwareUpdateRequestor.Enums.UpdateStateEnum, old_value
+        new_update_state = UpdateState(new_value)
+        old_update_state = UpdateState(old_value)
+
+        LOGGER.info(
+            "Update state changed from %r to %r",
+            old_update_state,
+            new_update_state,
         )
 
         # Update state of target node changed, check if update is done.
-        if (
-            update_state
-            == Clusters.OtaSoftwareUpdateRequestor.Enums.UpdateStateEnum.kIdle
-        ):
-            if (
-                old_update_state
-                == Clusters.OtaSoftwareUpdateRequestor.Enums.UpdateStateEnum.kQuerying
-            ):
-                raise UpdateError("Target node did not process the update file")
+        if new_update_state == UpdateState.kIdle:
+            if old_update_state == UpdateState.kQuerying:
+                self._ota_done.set_exception(
+                    UpdateError("Target node did not process the update file")
+                )
 
             LOGGER.info(
                 "Node %d update state idle, assuming done.", self._ota_target_node_id
             )
-            self._ota_done.set()
+            self._ota_done.set_result(None)
