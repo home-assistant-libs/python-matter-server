@@ -353,11 +353,21 @@ class ExternalOtaProvider:
             Clusters.OtaSoftwareUpdateRequestor.Enums.UpdateStateEnum, new_value
         )
 
+        old_update_state = cast(
+            Clusters.OtaSoftwareUpdateRequestor.Enums.UpdateStateEnum, old_value
+        )
+
         # Update state of target node changed, check if update is done.
         if (
             update_state
             == Clusters.OtaSoftwareUpdateRequestor.Enums.UpdateStateEnum.kIdle
         ):
+            if (
+                old_update_state
+                == Clusters.OtaSoftwareUpdateRequestor.Enums.UpdateStateEnum.kQuerying
+            ):
+                raise UpdateError("Target node did not process the update file")
+
             LOGGER.info(
                 "Node %d update state idle, assuming done.", self._ota_target_node_id
             )
