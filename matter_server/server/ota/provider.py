@@ -4,15 +4,13 @@ from __future__ import annotations
 
 import asyncio
 from base64 import b64encode
-from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 import functools
 import hashlib
-import json
 import logging
 from pathlib import Path
 import secrets
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 from urllib.parse import unquote, urlparse
 
 from aiohttp import ClientError, ClientSession
@@ -23,7 +21,9 @@ from chip.exceptions import ChipStackError
 from chip.interaction_model import Status
 
 from matter_server.common.errors import UpdateError
-from matter_server.common.helpers.util import dataclass_from_dict
+from matter_server.common.helpers.util import (
+    create_attribute_path_from_attribute,
+)
 
 if TYPE_CHECKING:
     from asyncio.subprocess import Process
@@ -34,9 +34,13 @@ if TYPE_CHECKING:
 
 LOGGER = logging.getLogger(__name__)
 
-DEFAULT_UPDATES_PATH: Final[Path] = Path("updates")
+DEFAULT_OTA_PROVIDER_NODE_ID: Final[int] = 990000
 
-DEFAULT_OTA_PROVIDER_NODE_ID = 999900
+OTA_SOFTWARE_UPDATE_REQUESTOR_UPDATE_STATE_ATTRIBUTE_PATH = (
+    create_attribute_path_from_attribute(
+        0, Clusters.OtaSoftwareUpdateRequestor.Attributes.UpdateState
+    )
+)
 
 # From Matter SDK src/app/ota_image_tool.py
 CHECHKSUM_TYPES: Final[dict[int, str]] = {
@@ -55,31 +59,6 @@ CHECHKSUM_TYPES: Final[dict[int, str]] = {
 }
 
 
-@dataclass
-class DeviceSoftwareVersionModel:  # pylint: disable=C0103
-    """Device Software Version Model for OTA Provider JSON descriptor file."""
-
-    vendorId: int
-    productId: int
-    softwareVersion: int
-    softwareVersionString: str
-    cDVersionNumber: int
-    softwareVersionValid: bool
-    minApplicableSoftwareVersion: int
-    maxApplicableSoftwareVersion: int
-    otaURL: str
-
-
-@dataclass
-class OtaProviderImageList:  # pylint: disable=C0103
-    """Update File for OTA Provider JSON descriptor file."""
-
-    otaProviderDiscriminator: int
-    otaProviderPasscode: int
-    otaProviderNodeId: int | None
-    deviceSoftwareVersionModel: list[DeviceSoftwareVersionModel]
-
-
 class ExternalOtaProvider:
     """Class handling Matter OTA Provider.
 
@@ -93,11 +72,10 @@ class ExternalOtaProvider:
         """Initialize the OTA provider."""
         self._vendor_id: int = vendor_id
         self._ota_provider_dir: Path = ota_provider_dir
-        self._ota_provider_image_list_file: Path = ota_provider_dir / "updates.json"
-        self._ota_provider_image_list: OtaProviderImageList | None = None
+        self._ota_file_path: Path | None = None
         self._ota_provider_proc: Process | None = None
         self._ota_provider_task: asyncio.Task | None = None
-        self._ota_provider_lock: asyncio.Lock = asyncio.Lock()
+        self._ota_done: asyncio.Event = asyncio.Event()
         self._ota_target_node_id: int | None = None
 
     async def initialize(self) -> None:
@@ -105,55 +83,25 @@ class ExternalOtaProvider:
 
         loop = asyncio.get_event_loop()
 
-        # Take existence of image list file as indicator if we need to initialize the
-        # OTA Provider.
-        if not await loop.run_in_executor(
-            None, self._ota_provider_image_list_file.exists
-        ):
-            await loop.run_in_executor(
-                None, functools.partial(DEFAULT_UPDATES_PATH.mkdir, exist_ok=True)
-            )
-
-            # Initialize with random data. Node ID will get written once paired by
-            # device controller.
-            self._ota_provider_image_list = OtaProviderImageList(
-                otaProviderDiscriminator=secrets.randbelow(2**12),
-                otaProviderPasscode=secrets.randbelow(2**21),
-                otaProviderNodeId=None,
-                deviceSoftwareVersionModel=[],
-            )
-        else:
-
-            def _read_update_json(
-                update_json_path: Path,
-            ) -> None | OtaProviderImageList:
-                with open(update_json_path, "r") as json_file:
-                    data = json.load(json_file)
-                    return dataclass_from_dict(OtaProviderImageList, data)
-
-            self._ota_provider_image_list = await loop.run_in_executor(
-                None, _read_update_json, self._ota_provider_image_list_file
-            )
-
-    def _get_ota_provider_image_list(self) -> OtaProviderImageList:
-        if self._ota_provider_image_list is None:
-            raise RuntimeError("OTA provider image list not initialized.")
-        return self._ota_provider_image_list
+        await loop.run_in_executor(
+            None, functools.partial(self._ota_provider_dir.mkdir, exist_ok=True)
+        )
 
     async def _commission_ota_provider(
         self,
-        passcode: int,
-        descriminator: int,
         chip_device_controller: ChipDeviceControllerWrapper,
-    ) -> int:
+        passcode: int,
+        discriminator: int,
+        ota_provider_node_id: int,
+    ) -> None:
         """Commissions the OTA Provider, returns node ID of the commissioned provider."""
 
         res: PyChipError = await chip_device_controller.commission_on_network(
-            DEFAULT_OTA_PROVIDER_NODE_ID,
+            ota_provider_node_id,
             passcode,
             # TODO: Filtering by long discriminator seems broken
             disc_filter_type=FilterType.LONG_DISCRIMINATOR,
-            disc_filter=descriminator,
+            disc_filter=discriminator,
         )
         if not res.is_success:
             await self.stop()
@@ -163,7 +111,7 @@ class ExternalOtaProvider:
 
         LOGGER.info(
             "OTA Provider App commissioned with node id %d.",
-            DEFAULT_OTA_PROVIDER_NODE_ID,
+            ota_provider_node_id,
         )
 
         # Adjust ACL of OTA Requestor such that Node peer-to-peer communication
@@ -172,7 +120,7 @@ class ExternalOtaProvider:
             read_result = cast(
                 Attribute.AsyncReadTransaction.ReadResponse,
                 await chip_device_controller.read_attribute(
-                    DEFAULT_OTA_PROVIDER_NODE_ID,
+                    ota_provider_node_id,
                     [(0, Clusters.AccessControl.Attributes.Acl)],
                 ),
             )
@@ -204,7 +152,7 @@ class ExternalOtaProvider:
             # the OTA Provider App.
             write_result: Attribute.AttributeWriteResult = (
                 await chip_device_controller.write_attribute(
-                    DEFAULT_OTA_PROVIDER_NODE_ID,
+                    ota_provider_node_id,
                     [(0, Clusters.AccessControl.Attributes.Acl(acl_list))],
                 )
             )
@@ -220,56 +168,33 @@ class ExternalOtaProvider:
             await self.stop()
             raise UpdateError("Error while setting up OTA Provider.") from ex
 
-        return DEFAULT_OTA_PROVIDER_NODE_ID
-
-    def _write_ota_provider_image_list_json(
-        self,
-        ota_provider_image_list_file: Path,
-        ota_provider_image_list: OtaProviderImageList,
-    ) -> None:
-        update_file_dict = asdict(ota_provider_image_list)
-        with open(ota_provider_image_list_file, "w") as json_file:
-            json.dump(update_file_dict, json_file, indent=4)
-
     async def start_update(
         self, chip_device_controller: ChipDeviceControllerWrapper, node_id: int
     ) -> None:
         """Start the OTA Provider and trigger the update."""
 
-        # Don't hold the response
-        if self._ota_provider_lock.locked():
-            raise UpdateError(
-                "OTA Provider already running. Only one update at a time possible."
-            )
-
-        await self._ota_provider_lock.acquire()
-
         self._ota_target_node_id = node_id
 
         loop = asyncio.get_running_loop()
-        image_list = self._get_ota_provider_image_list()
-        await loop.run_in_executor(
-            None,
-            self._write_ota_provider_image_list_json,
-            self._ota_provider_image_list_file,
-            image_list,
-        )
 
-        ota_provider_cmd = [
-            "chip-ota-provider-app",
-            "--discriminator",
-            str(image_list.otaProviderDiscriminator),
-            "--passcode",
-            str(image_list.otaProviderPasscode),
-            "--secured-device-port",
-            "5565",
-            "--KVS",
-            str(self._ota_provider_dir / "chip_kvs_ota_provider"),
-            "--otaImageList",
-            str(self._ota_provider_image_list_file),
-        ]
+        ota_provider_passcode = secrets.randbelow(2**21)
+        ota_provider_discriminator = secrets.randbelow(2**12)
 
         timestamp = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
+        ota_provider_cmd = [
+            "chip-ota-provider-app",
+            "--passcode",
+            str(ota_provider_passcode),
+            "--discriminator",
+            str(ota_provider_discriminator),
+            "--secured-device-port",
+            "0",
+            "--KVS",
+            str(self._ota_provider_dir / f"chip_kvs_ota_provider_{timestamp}"),
+            "--filepath",
+            str(self._ota_file_path),
+        ]
+
         log_file_path = self._ota_provider_dir / f"ota_provider_{timestamp}.log"
 
         log_file = await loop.run_in_executor(None, log_file_path.open, "w")
@@ -284,15 +209,17 @@ class ExternalOtaProvider:
                 self._ota_provider_proc.communicate()
             )
 
-            # Commission and prepare OTA Provider if not initialized yet.
-            # Use "ota_provider_node_id" to indicate if OTA Provider is setup or not.
-            if image_list.otaProviderNodeId is None:
-                LOGGER.info("Commission and initialize OTA Provider")
-                image_list.otaProviderNodeId = await self._commission_ota_provider(
-                    image_list.otaProviderPasscode,
-                    image_list.otaProviderDiscriminator,
-                    chip_device_controller,
-                )
+            # Commission and prepare ephemeral OTA Provider
+            LOGGER.info("Commission and initialize OTA Provider")
+            ota_provider_node_id = (
+                DEFAULT_OTA_PROVIDER_NODE_ID + self._ota_target_node_id
+            )
+            await self._commission_ota_provider(
+                chip_device_controller,
+                ota_provider_passcode,
+                ota_provider_discriminator,
+                ota_provider_node_id,
+            )
 
             # Notify update node about the availability of the OTA Provider. It will query
             # the OTA provider and start the update.
@@ -301,7 +228,7 @@ class ExternalOtaProvider:
                     node_id,
                     endpoint_id=0,
                     command=Clusters.OtaSoftwareUpdateRequestor.Commands.AnnounceOTAProvider(
-                        providerNodeID=image_list.otaProviderNodeId,
+                        providerNodeID=ota_provider_node_id,
                         vendorID=self._vendor_id,
                         announcementReason=Clusters.OtaSoftwareUpdateRequestor.Enums.AnnouncementReasonEnum.kUpdateAvailable,
                         endpoint=ExternalOtaProvider.ENDPOINT_ID,
@@ -311,10 +238,11 @@ class ExternalOtaProvider:
                 raise UpdateError(
                     "Error while announcing OTA Provider to node."
                 ) from ex
-        except UpdateError as ex:
-            # On error, make sure we stop the OTA Provider.
+
+            await self._ota_done.wait()
+        finally:
             await self.stop()
-            raise ex
+            self._ota_target_node_id = None
 
     async def _reset(self) -> None:
         """Reset the OTA Provider App state."""
@@ -343,30 +271,6 @@ class ExternalOtaProvider:
         self._ota_provider_proc = None
         self._ota_provider_task = None
 
-    async def add_update(self, update_desc: dict, ota_file: Path) -> None:
-        """Add update to the OTA provider."""
-
-        local_ota_url = str(ota_file)
-        image_list = self._get_ota_provider_image_list()
-        for i, device_software in enumerate(image_list.deviceSoftwareVersionModel):
-            if device_software.otaURL == local_ota_url:
-                LOGGER.debug("Device software entry exists already, replacing!")
-                del image_list.deviceSoftwareVersionModel[i]
-
-        # Convert to OTA Requestor descriptor file
-        new_device_software = DeviceSoftwareVersionModel(
-            vendorId=update_desc["vid"],
-            productId=update_desc["pid"],
-            softwareVersion=update_desc["softwareVersion"],
-            softwareVersionString=update_desc["softwareVersionString"],
-            cDVersionNumber=update_desc["cdVersionNumber"],
-            softwareVersionValid=update_desc["softwareVersionValid"],
-            minApplicableSoftwareVersion=update_desc["minApplicableSoftwareVersion"],
-            maxApplicableSoftwareVersion=update_desc["maxApplicableSoftwareVersion"],
-            otaURL=local_ota_url,
-        )
-        image_list.deviceSoftwareVersionModel.append(new_device_software)
-
     async def download_update(self, update_desc: dict) -> None:
         """Download update file from OTA Path and add it to the OTA provider."""
 
@@ -375,11 +279,8 @@ class ExternalOtaProvider:
         file_name = unquote(Path(parsed_url.path).name)
 
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(
-            None, functools.partial(DEFAULT_UPDATES_PATH.mkdir, exist_ok=True)
-        )
 
-        file_path = DEFAULT_UPDATES_PATH / file_name
+        file_path = self._ota_provider_dir / file_name
 
         try:
             checksum_alg = None
@@ -425,7 +326,7 @@ class ExternalOtaProvider:
                 LOGGER.info(
                     "Update file '%s' downloaded to '%s'",
                     file_name,
-                    DEFAULT_UPDATES_PATH,
+                    self._ota_provider_dir,
                 )
 
         except (InvalidURL, ClientError, TimeoutError) as err:
@@ -434,33 +335,30 @@ class ExternalOtaProvider:
             )
             raise UpdateError("Fetching software version failed") from err
 
-        await self.add_update(update_desc, file_path)
+        self._ota_file_path = file_path
 
     async def check_update_state(
         self,
-        node_id: int,
-        update_state: Clusters.OtaSoftwareUpdateRequestor.Enums.UpdateStateEnum,
+        path: Attribute.AttributePath,
+        old_value: Any,
+        new_value: Any,
     ) -> None:
-        """
-        Check the update state of a node and take appropriate action.
+        """Check the update state of a node and take appropriate action."""
 
-        Args:
-            node_id: The ID of the node.
-            update_state: The update state of the node.
-        """
-
-        if self._ota_target_node_id is None:
+        LOGGER.info("Update state changed: %s, %s %s", str(path), old_value, new_value)
+        if str(path) != OTA_SOFTWARE_UPDATE_REQUESTOR_UPDATE_STATE_ATTRIBUTE_PATH:
             return
 
-        if self._ota_target_node_id != node_id:
-            return
+        update_state = cast(
+            Clusters.OtaSoftwareUpdateRequestor.Enums.UpdateStateEnum, new_value
+        )
 
         # Update state of target node changed, check if update is done.
         if (
             update_state
             == Clusters.OtaSoftwareUpdateRequestor.Enums.UpdateStateEnum.kIdle
         ):
-            LOGGER.info("Update of node %d done.", node_id)
-            await self.stop()
-            self._ota_target_node_id = None
-            self._ota_provider_lock.release()
+            LOGGER.info(
+                "Node %d update state idle, assuming done.", self._ota_target_node_id
+            )
+            self._ota_done.set()

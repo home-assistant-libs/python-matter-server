@@ -62,7 +62,7 @@ from ..common.models import (
 from .const import DATA_MODEL_SCHEMA_VERSION
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
     from pathlib import Path
 
     from .server import MatterServer
@@ -110,11 +110,6 @@ BASIC_INFORMATION_SOFTWARE_VERSION_STRING_ATTRIBUTE_PATH = (
         0, Clusters.BasicInformation.Attributes.SoftwareVersionString
     )
 )
-OTA_SOFTWARE_UPDATE_REQUESTOR_UPDATE_STATE_ATTRIBUTE_PATH = (
-    create_attribute_path_from_attribute(
-        0, Clusters.OtaSoftwareUpdateRequestor.Attributes.UpdateState
-    )
-)
 
 
 # pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods
@@ -131,6 +126,7 @@ class MatterDeviceController:
     ):
         """Initialize the device controller."""
         self.server = server
+        self._ota_provider_dir = ota_provider_dir
 
         self._chip_device_controller = ChipDeviceControllerWrapper(
             server, paa_root_cert_dir
@@ -158,7 +154,7 @@ class MatterDeviceController:
         self._polled_attributes: dict[int, set[str]] = {}
         self._custom_attribute_poller_timer: asyncio.TimerHandle | None = None
         self._custom_attribute_poller_task: asyncio.Task | None = None
-        self._ota_provider = ExternalOtaProvider(server.vendor_id, ota_provider_dir)
+        self._attribute_update_callbacks: dict[int, list[Callable]] = {}
 
     async def initialize(self) -> None:
         """Initialize the device controller."""
@@ -166,7 +162,6 @@ class MatterDeviceController:
             await self._chip_device_controller.get_compressed_fabric_id()
         )
         self._fabric_id_hex = hex(self._compressed_fabric_id)[2:]
-        await self._ota_provider.initialize()
 
     async def start(self) -> None:
         """Handle logic on controller start."""
@@ -230,9 +225,6 @@ class MatterDeviceController:
 
         # shutdown the sdk device controller
         await self._chip_device_controller.shutdown()
-        # shutdown the OTA Provider
-        if self._ota_provider:
-            await self._ota_provider.stop()
         LOGGER.debug("Stopped.")
 
     @property
@@ -934,13 +926,28 @@ class MatterDeviceController:
             )
 
         # Add update to the OTA provider
-        await self._ota_provider.download_update(update)
-
-        # Make sure any previous instances get stopped
-        await self._ota_provider.start_update(
-            self._chip_device_controller,
-            node_id,
+        ota_provider = ExternalOtaProvider(
+            self.server.vendor_id, self._ota_provider_dir / f"{node_id}"
         )
+
+        await ota_provider.initialize()
+
+        await ota_provider.download_update(update)
+
+        self._attribute_update_callbacks.setdefault(node_id, []).append(
+            ota_provider.check_update_state
+        )
+
+        try:
+            # Make sure any previous instances get stopped
+            await ota_provider.start_update(
+                self._chip_device_controller,
+                node_id,
+            )
+        finally:
+            self._attribute_update_callbacks[node_id].remove(
+                ota_provider.check_update_state
+            )
 
         return update
 
@@ -1033,21 +1040,15 @@ class MatterDeviceController:
                 # schedule a full interview of the node if the software version changed
                 self._loop.create_task(self.interview_node(node_id))
 
-            # work out if update state changed
-            if (
-                str(path) == OTA_SOFTWARE_UPDATE_REQUESTOR_UPDATE_STATE_ATTRIBUTE_PATH
-                and new_value != old_value
-            ):
-                if self._ota_provider:
-                    loop.create_task(
-                        self._ota_provider.check_update_state(node_id, new_value)
-                    )
-
             # store updated value in node attributes
             node.attributes[str(path)] = new_value
 
             # schedule save to persistent storage
             self._write_node_state(node_id)
+
+            if node_id in self._attribute_update_callbacks:
+                for callback in self._attribute_update_callbacks[node_id]:
+                    self._loop.create_task(callback(path, old_value, new_value))
 
             # This callback is running in the CHIP stack thread
             self.server.signal_event(
