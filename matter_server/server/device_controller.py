@@ -12,7 +12,7 @@ import asyncio
 from collections import deque
 from datetime import datetime
 import logging
-from random import randint
+import secrets
 import time
 from typing import TYPE_CHECKING, Any, cast
 
@@ -427,7 +427,7 @@ class MatterDeviceController:
             return self._known_commissioning_params[node_id]
 
         if discriminator is None:
-            discriminator = randint(0, 4095)  # noqa: S311
+            discriminator = secrets.randbelow(2**12)
 
         sdk_result = await self._chip_device_controller.open_commissioning_window(
             node_id,
