@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 from collections import deque
 from datetime import datetime
+from functools import cached_property
 import logging
 from random import randint
 import time
@@ -223,7 +224,7 @@ class MatterDeviceController:
         """Return if Thread operational dataset as been set."""
         return self._thread_credentials_set
 
-    @property
+    @cached_property
     def loop(self) -> asyncio.AbstractEventLoop:
         """Return the event loop."""
         if TYPE_CHECKING:
