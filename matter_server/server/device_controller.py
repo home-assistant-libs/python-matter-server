@@ -950,11 +950,10 @@ class MatterDeviceController:
                 attribute_updated, path, old_value, new_value
             )
 
-        def event_callback(
+        def event(
             data: Attribute.EventReadResult,
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
-            # pylint: disable=unused-argument
             node_logger.log(
                 VERBOSE_LOG_LEVEL,
                 "Received node event: %s - transaction: %s",
@@ -976,11 +975,15 @@ class MatterDeviceController:
             self.event_history.append(node_event)
 
             if isinstance(data.Data, Clusters.BasicInformation.Events.ShutDown):
-                self._loop.call_soon_threadsafe(self._node_unavailable, node_id)
+                self._node_unavailable(node_id)
 
-            self._loop.call_soon_threadsafe(
-                self.server.signal_event, EventType.NODE_EVENT, node_event
-            )
+            self.server.signal_event(EventType.NODE_EVENT, node_event)
+
+        def event_callback(
+            data: Attribute.EventReadResult,
+            transaction: Attribute.SubscriptionTransaction,
+        ) -> None:
+            self._loop.call_soon_threadsafe(event, data, transaction)
 
         def error_callback(
             chipError: int, transaction: Attribute.SubscriptionTransaction
