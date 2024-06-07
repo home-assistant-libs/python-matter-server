@@ -1301,6 +1301,15 @@ class MatterDeviceController:
         elif (now - last_seen) > NODE_MDNS_BACKOFF:
             # node came back online after being offline for a while or restarted
             logger.info("Node %s re-discovered on MDNS", node_id)
+        elif state_change == ServiceStateChange.Added:
+            # Trigger node re-subscriptions when mDNS entry got added
+            logger.info("Node %s activity on MDNS, trigger resubscribe", node_id)
+            asyncio.create_task(
+                self._chip_device_controller.trigger_resubscribe_if_scheduled(
+                    node_id, "mDNS state change detected"
+                )
+            )
+            return
         else:
             # ignore all other cases
             return
