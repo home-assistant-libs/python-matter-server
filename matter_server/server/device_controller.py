@@ -225,10 +225,9 @@ class MatterDeviceController:
         return self._thread_credentials_set
 
     @cached_property
-    def loop(self) -> asyncio.AbstractEventLoop:
+    def _loop(self) -> asyncio.AbstractEventLoop:
         """Return the event loop."""
-        if TYPE_CHECKING:
-            assert self.server.loop
+        assert self.server.loop
         return self.server.loop
 
     @api_command(APICommand.GET_NODES)
@@ -450,7 +449,7 @@ class MatterDeviceController:
             setup_qr_code=sdk_result.setupQRCode,
         )
         # we store the commission parameters and clear them after the timeout
-        self.loop.call_later(
+        self._loop.call_later(
             timeout, self._known_commissioning_params.pop, node_id, None
         )
         return params
@@ -903,7 +902,7 @@ class MatterDeviceController:
                 if endpoints_removed:
                     self._handle_endpoints_removed(node_id, endpoints_removed)
                 if endpoints_added:
-                    self.loop.create_task(
+                    self._loop.create_task(
                         self._handle_endpoints_added(node_id, endpoints_added)
                     )
                 return
@@ -914,7 +913,7 @@ class MatterDeviceController:
                 and new_value != old_value
             ):
                 # schedule a full interview of the node if the software version changed
-                self.loop.create_task(self.interview_node(node_id))
+                self._loop.create_task(self.interview_node(node_id))
 
             # store updated value in node attributes
             node.attributes[str(path)] = new_value
@@ -946,7 +945,7 @@ class MatterDeviceController:
             if old_value == new_value:
                 return
 
-            self.loop.call_soon_threadsafe(
+            self._loop.call_soon_threadsafe(
                 attribute_updated, path, old_value, new_value
             )
 
@@ -974,7 +973,7 @@ class MatterDeviceController:
                 data=data.Data,
             )
             self.event_history.append(node_event)
-            self.loop.call_soon_threadsafe(
+            self._loop.call_soon_threadsafe(
                 self.server.signal_event, EventType.NODE_EVENT, node_event
             )
 
@@ -1125,14 +1124,14 @@ class MatterDeviceController:
                 "integration%3A%20matter&projects=&template=bug_report.yml\n",
             )
             # reschedule itself
-            log_timers[node_id] = self.loop.call_later(
+            log_timers[node_id] = self._loop.call_later(
                 15 * 60, lambda: asyncio.create_task(log_node_long_setup(time_start))
             )
 
         async with self._node_setup_throttle:
             time_start = time.time()
             # we want to track nodes that take too long so we log it when we detect that
-            log_timers[node_id] = self.loop.call_later(
+            log_timers[node_id] = self._loop.call_later(
                 15 * 60, lambda: asyncio.create_task(log_node_long_setup(time_start))
             )
             try:
@@ -1256,7 +1255,7 @@ class MatterDeviceController:
 
         if service_type == MDNS_TYPE_COMMISSIONABLE_NODE:
             # process the event with a debounce timer
-            self._mdns_event_timer[name] = self.loop.call_later(
+            self._mdns_event_timer[name] = self._loop.call_later(
                 0.5, self._on_mdns_commissionable_node_state, name, state_change
             )
             return
@@ -1266,7 +1265,7 @@ class MatterDeviceController:
                 # filter out messages that are not for our fabric
                 return
         # process the event with a debounce timer
-        self._mdns_event_timer[name] = self.loop.call_later(
+        self._mdns_event_timer[name] = self._loop.call_later(
             0.5, self._on_mdns_operational_node_state, name, state_change
         )
 
@@ -1391,7 +1390,7 @@ class MatterDeviceController:
                 self._fallback_node_scanner()
             )
 
-        self._fallback_node_scanner_timer = self.loop.call_later(
+        self._fallback_node_scanner_timer = self._loop.call_later(
             FALLBACK_NODE_SCANNER_INTERVAL, run_fallback_node_scanner
         )
 
@@ -1438,6 +1437,6 @@ class MatterDeviceController:
         if not self._polled_attributes:
             return
 
-        self._custom_attribute_poller_timer = self.loop.call_later(
+        self._custom_attribute_poller_timer = self._loop.call_later(
             CUSTOM_ATTRIBUTES_POLLER_INTERVAL, run_custom_attributes_poller
         )
