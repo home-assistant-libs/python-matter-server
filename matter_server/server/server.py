@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from functools import partial
+from functools import cached_property, partial
 import ipaddress
 import logging
 import os
@@ -125,19 +125,17 @@ class MatterServer:
         self.loop: asyncio.AbstractEventLoop | None = None
         # Instantiate the Matter Stack using the SDK using the given storage path
         self.stack = MatterStack(self)
-        # Initialize our (intermediate) device controller which keeps track
-        # of Matter devices and their subscriptions.
-        self._device_controller = MatterDeviceController(self, self.paa_root_cert_dir)
         self.storage = StorageController(self)
         self.vendor_info = VendorInfo(self)
         # we dynamically register command handlers
         self.command_handlers: dict[str, APICommandHandler] = {}
+        self._device_controller: MatterDeviceController | None = None
         self._subscribers: set[EventCallBackType] = set()
-        self._register_api_commands()
 
-    @property
+    @cached_property
     def device_controller(self) -> MatterDeviceController:
         """Return the main Matter device controller."""
+        assert self._device_controller
         return self._device_controller
 
     async def start(self) -> None:
@@ -155,6 +153,11 @@ class MatterServer:
         # (re)fetch all PAA certificates once at startup
         # NOTE: this must be done before initializing the controller
         await fetch_certificates(self.paa_root_cert_dir)
+
+        # Initialize our (intermediate) device controller which keeps track
+        # of Matter devices and their subscriptions.
+        self._device_controller = MatterDeviceController(self, self.paa_root_cert_dir)
+        self._register_api_commands()
 
         await self._device_controller.initialize()
         await self.storage.start()
@@ -197,7 +200,7 @@ class MatterServer:
         await self._runner.cleanup()
         await self.app.shutdown()
         await self.app.cleanup()
-        await self._device_controller.stop()
+        await self.device_controller.stop()
         await self.storage.stop()
         self.stack.shutdown()
         self.logger.debug("Cleanup complete")
@@ -220,6 +223,7 @@ class MatterServer:
     @api_command(APICommand.SERVER_INFO)
     def get_info(self) -> ServerInfoMessage:
         """Return (version)info of the Matter Server."""
+        assert self._device_controller
         assert self._device_controller.compressed_fabric_id is not None
         return ServerInfoMessage(
             fabric_id=self.fabric_id,
@@ -236,8 +240,8 @@ class MatterServer:
         """Return a full dump of the server (for diagnostics)."""
         return ServerDiagnostics(
             info=self.get_info(),
-            nodes=self._device_controller.get_nodes(),
-            events=list(self._device_controller.event_history),
+            nodes=self.device_controller.get_nodes(),
+            events=list(self.device_controller.event_history),
         )
 
     def signal_event(self, evt: EventType, data: Any = None) -> None:
