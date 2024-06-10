@@ -4,7 +4,7 @@ import pathlib
 from typing import Final
 
 # The minimum schema version (of a client) the server can support
-MIN_SCHEMA_VERSION = 5
+MIN_SCHEMA_VERSION = 9
 
 # schema version of our data model
 # only bump if the format of the data in MatterNodeData changed
