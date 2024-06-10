@@ -84,7 +84,7 @@ class MatterClientConnection:
             # our schema version is too low and can't be handled by the server anymore.
             await self._ws_client.close()
             raise InvalidServerVersion(
-                f"Matter schema version is incompatible: {info.schema_version}, "
+                f"Matter schema version is incompatible: {SCHEMA_VERSION}, "
                 f"the server requires at least {info.min_supported_schema_version} "
                 " - update the Matter client to a more recent version or downgrade the server."
             )
