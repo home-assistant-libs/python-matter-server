@@ -751,7 +751,7 @@ class MatterDeviceController:
 
     @api_command(APICommand.PING_NODE)
     async def ping_node(self, node_id: int, attempts: int = 1) -> NodePingResult:
-        """Ping node on the currently known IP-adress(es)."""
+        """Ping node on the currently known IP-address(es)."""
         result: NodePingResult = {}
         if node_id >= TEST_NODE_START:
             return {"0.0.0.0": True, "0000:1111:2222:3333:4444": True}
@@ -781,9 +781,8 @@ class MatterDeviceController:
                     "Pinging address %s (using interface %s)", clean_ip, interface_idx
                 )
             else:
-                clean_ip = ip_address
-                node_logger.debug("Pinging address %s", clean_ip)
-            result[clean_ip] = await ping_ip(ip_address, timeout, attempts=attempts)
+                node_logger.debug("Pinging address %s", ip_address)
+            result[ip_address] = await ping_ip(ip_address, timeout, attempts=attempts)
 
         ip_addresses = await self.get_node_ip_addresses(
             node_id, prefer_cache=False, scoped=True
@@ -814,10 +813,10 @@ class MatterDeviceController:
         prefer_cache: bool = False,
         scoped: bool = False,
     ) -> list[str]:
-        """Return the currently known (scoped) IP-adress(es)."""
+        """Return the currently known (scoped) IP-address(es)."""
         cached_info = self._last_known_ip_addresses.get(node_id, [])
         if prefer_cache and cached_info:
-            return cached_info if scoped else [x.split("%")[0] for x in cached_info]
+            return cached_info
         node = self._nodes.get(node_id)
         if node is None:
             raise NodeNotExists(
@@ -835,10 +834,10 @@ class MatterDeviceController:
                 "Node could not be discovered on the network, returning cached IP's"
             )
             return cached_info
-        ip_adresses = info.parsed_scoped_addresses(IPVersion.All)
+        ip_addresses = info.parsed_scoped_addresses(IPVersion.All)
         # cache this info for later use
-        self._last_known_ip_addresses[node_id] = ip_adresses
-        return ip_adresses if scoped else [x.split("%")[0] for x in ip_adresses]
+        self._last_known_ip_addresses[node_id] = ip_addresses
+        return ip_addresses
 
     @api_command(APICommand.IMPORT_TEST_NODE)
     async def import_test_node(self, dump: str) -> None:
