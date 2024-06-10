@@ -877,12 +877,11 @@ class MatterDeviceController:
             )
 
         node_logger = LOGGER.getChild(f"node_{node_id}")
-        node = self._nodes[node_id]
 
         # Shutdown existing subscriptions for this node first
         await self._chip_device_controller.shutdown_subscription(node_id)
 
-        def attribute_updated(
+        def attribute_updated_callback(
             path: Attribute.AttributePath,
             old_value: Any,
             new_value: Any,
@@ -896,6 +895,7 @@ class MatterDeviceController:
             )
 
             # work out added/removed endpoints on bridges
+            node = self._nodes[node_id]
             if node.is_bridge and str(path) == DESCRIPTOR_PARTS_LIST_ATTRIBUTE_PATH:
                 endpoints_removed = set(old_value or []) - set(new_value)
                 endpoints_added = set(new_value) - set(old_value or [])
@@ -928,7 +928,7 @@ class MatterDeviceController:
                 (node_id, str(path), new_value),
             )
 
-        def attribute_updated_callback(
+        def attribute_updated_callback_threadsafe(
             path: Attribute.AttributePath,
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
@@ -939,6 +939,7 @@ class MatterDeviceController:
             if isinstance(new_value, ValueDecodeFailure):
                 return
 
+            node = self._nodes[node_id]
             old_value = node.attributes.get(str(path))
 
             # return early if the value did not actually change at all
@@ -946,14 +947,13 @@ class MatterDeviceController:
                 return
 
             self._loop.call_soon_threadsafe(
-                attribute_updated, path, old_value, new_value
+                attribute_updated_callback, path, old_value, new_value
             )
 
         def event_callback(
             data: Attribute.EventReadResult,
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
-            # pylint: disable=unused-argument
             node_logger.log(
                 VERBOSE_LOG_LEVEL,
                 "Received node event: %s - transaction: %s",
@@ -973,9 +973,17 @@ class MatterDeviceController:
                 data=data.Data,
             )
             self.event_history.append(node_event)
-            self._loop.call_soon_threadsafe(
-                self.server.signal_event, EventType.NODE_EVENT, node_event
-            )
+
+            if isinstance(data.Data, Clusters.BasicInformation.Events.ShutDown):
+                self._node_unavailable(node_id)
+
+            self.server.signal_event(EventType.NODE_EVENT, node_event)
+
+        def event_callback_threadsafe(
+            data: Attribute.EventReadResult,
+            transaction: Attribute.SubscriptionTransaction,
+        ) -> None:
+            self._loop.call_soon_threadsafe(event_callback, data, transaction)
 
         def error_callback(
             chipError: int, transaction: Attribute.SubscriptionTransaction
@@ -1001,17 +1009,9 @@ class MatterDeviceController:
             # after some resubscription attempts and we shutdown the subscription
             # if the resubscription interval exceeds 30 minutes (TTL of mdns).
             # The node will be auto picked up by mdns if it's alive again.
-            if (
-                node.available
-                and resubscription_attempt >= NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE
-            ):
-                node.available = False
-                self.server.signal_event(EventType.NODE_UPDATED, node)
-                LOGGER.info("Marked node %s as unavailable", node_id)
-            if (
-                not node.available
-                and nextResubscribeIntervalMsec > NODE_RESUBSCRIBE_TIMEOUT_OFFLINE
-            ):
+            if resubscription_attempt >= NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE:
+                self._node_unavailable(node_id)
+            if nextResubscribeIntervalMsec > NODE_RESUBSCRIBE_TIMEOUT_OFFLINE:
                 asyncio.create_task(self._node_offline(node_id))
 
         def resubscription_succeeded(
@@ -1022,6 +1022,7 @@ class MatterDeviceController:
             node_logger.info("Re-Subscription succeeded")
             self._last_subscription_attempt[node_id] = 0
             # mark node as available and signal consumers
+            node = self._nodes[node_id]
             if not node.available:
                 node.available = True
                 self.server.signal_event(EventType.NODE_UPDATED, node)
@@ -1031,6 +1032,7 @@ class MatterDeviceController:
         # determine subscription ceiling based on routing role
         # Endpoint 0, ThreadNetworkDiagnostics Cluster, routingRole attribute
         # for WiFi devices, this cluster doesn't exist.
+        node = self._nodes[node_id]
         routing_role = node.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH)
         if routing_role is None:
             interval_ceiling = NODE_SUBSCRIPTION_CEILING_WIFI
@@ -1056,8 +1058,8 @@ class MatterDeviceController:
 
         # Make sure to clear default handler which prints to stdout
         sub.SetAttributeUpdateCallback(None)
-        sub.SetRawAttributeUpdateCallback(attribute_updated_callback)
-        sub.SetEventUpdateCallback(event_callback)
+        sub.SetRawAttributeUpdateCallback(attribute_updated_callback_threadsafe)
+        sub.SetEventUpdateCallback(event_callback_threadsafe)
         sub.SetErrorCallback(error_callback)
         sub.SetResubscriptionAttemptedCallback(resubscription_attempted)
         sub.SetResubscriptionSucceededCallback(resubscription_succeeded)
@@ -1344,6 +1346,16 @@ class MatterDeviceController:
             subkey=str(node_id),
             force=force,
         )
+
+    def _node_unavailable(self, node_id: int) -> None:
+        """Mark node as unavailable."""
+        # mark node as unavailable (if it wasn't already)
+        node = self._nodes[node_id]
+        if not node.available:
+            return
+        node.available = False
+        self.server.signal_event(EventType.NODE_UPDATED, node)
+        LOGGER.info("Marked node %s as unavailable", node_id)
 
     async def _node_offline(self, node_id: int) -> None:
         """Mark node as offline."""
