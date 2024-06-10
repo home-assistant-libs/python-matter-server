@@ -291,7 +291,6 @@ class MatterServer:
         """Register all methods decorated as api_command."""
         for cls in (self, self._device_controller, self.vendor_info):
             for attr_name in dir(cls):
-                print(attr_name)
                 if attr_name.startswith("_"):
                     continue
                 val = getattr(cls, attr_name)
