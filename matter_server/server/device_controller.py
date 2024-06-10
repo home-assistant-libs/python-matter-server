@@ -881,7 +881,7 @@ class MatterDeviceController:
         # Shutdown existing subscriptions for this node first
         await self._chip_device_controller.shutdown_subscription(node_id)
 
-        def attribute_updated(
+        def attribute_updated_callback(
             path: Attribute.AttributePath,
             old_value: Any,
             new_value: Any,
@@ -928,7 +928,7 @@ class MatterDeviceController:
                 (node_id, str(path), new_value),
             )
 
-        def attribute_updated_callback(
+        def attribute_updated_callback_threadsafe(
             path: Attribute.AttributePath,
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
@@ -947,10 +947,10 @@ class MatterDeviceController:
                 return
 
             self._loop.call_soon_threadsafe(
-                attribute_updated, path, old_value, new_value
+                attribute_updated_callback, path, old_value, new_value
             )
 
-        def event(
+        def event_callback(
             data: Attribute.EventReadResult,
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
@@ -979,11 +979,11 @@ class MatterDeviceController:
 
             self.server.signal_event(EventType.NODE_EVENT, node_event)
 
-        def event_callback(
+        def event_callback_threadsafe(
             data: Attribute.EventReadResult,
             transaction: Attribute.SubscriptionTransaction,
         ) -> None:
-            self._loop.call_soon_threadsafe(event, data, transaction)
+            self._loop.call_soon_threadsafe(event_callback, data, transaction)
 
         def error_callback(
             chipError: int, transaction: Attribute.SubscriptionTransaction
@@ -1058,8 +1058,8 @@ class MatterDeviceController:
 
         # Make sure to clear default handler which prints to stdout
         sub.SetAttributeUpdateCallback(None)
-        sub.SetRawAttributeUpdateCallback(attribute_updated_callback)
-        sub.SetEventUpdateCallback(event_callback)
+        sub.SetRawAttributeUpdateCallback(attribute_updated_callback_threadsafe)
+        sub.SetEventUpdateCallback(event_callback_threadsafe)
         sub.SetErrorCallback(error_callback)
         sub.SetResubscriptionAttemptedCallback(resubscription_attempted)
         sub.SetResubscriptionSucceededCallback(resubscription_succeeded)
