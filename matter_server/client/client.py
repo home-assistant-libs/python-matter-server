@@ -273,14 +273,14 @@ class MatterClient:
     async def get_node_ip_addresses(
         self, node_id: int, prefer_cache: bool = True, scoped: bool = False
     ) -> list[str]:
-        """Return the currently known (scoped) IP-adress(es)."""
+        """Return the currently known (scoped) IP-address(es)."""
         if TYPE_CHECKING:
             assert self.server_info is not None
         if self.server_info.schema_version >= 8:
             return cast(
                 list[str],
                 await self.send_command(
-                    APICommand.GET_NODE_IP_ADRESSES,
+                    APICommand.GET_NODE_IP_ADDRESSES,
                     require_schema=8,
                     node_id=node_id,
                     prefer_cache=prefer_cache,

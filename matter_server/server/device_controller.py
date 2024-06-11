@@ -784,9 +784,7 @@ class MatterDeviceController:
                 node_logger.debug("Pinging address %s", ip_address)
             result[ip_address] = await ping_ip(ip_address, timeout, attempts=attempts)
 
-        ip_addresses = await self.get_node_ip_addresses(
-            node_id, prefer_cache=False, scoped=True
-        )
+        ip_addresses = await self._get_node_ip_addresses(node_id, prefer_cache=False)
         tasks = [_do_ping(x) for x in ip_addresses]
         # TODO: replace this gather with a taskgroup once we bump our py version
         await asyncio.gather(*tasks)
@@ -806,14 +804,10 @@ class MatterDeviceController:
 
         return result
 
-    @api_command(APICommand.GET_NODE_IP_ADRESSES)
-    async def get_node_ip_addresses(
-        self,
-        node_id: int,
-        prefer_cache: bool = False,
-        scoped: bool = False,
+    async def _get_node_ip_addresses(
+        self, node_id: int, prefer_cache: bool = False
     ) -> list[str]:
-        """Return the currently known (scoped) IP-address(es)."""
+        """Get the IP addresses of a node."""
         cached_info = self._last_known_ip_addresses.get(node_id, [])
         if prefer_cache and cached_info:
             return cached_info
@@ -838,6 +832,17 @@ class MatterDeviceController:
         # cache this info for later use
         self._last_known_ip_addresses[node_id] = ip_addresses
         return ip_addresses
+
+    @api_command(APICommand.GET_NODE_IP_ADDRESSES)
+    async def get_node_ip_addresses(
+        self,
+        node_id: int,
+        prefer_cache: bool = False,
+        scoped: bool = False,
+    ) -> list[str]:
+        """Return the currently known (scoped) IP-address(es)."""
+        ip_addresses = await self._get_node_ip_addresses(node_id, prefer_cache)
+        return ip_addresses if scoped else [x.split("%")[0] for x in ip_addresses]
 
     @api_command(APICommand.IMPORT_TEST_NODE)
     async def import_test_node(self, dump: str) -> None:
