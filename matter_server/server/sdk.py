@@ -396,3 +396,14 @@ class ChipDeviceControllerWrapper:
     def node_has_subscription(self, node_id: int) -> bool:
         """Check if a node has an active subscription."""
         return node_id in self._subscriptions
+
+    async def trigger_resubscribe_if_scheduled(self, node_id: int, reason: str) -> None:
+        """Trigger resubscribe now if a resubscribe is scheduled.
+
+        If the ReadClient currently has a resubscription attempt scheduled, This
+        function allows to trigger that attempt immediately. This is useful
+        when the server side is up and communicating, and it's a good time to
+        try to resubscribe.
+        """
+        if sub := self._subscriptions.get(node_id, None):
+            await sub.TriggerResubscribeIfScheduled(reason)
