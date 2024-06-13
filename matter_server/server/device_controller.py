@@ -17,6 +17,7 @@ import secrets
 import time
 from typing import TYPE_CHECKING, Any, cast
 
+from chip.ChipDeviceCtrl import ChipDeviceController
 from chip.clusters import Attribute, Objects as Clusters
 from chip.clusters.Attribute import ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
@@ -128,6 +129,7 @@ class MatterDeviceController:
         self._last_known_ip_addresses: dict[int, list[str]] = {}
         self._last_subscription_attempt: dict[int, int] = {}
         self._known_commissioning_params: dict[int, CommissioningParameters] = {}
+        self._known_commissioning_params_timers: dict[int, asyncio.TimerHandle] = {}
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
         self._fallback_node_scanner_timer: asyncio.TimerHandle | None = None
@@ -418,7 +420,7 @@ class MatterDeviceController:
         node_id: int,
         timeout: int = 300,
         iteration: int = 1000,
-        option: int = 1,
+        option: int = ChipDeviceController.CommissioningWindowPasscode.kTokenWithRandomPin,
         discriminator: int | None = None,
     ) -> CommissioningParameters:
         """Open a commissioning window to commission a device present on this controller to another.
@@ -428,10 +430,45 @@ class MatterDeviceController:
         if (node := self._nodes.get(node_id)) is None or not node.available:
             raise NodeNotReady(f"Node {node_id} is not (yet) available.")
 
-        if node_id in self._known_commissioning_params:
-            # node has already been put into commissioning mode,
-            # return previous parameters
-            return self._known_commissioning_params[node_id]
+        read_response: Attribute.AsyncReadTransaction.ReadResponse = (
+            await self._chip_device_controller.read_attribute(
+                node_id,
+                [(0, Clusters.AdministratorCommissioning.Attributes.WindowStatus)],
+            )
+        )
+        window_status = cast(
+            Clusters.AdministratorCommissioning.Enums.CommissioningWindowStatusEnum,
+            read_response.attributes[0][Clusters.AdministratorCommissioning][
+                Clusters.AdministratorCommissioning.Attributes.WindowStatus
+            ],
+        )
+
+        if (
+            window_status
+            == Clusters.AdministratorCommissioning.Enums.CommissioningWindowStatusEnum.kWindowNotOpen
+        ):
+            # Commissioning window is no longer open (e.g. device got paired already)
+            # Remove our stored commissioning parameters.
+            if node_id in self._known_commissioning_params_timers:
+                self._known_commissioning_params_timers[node_id].cancel()
+            self._known_commissioning_params.pop(node_id, None)
+        else:
+            # Node is still in commissioning mode, return previous parameters
+            if node_id in self._known_commissioning_params:
+                return self._known_commissioning_params[node_id]
+
+            # We restarted or somebody else put node into commissioning mode
+            # Close commissioning window and put into commissioning mode again.
+            LOGGER.info(
+                "Commissioning window open but no parameters available. Closing and reopening commissioning window for node %s",
+                node_id,
+            )
+            await self._chip_device_controller.send_command(
+                node_id,
+                endpoint_id=0,
+                command=Clusters.AdministratorCommissioning.Commands.RevokeCommissioning(),
+                timed_request_timeout_ms=5000,
+            )
 
         if discriminator is None:
             discriminator = secrets.randbelow(2**12)
@@ -449,7 +486,7 @@ class MatterDeviceController:
             setup_qr_code=sdk_result.setupQRCode,
         )
         # we store the commission parameters and clear them after the timeout
-        self._loop.call_later(
+        self._known_commissioning_params_timers[node_id] = self._loop.call_later(
             timeout, self._known_commissioning_params.pop, node_id, None
         )
         return params
