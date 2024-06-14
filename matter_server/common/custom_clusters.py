@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 ALL_CUSTOM_CLUSTERS: dict[int, Cluster] = {}
 ALL_CUSTOM_ATTRIBUTES: dict[int, dict[int, ClusterAttributeDescriptor]] = {}
 
+
 @dataclass
 class CustomClusterMixin:
     """Base model for a vendor specific custom cluster."""
@@ -95,7 +96,6 @@ class EveCluster(Cluster, CustomClusterMixin):
 
     class Attributes:
         """Attributes for the Eve Cluster."""
-
 
         @dataclass
         class TimesOpened(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
