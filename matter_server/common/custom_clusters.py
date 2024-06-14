@@ -67,6 +67,9 @@ class EveCluster(Cluster, CustomClusterMixin):
         return ClusterObjectDescriptor(
             Fields=[
                 ClusterObjectFieldDescriptor(
+                    Label="timesOpened", Tag=0x130A0006, Type=int
+                ),
+                ClusterObjectFieldDescriptor(
                     Label="watt", Tag=0x130A000A, Type=float32
                 ),
                 ClusterObjectFieldDescriptor(
@@ -84,6 +87,7 @@ class EveCluster(Cluster, CustomClusterMixin):
             ]
         )
 
+    timesOpened: int | None = None
     watt: float32 | None = None
     wattAccumulated: float32 | None = None
     wattAccumulatedControlPoint: float32 | None = None
@@ -92,6 +96,29 @@ class EveCluster(Cluster, CustomClusterMixin):
 
     class Attributes:
         """Attributes for the Eve Cluster."""
+
+        @dataclass
+        class TimesOpened(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """TimesOpened Attribute within the Eve Cluster."""
+
+            should_poll = True
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x130AFC01
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x130A0006
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=int)
+
+            value: int = 0
 
         @dataclass
         class Watt(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
