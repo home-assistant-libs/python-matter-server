@@ -1094,6 +1094,7 @@ class MatterDeviceController:
                 return_cluster_objects=False,
                 report_interval=(interval_floor, interval_ceiling),
                 auto_resubscribe=True,
+                fabric_filtered=False,
             )
         )
 
