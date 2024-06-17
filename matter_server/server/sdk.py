@@ -179,6 +179,16 @@ class ChipDeviceControllerWrapper:
             threadOperationalDataset=bytes.fromhex(dataset),
         )
 
+    async def unpair_device(self, node_id: int) -> PyChipError:
+        """Remove our fabric from given node.
+
+        Tries to look up the device attached to our controller with the given
+        remote node id and ask it to remove Fabric.
+        """
+        return await self._call_sdk_non_reentrant(
+            self._chip_controller.UnpairDevice, nodeid=node_id
+        )
+
     async def open_commissioning_window(
         self,
         node_id: int,
