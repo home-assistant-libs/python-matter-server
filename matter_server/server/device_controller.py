@@ -750,41 +750,10 @@ class MatterDeviceController:
         if node is None or node_id >= TEST_NODE_START:
             return
 
-        attribute_path = create_attribute_path_from_attribute(
-            0,
-            Clusters.OperationalCredentials.Attributes.CurrentFabricIndex,
-        )
-        fabric_index = node.attributes.get(attribute_path)
-        if fabric_index is None:
-            return
-        result: Clusters.OperationalCredentials.Commands.NOCResponse | None = None
         try:
-            result = await self._chip_device_controller.send_command(
-                node_id=node_id,
-                endpoint_id=0,
-                command=Clusters.OperationalCredentials.Commands.RemoveFabric(
-                    fabricIndex=fabric_index,
-                ),
-            )
+            await self._chip_device_controller.unpair_device(node_id)
         except ChipStackError as err:
-            LOGGER.warning(
-                "Removing current fabric from device failed: %s",
-                str(err) or err.__class__.__name__,
-                # only log stacktrace if we have verbose logging enabled
-                exc_info=err if LOGGER.isEnabledFor(VERBOSE_LOG_LEVEL) else None,
-            )
-            return
-        if (
-            result is None
-            or result.statusCode
-            == Clusters.OperationalCredentials.Enums.NodeOperationalCertStatusEnum.kOk
-        ):
-            LOGGER.info("Successfully removed Home Assistant fabric from device.")
-        else:
-            LOGGER.warning(
-                "Removing current fabric from device failed with status code %d.",
-                result.statusCode,
-            )
+            LOGGER.warning("Removing current fabric from device failed: %s", err)
 
     @api_command(APICommand.PING_NODE)
     async def ping_node(self, node_id: int, attempts: int = 1) -> NodePingResult:
