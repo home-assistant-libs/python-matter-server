@@ -62,8 +62,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
 
-    from chip.native import PyChipError
-
     from .server import MatterServer
 
 DATA_KEY_NODES = "nodes"
@@ -274,21 +272,28 @@ class MatterDeviceController:
                 attempts,
                 MAX_COMMISSION_RETRIES,
             )
-            result: (
-                PyChipError | None
-            ) = await self._chip_device_controller.commission_with_code(
-                node_id,
-                code,
-                DiscoveryType.DISCOVERY_NETWORK_ONLY
-                if network_only
-                else DiscoveryType.DISCOVERY_ALL,
-            )
-            if result and result.is_success:
-                break
-            if attempts >= MAX_COMMISSION_RETRIES:
-                raise NodeCommissionFailed(
-                    f"Commission with code failed for node {node_id}."
+            try:
+                commissioned_node_id: int = (
+                    await self._chip_device_controller.commission_with_code(
+                        node_id,
+                        code,
+                        DiscoveryType.DISCOVERY_NETWORK_ONLY
+                        if network_only
+                        else DiscoveryType.DISCOVERY_ALL,
+                    )
                 )
+                # We use SDK default behavior which always uses the commissioning Node ID in the
+                # generated NOC. So this should be the same really.
+                LOGGER.info(
+                    "Commissioned Node ID: %s vs %s", commissioned_node_id, node_id
+                )
+                assert commissioned_node_id == node_id
+                break
+            except ChipStackError as err:
+                if attempts >= MAX_COMMISSION_RETRIES:
+                    raise NodeCommissionFailed(
+                        f"Commission with code failed for node {node_id}."
+                    ) from err
             await asyncio.sleep(5)
 
         LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
@@ -346,33 +351,42 @@ class MatterDeviceController:
         # by retrying, we increase the chances of a successful commission
         while attempts <= MAX_COMMISSION_RETRIES:
             attempts += 1
-            result: PyChipError | None
-            if ip_addr is None:
-                # regular CommissionOnNetwork if no IP address provided
-                LOGGER.info(
-                    "Starting Matter commissioning on network using Node ID %s (attempt %s/%s).",
-                    node_id,
-                    attempts,
-                    MAX_COMMISSION_RETRIES,
-                )
-                result = await self._chip_device_controller.commission_on_network(
-                    node_id, setup_pin_code, filter_type, filter
-                )
-            else:
-                LOGGER.info(
-                    "Starting Matter commissioning using Node ID %s and IP %s (attempt %s/%s).",
-                    node_id,
-                    ip_addr,
-                    attempts,
-                    MAX_COMMISSION_RETRIES,
-                )
-                result = await self._chip_device_controller.commission_ip(
-                    node_id, setup_pin_code, ip_addr
-                )
-            if result and result.is_success:
+            try:
+                if ip_addr is None:
+                    # regular CommissionOnNetwork if no IP address provided
+                    LOGGER.info(
+                        "Starting Matter commissioning on network using Node ID %s (attempt %s/%s).",
+                        node_id,
+                        attempts,
+                        MAX_COMMISSION_RETRIES,
+                    )
+                    commissioned_node_id = (
+                        await self._chip_device_controller.commission_on_network(
+                            node_id, setup_pin_code, filter_type, filter
+                        )
+                    )
+                else:
+                    LOGGER.info(
+                        "Starting Matter commissioning using Node ID %s and IP %s (attempt %s/%s).",
+                        node_id,
+                        ip_addr,
+                        attempts,
+                        MAX_COMMISSION_RETRIES,
+                    )
+                    commissioned_node_id = (
+                        await self._chip_device_controller.commission_ip(
+                            node_id, setup_pin_code, ip_addr
+                        )
+                    )
+                # We use SDK default behavior which always uses the commissioning Node ID in the
+                # generated NOC. So this should be the same really.
+                assert commissioned_node_id == node_id
                 break
-            if attempts >= MAX_COMMISSION_RETRIES:
-                raise NodeCommissionFailed(f"Commissioning failed for node {node_id}.")
+            except ChipStackError as err:
+                if attempts >= MAX_COMMISSION_RETRIES:
+                    raise NodeCommissionFailed(
+                        f"Commissioning failed for node {node_id}."
+                    ) from err
             await asyncio.sleep(5)
 
         LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
