@@ -865,7 +865,12 @@ class MatterDeviceController:
         else:
             dump_nodes = dump_data["data"]["server"]["nodes"]
         # node ids > 900000 are reserved for test nodes
-        next_test_node_id = max(*(x for x in self._nodes), TEST_NODE_START) + 1
+        if self._nodes:
+            next_test_node_id = max(*(x for x in self._nodes), TEST_NODE_START) + 1
+        else:
+            #an empty self._nodes dict evaluates to false so we set the first 
+            #test node id to TEST_NODE_START
+            next_test_node_id = TEST_NODE_START
         for node_dict in dump_nodes:
             node = dataclass_from_dict(MatterNodeData, node_dict, strict=True)
             node.node_id = next_test_node_id
