@@ -8,7 +8,6 @@ also makes the API more pythonic where possible.
 from __future__ import annotations
 
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 import logging
 import time
@@ -25,6 +24,7 @@ from ..common.errors import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from concurrent.futures import ThreadPoolExecutor
     from pathlib import Path
 
     from chip.ChipDeviceCtrl import (
@@ -59,7 +59,6 @@ class ChipDeviceControllerWrapper:
 
         self._node_lock: dict[int, asyncio.Lock] = {}
         self._subscriptions: dict[int, Attribute.SubscriptionTransaction] = {}
-        self._sdk_non_entrant_executor = ThreadPoolExecutor(max_workers=1)
 
         # Instantiate the underlying ChipDeviceController instance on the Fabric
         self._chip_controller = self.server.stack.fabric_admin.NewController(
@@ -100,16 +99,6 @@ class ChipDeviceControllerWrapper:
     ) -> _T:
         return await self._call_sdk_executor(None, target, *args, **kwargs)
 
-    async def _call_sdk_non_reentrant(
-        self,
-        target: Callable[..., _T],
-        *args: Any,
-        **kwargs: Any,
-    ) -> _T:
-        return await self._call_sdk_executor(
-            self._sdk_non_entrant_executor, target, *args, **kwargs
-        )
-
     async def get_compressed_fabric_id(self) -> int:
         """Get the compressed fabric id."""
         return await self._call_sdk(self._chip_controller.GetCompressedFabricId)
@@ -128,13 +117,15 @@ class ChipDeviceControllerWrapper:
         node_id: int,
         setup_payload: str,
         discovery_type: DiscoveryType,
-    ) -> PyChipError:
+    ) -> int:
         """Commission a device using a QR Code or Manual Pairing Code."""
-        return await self._call_sdk_non_reentrant(
-            self._chip_controller.CommissionWithCode,
-            setupPayload=setup_payload,
-            nodeid=node_id,
-            discoveryType=discovery_type,
+        return cast(
+            int,
+            await self._chip_controller.CommissionWithCode(
+                setupPayload=setup_payload,
+                nodeid=node_id,
+                discoveryType=discovery_type,
+            ),
         )
 
     async def commission_on_network(
@@ -143,25 +134,29 @@ class ChipDeviceControllerWrapper:
         setup_pin_code: int,
         disc_filter_type: FilterType = FilterType.NONE,
         disc_filter: Any = None,
-    ) -> PyChipError:
+    ) -> int:
         """Commission a device on the network."""
-        return await self._call_sdk_non_reentrant(
-            self._chip_controller.CommissionOnNetwork,
-            nodeId=node_id,
-            setupPinCode=setup_pin_code,
-            filterType=disc_filter_type,
-            filter=disc_filter,
+        return cast(
+            int,
+            await self._chip_controller.CommissionOnNetwork(
+                nodeId=node_id,
+                setupPinCode=setup_pin_code,
+                filterType=disc_filter_type,
+                filter=disc_filter,
+            ),
         )
 
     async def commission_ip(
         self, node_id: int, setup_pin_code: int, ip_addr: str
-    ) -> PyChipError:
+    ) -> int:
         """Commission a device using an IP address."""
-        return await self._call_sdk_non_reentrant(
-            self._chip_controller.CommissionIP,
-            nodeid=node_id,
-            setupPinCode=setup_pin_code,
-            ipaddr=ip_addr,
+        return cast(
+            int,
+            await self._chip_controller.CommissionIP(
+                nodeid=node_id,
+                setupPinCode=setup_pin_code,
+                ipaddr=ip_addr,
+            ),
         )
 
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
@@ -185,9 +180,7 @@ class ChipDeviceControllerWrapper:
         Tries to look up the device attached to our controller with the given
         remote node id and ask it to remove Fabric.
         """
-        return await self._call_sdk_non_reentrant(
-            self._chip_controller.UnpairDevice, nodeid=node_id
-        )
+        return await self._chip_controller.UnpairDevice(nodeid=node_id)
 
     async def open_commissioning_window(
         self,
@@ -199,8 +192,7 @@ class ChipDeviceControllerWrapper:
     ) -> CommissioningParameters:
         """Open a commissioning window to commission a device present on this controller to another."""
         async with self._get_node_lock(node_id):
-            return await self._call_sdk_non_reentrant(
-                self._chip_controller.OpenCommissioningWindow,
+            return await self._chip_controller.OpenCommissioningWindow(
                 nodeid=node_id,
                 timeout=timeout,
                 iteration=iteration,
