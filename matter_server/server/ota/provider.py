@@ -28,8 +28,6 @@ from matter_server.common.helpers.util import (
 if TYPE_CHECKING:
     from asyncio.subprocess import Process
 
-    from chip.native import PyChipError
-
     from matter_server.server.sdk import ChipDeviceControllerWrapper
 
 LOGGER = logging.getLogger(__name__)
@@ -96,27 +94,22 @@ class ExternalOtaProvider:
     ) -> None:
         """Commissions the OTA Provider, returns node ID of the commissioned provider."""
 
-        res: PyChipError = await chip_device_controller.commission_on_network(
-            ota_provider_node_id,
-            passcode,
-            # TODO: Filtering by long discriminator seems broken
-            disc_filter_type=FilterType.LONG_DISCRIMINATOR,
-            disc_filter=discriminator,
-        )
-        if not res.is_success:
-            await self.stop()
-            raise UpdateError(
-                f"Failed to commission OTA Provider App: SDK Error {res.code}"
-            )
-
-        LOGGER.info(
-            "OTA Provider App commissioned with node id %d.",
-            ota_provider_node_id,
-        )
-
         # Adjust ACL of OTA Requestor such that Node peer-to-peer communication
         # is allowed.
         try:
+            commissioned_node_id = await chip_device_controller.commission_on_network(
+                ota_provider_node_id,
+                passcode,
+                disc_filter_type=FilterType.LONG_DISCRIMINATOR,
+                disc_filter=discriminator,
+            )
+            assert commissioned_node_id == ota_provider_node_id
+
+            LOGGER.info(
+                "OTA Provider App commissioned with node id %d.",
+                ota_provider_node_id,
+            )
+
             read_result = cast(
                 Attribute.AsyncReadTransaction.ReadResponse,
                 await chip_device_controller.read_attribute(
@@ -163,7 +156,7 @@ class ExternalOtaProvider:
                 )
                 raise UpdateError("Error while setting up OTA Provider.")
         except ChipStackError as ex:
-            logging.exception("Failed adjusting OTA Provider App ACL.", exc_info=ex)
+            logging.exception("Failed setting up OTA Provider.", exc_info=ex)
             raise UpdateError("Error while setting up OTA Provider.") from ex
 
     async def start_update(
