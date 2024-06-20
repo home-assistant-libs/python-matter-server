@@ -119,10 +119,13 @@ class ChipDeviceControllerWrapper:
         discovery_type: DiscoveryType,
     ) -> int:
         """Commission a device using a QR Code or Manual Pairing Code."""
-        return await self._chip_controller.CommissionWithCode(
-            setupPayload=setup_payload,
-            nodeid=node_id,
-            discoveryType=discovery_type,
+        return cast(
+            int,
+            await self._chip_controller.CommissionWithCode(
+                setupPayload=setup_payload,
+                nodeid=node_id,
+                discoveryType=discovery_type,
+            ),
         )
 
     async def commission_on_network(
@@ -133,21 +136,27 @@ class ChipDeviceControllerWrapper:
         disc_filter: Any = None,
     ) -> int:
         """Commission a device on the network."""
-        return await self._chip_controller.CommissionOnNetwork(
-            nodeId=node_id,
-            setupPinCode=setup_pin_code,
-            filterType=disc_filter_type,
-            filter=disc_filter,
+        return cast(
+            int,
+            await self._chip_controller.CommissionOnNetwork(
+                nodeId=node_id,
+                setupPinCode=setup_pin_code,
+                filterType=disc_filter_type,
+                filter=disc_filter,
+            ),
         )
 
     async def commission_ip(
         self, node_id: int, setup_pin_code: int, ip_addr: str
     ) -> int:
         """Commission a device using an IP address."""
-        return await self._chip_controller.CommissionIP(
-            nodeid=node_id,
-            setupPinCode=setup_pin_code,
-            ipaddr=ip_addr,
+        return cast(
+            int,
+            await self._chip_controller.CommissionIP(
+                nodeid=node_id,
+                setupPinCode=setup_pin_code,
+                ipaddr=ip_addr,
+            ),
         )
 
     async def set_wifi_credentials(self, ssid: str, credentials: str) -> None:
