@@ -71,7 +71,6 @@ LOGGER = logging.getLogger(__name__)
 NODE_SUBSCRIPTION_CEILING_WIFI = 60
 NODE_SUBSCRIPTION_CEILING_THREAD = 60
 NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 600
-MAX_COMMISSION_RETRIES = 3
 NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE = 3
 NODE_RESUBSCRIBE_TIMEOUT_OFFLINE = 30 * 60 * 1000
 NODE_PING_TIMEOUT = 10
@@ -260,41 +259,29 @@ class MatterDeviceController:
         """
         node_id = self._get_next_node_id()
 
-        attempts = 0
-        # we retry commissioning a few times as we've seen devices in the wild
-        # that are a bit unstable.
-        # by retrying, we increase the chances of a successful commission
-        while attempts <= MAX_COMMISSION_RETRIES:
-            attempts += 1
-            LOGGER.info(
-                "Starting Matter commissioning with code using Node ID %s (attempt %s/%s).",
-                node_id,
-                attempts,
-                MAX_COMMISSION_RETRIES,
+        LOGGER.info(
+            "Starting Matter commissioning with code using Node ID %s.",
+            node_id,
+        )
+        try:
+            commissioned_node_id: int = (
+                await self._chip_device_controller.commission_with_code(
+                    node_id,
+                    code,
+                    DiscoveryType.DISCOVERY_NETWORK_ONLY
+                    if network_only
+                    else DiscoveryType.DISCOVERY_ALL,
+                )
             )
-            try:
-                commissioned_node_id: int = (
-                    await self._chip_device_controller.commission_with_code(
-                        node_id,
-                        code,
-                        DiscoveryType.DISCOVERY_NETWORK_ONLY
-                        if network_only
-                        else DiscoveryType.DISCOVERY_ALL,
-                    )
-                )
-                # We use SDK default behavior which always uses the commissioning Node ID in the
-                # generated NOC. So this should be the same really.
-                LOGGER.info(
-                    "Commissioned Node ID: %s vs %s", commissioned_node_id, node_id
-                )
-                assert commissioned_node_id == node_id
-                break
-            except ChipStackError as err:
-                if attempts >= MAX_COMMISSION_RETRIES:
-                    raise NodeCommissionFailed(
-                        f"Commission with code failed for node {node_id}."
-                    ) from err
-            await asyncio.sleep(5)
+            # We use SDK default behavior which always uses the commissioning Node ID in the
+            # generated NOC. So this should be the same really.
+            LOGGER.info("Commissioned Node ID: %s vs %s", commissioned_node_id, node_id)
+            if commissioned_node_id != node_id:
+                raise RuntimeError("Returned Node ID must match requested Node ID")
+        except ChipStackError as err:
+            raise NodeCommissionFailed(
+                f"Commission with code failed for node {node_id}."
+            ) from err
 
         LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
 
@@ -345,49 +332,35 @@ class MatterDeviceController:
         if ip_addr is not None:
             ip_addr = self.server.scope_ipv6_lla(ip_addr)
 
-        attempts = 0
-        # we retry commissioning a few times as we've seen devices in the wild
-        # that are a bit unstable.
-        # by retrying, we increase the chances of a successful commission
-        while attempts <= MAX_COMMISSION_RETRIES:
-            attempts += 1
-            try:
-                if ip_addr is None:
-                    # regular CommissionOnNetwork if no IP address provided
-                    LOGGER.info(
-                        "Starting Matter commissioning on network using Node ID %s (attempt %s/%s).",
-                        node_id,
-                        attempts,
-                        MAX_COMMISSION_RETRIES,
+        try:
+            if ip_addr is None:
+                # regular CommissionOnNetwork if no IP address provided
+                LOGGER.info(
+                    "Starting Matter commissioning on network using Node ID %s.",
+                    node_id,
+                )
+                commissioned_node_id = (
+                    await self._chip_device_controller.commission_on_network(
+                        node_id, setup_pin_code, filter_type, filter
                     )
-                    commissioned_node_id = (
-                        await self._chip_device_controller.commission_on_network(
-                            node_id, setup_pin_code, filter_type, filter
-                        )
-                    )
-                else:
-                    LOGGER.info(
-                        "Starting Matter commissioning using Node ID %s and IP %s (attempt %s/%s).",
-                        node_id,
-                        ip_addr,
-                        attempts,
-                        MAX_COMMISSION_RETRIES,
-                    )
-                    commissioned_node_id = (
-                        await self._chip_device_controller.commission_ip(
-                            node_id, setup_pin_code, ip_addr
-                        )
-                    )
-                # We use SDK default behavior which always uses the commissioning Node ID in the
-                # generated NOC. So this should be the same really.
-                assert commissioned_node_id == node_id
-                break
-            except ChipStackError as err:
-                if attempts >= MAX_COMMISSION_RETRIES:
-                    raise NodeCommissionFailed(
-                        f"Commissioning failed for node {node_id}."
-                    ) from err
-            await asyncio.sleep(5)
+                )
+            else:
+                LOGGER.info(
+                    "Starting Matter commissioning using Node ID %s and IP %s.",
+                    node_id,
+                    ip_addr,
+                )
+                commissioned_node_id = await self._chip_device_controller.commission_ip(
+                    node_id, setup_pin_code, ip_addr
+                )
+            # We use SDK default behavior which always uses the commissioning Node ID in the
+            # generated NOC. So this should be the same really.
+            if commissioned_node_id != node_id:
+                raise RuntimeError("Returned Node ID must match requested Node ID")
+        except ChipStackError as err:
+            raise NodeCommissionFailed(
+                f"Commissioning failed for node {node_id}."
+            ) from err
 
         LOGGER.info("Matter commissioning of Node ID %s successful.", node_id)
 
