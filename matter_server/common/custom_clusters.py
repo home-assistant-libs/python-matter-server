@@ -238,6 +238,125 @@ class EveCluster(Cluster, CustomClusterMixin):
             value: float32 = 0
 
 
+@dataclass
+class NeoCluster(Cluster, CustomClusterMixin):
+    """Custom (vendor-specific) cluster for Neo - Vendor ID 4991 (0x137F)."""
+
+    id: ClassVar[int] = 0x00125DFC11
+
+    @ChipUtility.classproperty
+    def descriptor(cls) -> ClusterObjectDescriptor:
+        """Return descriptor for this cluster."""
+        return ClusterObjectDescriptor(
+            Fields=[
+                ClusterObjectFieldDescriptor(
+                    Label="wattAccumulated", Tag=0x00125D0021, Type=float32
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="watt", Tag=0x00125D0023, Type=float32
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="current", Tag=0x00125D0022, Type=float32
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="voltage", Tag=0x00125D0024, Type=float32
+                ),
+            ]
+        )
+
+    watt: float32 | None = None
+    wattAccumulated: float32 | None = None
+    voltage: float32 | None = None
+    current: float32 | None = None
+
+    class Attributes:
+        """Attributes for the Neo Cluster."""
+
+        @dataclass
+        class Watt(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """Watt Attribute within the Neo Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x00125DFC11
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00125D0023
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=float32)
+
+            value: float32 = 0
+
+        @dataclass
+        class WattAccumulated(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """WattAccumulated Attribute within the Neo Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x00125DFC11
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00125D0021
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=float32)
+
+            value: float32 = 0
+
+        @dataclass
+        class Voltage(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """Voltage Attribute within the Neo Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x00125DFC11
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00125D0024
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=float32)
+
+            value: float32 = 0
+
+        @dataclass
+        class Current(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """Current Attribute within the Neo Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x00125DFC11
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00125D0022
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=float32)
+
+            value: float32 = 0
+
+
 def check_polled_attributes(node_data: MatterNodeData) -> set[str]:
     """Check if custom attributes are present in the node data that need to be polled."""
     attributes_to_poll: set[str] = set()
