@@ -115,7 +115,6 @@ def test_dataclass_from_dict():
 
 def test_parse_value():
     """Test special cases in the parse_value helper."""
-    # ruff: noqa: PT011
     # test None value which is allowed
     assert parse_value("test", None, int, allow_none=True) is None
     # test unexpected None value
