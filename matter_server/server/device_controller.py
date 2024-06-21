@@ -695,6 +695,7 @@ class MatterDeviceController:
             name=attribute_path,
             value=value,
             value_type=attribute.attribute_type.Type,
+            allow_none=False,
             allow_sdk_types=True,
         )
         if node_id >= TEST_NODE_START:

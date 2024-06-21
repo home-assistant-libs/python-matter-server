@@ -107,7 +107,7 @@ def parse_value(
     value: Any,
     value_type: Any,
     default: Any = MISSING,
-    allow_none: bool = True,
+    allow_none: bool = False,
     allow_sdk_types: bool = False,
 ) -> Any:
     """
@@ -121,6 +121,16 @@ def parse_value(
         # this shouldn't happen, but just in case
         value_type = get_type_hints(value_type, globals(), locals())
 
+    # handle value is None/missing but a default value is set
+    if value is None and not isinstance(default, type(MISSING)):
+        return default
+    # handle value is None and sdk type is Nullable
+    if value is None and value_type is Nullable:
+        return Nullable() if allow_sdk_types else None
+    # handle value is None (but that is allowed according to the annotations)
+    if value is None and value_type is NoneType:
+        return None
+
     if isinstance(value, dict):
         if descriptor := getattr(value_type, "descriptor", None):
             # handle matter TLV dicts where the keys are just tag identifiers
@@ -132,14 +142,6 @@ def parse_value(
                 return None
             value = None
 
-    if value is None and not isinstance(default, type(MISSING)):
-        return default
-    if value is None and value_type is NoneType:
-        return None
-    if value is None and value_type is Nullable:
-        return Nullable() if allow_sdk_types else None
-    if value is None and allow_none:
-        return None
     if is_dataclass(value_type) and isinstance(value, dict):
         return dataclass_from_dict(value_type, value)
     # get origin value type and inspect one-by-one
@@ -156,7 +158,11 @@ def parse_value(
         subvalue_type = get_args(value_type)[1]
         return {
             parse_value(subkey, subkey, subkey_type): parse_value(
-                f"{subkey}.value", subvalue, subvalue_type
+                f"{subkey}.value",
+                subvalue,
+                subvalue_type,
+                allow_none=allow_none,
+                allow_sdk_types=allow_sdk_types,
             )
             for subkey, subvalue in value.items()
         }
@@ -169,7 +175,13 @@ def parse_value(
                 return value
             # try them all until one succeeds
             try:
-                return parse_value(name, value, sub_arg_type)
+                return parse_value(
+                    name,
+                    value,
+                    sub_arg_type,
+                    allow_none=allow_none,
+                    allow_sdk_types=allow_sdk_types,
+                )
             except (KeyError, TypeError, ValueError):
                 pass
         # if we get to this point, all possibilities failed
@@ -189,8 +201,11 @@ def parse_value(
     # handle Any as value type (which is basically unprocessable)
     if value_type is Any:
         return value
+    # handle value is None (but that is allowed)
+    if value is None and allow_none:
+        return None
     # raise if value is None and the value is required according to annotations
-    if value is None and value_type is not NoneType and not allow_none:
+    if value is None:
         raise KeyError(f"`{name}` of type `{value_type}` is required.")
 
     try:
