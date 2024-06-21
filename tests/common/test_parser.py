@@ -3,8 +3,9 @@
 from dataclasses import dataclass
 import datetime
 from enum import Enum, IntEnum
-from typing import Optional
+from typing import Optional, Union
 
+from chip.clusters.Types import Nullable, NullValue
 import pytest
 
 from matter_server.common.helpers.util import dataclass_from_dict, parse_value
@@ -110,3 +111,22 @@ def test_dataclass_from_dict():
     # test NOCStruct.noc edge case
     res = parse_value("NOCStruct.noc", 5, bytes)
     assert res == b""
+
+
+def test_parse_value():
+    """Test special cases in the parse_value helper."""
+    # ruff: noqa: PT011
+    # test None value which is allowed
+    assert parse_value("test", None, int, allow_none=True) is None
+    # test unexpected None value
+    with pytest.raises(KeyError):
+        parse_value("test", None, int, allow_none=False)
+    # test sdk Nullable type
+    assert parse_value("test", None, Nullable) is None
+    assert parse_value("test", None, Nullable, allow_sdk_types=True) == NullValue
+    assert (
+        parse_value(
+            "test", None, Union[int, Nullable], allow_none=False, allow_sdk_types=True
+        )
+        == NullValue
+    )
