@@ -1,5 +1,6 @@
 """Handle OTA software version endpoints of the DCL."""
 
+from http import HTTPStatus
 import logging
 from typing import Any, cast
 
@@ -13,11 +14,14 @@ LOGGER = logging.getLogger(__name__)
 
 async def _get_software_versions(vid: int, pid: int) -> Any:
     """Check DCL if there are updates available for a particular node."""
-    async with ClientSession(raise_for_status=True) as http_session:
+    async with ClientSession(raise_for_status=False) as http_session:
         # fetch the paa certificates list
         async with http_session.get(
             f"{DCL_PRODUCTION_URL}/dcl/model/versions/{vid}/{pid}"
         ) as response:
+            if response.status == HTTPStatus.NOT_FOUND:
+                return None
+            response.raise_for_status()
             return await response.json()
 
 
@@ -85,6 +89,9 @@ async def check_for_update(
 
         # Get all versions and check each one of them.
         versions = await _get_software_versions(vid, pid)
+        if versions is None:
+            LOGGER.info("There is no update information for this device on the DCL.")
+            return None
 
         all_software_versions: list[int] = versions["modelVersions"]["softwareVersions"]
         newer_software_versions = [
