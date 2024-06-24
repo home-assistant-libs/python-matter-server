@@ -252,7 +252,7 @@ class MatterServer:
             if asyncio.iscoroutinefunction(callback):
                 asyncio.create_task(callback(evt, data))
             else:
-                self.loop.call_soon_threadsafe(callback, evt, data)
+                self.loop.call_soon(callback, evt, data)
 
     def scope_ipv6_lla(self, ip_addr: str) -> str:
         """Scope IPv6 link-local addresses to primary interface.
