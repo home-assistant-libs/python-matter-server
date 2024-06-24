@@ -211,3 +211,21 @@ class CommissioningParameters:
     setup_pin_code: int
     setup_manual_code: str
     setup_qr_code: str
+
+
+@dataclass
+class MatterSoftwareVersion:
+    """Representation of a Matter software version. Return by the check_node_update command.
+
+    This holds Matter software version information similar to what is available from the CSA DCL.
+    https://on.dcl.csa-iot.org/#/Query/ModelVersion.
+    """
+
+    vid: int
+    pid: int
+    software_version: int
+    software_version_string: str
+    firmware_information: str | None
+    min_applicable_software_version: int
+    max_applicable_software_version: int
+    release_notes_url: str | None

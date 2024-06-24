@@ -28,7 +28,11 @@ from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZerocon
 
 from matter_server.common.const import VERBOSE_LOG_LEVEL
 from matter_server.common.custom_clusters import check_polled_attributes
-from matter_server.common.models import CommissionableNodeData, CommissioningParameters
+from matter_server.common.models import (
+    CommissionableNodeData,
+    CommissioningParameters,
+    MatterSoftwareVersion,
+)
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
 from matter_server.server.ota import check_for_update
@@ -897,7 +901,7 @@ class MatterDeviceController:
             self.server.signal_event(EventType.NODE_ADDED, node)
 
     @api_command(APICommand.CHECK_NODE_UPDATE)
-    async def check_node_update(self, node_id: int) -> dict | None:
+    async def check_node_update(self, node_id: int) -> MatterSoftwareVersion | None:
         """
         Check if there is an update for a particular node.
 
@@ -906,12 +910,36 @@ class MatterDeviceController:
         information of the latest update available.
         """
 
-        return await self._check_node_update(node_id)
+        update = await self._check_node_update(node_id)
+        if update is None:
+            return None
+
+        if not all(
+            key in update
+            for key in [
+                "vid",
+                "pid",
+                "softwareVersion",
+                "softwareVersionString",
+                "minApplicableSoftwareVersion",
+                "maxApplicableSoftwareVersion",
+            ]
+        ):
+            raise UpdateCheckError("Invalid update data")
+
+        return MatterSoftwareVersion(
+            vid=update["vid"],
+            pid=update["pid"],
+            software_version=update["softwareVersion"],
+            software_version_string=update["softwareVersionString"],
+            firmware_information=update.get("firmwareInformation", None),
+            min_applicable_software_version=update["minApplicableSoftwareVersion"],
+            max_applicable_software_version=update["maxApplicableSoftwareVersion"],
+            release_notes_url=update.get("releaseNotesUrl", None),
+        )
 
     @api_command(APICommand.UPDATE_NODE)
-    async def update_node(
-        self, node_id: int, software_version: int | str
-    ) -> dict | None:
+    async def update_node(self, node_id: int, software_version: int | str) -> None:
         """
         Update a node to a new software version.
 
@@ -963,8 +991,6 @@ class MatterDeviceController:
                 ota_provider.check_update_state
             )
             self._nodes_in_ota.remove(node_id)
-
-        return update
 
     async def _check_node_update(
         self,
