@@ -10,6 +10,7 @@ import uuid
 from chip.clusters import Objects as Clusters
 from chip.clusters.Types import NullValue
 
+from matter_server.common.const import SCHEMA_VERSION
 from matter_server.common.errors import ERROR_MAP, NodeNotExists
 
 from ..common.helpers.util import (
@@ -509,14 +510,13 @@ class MatterClient:
         """Interview a node."""
         await self.send_command(APICommand.INTERVIEW_NODE, node_id=node_id)
 
-    async def send_command(
+    def _prepare_message(
         self,
         command: str,
         require_schema: int | None = None,
         **kwargs: Any,
-    ) -> Any:
-        """Send a command and get a response."""
-        if not self.connection.connected or not self._loop:
+    ) -> CommandMessage:
+        if not self.connection.connected:
             raise InvalidState("Not connected")
 
         if (
@@ -526,14 +526,29 @@ class MatterClient:
         ):
             raise InvalidServerVersion(
                 "Command not available due to incompatible server version. Update the Matter "
-                f"Server to a version that supports at least api schema {require_schema}."
+                f"Server to a version that supports at least api schema {require_schema}.",
+                SCHEMA_VERSION,
+                self.server_info.schema_version,
+                self.server_info.min_supported_schema_version,
             )
 
-        message = CommandMessage(
+        return CommandMessage(
             message_id=uuid.uuid4().hex,
             command=command,
             args=kwargs,
         )
+
+    async def send_command(
+        self,
+        command: str,
+        require_schema: int | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Send a command and get a response."""
+        if not self._loop:
+            raise InvalidState("Not connected")
+
+        message = self._prepare_message(command, require_schema, **kwargs)
         future: asyncio.Future[Any] = self._loop.create_future()
         self._result_futures[message.message_id] = future
         await self.connection.send_message(message)
@@ -549,22 +564,8 @@ class MatterClient:
         **kwargs: Any,
     ) -> None:
         """Send a command without waiting for the response."""
-        if not self.server_info:
-            raise InvalidState("Not connected")
 
-        if (
-            require_schema is not None
-            and require_schema > self.server_info.schema_version
-        ):
-            raise InvalidServerVersion(
-                "Command not available due to incompatible server version. Update the Matter "
-                f"Server to a version that supports at least api schema {require_schema}."
-            )
-        message = CommandMessage(
-            message_id=uuid.uuid4().hex,
-            command=command,
-            args=kwargs,
-        )
+        message = self._prepare_message(command, require_schema, **kwargs)
         await self.connection.send_message(message)
 
     async def get_diagnostics(self) -> ServerDiagnostics:
