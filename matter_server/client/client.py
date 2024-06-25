@@ -10,7 +10,6 @@ import uuid
 from chip.clusters import Objects as Clusters
 from chip.clusters.Types import NullValue
 
-from matter_server.common.const import SCHEMA_VERSION
 from matter_server.common.errors import ERROR_MAP, NodeNotExists
 
 from ..common.helpers.util import (
@@ -38,7 +37,7 @@ from ..common.models import (
     SuccessResultMessage,
 )
 from .connection import MatterClientConnection
-from .exceptions import ConnectionClosed, InvalidServerVersion, InvalidState
+from .exceptions import ConnectionClosed, InvalidState, ServerVersionTooOld
 from .models.node import (
     MatterFabricData,
     MatterNode,
@@ -524,12 +523,9 @@ class MatterClient:
             and self.server_info is not None
             and require_schema > self.server_info.schema_version
         ):
-            raise InvalidServerVersion(
+            raise ServerVersionTooOld(
                 "Command not available due to incompatible server version. Update the Matter "
                 f"Server to a version that supports at least api schema {require_schema}.",
-                SCHEMA_VERSION,
-                self.server_info.schema_version,
-                self.server_info.min_supported_schema_version,
             )
 
         return CommandMessage(

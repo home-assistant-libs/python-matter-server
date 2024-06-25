@@ -54,15 +54,10 @@ class InvalidMessage(MatterClientException):
 class InvalidServerVersion(MatterClientException):
     """Exception raised when connected to server with incompatible version."""
 
-    def __init__(
-        self,
-        msg: str,
-        client_schema_version: int,
-        server_schema_version: int,
-        min_supported_schema_version: int,
-    ):
-        """Initialize an invalid server version error."""
-        super().__init__(msg)
-        self.client_schema_version = client_schema_version
-        self.server_schema_version = server_schema_version
-        self.min_supported_schema_version = min_supported_schema_version
+
+class ServerVersionTooOld(InvalidServerVersion):
+    """Exception raised when connected to server with is too old to support this client."""
+
+
+class ServerVersionTooNew(InvalidServerVersion):
+    """Exception raised when connected to server with is too new for this client."""
