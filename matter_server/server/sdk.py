@@ -395,6 +395,13 @@ class ChipDeviceControllerWrapper:
         if sub := self._subscriptions.pop(node_id, None):
             await self._call_sdk(sub.Shutdown)
 
+    async def subscription_override_liveness_timeout(
+        self, node_id: int, liveness_timeout_ms: int
+    ) -> None:
+        """Override the liveness timeout for the subscription of the node."""
+        if sub := self._subscriptions.get(node_id):
+            await self._call_sdk(sub.OverrideLivenessTimeoutMs, liveness_timeout_ms)
+
     def node_has_subscription(self, node_id: int) -> bool:
         """Check if a node has an active subscription."""
         return node_id in self._subscriptions

@@ -73,6 +73,7 @@ NODE_SUBSCRIPTION_CEILING_THREAD = 60
 NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 600
 NODE_RESUBSCRIBE_ATTEMPTS_UNAVAILABLE = 3
 NODE_RESUBSCRIBE_TIMEOUT_OFFLINE = 30 * 60 * 1000
+NODE_RESUBSCRIBE_FORCE_TIMEOUT = 5
 NODE_PING_TIMEOUT = 10
 NODE_PING_TIMEOUT_BATTERY_POWERED = 60
 NODE_MDNS_BACKOFF = 610  # must be higher than (highest) sub ceiling
@@ -978,7 +979,10 @@ class MatterDeviceController:
             self.event_history.append(node_event)
 
             if isinstance(data.Data, Clusters.BasicInformation.Events.ShutDown):
-                self._node_unavailable(node_id)
+                # Force resubscription after a shutdown event. Otherwise we'd have to
+                # wait for up to NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED minutes for
+                # the SDK to notice the device is gone.
+                self._node_unavailable(node_id, True)
 
             self.server.signal_event(EventType.NODE_EVENT, node_event)
 
@@ -1359,7 +1363,9 @@ class MatterDeviceController:
             force=force,
         )
 
-    def _node_unavailable(self, node_id: int) -> None:
+    def _node_unavailable(
+        self, node_id: int, force_resubscription: bool = False
+    ) -> None:
         """Mark node as unavailable."""
         # mark node as unavailable (if it wasn't already)
         node = self._nodes[node_id]
@@ -1367,7 +1373,31 @@ class MatterDeviceController:
             return
         node.available = False
         self.server.signal_event(EventType.NODE_UPDATED, node)
-        LOGGER.info("Marked node %s as unavailable", node_id)
+        node_logger = LOGGER.getChild(f"node_{node_id}")
+        node_logger.info("Marked node as unavailable")
+        if force_resubscription:
+            # Make sure the subscriptions are expiring very soon to trigger subscription
+            # resumption logic quickly. This is especially important for battery operated
+            # devices so subscription resumption logic kicks in quickly.
+            node_logger.info(
+                "Forcing subscription timeout in %ds", NODE_RESUBSCRIBE_FORCE_TIMEOUT
+            )
+            asyncio.create_task(
+                self._chip_device_controller.subscription_override_liveness_timeout(
+                    node_id, NODE_RESUBSCRIBE_FORCE_TIMEOUT * 1000
+                )
+            )
+            # Clear the timeout soon after the scheduled timeout above. This causes the
+            # SDK to use the default liveness timeout again, which is what we want for
+            # the once resumed subscription.
+            self._loop.call_later(
+                NODE_RESUBSCRIBE_FORCE_TIMEOUT + 1,
+                lambda: asyncio.create_task(
+                    self._chip_device_controller.subscription_override_liveness_timeout(
+                        node_id, 0
+                    )
+                ),
+            )
 
     async def _node_offline(self, node_id: int) -> None:
         """Mark node as offline."""
@@ -1379,7 +1409,8 @@ class MatterDeviceController:
             return  # nothing to do to
         node.available = False
         self.server.signal_event(EventType.NODE_UPDATED, node)
-        LOGGER.info("Marked node %s as offline", node_id)
+        node_logger = LOGGER.getChild(f"node_{node_id}")
+        node_logger.info("Marked node as offline")
 
     async def _fallback_node_scanner(self) -> None:
         """Scan for operational nodes in the background that are missed by mdns."""
