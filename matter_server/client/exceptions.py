@@ -53,3 +53,11 @@ class InvalidMessage(MatterClientException):
 
 class InvalidServerVersion(MatterClientException):
     """Exception raised when connected to server with incompatible version."""
+
+
+class ServerVersionTooOld(InvalidServerVersion):
+    """Exception raised when connected to server with is too old to support this client."""
+
+
+class ServerVersionTooNew(InvalidServerVersion):
+    """Exception raised when connected to server with is too new for this client."""

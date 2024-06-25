@@ -26,9 +26,10 @@ from .exceptions import (
     ConnectionClosed,
     ConnectionFailed,
     InvalidMessage,
-    InvalidServerVersion,
     InvalidState,
     NotConnected,
+    ServerVersionTooNew,
+    ServerVersionTooOld,
 )
 
 LOGGER = logging.getLogger(f"{__package__}.connection")
@@ -79,14 +80,22 @@ class MatterClientConnection:
         info = cast(ServerInfoMessage, await self.receive_message_or_raise())
         self.server_info = info
 
-        # basic check for server schema version compatibility
-        if info.min_supported_schema_version > SCHEMA_VERSION:
-            # our schema version is too low and can't be handled by the server anymore.
+        if info.schema_version < SCHEMA_VERSION:
+            # The client schema is too new, the server can't handle it yet
             await self._ws_client.close()
-            raise InvalidServerVersion(
+            raise ServerVersionTooOld(
+                f"Matter schema version is incompatible: {SCHEMA_VERSION}, "
+                f"the server supports at most {info.schema_version} "
+                "- update the Matter server to a more recent version or downgrade the client."
+            )
+
+        if info.min_supported_schema_version > SCHEMA_VERSION:
+            # The client schema version is too low and can't be handled by the server anymore
+            await self._ws_client.close()
+            raise ServerVersionTooNew(
                 f"Matter schema version is incompatible: {SCHEMA_VERSION}, "
                 f"the server requires at least {info.min_supported_schema_version} "
-                " - update the Matter client to a more recent version or downgrade the server."
+                "- update the Matter client to a more recent version or downgrade the server."
             )
 
         LOGGER.info(

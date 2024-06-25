@@ -131,6 +131,10 @@ class MatterServer:
         self.command_handlers: dict[str, APICommandHandler] = {}
         self._device_controller: MatterDeviceController | None = None
         self._subscribers: set[EventCallBackType] = set()
+        if MIN_SCHEMA_VERSION > SCHEMA_VERSION:
+            raise RuntimeError(
+                "Minimum supported schema version can't be higher than current schema version."
+            )
 
     @cached_property
     def device_controller(self) -> MatterDeviceController:
