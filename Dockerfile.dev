@@ -3,8 +3,6 @@ FROM python:3.11-slim-bullseye
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-WORKDIR /app
-
 RUN \
     set -x \
     && apt-get update \
@@ -17,12 +15,23 @@ RUN \
         unzip \
         libcairo2 \
         gdb \
+        curl \ 
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g npm@latest 
     && apt-get purge -y --auto-remove \
     && rm -rf \
         /var/lib/apt/lists/* \
         /usr/src/*
 
+WORKDIR /app
 COPY . ./
+
+WORKDIR /app/dashboard/script
+RUN ./setup 
+RUN ./build 
+
+WORKDIR /app
 
 # hadolint ignore=DL3013
 RUN \
@@ -31,5 +40,4 @@ RUN \
 
 VOLUME ["/data"]
 EXPOSE 5580
-
 ENTRYPOINT ["./docker-entrypoint.sh"]
