@@ -319,8 +319,16 @@ class ChipDeviceControllerWrapper:
         # This is basically a re-implementation of the chip controller's Read function
         # but one that allows us to send/request custom attributes.
         future = self.server.loop.create_future()
-        device = await self.find_or_establish_case_session(node_id)
         async with self._get_node_lock(node_id):
+            # GetConnectedDevice is guaranteed to return a deviceProxy
+            # otherwise it will raise a ChipStackError exception. A caller to
+            # this function should handle the exception in any case, as the Read
+            # below might raise such exceptions too.
+            device = await self._chip_controller.GetConnectedDevice(
+                nodeid=node_id,
+                allowPASE=False,
+                timeoutMs=None,
+            )
             Attribute.Read(
                 future=future,
                 eventLoop=self.server.loop,
