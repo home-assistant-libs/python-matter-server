@@ -208,7 +208,7 @@ class ChipDeviceControllerWrapper:
         | None
     ):
         """Discover Commissionable Nodes (discovered on BLE or mDNS)."""
-        return await self._call_sdk(self._chip_controller.DiscoverCommissionableNodes)
+        return await self._chip_controller.DiscoverCommissionableNodes()
 
     async def read_attribute(
         self,
