@@ -15,11 +15,16 @@ RUN \
         unzip \
         libcairo2 \
         gdb \
-        curl \ 
-    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs \
-    && npm install -g npm@latest \
-    && apt-get purge -y --auto-remove \
+        curl
+
+RUN \
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash \
+    && export NVM_DIR="$HOME/.nvm" \
+    && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" \
+    && nvm install 18
+
+RUN \
+    apt-get purge -y --auto-remove \
     && rm -rf \
         /var/lib/apt/lists/* \
         /usr/src/*
