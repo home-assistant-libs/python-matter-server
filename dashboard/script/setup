@@ -7,3 +7,7 @@ cd "$(dirname "$0")/.."
 
 # Install node modules
 npm install
+
+# generate descriptions file (from python source)
+cd ".."
+python3 scripts/generate_descriptions.py
