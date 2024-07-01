@@ -28,8 +28,8 @@ export const device_types: Record<number, DeviceType> = {
     "clusters": [
       66,
       67,
-      28,
-      68
+      68,
+      28
     ]
   },
   "22": {
@@ -96,8 +96,8 @@ export const device_types: Record<number, DeviceType> = {
     "id": 14,
     "label": "Aggregator",
     "clusters": [
-      37,
-      29
+      29,
+      37
     ]
   },
   "19": {
@@ -191,13 +191,13 @@ export const device_types: Record<number, DeviceType> = {
     "clusters": [
       512,
       1026,
-      3,
-      1028,
       98,
-      6,
-      4,
-      8,
       1027,
+      1028,
+      6,
+      3,
+      8,
+      4,
       29,
       30
     ]
@@ -262,9 +262,9 @@ export const device_types: Record<number, DeviceType> = {
     "id": 21,
     "label": "Contact Sensor",
     "clusters": [
+      29,
       3,
-      69,
-      29
+      69
     ]
   },
   "262": {
@@ -300,8 +300,8 @@ export const device_types: Record<number, DeviceType> = {
     "id": 773,
     "label": "Pressure Sensor",
     "clusters": [
-      3,
       1027,
+      3,
       29
     ]
   },
@@ -354,10 +354,10 @@ export const device_types: Record<number, DeviceType> = {
     "id": 514,
     "label": "Window Covering",
     "clusters": [
-      258,
-      3,
-      4,
       98,
+      3,
+      258,
+      4,
       29
     ]
   },
@@ -374,9 +374,9 @@ export const device_types: Record<number, DeviceType> = {
     "id": 768,
     "label": "Heating/Cooling Unit",
     "clusters": [
+      98,
       514,
       3,
-      98,
       4,
       6,
       8,
@@ -418,11 +418,11 @@ export const device_types: Record<number, DeviceType> = {
       1286,
       1287,
       1288,
-      6,
+      1289,
       1290,
       1291,
+      6,
       1292,
-      1289,
       1294,
       29
     ]
@@ -437,8 +437,8 @@ export const device_types: Record<number, DeviceType> = {
       1286,
       1287,
       1288,
-      6,
       1289,
+      6,
       1291,
       29
     ]
@@ -452,15 +452,15 @@ export const device_types: Record<number, DeviceType> = {
       1285,
       1286,
       1287,
-      8,
       1288,
-      6,
-      1291,
-      1290,
-      1292,
-      1294,
-      1293,
       1289,
+      1290,
+      1291,
+      6,
+      1293,
+      1294,
+      8,
+      1292,
       29,
       30
     ]
@@ -474,14 +474,14 @@ export const device_types: Record<number, DeviceType> = {
       1285,
       1286,
       1287,
-      8,
       1288,
-      6,
-      1291,
-      1290,
-      1292,
-      1294,
       1289,
+      1290,
+      1291,
+      6,
+      8,
+      1294,
+      1292,
       29,
       30
     ]
@@ -526,14 +526,14 @@ export const device_types: Record<number, DeviceType> = {
     "label": "Room Air Conditioner",
     "clusters": [
       513,
-      1026,
-      3,
+      98,
       514,
+      1026,
       1029,
       6,
-      516,
-      98,
+      3,
       4,
+      516,
       29
     ]
   },
@@ -572,12 +572,12 @@ export const device_types: Record<number, DeviceType> = {
       1029,
       1066,
       1067,
-      1068,
       1036,
-      1070,
       1069,
       1037,
       1071,
+      1068,
+      1070,
       1043,
       1045,
       91,
@@ -692,9 +692,9 @@ export const device_types: Record<number, DeviceType> = {
     "label": "Water Freeze Detector",
     "clusters": [
       128,
+      29,
       3,
-      69,
-      29
+      69
     ]
   },
   "66": {
@@ -711,9 +711,9 @@ export const device_types: Record<number, DeviceType> = {
     "label": "Water Leak Detector",
     "clusters": [
       128,
+      29,
       3,
-      69,
-      29
+      69
     ]
   },
   "68": {
@@ -721,9 +721,9 @@ export const device_types: Record<number, DeviceType> = {
     "label": "Rain Sensor",
     "clusters": [
       128,
+      29,
       3,
-      69,
-      29
+      69
     ]
   },
   "4293984272": {
@@ -739,10 +739,10 @@ export const device_types: Record<number, DeviceType> = {
     "clusters": [
       768,
       257,
+      98,
       1026,
       259,
       3,
-      98,
       6,
       4,
       8,
@@ -12566,6 +12566,12 @@ export const clusters: Record<number, ClusterDescription> = {
     "id": 319486977,
     "label": "EveCluster",
     "attributes": {
+      "319422470": {
+        "id": 319422470,
+        "cluster_id": 319486977,
+        "label": "TimesOpened",
+        "type": "int"
+      },
       "319422474": {
         "id": 319422474,
         "cluster_id": 319486977,
@@ -12593,6 +12599,36 @@ export const clusters: Record<number, ClusterDescription> = {
       "319422473": {
         "id": 319422473,
         "cluster_id": 319486977,
+        "label": "Current",
+        "type": "float32"
+      }
+    }
+  },
+  "308149265": {
+    "id": 308149265,
+    "label": "NeoCluster",
+    "attributes": {
+      "308084771": {
+        "id": 308084771,
+        "cluster_id": 308149265,
+        "label": "Watt",
+        "type": "float32"
+      },
+      "308084769": {
+        "id": 308084769,
+        "cluster_id": 308149265,
+        "label": "WattAccumulated",
+        "type": "float32"
+      },
+      "308084772": {
+        "id": 308084772,
+        "cluster_id": 308149265,
+        "label": "Voltage",
+        "type": "float32"
+      },
+      "308084770": {
+        "id": 308084770,
+        "cluster_id": 308149265,
         "label": "Current",
         "type": "float32"
       }
