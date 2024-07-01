@@ -10,6 +10,8 @@ Install the dependencies:
 script/setup
 ```
 
+NOTE: The python matter server (dependencies) also need to be present in order for the setup to succeed.
+
 Run the development server:
 
 ```bash
