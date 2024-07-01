@@ -57,6 +57,7 @@ jobs:
             tomli_w.dump(pyproject, f)
       - name: Build dashboard
         run: |
+          pip install -e .
           dashboard/script/setup
           dashboard/script/build
       - name: Build python package
