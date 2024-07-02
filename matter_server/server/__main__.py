@@ -98,6 +98,12 @@ parser.add_argument(
     default=None,
     help="Directory where PAA root certificates are stored.",
 )
+parser.add_argument(
+    "--use-test-net-dcl",
+    type=bool,
+    default=False,
+    help="Use PAA root certificates and other device information from test-net DCL.",
+)
 
 args = parser.parse_args()
 
@@ -181,6 +187,7 @@ def main() -> None:
         args.listen_address,
         args.primary_interface,
         args.paa_root_cert_dir,
+        args.use_test_net_dcl,
     )
 
     async def handle_stop(loop: asyncio.AbstractEventLoop) -> None:
