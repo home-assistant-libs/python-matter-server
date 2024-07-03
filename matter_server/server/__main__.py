@@ -100,8 +100,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--enable-test-net-dcl",
-    type=bool,
-    default=False,
+    action="store_true",
     help="Enable PAA root certificates and other device information from test-net DCL.",
 )
 
