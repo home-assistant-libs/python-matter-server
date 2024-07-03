@@ -108,7 +108,7 @@ class MatterServer:
         listen_addresses: list[str] | None = None,
         primary_interface: str | None = None,
         paa_root_cert_dir: Path | None = None,
-        use_test_net_dcl: bool = False,
+        enable_test_net_dcl: bool = False,
     ) -> None:
         """Initialize the Matter Server."""
         self.storage_path = storage_path
@@ -121,7 +121,7 @@ class MatterServer:
             self.paa_root_cert_dir = DEFAULT_PAA_ROOT_CERTS_DIR
         else:
             self.paa_root_cert_dir = Path(paa_root_cert_dir).absolute()
-        self.use_test_net_dcl = use_test_net_dcl
+        self.enable_test_net_dcl = enable_test_net_dcl
         self.logger = logging.getLogger(__name__)
         self.app = web.Application()
         self.loop: asyncio.AbstractEventLoop | None = None
@@ -160,7 +160,7 @@ class MatterServer:
         # NOTE: this must be done before initializing the controller
         await fetch_certificates(
             self.paa_root_cert_dir,
-            fetch_test_certificates=self.use_test_net_dcl,
+            fetch_test_certificates=self.enable_test_net_dcl,
             fetch_production_certificates=True,
         )
 
