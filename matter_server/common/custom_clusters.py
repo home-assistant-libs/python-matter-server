@@ -12,7 +12,7 @@ from chip.clusters.ClusterObjects import (
     ClusterObjectDescriptor,
     ClusterObjectFieldDescriptor,
 )
-from chip.tlv import float32
+from chip.tlv import float32, uint
 
 from matter_server.common.helpers.util import parse_attribute_path
 
@@ -355,6 +355,94 @@ class NeoCluster(Cluster, CustomClusterMixin):
                 return ClusterObjectFieldDescriptor(Type=float32)
 
             value: float32 = 0
+
+
+@dataclass
+class ThirdRealityMeteringCluster(Cluster, CustomClusterMixin):
+    """Custom (vendor-specific) PowerMetering cluster for ThirdReality."""
+
+    id: ClassVar[int] = 0x130DFC02
+
+    @ChipUtility.classproperty
+    def descriptor(cls) -> ClusterObjectDescriptor:
+        """Return descriptor for this cluster."""
+        return ClusterObjectDescriptor(
+            Fields=[
+                ClusterObjectFieldDescriptor(
+                    Label="currentSummationDelivered", Tag=0x0000, Type=uint
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="instantaneousDemand", Tag=0x0400, Type=uint
+                ),
+            ]
+        )
+
+    currentSummationDelivered: uint | None = None
+    instantaneousDemand: uint | None = None
+
+    class Attributes:
+        """Attributes for the custom Cluster."""
+
+        @dataclass
+        class CurrentSummationDelivered(
+            ClusterAttributeDescriptor, CustomClusterAttributeMixin
+        ):
+            """CurrentSummationDelivered represents the most recent summed value of Energy consumed in the premise.
+
+            CurrentSummationDelivered is updated continuously as new measurements are made.
+            This attribute is Read only.
+            Value is set to zero when leave command is received (beginning version 2.6.15),
+            or local factory reset(10s) is performed on the device..
+            """
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x130DFC02
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x0000
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+        @dataclass
+        class InstantaneousDemand(
+            ClusterAttributeDescriptor, CustomClusterAttributeMixin
+        ):
+            """
+            InstantaneousDemand represents the current Demand of Energy delivered at the premise.
+
+            Device is able measure only positive values indicate Demand delivered to the premise.
+            InstantaneousDemand is updated continuously as new measurements are made.
+            The frequency of updates to this field is specific to the metering device,
+            but should be within the range of once every second to once every 5 seconds.
+            The same multiplier and divisor values used for Current Summation Delivered (Energy) will be used.
+            If connected load is below 1W, this attribute is set to 0 and no accumulation of energy is done.
+            """
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x130DFC02
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x0400
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
 
 
 def check_polled_attributes(node_data: MatterNodeData) -> set[str]:
