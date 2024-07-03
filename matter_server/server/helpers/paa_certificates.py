@@ -149,7 +149,9 @@ async def fetch_dcl_certificates(
 # are correctly captured
 
 
-async def fetch_git_certificates(paa_root_cert_dir: Path) -> int:
+async def fetch_git_certificates(
+    paa_root_cert_dir: Path, prefix: str | None = None
+) -> int:
     """Fetch Git PAA Certificates."""
     fetch_count = 0
     LOGGER.info("Fetching the latest PAA root certificates from Git.")
@@ -163,6 +165,8 @@ async def fetch_git_certificates(paa_root_cert_dir: Path) -> int:
                 git_certs = {item["name"].split(".")[0] for item in contents}
             # Fetch certificates
             for cert in git_certs:
+                if prefix and not cert.startswith(prefix):
+                    continue
                 async with http_session.get(f"{GIT_URL}/{cert}.pem") as response:
                     certificate = await response.text()
                 if await write_paa_root_cert(
@@ -238,6 +242,11 @@ async def fetch_certificates(
 
     if fetch_test_certificates:
         total_fetch_count += await fetch_git_certificates(paa_root_cert_dir)
+    else:
+        # Treat the Chip-Test certificates as production, we use them in our examples
+        total_fetch_count += await fetch_git_certificates(
+            paa_root_cert_dir, "Chip-Test"
+        )
 
     await loop.run_in_executor(None, paa_root_cert_dir_version.write_text, "1")
 
