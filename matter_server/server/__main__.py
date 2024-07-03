@@ -15,6 +15,7 @@ from aiorun import run
 import coloredlogs
 
 from matter_server.common.const import VERBOSE_LOG_LEVEL
+from matter_server.common.helpers.logger import MatterFormatter
 from matter_server.server import stack
 
 from .server import MatterServer
@@ -117,6 +118,7 @@ def _setup_logging() -> None:
     log_fmt = (
         "%(asctime)s.%(msecs)03d (%(threadName)s) %(levelname)s [%(name)s] %(message)s"
     )
+    node_log_fmt = "%(asctime)s.%(msecs)03d (%(threadName)s) %(levelname)s [%(name)s] <Node:%(node)s> %(message)s"
     custom_level_style = {
         **coloredlogs.DEFAULT_LEVEL_STYLES,
         "chip_automation": {"color": "green", "faint": True},
@@ -124,9 +126,20 @@ def _setup_logging() -> None:
         "chip_progress": {},
         "chip_error": {"color": "red"},
     }
+    custom_field_styles = {
+        **coloredlogs.DEFAULT_FIELD_STYLES,
+        "node": {"color": "magenta"},
+    }
     # Let coloredlogs handle all levels, we filter levels in the logging module
-    coloredlogs.install(
-        level=logging.NOTSET, level_styles=custom_level_style, fmt=log_fmt
+    handler = coloredlogs.StandardErrorHandler(level=logging.NOTSET)
+    handler.setFormatter(
+        MatterFormatter(
+            fmt=log_fmt,
+            node_fmt=node_log_fmt,
+            datefmt=FORMAT_DATETIME,
+            level_styles=custom_level_style,
+            field_styles=custom_field_styles,
+        )
     )
 
     # Capture warnings.warn(...) and friends messages in logs.
@@ -134,11 +147,11 @@ def _setup_logging() -> None:
     # This way they're where other messages are, and can be filtered as usual.
     logging.captureWarnings(True)
 
-    logging.basicConfig(level=args.log_level.upper())
-    logger = logging.getLogger()
     logging.addLevelName(VERBOSE_LOG_LEVEL, "VERBOSE")
+    logging.basicConfig(level=args.log_level.upper(), handlers=[handler])
 
     # setup file handler
+    logger = logging.getLogger()
     if args.log_file:
         log_filename = os.path.join(args.log_file)
         file_handler = RotatingFileHandler(

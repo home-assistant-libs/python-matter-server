@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 from collections import deque
 from datetime import datetime
-from functools import cached_property
+from functools import cached_property, lru_cache
 import logging
 import secrets
 import time
@@ -229,6 +229,13 @@ class MatterDeviceController:
         """Return the event loop."""
         assert self.server.loop
         return self.server.loop
+
+    @lru_cache(maxsize=1024)  # noqa: B019
+    def get_node_logger(
+        self, logger: logging.Logger, node_id: int
+    ) -> logging.LoggerAdapter:
+        """Return a logger for a specific node."""
+        return logging.LoggerAdapter(logger, {"node": node_id})
 
     @api_command(APICommand.GET_NODES)
     def get_nodes(self, only_available: bool = False) -> list[MatterNodeData]:
@@ -757,7 +764,7 @@ class MatterDeviceController:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or is not yet interviewed"
             )
-        node_logger = LOGGER.getChild(f"node_{node_id}")
+        node_logger = self.get_node_logger(LOGGER, node_id)
 
         battery_powered = (
             node.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH, 0)
@@ -813,7 +820,7 @@ class MatterDeviceController:
             raise NodeNotExists(
                 f"Node {node_id} does not exist or is not yet interviewed"
             )
-        node_logger = LOGGER.getChild(f"node_{node_id}")
+        node_logger = self.get_node_logger(LOGGER, node_id)
         # query mdns for all IP's
         # ensure both fabric id and node id have 16 characters (prefix with zero's)
         mdns_name = f"{self.compressed_fabric_id:0{16}X}-{node_id:0{16}X}.{MDNS_TYPE_OPERATIONAL_NODE}"
@@ -882,7 +889,7 @@ class MatterDeviceController:
                 f"Node {node_id} does not exist or has not been interviewed."
             )
 
-        node_logger = LOGGER.getChild(f"node_{node_id}")
+        node_logger = self.get_node_logger(LOGGER, node_id)
 
         # Shutdown existing subscriptions for this node first
         await self._chip_device_controller.shutdown_subscription(node_id)
@@ -1104,7 +1111,8 @@ class MatterDeviceController:
             # prevent duplicate setup actions
             return
         self._nodes_in_setup.add(node_id)
-        node_logger = LOGGER.getChild(f"node_{node_id}")
+
+        node_logger = self.get_node_logger(LOGGER, node_id)
         node_data = self._nodes[node_id]
         log_timers: dict[int, asyncio.TimerHandle] = {}
         is_thread_node = (
@@ -1297,6 +1305,7 @@ class MatterDeviceController:
         # the mdns name is constructed as [fabricid]-[nodeid]._matter._tcp.local.
         # extract the node id from the name
         node_id = int(name.split("-")[1].split(".")[0], 16)
+        node_logger = self.get_node_logger(logger, node_id)
 
         if not (node := self._nodes.get(node_id)):
             return  # this should not happen, but guard just in case
@@ -1315,13 +1324,13 @@ class MatterDeviceController:
             return
 
         if not self._chip_device_controller.node_has_subscription(node_id):
-            logger.info("Node %s discovered on MDNS", node_id)
+            node_logger.info("Discovered on mDNS")
         elif (now - last_seen) > NODE_MDNS_BACKOFF:
             # node came back online after being offline for a while or restarted
-            logger.info("Node %s re-discovered on MDNS", node_id)
+            node_logger.info("Re-discovered on mDNS")
         elif state_change == ServiceStateChange.Added:
             # Trigger node re-subscriptions when mDNS entry got added
-            logger.info("Node %s activity on MDNS, trigger resubscribe", node_id)
+            node_logger.info("Activity on mDNS, trigger resubscribe")
             asyncio.create_task(
                 self._chip_device_controller.trigger_resubscribe_if_scheduled(
                     node_id, "mDNS state change detected"
@@ -1383,7 +1392,7 @@ class MatterDeviceController:
             return
         node.available = False
         self.server.signal_event(EventType.NODE_UPDATED, node)
-        node_logger = LOGGER.getChild(f"node_{node_id}")
+        node_logger = self.get_node_logger(LOGGER, node_id)
         node_logger.info("Marked node as unavailable")
         if force_resubscription:
             # Make sure the subscriptions are expiring very soon to trigger subscription
@@ -1419,7 +1428,7 @@ class MatterDeviceController:
             return  # nothing to do to
         node.available = False
         self.server.signal_event(EventType.NODE_UPDATED, node)
-        node_logger = LOGGER.getChild(f"node_{node_id}")
+        node_logger = self.get_node_logger(LOGGER, node_id)
         node_logger.info("Marked node as offline")
 
     async def _fallback_node_scanner(self) -> None:
