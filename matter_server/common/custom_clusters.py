@@ -372,7 +372,7 @@ class ThirdRealityMeteringCluster(Cluster, CustomClusterMixin):
                     Label="currentSummationDelivered", Tag=0x0000, Type=uint
                 ),
                 ClusterObjectFieldDescriptor(
-                    Label="instantaneousDemand", Tag=0x0200, Type=uint
+                    Label="instantaneousDemand", Tag=0x0400, Type=uint
                 ),
             ]
         )
