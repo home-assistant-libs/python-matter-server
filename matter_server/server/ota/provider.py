@@ -179,7 +179,7 @@ class ExternalOtaProvider:
             "--discriminator",
             str(ota_provider_discriminator),
             "--secured-device-port",
-            "0",
+            "5540",
             "--KVS",
             str(self._ota_provider_dir / f"chip_kvs_ota_provider_{timestamp}"),
             "--filepath",
@@ -212,7 +212,7 @@ class ExternalOtaProvider:
                 ota_provider_node_id,
             )
 
-            # Notify update node about the availability of the OTA Provider. 
+            # Notify update node about the availability of the OTA Provider.
             # It will query the OTA provider and start the update.
             try:
                 await chip_device_controller.send_command(
