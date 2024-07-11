@@ -96,9 +96,11 @@ class MatterStack:
         self.logger.info("Initializing CHIP/Matter Controller Stack...")
         storage_file = os.path.join(server.storage_path, "chip.json")
         self.logger.debug(
-            "Using storage file: %s - Using bluetooth adapter: %s",
+            "Using storage file: %s - Bluetooth commissioning enabled: %s",
             storage_file,
-            "NO" if bluetooth_adapter_id is None else bluetooth_adapter_id,
+            "NO"
+            if bluetooth_adapter_id is None
+            else f"YES (adapter {bluetooth_adapter_id})",
         )
         # give the fake adapter id of 999 to disable bluetooth
         # because None means use the default adapter
