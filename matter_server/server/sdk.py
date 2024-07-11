@@ -8,7 +8,7 @@ also makes the API more pythonic where possible.
 from __future__ import annotations
 
 import asyncio
-from functools import partial
+from functools import lru_cache, partial
 import logging
 import time
 from typing import TYPE_CHECKING, Any, TypeVar, cast
@@ -40,6 +40,8 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 
 LOGGER = logging.getLogger(__name__)
+
+# pylint: disable=too-many-public-methods
 
 
 class ChipDeviceControllerWrapper:
@@ -98,6 +100,13 @@ class ChipDeviceControllerWrapper:
         **kwargs: Any,
     ) -> _T:
         return await self._call_sdk_executor(None, target, *args, **kwargs)
+
+    @lru_cache(maxsize=1024)  # noqa: B019
+    def get_node_logger(
+        self, logger: logging.Logger, node_id: int
+    ) -> logging.LoggerAdapter:
+        """Return a logger for a specific node."""
+        return logging.LoggerAdapter(logger, {"node": node_id})
 
     async def get_compressed_fabric_id(self) -> int:
         """Get the compressed fabric id."""
@@ -365,7 +374,7 @@ class ChipDeviceControllerWrapper:
         if self._chip_controller is None:
             raise RuntimeError("Device Controller not initialized.")
 
-        node_logger = LOGGER.getChild(f"node_{node_id}")
+        node_logger = self.get_node_logger(LOGGER, node_id)
         attempt = 1
 
         while attempt <= retries:
