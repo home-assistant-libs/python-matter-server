@@ -30,10 +30,7 @@ from ..common.models import (
     ServerInfoMessage,
 )
 from ..server.client_handler import WebsocketClientHandler
-from .const import (
-    DEFAULT_PAA_ROOT_CERTS_DIR,
-    MIN_SCHEMA_VERSION,
-)
+from .const import DEFAULT_PAA_ROOT_CERTS_DIR, MIN_SCHEMA_VERSION
 from .device_controller import MatterDeviceController
 from .stack import MatterStack
 from .storage import StorageController
@@ -109,6 +106,7 @@ class MatterServer:
         primary_interface: str | None = None,
         paa_root_cert_dir: Path | None = None,
         enable_test_net_dcl: bool = False,
+        bluetooth_adapter_id: int | None = None,
     ) -> None:
         """Initialize the Matter Server."""
         self.storage_path = storage_path
@@ -122,11 +120,12 @@ class MatterServer:
         else:
             self.paa_root_cert_dir = Path(paa_root_cert_dir).absolute()
         self.enable_test_net_dcl = enable_test_net_dcl
+        self.bluetooth_enabled = bluetooth_adapter_id is not None
         self.logger = logging.getLogger(__name__)
         self.app = web.Application()
         self.loop: asyncio.AbstractEventLoop | None = None
         # Instantiate the Matter Stack using the SDK using the given storage path
-        self.stack = MatterStack(self)
+        self.stack = MatterStack(self, bluetooth_adapter_id)
         self.storage = StorageController(self)
         self.vendor_info = VendorInfo(self)
         # we dynamically register command handlers
@@ -243,6 +242,7 @@ class MatterServer:
             sdk_version=chip_clusters_version(),
             wifi_credentials_set=self._device_controller.wifi_credentials_set,
             thread_credentials_set=self._device_controller.thread_credentials_set,
+            bluetooth_enabled=self.bluetooth_enabled,
         )
 
     @api_command(APICommand.SERVER_DIAGNOSTICS)

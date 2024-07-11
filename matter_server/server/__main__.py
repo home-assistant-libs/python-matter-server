@@ -103,6 +103,12 @@ parser.add_argument(
     action="store_true",
     help="Enable PAA root certificates and other device information from test-net DCL.",
 )
+parser.add_argument(
+    "--bluetooth-adapter",
+    type=int,
+    required=False,
+    help="Optional bluetooth adapter (id) to enable direct commisisoning support.",
+)
 
 args = parser.parse_args()
 

@@ -166,6 +166,7 @@ class ServerInfoMessage:
     sdk_version: str
     wifi_credentials_set: bool
     thread_credentials_set: bool
+    bluetooth_enabled: bool
 
 
 MessageType = (
