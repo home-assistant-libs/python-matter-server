@@ -949,7 +949,7 @@ class MatterDeviceController:
         notify the node about the new update.
         """
 
-        node_logger = LOGGER.getChild(f"node_{node_id}")
+        node_logger = self.get_node_logger(LOGGER, node_id)
         node_logger.info("Update to software version %r", software_version)
 
         update = await self._check_node_update(node_id, software_version)
@@ -997,7 +997,7 @@ class MatterDeviceController:
         node_id: int,
         requested_software_version: int | str | None = None,
     ) -> dict | None:
-        node_logger = LOGGER.getChild(f"node_{node_id}")
+        node_logger = self.get_node_logger(LOGGER, node_id)
         node = self._nodes[node_id]
 
         node_logger.debug("Check for updates.")
