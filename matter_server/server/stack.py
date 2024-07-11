@@ -89,13 +89,22 @@ class MatterStack:
     def __init__(
         self,
         server: "MatterServer",
+        bluetooth_adapter_id: int | None = None,
     ) -> None:
         """Initialize Matter Stack."""
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing CHIP/Matter Controller Stack...")
         storage_file = os.path.join(server.storage_path, "chip.json")
-        self.logger.debug("Using storage file: %s", storage_file)
-        chip.native.Init()
+        self.logger.debug(
+            "Using storage file: %s - Bluetooth commissioning enabled: %s",
+            storage_file,
+            "NO"
+            if bluetooth_adapter_id is None
+            else f"YES (adapter {bluetooth_adapter_id})",
+        )
+        # give the fake adapter id of 999 to disable bluetooth
+        # because None means use the default adapter
+        chip.native.Init(999 if bluetooth_adapter_id is None else bluetooth_adapter_id)
 
         # Initialize logging after stack init!
         # See: https://github.com/project-chip/connectedhomeip/issues/20233

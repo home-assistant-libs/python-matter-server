@@ -258,8 +258,10 @@ class MatterDeviceController:
 
         :return: The NodeInfo of the commissioned device.
         """
-        node_id = self._get_next_node_id()
+        if not network_only and not self.server.bluetooth_enabled:
+            raise NodeCommissionFailed("Bluetooth commissioning is not available.")
 
+        node_id = self._get_next_node_id()
         LOGGER.info(
             "Starting Matter commissioning with code using Node ID %s.",
             node_id,
