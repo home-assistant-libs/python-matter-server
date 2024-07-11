@@ -12,30 +12,30 @@ from matter_server.server.helpers import DCL_PRODUCTION_URL
 LOGGER = logging.getLogger(__name__)
 
 
-async def _get_software_versions(vid: int, pid: int) -> Any:
+async def _get_software_versions(session: ClientSession, vid: int, pid: int) -> Any:
     """Check DCL if there are updates available for a particular node."""
-    async with ClientSession(raise_for_status=False) as http_session:
-        # fetch the paa certificates list
-        async with http_session.get(
-            f"{DCL_PRODUCTION_URL}/dcl/model/versions/{vid}/{pid}"
-        ) as response:
-            if response.status == HTTPStatus.NOT_FOUND:
-                return None
-            response.raise_for_status()
-            return await response.json()
+    # fetch the paa certificates list
+    async with session.get(f"/dcl/model/versions/{vid}/{pid}") as response:
+        if response.status == HTTPStatus.NOT_FOUND:
+            return None
+        response.raise_for_status()
+        return await response.json()
 
 
-async def _get_software_version(vid: int, pid: int, software_version: int) -> Any:
+async def _get_software_version(
+    session: ClientSession, vid: int, pid: int, software_version: int
+) -> Any:
     """Check DCL if there are updates available for a particular node."""
-    async with ClientSession(raise_for_status=True) as http_session:
-        # fetch the paa certificates list
-        async with http_session.get(
-            f"{DCL_PRODUCTION_URL}/dcl/model/versions/{vid}/{pid}/{software_version}"
-        ) as response:
-            return await response.json()
+    # fetch the paa certificates list
+    async with session.get(
+        f"/dcl/model/versions/{vid}/{pid}/{software_version}"
+    ) as response:
+        response.raise_for_status()
+        return await response.json()
 
 
 async def _check_update_version(
+    session: ClientSession,
     vid: int,
     pid: int,
     current_software_version: int,
@@ -43,7 +43,7 @@ async def _check_update_version(
     requested_software_version_string: str | None = None,
 ) -> None | dict:
     version_res: dict = await _get_software_version(
-        vid, pid, requested_software_version
+        session, vid, pid, requested_software_version
     )
     if not isinstance(version_res, dict):
         raise TypeError("Unexpected DCL response.")
@@ -81,38 +81,53 @@ async def check_for_update(
 ) -> None | dict:
     """Check if there is a software update available on the DCL."""
     try:
-        # If a specific version as integer is requested, just fetch it (and hope it exists)
-        if isinstance(requested_software_version, int):
-            return await _check_update_version(
-                vid, pid, current_software_version, requested_software_version
-            )
+        async with ClientSession(
+            base_url=DCL_PRODUCTION_URL, raise_for_status=False
+        ) as session:
+            # If a specific version as integer is requested, just fetch it (and hope it exists)
+            if isinstance(requested_software_version, int):
+                return await _check_update_version(
+                    session,
+                    vid,
+                    pid,
+                    current_software_version,
+                    requested_software_version,
+                )
 
-        # Get all versions and check each one of them.
-        versions = await _get_software_versions(vid, pid)
-        if versions is None:
-            LOGGER.info("There is no update information for this device on the DCL.")
+            # Get all versions and check each one of them.
+            versions = await _get_software_versions(session, vid, pid)
+            if versions is None:
+                LOGGER.info(
+                    "There is no update information for this device on the DCL."
+                )
+                return None
+
+            all_software_versions: list[int] = versions["modelVersions"][
+                "softwareVersions"
+            ]
+            newer_software_versions = [
+                version
+                for version in all_software_versions
+                if version > current_software_version
+            ]
+
+            # Check if there is a newer software version available, no downgrade possible
+            if not newer_software_versions:
+                return None
+
+            # Check if latest firmware is applicable, and backtrack from there
+            for version in sorted(newer_software_versions, reverse=True):
+                if version_candidate := await _check_update_version(
+                    session,
+                    vid,
+                    pid,
+                    current_software_version,
+                    version,
+                    requested_software_version,
+                ):
+                    return version_candidate
+                LOGGER.debug("Software version %d not applicable.", version)
             return None
-
-        all_software_versions: list[int] = versions["modelVersions"]["softwareVersions"]
-        newer_software_versions = [
-            version
-            for version in all_software_versions
-            if version > current_software_version
-        ]
-
-        # Check if there is a newer software version available, no downgrade possible
-        if not newer_software_versions:
-            LOGGER.info("No newer software version available.")
-            return None
-
-        # Check if latest firmware is applicable, and backtrack from there
-        for version in sorted(newer_software_versions, reverse=True):
-            if version_candidate := await _check_update_version(
-                vid, pid, current_software_version, version, requested_software_version
-            ):
-                return version_candidate
-            LOGGER.debug("Software version %d not applicable.", version)
-        return None
 
     except (ClientError, TimeoutError) as err:
         raise UpdateCheckError(
