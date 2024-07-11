@@ -212,8 +212,8 @@ class ExternalOtaProvider:
                 ota_provider_node_id,
             )
 
-            # Notify update node about the availability of the OTA Provider. It will query
-            # the OTA provider and start the update.
+            # Notify update node about the availability of the OTA Provider. 
+            # It will query the OTA provider and start the update.
             try:
                 await chip_device_controller.send_command(
                     node_id,
