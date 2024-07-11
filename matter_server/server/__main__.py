@@ -193,6 +193,7 @@ def main() -> None:
         args.primary_interface,
         args.paa_root_cert_dir,
         args.enable_test_net_dcl,
+        args.bluetooth_adapter,
     )
 
     async def handle_stop(loop: asyncio.AbstractEventLoop) -> None:
