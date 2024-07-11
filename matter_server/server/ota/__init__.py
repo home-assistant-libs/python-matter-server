@@ -1,5 +1,7 @@
 """OTA implementation for the Matter Server."""
 
+from logging import LoggerAdapter
+
 from matter_server.server.ota import dcl
 
 HARDCODED_UPDATES: dict[tuple[int, int], dict] = {
@@ -35,6 +37,7 @@ HARDCODED_UPDATES: dict[tuple[int, int], dict] = {
 
 
 async def check_for_update(
+    logger: LoggerAdapter,
     vid: int,
     pid: int,
     current_software_version: int,
@@ -51,5 +54,5 @@ async def check_for_update(
             return update
 
     return await dcl.check_for_update(
-        vid, pid, current_software_version, requested_software_version
+        logger, vid, pid, current_software_version, requested_software_version
     )

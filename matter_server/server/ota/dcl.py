@@ -9,8 +9,6 @@ from aiohttp import ClientError, ClientSession
 from matter_server.common.errors import UpdateCheckError
 from matter_server.server.helpers import DCL_PRODUCTION_URL
 
-LOGGER = logging.getLogger(__name__)
-
 
 async def _get_software_versions(session: ClientSession, vid: int, pid: int) -> Any:
     """Check DCL if there are updates available for a particular node."""
@@ -74,6 +72,7 @@ async def _check_update_version(
 
 
 async def check_for_update(
+    logger: logging.LoggerAdapter,
     vid: int,
     pid: int,
     current_software_version: int,
@@ -97,7 +96,7 @@ async def check_for_update(
             # Get all versions and check each one of them.
             versions = await _get_software_versions(session, vid, pid)
             if versions is None:
-                LOGGER.info(
+                logger.info(
                     "There is no update information for this device on the DCL."
                 )
                 return None
@@ -126,7 +125,7 @@ async def check_for_update(
                     requested_software_version,
                 ):
                     return version_candidate
-                LOGGER.debug("Software version %d not applicable.", version)
+                logger.debug("Software version %d not applicable.", version)
             return None
 
     except (ClientError, TimeoutError) as err:

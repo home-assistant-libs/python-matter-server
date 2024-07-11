@@ -1013,7 +1013,7 @@ class MatterDeviceController:
         )
 
         update = await check_for_update(
-            vid, pid, software_version, requested_software_version
+            node_logger, vid, pid, software_version, requested_software_version
         )
         if not update:
             node_logger.info("No new update found.")
