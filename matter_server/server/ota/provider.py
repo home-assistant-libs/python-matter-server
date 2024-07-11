@@ -359,6 +359,7 @@ class ExternalOtaProvider:
                 self._ota_done.set_exception(
                     UpdateError("Target node did not process the update file")
                 )
+                return
 
             LOGGER.info(
                 "Node %d update state idle, assuming done.", self._ota_target_node_id
