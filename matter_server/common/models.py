@@ -229,3 +229,30 @@ class MatterSoftwareVersion:
     min_applicable_software_version: int
     max_applicable_software_version: int
     release_notes_url: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> MatterSoftwareVersion:
+        """Initialize from dict."""
+        return cls(
+            vid=data["vid"],
+            pid=data["pid"],
+            software_version=data["software_version"],
+            software_version_string=data["software_version_string"],
+            firmware_information=data["firmware_information"],
+            min_applicable_software_version=data["min_applicable_software_version"],
+            max_applicable_software_version=data["max_applicable_software_version"],
+            release_notes_url=data["release_notes_url"],
+        )
+
+    def as_dict(self) -> dict:
+        """Return dict representation of the object."""
+        return {
+            "vid": self.vid,
+            "pid": self.pid,
+            "software_version": self.software_version,
+            "software_version_string": self.software_version_string,
+            "firmware_information": self.firmware_information,
+            "min_applicable_software_version": self.min_applicable_software_version,
+            "max_applicable_software_version": self.max_applicable_software_version,
+            "release_notes_url": self.release_notes_url,
+        }
