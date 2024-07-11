@@ -15,7 +15,7 @@ from aiorun import run
 import coloredlogs
 
 from matter_server.common.const import VERBOSE_LOG_LEVEL
-from matter_server.common.helpers.logger import MatterFormatter
+from matter_server.common.helpers.logger import MatterFormatter, MatterNodeFilter
 from matter_server.server import stack
 
 from .server import MatterServer
@@ -110,6 +110,12 @@ parser.add_argument(
     required=False,
     help="Optional bluetooth adapter (id) to enable direct commisisoning support.",
 )
+parser.add_argument(
+    "--log-node-ids",
+    type=int,
+    nargs="+",
+    help="List of node IDs to show logs from (applies only to server logs).",
+)
 
 args = parser.parse_args()
 
@@ -141,6 +147,9 @@ def _setup_logging() -> None:
             field_styles=custom_field_styles,
         )
     )
+
+    if args.log_node_ids:
+        handler.addFilter(MatterNodeFilter(set(args.log_node_ids)))
 
     # Capture warnings.warn(...) and friends messages in logs.
     # The standard destination for them is stderr, which may end up unnoticed.

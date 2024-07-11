@@ -31,3 +31,22 @@ class MatterFormatter(ColoredFormatter):  # type: ignore[misc]
         result = super().format(record)
         self._style = original_style
         return cast(str, result)
+
+
+class MatterNodeFilter(logging.Filter):
+    """Filter for Matter project to filter by node."""
+
+    def __init__(self, node: set[int], name: str = ""):
+        """Initialize the filter."""
+        super().__init__(name)
+        self.node = node
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Filter the log record."""
+        if not hasattr(record, "node"):
+            return True
+
+        # Always display warnings and above
+        if record.levelno >= logging.WARNING:
+            return True
+        return record.node in self.node
