@@ -1,6 +1,6 @@
 """Test DCL OTA updates."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -62,7 +62,7 @@ def mock_get_software_version():
 async def test_check_updates(get_software_versions, get_software_version):
     """Test the case where the latest software version is applicable."""
     # Call the function with a current software version of 1000
-    result = await check_for_update(4447, 8194, 1000)
+    result = await check_for_update(MagicMock(), 4447, 8194, 1000)
 
     assert result == DCL_RESPONSE_SOFTWARE_VERSION_1011["modelVersion"]
 
@@ -72,7 +72,7 @@ async def test_check_updates_not_applicable(
 ):
     """Test the case where the latest software version is not applicable."""
     # Call the function with a current software version of 1
-    result = await check_for_update(4447, 8194, 1)
+    result = await check_for_update(MagicMock(), 4447, 8194, 1)
 
     assert result is None
 
@@ -80,6 +80,6 @@ async def test_check_updates_not_applicable(
 async def test_check_updates_specific_version(get_software_version):
     """Test the case to get a specific version."""
     # Call the function with a current software version of 1000 and request 1011 as update
-    result = await check_for_update(4447, 8194, 1000, 1011)
+    result = await check_for_update(MagicMock(), 4447, 8194, 1000, 1011)
 
     assert result == DCL_RESPONSE_SOFTWARE_VERSION_1011["modelVersion"]
