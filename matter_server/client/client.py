@@ -519,7 +519,9 @@ class MatterClient:
 
         The "softwareVersionString" is a human friendly version string.
         """
-        data = await self.send_command(APICommand.CHECK_NODE_UPDATE, node_id=node_id, require_schema=10)
+        data = await self.send_command(
+            APICommand.CHECK_NODE_UPDATE, node_id=node_id, require_schema=10
+        )
         if data is None:
             return None
 
@@ -535,7 +537,7 @@ class MatterClient:
             APICommand.UPDATE_NODE,
             node_id=node_id,
             software_version=software_version,
-            require_schema=10
+            require_schema=10,
         )
 
     def _prepare_message(
