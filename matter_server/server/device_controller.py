@@ -28,9 +28,15 @@ from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZerocon
 
 from matter_server.common.const import VERBOSE_LOG_LEVEL
 from matter_server.common.custom_clusters import check_polled_attributes
-from matter_server.common.models import CommissionableNodeData, CommissioningParameters
+from matter_server.common.models import (
+    CommissionableNodeData,
+    CommissioningParameters,
+    MatterSoftwareVersion,
+)
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
+from matter_server.server.ota import check_for_update, load_local_updates
+from matter_server.server.ota.provider import ExternalOtaProvider
 from matter_server.server.sdk import ChipDeviceControllerWrapper
 
 from ..common.errors import (
@@ -40,6 +46,8 @@ from ..common.errors import (
     NodeNotExists,
     NodeNotReady,
     NodeNotResolving,
+    UpdateCheckError,
+    UpdateError,
 )
 from ..common.helpers.api import api_command
 from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_loads
@@ -55,11 +63,12 @@ from ..common.models import (
     MatterNodeData,
     MatterNodeEvent,
     NodePingResult,
+    UpdateSource,
 )
 from .const import DATA_MODEL_SCHEMA_VERSION
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
     from pathlib import Path
 
     from .server import MatterServer
@@ -91,11 +100,23 @@ ROUTING_ROLE_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
 DESCRIPTOR_PARTS_LIST_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
     0, Clusters.Descriptor.Attributes.PartsList
 )
+BASIC_INFORMATION_VENDOR_ID_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
+    0, Clusters.BasicInformation.Attributes.VendorID
+)
+BASIC_INFORMATION_PRODUCT_ID_ATTRIBUTE_PATH = create_attribute_path_from_attribute(
+    0, Clusters.BasicInformation.Attributes.ProductID
+)
 BASIC_INFORMATION_SOFTWARE_VERSION_ATTRIBUTE_PATH = (
     create_attribute_path_from_attribute(
         0, Clusters.BasicInformation.Attributes.SoftwareVersion
     )
 )
+BASIC_INFORMATION_SOFTWARE_VERSION_STRING_ATTRIBUTE_PATH = (
+    create_attribute_path_from_attribute(
+        0, Clusters.BasicInformation.Attributes.SoftwareVersionString
+    )
+)
+
 
 # pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods
 
@@ -107,9 +128,11 @@ class MatterDeviceController:
         self,
         server: MatterServer,
         paa_root_cert_dir: Path,
+        ota_provider_dir: Path,
     ):
         """Initialize the device controller."""
         self.server = server
+        self._ota_provider_dir = ota_provider_dir
 
         self._chip_device_controller = ChipDeviceControllerWrapper(
             server, paa_root_cert_dir
@@ -122,6 +145,7 @@ class MatterDeviceController:
         self._wifi_credentials_set: bool = False
         self._thread_credentials_set: bool = False
         self._nodes_in_setup: set[int] = set()
+        self._nodes_in_ota: set[int] = set()
         self._node_last_seen: dict[int, float] = {}
         self._nodes: dict[int, MatterNodeData] = {}
         self._last_known_ip_addresses: dict[int, list[str]] = {}
@@ -137,6 +161,7 @@ class MatterDeviceController:
         self._polled_attributes: dict[int, set[str]] = {}
         self._custom_attribute_poller_timer: asyncio.TimerHandle | None = None
         self._custom_attribute_poller_task: asyncio.Task | None = None
+        self._attribute_update_callbacks: dict[int, list[Callable]] = {}
 
     async def initialize(self) -> None:
         """Initialize the device controller."""
@@ -144,6 +169,7 @@ class MatterDeviceController:
             await self._chip_device_controller.get_compressed_fabric_id()
         )
         self._fabric_id_hex = hex(self._compressed_fabric_id)[2:]
+        await load_local_updates(self._ota_provider_dir)
 
     async def start(self) -> None:
         """Handle logic on controller start."""
@@ -876,6 +902,137 @@ class MatterDeviceController:
             self._nodes[node.node_id] = node
             self.server.signal_event(EventType.NODE_ADDED, node)
 
+    @api_command(APICommand.CHECK_NODE_UPDATE)
+    async def check_node_update(self, node_id: int) -> MatterSoftwareVersion | None:
+        """
+        Check if there is an update for a particular node.
+
+        Reads the current software version and checks the DCL if there is an update
+        available. If there is an update available, the command returns the version
+        information of the latest update available.
+        """
+
+        update_source, update = await self._check_node_update(node_id)
+        if update_source is None or update is None:
+            return None
+
+        if not all(
+            key in update
+            for key in [
+                "vid",
+                "pid",
+                "softwareVersion",
+                "softwareVersionString",
+                "minApplicableSoftwareVersion",
+                "maxApplicableSoftwareVersion",
+            ]
+        ):
+            raise UpdateCheckError("Invalid update data")
+
+        return MatterSoftwareVersion(
+            vid=update["vid"],
+            pid=update["pid"],
+            software_version=update["softwareVersion"],
+            software_version_string=update["softwareVersionString"],
+            firmware_information=update.get("firmwareInformation", None),
+            min_applicable_software_version=update["minApplicableSoftwareVersion"],
+            max_applicable_software_version=update["maxApplicableSoftwareVersion"],
+            release_notes_url=update.get("releaseNotesUrl", None),
+            update_source=update_source,
+        )
+
+    @api_command(APICommand.UPDATE_NODE)
+    async def update_node(self, node_id: int, software_version: int | str) -> None:
+        """
+        Update a node to a new software version.
+
+        This command checks if the requested software version is indeed still available
+        and if so, it will start the update process. The update process will be handled
+        by the built-in OTA provider. The OTA provider will download the update and
+        notify the node about the new update.
+        """
+
+        node_logger = self.get_node_logger(LOGGER, node_id)
+        node_logger.info("Update to software version %r", software_version)
+
+        _, update = await self._check_node_update(node_id, software_version)
+        if update is None:
+            raise UpdateCheckError(
+                f"Software version {software_version} is not available for node {node_id}."
+            )
+
+        # Add update to the OTA provider
+        ota_provider = ExternalOtaProvider(
+            self.server.vendor_id, self._ota_provider_dir / f"{node_id}"
+        )
+
+        await ota_provider.initialize()
+
+        node_logger.info("Downloading update from '%s'", update["otaUrl"])
+        await ota_provider.download_update(update)
+
+        self._attribute_update_callbacks.setdefault(node_id, []).append(
+            ota_provider.check_update_state
+        )
+
+        try:
+            if node_id in self._nodes_in_ota:
+                raise UpdateError(
+                    f"Node {node_id} is already in the process of updating."
+                )
+
+            self._nodes_in_ota.add(node_id)
+
+            # Make sure any previous instances get stopped
+            node_logger.info("Starting update using OTA Provider.")
+            await ota_provider.start_update(
+                self._chip_device_controller,
+                node_id,
+            )
+        finally:
+            self._attribute_update_callbacks[node_id].remove(
+                ota_provider.check_update_state
+            )
+            self._nodes_in_ota.remove(node_id)
+
+    async def _check_node_update(
+        self,
+        node_id: int,
+        requested_software_version: int | str | None = None,
+    ) -> tuple[UpdateSource, dict] | tuple[None, None]:
+        node_logger = self.get_node_logger(LOGGER, node_id)
+        node = self._nodes[node_id]
+
+        node_logger.debug("Check for updates.")
+        vid = cast(int, node.attributes.get(BASIC_INFORMATION_VENDOR_ID_ATTRIBUTE_PATH))
+        pid = cast(
+            int, node.attributes.get(BASIC_INFORMATION_PRODUCT_ID_ATTRIBUTE_PATH)
+        )
+        software_version = cast(
+            int, node.attributes.get(BASIC_INFORMATION_SOFTWARE_VERSION_ATTRIBUTE_PATH)
+        )
+        software_version_string = node.attributes.get(
+            BASIC_INFORMATION_SOFTWARE_VERSION_STRING_ATTRIBUTE_PATH
+        )
+
+        update_source, update = await check_for_update(
+            node_logger, vid, pid, software_version, requested_software_version
+        )
+        if not update_source or not update:
+            node_logger.info("No new update found.")
+            return None, None
+
+        if "otaUrl" not in update:
+            raise UpdateCheckError("Update found, but no OTA URL provided.")
+
+        node_logger.info(
+            "New software update found: %s on %s (current %s).",
+            update["softwareVersionString"],
+            update_source,
+            software_version_string,
+        )
+        return update_source, update
+
     async def _subscribe_node(self, node_id: int) -> None:
         """
         Subscribe to all node state changes/events for an individual node.
@@ -933,6 +1090,10 @@ class MatterDeviceController:
 
             # schedule save to persistent storage
             self._write_node_state(node_id)
+
+            if node_id in self._attribute_update_callbacks:
+                for callback in self._attribute_update_callbacks[node_id]:
+                    self._loop.create_task(callback(path, old_value, new_value))
 
             # This callback is running in the CHIP stack thread
             self.server.signal_event(

@@ -29,6 +29,7 @@ from ..common.models import (
     EventType,
     MatterNodeData,
     MatterNodeEvent,
+    MatterSoftwareVersion,
     MessageType,
     NodePingResult,
     ResultMessageBase,
@@ -508,6 +509,36 @@ class MatterClient:
     async def interview_node(self, node_id: int) -> None:
         """Interview a node."""
         await self.send_command(APICommand.INTERVIEW_NODE, node_id=node_id)
+
+    async def check_node_update(self, node_id: int) -> MatterSoftwareVersion | None:
+        """Check Node for updates.
+
+        Return a dict with the available update information. Most notable
+        "softwareVersion" contains the integer value of the update version which then
+        can be used for the update_node command to trigger the update.
+
+        The "softwareVersionString" is a human friendly version string.
+        """
+        data = await self.send_command(
+            APICommand.CHECK_NODE_UPDATE, node_id=node_id, require_schema=10
+        )
+        if data is None:
+            return None
+
+        return dataclass_from_dict(MatterSoftwareVersion, data)
+
+    async def update_node(
+        self,
+        node_id: int,
+        software_version: int | str,
+    ) -> None:
+        """Start node update to a particular version."""
+        await self.send_command(
+            APICommand.UPDATE_NODE,
+            node_id=node_id,
+            software_version=software_version,
+            require_schema=10,
+        )
 
     def _prepare_message(
         self,

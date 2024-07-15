@@ -19,14 +19,14 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.utils import CryptographyDeprecationWarning
 
+from matter_server.server.helpers import DCL_PRODUCTION_URL, DCL_TEST_URL
+
 # Git repo details
 OWNER = "project-chip"
 REPO = "connectedhomeip"
 PATH = "credentials/development/paa-root-certs"
 
 LOGGER = logging.getLogger(__name__)
-PRODUCTION_URL = "https://on.dcl.csa-iot.org"
-TEST_URL = "https://on.test-net.dcl.csa-iot.org"
 GIT_URL = f"https://raw.githubusercontent.com/{OWNER}/{REPO}/master/{PATH}"
 
 
@@ -226,7 +226,7 @@ async def fetch_certificates(
         fetch_count = await fetch_dcl_certificates(
             paa_root_cert_dir=paa_root_cert_dir,
             base_name="dcld_production_",
-            base_url=PRODUCTION_URL,
+            base_url=DCL_PRODUCTION_URL,
         )
         LOGGER.info("Fetched %s PAA root certificates from DCL.", fetch_count)
         total_fetch_count += fetch_count
@@ -235,7 +235,7 @@ async def fetch_certificates(
         fetch_count = await fetch_dcl_certificates(
             paa_root_cert_dir=paa_root_cert_dir,
             base_name="dcld_test_",
-            base_url=TEST_URL,
+            base_url=DCL_TEST_URL,
         )
         LOGGER.info("Fetched %s PAA root certificates from Test DCL.", fetch_count)
         total_fetch_count += fetch_count
