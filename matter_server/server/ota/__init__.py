@@ -14,6 +14,8 @@ async def load_local_updates(ota_provider_dir: Path) -> None:
     """Load updates from locally stored json files."""
 
     def _load_update(ota_provider_dir: Path) -> None:
+        if not ota_provider_dir.exists():
+            return
         for update_file in ota_provider_dir.glob("*.json"):
             with open(update_file) as f:
                 update = json.load(f)
