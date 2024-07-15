@@ -213,6 +213,14 @@ class CommissioningParameters:
     setup_qr_code: str
 
 
+class UpdateSource(Enum):
+    """Enum with possible sources for a software update."""
+
+    MAIN_NET_DCL = "main-net-dcl"
+    TEST_NET_DCL = "test-net-dcl"
+    LOCAL = "local"
+
+
 @dataclass
 class MatterSoftwareVersion:
     """Representation of a Matter software version. Return by the check_node_update command.
@@ -229,6 +237,7 @@ class MatterSoftwareVersion:
     min_applicable_software_version: int
     max_applicable_software_version: int
     release_notes_url: str | None
+    update_source: UpdateSource
 
     @classmethod
     def from_dict(cls, data: dict) -> MatterSoftwareVersion:
@@ -242,6 +251,7 @@ class MatterSoftwareVersion:
             min_applicable_software_version=data["min_applicable_software_version"],
             max_applicable_software_version=data["max_applicable_software_version"],
             release_notes_url=data["release_notes_url"],
+            update_source=UpdateSource(data["update_source"]),
         )
 
     def as_dict(self) -> dict:
@@ -255,4 +265,5 @@ class MatterSoftwareVersion:
             "min_applicable_software_version": self.min_applicable_software_version,
             "max_applicable_software_version": self.max_applicable_software_version,
             "release_notes_url": self.release_notes_url,
+            "update_source": str(self.update_source),
         }

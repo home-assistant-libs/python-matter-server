@@ -63,6 +63,7 @@ from ..common.models import (
     MatterNodeData,
     MatterNodeEvent,
     NodePingResult,
+    UpdateSource,
 )
 from .const import DATA_MODEL_SCHEMA_VERSION
 
@@ -911,8 +912,8 @@ class MatterDeviceController:
         information of the latest update available.
         """
 
-        update = await self._check_node_update(node_id)
-        if update is None:
+        update_source, update = await self._check_node_update(node_id)
+        if update_source is None or update is None:
             return None
 
         if not all(
@@ -937,6 +938,7 @@ class MatterDeviceController:
             min_applicable_software_version=update["minApplicableSoftwareVersion"],
             max_applicable_software_version=update["maxApplicableSoftwareVersion"],
             release_notes_url=update.get("releaseNotesUrl", None),
+            update_source=update_source,
         )
 
     @api_command(APICommand.UPDATE_NODE)
@@ -953,7 +955,7 @@ class MatterDeviceController:
         node_logger = self.get_node_logger(LOGGER, node_id)
         node_logger.info("Update to software version %r", software_version)
 
-        update = await self._check_node_update(node_id, software_version)
+        _, update = await self._check_node_update(node_id, software_version)
         if update is None:
             raise UpdateCheckError(
                 f"Software version {software_version} is not available for node {node_id}."
@@ -997,7 +999,7 @@ class MatterDeviceController:
         self,
         node_id: int,
         requested_software_version: int | str | None = None,
-    ) -> dict | None:
+    ) -> tuple[UpdateSource, dict] | tuple[None, None]:
         node_logger = self.get_node_logger(LOGGER, node_id)
         node = self._nodes[node_id]
 
@@ -1013,22 +1015,23 @@ class MatterDeviceController:
             BASIC_INFORMATION_SOFTWARE_VERSION_STRING_ATTRIBUTE_PATH
         )
 
-        update = await check_for_update(
+        update_source, update = await check_for_update(
             node_logger, vid, pid, software_version, requested_software_version
         )
-        if not update:
+        if not update_source or not update:
             node_logger.info("No new update found.")
-            return None
+            return None, None
 
         if "otaUrl" not in update:
             raise UpdateCheckError("Update found, but no OTA URL provided.")
 
         node_logger.info(
-            "New software update found: %s (current %s).",
+            "New software update found: %s on %s (current %s).",
             update["softwareVersionString"],
+            update_source,
             software_version_string,
         )
-        return update
+        return update_source, update
 
     async def _subscribe_node(self, node_id: int) -> None:
         """

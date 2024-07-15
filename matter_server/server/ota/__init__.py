@@ -5,6 +5,7 @@ import json
 from logging import LoggerAdapter
 from pathlib import Path
 
+from matter_server.common.models import UpdateSource
 from matter_server.server.ota import dcl
 
 _local_updates: dict[tuple[int, int], dict] = {}
@@ -35,17 +36,19 @@ async def check_for_update(
     pid: int,
     current_software_version: int,
     requested_software_version: int | str | None = None,
-) -> None | dict:
+) -> tuple[UpdateSource, dict] | tuple[None, None]:
     """Check for software updates."""
     if (vid, pid) in _local_updates:
-        update = _local_updates[(vid, pid)]
+        local_update = _local_updates[(vid, pid)]
         if (
             requested_software_version is None
-            or update["softwareVersion"] == requested_software_version
-            or update["softwareVersionString"] == requested_software_version
+            or local_update["softwareVersion"] == requested_software_version
+            or local_update["softwareVersionString"] == requested_software_version
         ):
-            return update
+            return UpdateSource.LOCAL, local_update
 
-    return await dcl.check_for_update(
+    if dcl_update := await dcl.check_for_update(
         logger, vid, pid, current_software_version, requested_software_version
-    )
+    ):
+        return UpdateSource.MAIN_NET_DCL, dcl_update
+    return None, None
