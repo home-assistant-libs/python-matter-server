@@ -35,7 +35,7 @@ from matter_server.common.models import (
 )
 from matter_server.server.helpers.attributes import parse_attributes_from_read_result
 from matter_server.server.helpers.utils import ping_ip
-from matter_server.server.ota import check_for_update
+from matter_server.server.ota import check_for_update, load_local_updates
 from matter_server.server.ota.provider import ExternalOtaProvider
 from matter_server.server.sdk import ChipDeviceControllerWrapper
 
@@ -168,6 +168,7 @@ class MatterDeviceController:
             await self._chip_device_controller.get_compressed_fabric_id()
         )
         self._fabric_id_hex = hex(self._compressed_fabric_id)[2:]
+        await load_local_updates(self._ota_provider_dir)
 
     async def start(self) -> None:
         """Handle logic on controller start."""
