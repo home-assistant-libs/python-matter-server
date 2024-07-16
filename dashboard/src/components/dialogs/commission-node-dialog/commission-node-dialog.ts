@@ -5,6 +5,7 @@ import "@material/web/list/list-item";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { preventDefault } from "../../../util/prevent_default";
+import { MatterNode } from "../../../client/models/node";
 
 @customElement("commission-node-dialog")
 export class ComissionNodeDialog extends LitElement {
@@ -14,7 +15,7 @@ export class ComissionNodeDialog extends LitElement {
     return html`
       <md-dialog open @cancel=${preventDefault} @closed=${this._handleClosed}>
         <div slot="headline">Commission node</div>
-        <div slot="content">
+        <div slot="content" @node-commissioned=${this._nodeCommissioned}>
           ${!this._mode
             ? html`<md-list>
                 <md-list-item type="button" @click=${this._commissionWifi}
@@ -55,6 +56,11 @@ export class ComissionNodeDialog extends LitElement {
     this._mode = "existing";
   }
 
+  private _nodeCommissioned(ev: CustomEvent<MatterNode>) {
+    window.location.href = `#node/${ev.detail.node_id}`;
+    this._close();
+  }
+
   private _close() {
     this.shadowRoot!.querySelector("md-dialog")!.close();
   }
@@ -67,5 +73,9 @@ export class ComissionNodeDialog extends LitElement {
 declare global {
   interface HTMLElementTagNameMap {
     "commission-node-dialog": ComissionNodeDialog;
+  }
+
+  interface HASSDomEvents {
+    "node-commissioned": MatterNode;
   }
 }

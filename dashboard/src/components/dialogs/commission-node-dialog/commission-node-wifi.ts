@@ -5,6 +5,7 @@ import { LitElement, html } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import { MatterClient } from "../../../client/client";
 import { clientContext } from "../../../client/client-context";
+import { fireEvent } from "../../../util/fire_event";
 
 @customElement("commission-node-wifi")
 export class CommissionNodeWifi extends LitElement {
@@ -52,7 +53,10 @@ export class CommissionNodeWifi extends LitElement {
 
   private async _commissionNode() {
     try {
-      await this.client.commissionWithCode(this._pairingCodeField.value, false);
-    } catch (e) {}
+      const node = await this.client.commissionWithCode(this._pairingCodeField.value, false);
+      fireEvent(this, "node-commissioned", node);
+    } catch (e) {
+        alert(`Error commissioning node: ${e.message}`);
+    }
   }
 }
