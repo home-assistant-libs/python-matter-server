@@ -82,7 +82,10 @@ class ExternalOtaProvider:
         loop = asyncio.get_event_loop()
 
         await loop.run_in_executor(
-            None, functools.partial(self._ota_provider_dir.mkdir, exist_ok=True)
+            None,
+            functools.partial(
+                self._ota_provider_dir.mkdir, exist_ok=True, parents=True
+            ),
         )
 
     async def _commission_ota_provider(
