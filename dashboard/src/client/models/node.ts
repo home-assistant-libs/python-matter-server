@@ -38,6 +38,14 @@ export class MatterNode {
     return this.attributes["0/40/15"];
   }
 
+  get updateState(): number | undefined {
+    return this.attributes["0/42/2"];
+  }
+
+  get updateStateProgress(): number | undefined {
+    return this.attributes["0/42/3"];
+  }
+
   update(data: Record<string, any>): MatterNode {
     return new MatterNode({ ...this.data, ...data });
   }

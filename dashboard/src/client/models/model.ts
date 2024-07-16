@@ -236,6 +236,5 @@ export interface MatterFabricData {
 }
 
 
-
 export type NotificationType = "success" | "info" | "warning" | "error";
 export type NodePingResult = Record<string, boolean>;
