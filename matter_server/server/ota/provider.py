@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 from base64 import b64encode
 from datetime import UTC, datetime
-import functools
 import hashlib
 import logging
 from pathlib import Path
@@ -78,14 +77,8 @@ class ExternalOtaProvider:
 
     async def initialize(self) -> None:
         """Initialize OTA Provider."""
-
-        loop = asyncio.get_event_loop()
-
-        await loop.run_in_executor(
-            None,
-            functools.partial(
-                self._ota_provider_dir.mkdir, exist_ok=True, parents=True
-            ),
+        await asyncio.to_thread(
+            self._ota_provider_dir.mkdir, exist_ok=True, parents=True
         )
 
     async def _commission_ota_provider(
