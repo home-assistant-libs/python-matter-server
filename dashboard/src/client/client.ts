@@ -3,8 +3,10 @@ import { Connection } from "./connection";
 import { InvalidServerVersion } from "./exceptions";
 import {
   APICommands,
+  CommissioningParameters,
   ErrorResultMessage,
   EventMessage,
+  MatterSoftwareVersion,
   NodePingResult,
   SuccessResultMessage,
 } from "./models/model";
@@ -42,25 +44,33 @@ export class MatterClient {
   }
 
   async commissionWithCode(code: string, networkOnly: boolean): Promise<MatterNode> {
+    // Commission a device using a QR Code or Manual Pairing Code.
+    // code: The QR Code or Manual Pairing Code for device commissioning.
+    // network_only: If True, restricts device discovery to network only.
+    // Returns: The NodeInfo of the commissioned device.
     return await this.sendCommand("commission_with_code", 0, { code: code, network_only: networkOnly }) as MatterNode;
   }
 
   async setWifiCredentials(ssid: string, credentials: string) {
+    // Set WiFi credentials for commissioning to a (new) device.
     await this.sendCommand("set_wifi_credentials", 0, { ssid, credentials })
   }
 
   async setThreadOperationalDataset(dataset: string) {
+    // Set Thread Operational dataset in the stack.
     await this.sendCommand("set_thread_dataset", 0, { dataset })
   }
 
   async openCommissioningWindow(
     nodeId: number,
-    timeout = 300,
-    iteration = 1000,
-    option = 1,
-    distriminator: number | undefined = undefined
-  ) {
-    console.log("TODO");
+    timeout?: number,
+    iteration?: number,
+    option?: number,
+    distriminator?: number
+  ): Promise<CommissioningParameters> {
+    // Open a commissioning window to commission a device present on this controller to another.
+    // Returns code to use as discriminator.
+    return await this.sendCommand("open_commissioning_window", 0, { node_id: nodeId, timeout, iteration, option, distriminator }) as CommissioningParameters;
   }
 
   async discoverCommissionableNodes() {
@@ -76,11 +86,13 @@ export class MatterClient {
   }
 
   async pingNode(nodeId: number): Promise<NodePingResult> {
-    return await this.sendCommand("ping_node", 0, { node_id: nodeId });
+    // Ping node on the currently known IP-address(es).
+    return await this.sendCommand("ping_node", 0, { node_id: nodeId }) as NodePingResult;
   }
 
-  async getNodeIPAddresses(nodeId: number, preferCache = false, scoped = false): Promise<string[]> {
-    return await this.sendCommand("get_node_ip_addresses", 0, { node_id: nodeId, prefer_cache: preferCache, scoped: scoped });
+  async getNodeIPAddresses(nodeId: number, preferCache?: boolean, scoped?: boolean): Promise<string[]> {
+    // Return the currently known (scoped) IP-address(es).
+    return await this.sendCommand("get_node_ip_addresses", 8, { node_id: nodeId, prefer_cache: preferCache, scoped: scoped }) as string[];
   }
 
   async removeNode(nodeId: number) {
@@ -97,6 +109,23 @@ export class MatterClient {
 
   async writeAttribute(nodeId: number, attributePath: string, value: any) {
     await this.sendCommand("write_attribute", 0, { node_id: nodeId, attribute_path: attributePath, value: value });
+  }
+
+  async checkNodeUpdate(nodeId: number): Promise<MatterSoftwareVersion | null> {
+    // Check if there is an update for a particular node.
+    // Reads the current software version and checks the DCL if there is an update
+    // available. If there is an update available, the command returns the version
+    // information of the latest update available.
+    return await this.sendCommand("check_node_update", 10, { node_id: nodeId });
+  }
+
+  async updateNode(nodeId: number, softwareVersion: number | string) {
+    // Update a node to a new software version.
+    // This command checks if the requested software version is indeed still available
+    // and if so, it will start the update process. The update process will be handled
+    // by the built-in OTA provider. The OTA provider will download the update and
+    // notify the node about the new update.
+    await this.sendCommand("update_node", 10, { node_id: nodeId, software_version: softwareVersion });
   }
 
   async sendCommand<T extends keyof APICommands>(

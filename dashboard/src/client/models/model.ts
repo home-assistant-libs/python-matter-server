@@ -75,15 +75,23 @@ export interface APICommands {
   };
   ping_node: {
     requestArgs: {};
-    response: NodePingResult;
+    response: {};
   };
   import_test_node: {
-    requestArgs: { dump: string; };
+    requestArgs: {};
     response: null;
   };
   get_node_ip_addresses: {
-    requestArgs: { node_id: number, prefer_cache: boolean, scoped: boolean };
-    response: string[];
+    requestArgs: {};
+    response: {};
+  };
+  check_node_update: {
+    requestArgs: {};
+    response: MatterSoftwareVersion | null;
+  };
+  update_node: {
+    requestArgs: {};
+    response: MatterSoftwareVersion | null;
   };
 }
 
@@ -158,6 +166,49 @@ export interface WebSocketConfig {
   port: string;
   scheme: string;
   path: string;
+}
+
+export enum UpdateSource {
+  MAIN_NET_DCL = "main-net-dcl",
+  TEST_NET_DCL = "test-net-dcl",
+  LOCAL = "local"
+}
+
+export interface MatterSoftwareVersion {
+  vid: number
+  pid: number
+  software_version: number
+  software_version_string: string
+  firmware_information?: string
+  min_applicable_software_version: number
+  max_applicable_software_version: number
+  release_notes_url?: string
+  update_source: UpdateSource
+}
+
+export interface CommissioningParameters {
+  setup_pin_code: number
+  setup_manual_code: string
+  setup_qr_code: string
+}
+
+export interface CommissionableNodeData {
+  instance_name?: string
+  host_name?: string
+  port?: number
+  long_discriminator?: number
+  vendor_id?: number
+  product_id?: number
+  commissioning_mode?: number
+  device_type?: number
+  device_name?: string
+  pairing_instruction?: string
+  pairing_hint?: number
+  mrp_retry_interval_idle?: number
+  mrp_retry_interval_active?: number
+  supports_tcp?: boolean
+  addresses?: string[]
+  rotating_id?: string
 }
 
 export type NotificationType = "success" | "info" | "warning" | "error";
