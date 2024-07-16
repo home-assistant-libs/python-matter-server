@@ -15,7 +15,7 @@ export class CommissionNodeThread extends LitElement {
   public client!: MatterClient;
 
   @state()
-  private _loading!: boolean;
+  private _loading: boolean = false;
 
   @query("md-outlined-text-field[label='Thread dataset']")
   private _datasetField!: MdOutlinedTextField;

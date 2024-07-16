@@ -15,7 +15,7 @@ export class CommissionNodeWifi extends LitElement {
   public client!: MatterClient;
 
   @state()
-  private _loading!: boolean;
+  private _loading: boolean = false;
 
   @query("md-outlined-text-field[label='SSID']")
   private _ssidField!: MdOutlinedTextField;
@@ -36,11 +36,11 @@ export class CommissionNodeWifi extends LitElement {
           >Set WiFi Credentials</md-outlined-button
         >${this._loading ? html`<md-circular-progress indeterminate .visible="${this._loading}"></md-circular-progress>` : nothing}`;
     }
-    return html`<md-outlined-text-field label="Pairing code" ?disabled="${this._loading}">
+    return html`<md-outlined-text-field label="Pairing code" .disabled="${this._loading}">
       </md-outlined-text-field>
       <br />
       <br />
-      <md-outlined-button @click=${this._commissionNode} ?disabled="${this._loading}"
+      <md-outlined-button @click=${this._commissionNode} .disabled="${this._loading}"
         >Commission</md-outlined-button
       >${this._loading ? html`<md-circular-progress indeterminate></md-circular-progress>` : nothing}`;
   }

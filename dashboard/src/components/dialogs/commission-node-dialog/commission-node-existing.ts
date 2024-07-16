@@ -15,7 +15,7 @@ export class CommissionNodeExisting extends LitElement {
   public client!: MatterClient;
 
   @state()
-  private _loading!: boolean;
+  private _loading: boolean = false;
 
   @query("md-outlined-text-field[label='Share code']")
   private _pairingCodeField!: MdOutlinedTextField;
