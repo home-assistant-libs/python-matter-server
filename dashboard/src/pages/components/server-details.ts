@@ -69,8 +69,9 @@ export class ServerDetails extends LitElement {
   `;
   }
 
-  private async _commissionNode() {
-    showCommissionNodeDialog();
+  private _commissionNode() {
+    console.log(this.client);
+    showCommissionNodeDialog(this.client!);
   }
 
   private async _uploadDiagnosticsDumpFile() {

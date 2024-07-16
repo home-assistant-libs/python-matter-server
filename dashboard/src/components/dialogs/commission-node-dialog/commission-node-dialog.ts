@@ -3,14 +3,18 @@ import "@material/web/dialog/dialog";
 import "@material/web/list/list";
 import "@material/web/list/list-item";
 import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { preventDefault } from "../../../util/prevent_default";
+import { customElement, property, state } from "lit/decorators.js";
 import { MatterNode } from "../../../client/models/node";
+import { preventDefault } from "../../../util/prevent_default";
+import { MatterClient } from "../../../client/client";
 
 @customElement("commission-node-dialog")
 export class ComissionNodeDialog extends LitElement {
-  @state() private _mode?: "wifi" | "thread" | "existing";
 
+  @property({ attribute: false }) public client!: MatterClient;
+
+  @state() private _mode?: "wifi" | "thread" | "existing";
+  
   protected render() {
     return html`
       <md-dialog open @cancel=${preventDefault} @closed=${this._handleClosed}>
@@ -18,10 +22,10 @@ export class ComissionNodeDialog extends LitElement {
         <div slot="content" @node-commissioned=${this._nodeCommissioned}>
           ${!this._mode
             ? html`<md-list>
-                <md-list-item type="button" @click=${this._commissionWifi}
+                <md-list-item type="button" .disabled=${!this.client.serverInfo.bluetooth_enabled} @click=${this._commissionWifi}
                   >Commission new WiFi device</md-list-item
                 >
-                <md-list-item type="button" @click=${this._commissionThread}
+                <md-list-item type="button" .disabled=${!this.client.serverInfo.bluetooth_enabled} @click=${this._commissionThread}
                   >Commission new Thread device</md-list-item
                 >
                 <md-list-item type="button" @click=${this._commissionExisting}
@@ -42,11 +46,17 @@ export class ComissionNodeDialog extends LitElement {
   }
 
   private _commissionWifi() {
+    if (!this.client.serverInfo.bluetooth_enabled) {
+      return;
+    }
     import("./commission-node-wifi");
     this._mode = "wifi";
   }
 
   private _commissionThread() {
+    if (!this.client.serverInfo.bluetooth_enabled) {
+      return;
+    }
     import("./commission-node-thread");
     this._mode = "thread";
   }
