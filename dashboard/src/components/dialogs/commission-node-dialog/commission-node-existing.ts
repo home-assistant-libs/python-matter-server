@@ -33,7 +33,7 @@ export class CommissionNodeExisting extends LitElement {
   private async _commissionNode() {
     this._loading = true;
     try {
-      const node = await this.client.commissionWithCode(this._pairingCodeField.value, false);
+      const node = await this.client.commissionWithCode(this._pairingCodeField.value, true);
       fireEvent(this, "node-commissioned", node);
     } catch (err) {
       alert(`Error commissioning node: ${(err as Error).message}`);
