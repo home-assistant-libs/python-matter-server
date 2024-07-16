@@ -267,6 +267,12 @@ export class MatterClient {
       this.fireEvent("nodes_changed");
       return;
     }
+
+    if (event.event === "server_info_updated") {
+      this.connection.serverInfo = event.data;
+      this.fireEvent("server_info_updated");
+      return;
+    }
   }
 
   private fireEvent(event: string, data?: any) {

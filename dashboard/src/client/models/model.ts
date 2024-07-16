@@ -156,8 +156,12 @@ interface ServerEventEndpointRemoved {
   event: "endpoint_removed";
   data: {};
 }
+interface ServerEvenInfoUpdated {
+  event: "server_info_updated";
+  data: ServerInfoMessage;
+}
 
-export type EventMessage = ServerEventNodeAdded | ServerEventNodeUpdated | ServerEventNodeRemoved | ServerEventNodeEvent | ServerEventAttributeUpdated | ServerEventServerShutdown | ServerEventEndpointAdded | ServerEventEndpointRemoved
+export type EventMessage = ServerEventNodeAdded | ServerEventNodeUpdated | ServerEventNodeRemoved | ServerEventNodeEvent | ServerEventAttributeUpdated | ServerEventServerShutdown | ServerEventEndpointAdded | ServerEventEndpointRemoved | ServerEvenInfoUpdated
 
 
 export interface ResultMessageBase {

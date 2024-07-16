@@ -20,6 +20,7 @@ class EventType(Enum):
     NODE_EVENT = "node_event"
     ATTRIBUTE_UPDATED = "attribute_updated"
     SERVER_SHUTDOWN = "server_shutdown"
+    SERVER_INFO_UPDATED = "server_info_updated"
     ENDPOINT_ADDED = "endpoint_added"
     ENDPOINT_REMOVED = "endpoint_removed"
 
