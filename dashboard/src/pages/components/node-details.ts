@@ -5,9 +5,9 @@ import "@material/web/divider/divider";
 import "@material/web/iconbutton/icon-button";
 import "@material/web/list/list";
 import "@material/web/list/list-item";
-import { mdiChatProcessing, mdiTrashCan } from "@mdi/js";
+import { mdiChatProcessing, mdiTrashCan, mdiUpdate } from "@mdi/js";
 import { LitElement, css, html, nothing } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { MatterClient } from "../../client/client";
 import { DeviceType } from "../../client/models/descriptions";
 import { MatterNode } from "../../client/models/node";
@@ -37,6 +37,9 @@ export class NodeDetails extends LitElement {
 
   @property() public node?: MatterNode;
 
+  @state()
+  private _updateInitiated: boolean = false;
+
   protected render() {
     if (!this.node) return html``;
     return html`
@@ -44,19 +47,18 @@ export class NodeDetails extends LitElement {
         <md-list-item>
             <div slot="headline">
                 <b>Node ${this.node.node_id} ${this.node.nodeLabel}</b>
-                ${
-                  this.node.available
-                    ? nothing
-                    : html`<span class="status">OFFLINE</span>`
-                }
+                ${this.node.available
+        ? nothing
+        : html`<span class="status">OFFLINE</span>`
+      }
       </div>
         </md-list-item>
         <md-list-item>
           <div slot="supporting-text">
-            <span class="left">VendorName: </div>${this.node.vendorName}
+            <span class="left">VendorName: </span>${this.node.vendorName}
           </div>
           <div slot="supporting-text">
-            <span class="left">productName: </div>${this.node.productName}
+            <span class="left">productName: </span>${this.node.productName}
           </div>
           <div slot="supporting-text">
             <span class="left">Commissioned: </span>${this.node.date_commissioned}
@@ -70,23 +72,25 @@ export class NodeDetails extends LitElement {
           <div slot="supporting-text">
             <span class="left">Serialnumber: </span>${this.node.serialNumber}
           </div>
-          ${
-            this.node.is_bridge
-              ? ""
-              : html` <div slot="supporting-text">
+          ${this.node.is_bridge
+        ? ""
+        : html` <div slot="supporting-text">
                   <span class="left">All device types: </span
                   >${getNodeDeviceTypes(this.node)
-                    .map((deviceType) => {
-                      return deviceType.label;
-                    })
-                    .join(" / ")}
+            .map((deviceType) => {
+              return deviceType.label;
+            })
+            .join(" / ")}
                 </div>`
-          }
+      }
         </md-list-item>
         <md-list-item class="btn">
           <span>
-            <md-outlined-button @click=${this._reinterview}>Interview node<ha-svg-icon slot="icon" .path=${mdiChatProcessing}></ha-svg-icon></md-outlined-button>
-            <md-outlined-button @click=${this._remove}>Remove node<ha-svg-icon slot="icon"  .path=${mdiTrashCan}></ha-svg-icon></md-outlined-button>
+            <md-outlined-button @click=${this._reinterview}>Interview<ha-svg-icon slot="icon" .path=${mdiChatProcessing}></ha-svg-icon></md-outlined-button>
+            ${this.node.updateStateProgress != null || this._updateInitiated ? html`
+                <md-outlined-button disabled>Update (${this.node.updateStateProgress || 0}%)<ha-svg-icon slot="icon" .path=${mdiUpdate}></ha-svg-icon></md-outlined-button>`
+        : html`<md-outlined-button @click=${this._searchUpdate}>Update<ha-svg-icon slot="icon" .path=${mdiUpdate}></ha-svg-icon></md-outlined-button>`}
+            <md-outlined-button @click=${this._remove}>Remove<ha-svg-icon slot="icon" .path=${mdiTrashCan}></ha-svg-icon></md-outlined-button>
           </md-list-item>
       </md-list>
   `;
@@ -136,6 +140,41 @@ export class NodeDetails extends LitElement {
         title: "Failed to remove node",
         text: err.message,
       });
+    }
+  }
+
+  private async _searchUpdate() {
+    const nodeUpdate = await this.client.checkNodeUpdate(this.node!.node_id);
+    if (!nodeUpdate) {
+      showAlertDialog({
+        title: "No update available",
+        text: "No update available for this node",
+      });
+      return
+    }
+    if (
+      !(await showPromptDialog({
+        title: "Firmware update available",
+        text: `Found a firmware update for this node on ${nodeUpdate.update_source}.
+          Do you want to update this node to version ${nodeUpdate.software_version_string}?
+          Note that updating firmware is at your own risk and may cause the device to
+          malfunction or needs additional handling such as power cycling it and/or recommisisoning it.
+          Use with care.\n${nodeUpdate.firmware_information}`,
+        confirmText: "Start Update",
+      }))
+    ) {
+      return;
+    }
+    try {
+      this._updateInitiated = true;
+      await this.client.updateNode(this.node!.node_id, nodeUpdate.software_version);
+    } catch (err: any) {
+      showAlertDialog({
+        title: "Failed to update node",
+        text: err.message,
+      });
+    } finally {
+      this._updateInitiated = false
     }
   }
 
