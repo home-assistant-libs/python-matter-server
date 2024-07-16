@@ -5,6 +5,7 @@ import {
   APICommands,
   ErrorResultMessage,
   EventMessage,
+  NodePingResult,
   SuccessResultMessage,
 } from "./models/model";
 
@@ -40,20 +41,16 @@ export class MatterClient {
     };
   }
 
-  async commissionWithCode(code: string, networkOnly: boolean) {
-    console.log("TODO");
-  }
-
-  async commissionOnNetwork(setup_pin_code: number, ip_addr: string) {
-    console.log("TODO");
+  async commissionWithCode(code: string, networkOnly: boolean): Promise<MatterNode> {
+    return await this.sendCommand("commission_with_code", 0, { code: code, network_only: networkOnly }) as MatterNode;
   }
 
   async setWifiCredentials(ssid: string, credentials: string) {
-    console.log("TODO");
+    await this.sendCommand("set_wifi_credentials", 0, { ssid, credentials })
   }
 
   async setThreadOperationalDataset(dataset: string) {
-    console.log("TODO");
+    await this.sendCommand("set_thread_dataset", 0, { dataset })
   }
 
   async openCommissioningWindow(
@@ -78,8 +75,12 @@ export class MatterClient {
     console.log("TODO");
   }
 
-  async pingNode(nodeId: number) {
-    await this.sendCommand("ping_node", 0, { node_id: nodeId });
+  async pingNode(nodeId: number): Promise<NodePingResult> {
+    return await this.sendCommand("ping_node", 0, { node_id: nodeId });
+  }
+
+  async getNodeIPAddresses(nodeId: number, preferCache = false, scoped = false): Promise<string[]> {
+    return await this.sendCommand("get_node_ip_addresses", 0, { node_id: nodeId, prefer_cache: preferCache, scoped: scoped });
   }
 
   async removeNode(nodeId: number) {
@@ -92,6 +93,10 @@ export class MatterClient {
 
   async importTestNode(dump: string) {
     await this.sendCommand("import_test_node", 0, { dump });
+  }
+
+  async writeAttribute(nodeId: number, attributePath: string, value: any) {
+    await this.sendCommand("write_attribute", 0, { node_id: nodeId, attribute_path: attributePath, value: value });
   }
 
   async sendCommand<T extends keyof APICommands>(

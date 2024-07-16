@@ -75,11 +75,15 @@ export interface APICommands {
   };
   ping_node: {
     requestArgs: {};
-    response: {};
+    response: NodePingResult;
   };
   import_test_node: {
     requestArgs: { dump: string; };
     response: null;
+  };
+  get_node_ip_addresses: {
+    requestArgs: { node_id: number, prefer_cache: boolean, scoped: boolean };
+    response: string[];
   };
 }
 
@@ -97,6 +101,7 @@ export interface ServerInfoMessage {
   sdk_version: string;
   wifi_credentials_set: boolean;
   thread_credentials_set: boolean;
+  bluetooth_enabled: boolean;
 }
 
 interface ServerEventNodeAdded {
@@ -156,3 +161,4 @@ export interface WebSocketConfig {
 }
 
 export type NotificationType = "success" | "info" | "warning" | "error";
+export type NodePingResult = Record<string, boolean>;
