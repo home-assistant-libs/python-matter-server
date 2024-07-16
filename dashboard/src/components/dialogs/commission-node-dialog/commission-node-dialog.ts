@@ -14,7 +14,7 @@ export class ComissionNodeDialog extends LitElement {
   @property({ attribute: false }) public client!: MatterClient;
 
   @state() private _mode?: "wifi" | "thread" | "existing";
-  
+
   protected render() {
     return html`
       <md-dialog open @cancel=${preventDefault} @closed=${this._handleClosed}>
