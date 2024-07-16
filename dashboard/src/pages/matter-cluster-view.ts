@@ -1,15 +1,14 @@
-import "@material/web/iconbutton/icon-button";
 import "@material/web/divider/divider";
-import { LitElement, css, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import "@material/web/iconbutton/icon-button";
 import "@material/web/list/list";
 import "@material/web/list/list-item";
-import "@material/web/divider/divider";
+import { LitElement, css, html } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { MatterClient } from "../client/client";
-import "../components/ha-svg-icon";
-import { MatterNode } from "../client/models/node";
 import { clusters } from "../client/models/descriptions";
+import { MatterNode } from "../client/models/node";
 import { showAlertDialog } from "../components/dialog-box/show-dialog-box";
+import "../components/ha-svg-icon";
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -17,12 +16,16 @@ declare global {
   }
 }
 
-function clusterAttributes(attributes: { [key: string]: any }, endpoint: number, cluster: number) {
+function clusterAttributes(
+  attributes: { [key: string]: any },
+  endpoint: number,
+  cluster: number
+) {
   // extract unique clusters from the node attributes, as (sorted) array
   return Object.keys(attributes)
-    .filter(key => key.startsWith(`${endpoint}/${cluster}`))
+    .filter((key) => key.startsWith(`${endpoint}/${cluster}`))
     .map((key) => {
-      const attributeKey = Number(key.split('/')[2]);
+      const attributeKey = Number(key.split("/")[2]);
       return { key: attributeKey, value: attributes[key] };
     }, []);
 }
@@ -41,15 +44,10 @@ class MatterClusterView extends LitElement {
   public cluster?: number;
 
   render() {
-
     if (!this.node || this.endpoint == undefined || this.cluster == undefined) {
       return html`
         <p>Node, endpoint or cluster not found!</p>
-        <button
-          @click=${this._goBack}
-        >
-          Back
-        </button>
+        <button @click=${this._goBack}>Back</button>
       `;
     }
 
@@ -62,10 +60,7 @@ class MatterClusterView extends LitElement {
 
       <!-- node details section -->
       <div class="container">
-      <node-details
-          .node=${this.node}
-          .client=${this.client}
-        ></node-details>
+        <node-details .node=${this.node} .client=${this.client}></node-details>
       </div>
 
       <!-- Cluster attributes listing -->
@@ -73,35 +68,55 @@ class MatterClusterView extends LitElement {
         <md-list>
           <md-list-item>
             <div slot="headline">
-              <b>Attributes of ${clusters[this.cluster]?.label || 'Custom/Unknown Cluster'} Cluster on Endpoint ${this.endpoint}</b>
+              <b
+                >Attributes of
+                ${clusters[this.cluster]?.label || "Custom/Unknown Cluster"}
+                Cluster on Endpoint ${this.endpoint}</b
+              >
             </div>
             <div slot="supporting-text">
               ClusterId ${this.cluster} (0x00${this.cluster.toString(16)})
             </div>
           </md-list-item>
-          ${clusterAttributes(this.node.attributes, this.endpoint, this.cluster).map((attribute) => {
-      return html`
-                  <md-list-item>
-                    <div slot="headline">
-                    ${clusters[this.cluster!]?.attributes[attribute.key]?.label || 'Custom/Unknown Attribute'}
-                    </div>
-                    <div slot="supporting-text">
-                      AttributeId: ${attribute.key} (0x00${attribute.key.toString(16)}) - Value type: ${clusters[this.cluster!]?.attributes[attribute.key]?.type || 'unknown'}
-                    </div>
-                    <div slot="end">
-                      ${JSON.stringify(attribute.value).length > 20 ? html`<button @click=${() => { this._showAttributeValue(attribute.value) }}>Show value</button>` : JSON.stringify(attribute.value)}
-                    </div>
-                  </md-list-item>
-                  <md-divider />
-                `;
-    })}
+          ${clusterAttributes(
+            this.node.attributes,
+            this.endpoint,
+            this.cluster
+          ).map((attribute) => {
+            return html`
+              <md-list-item>
+                <div slot="headline">
+                  ${clusters[this.cluster!]?.attributes[attribute.key]?.label ||
+                  "Custom/Unknown Attribute"}
+                </div>
+                <div slot="supporting-text">
+                  AttributeId: ${attribute.key}
+                  (0x00${attribute.key.toString(16)}) - Value type:
+                  ${clusters[this.cluster!]?.attributes[attribute.key]?.type ||
+                  "unknown"}
+                </div>
+                <div slot="end">
+                  ${JSON.stringify(attribute.value).length > 20
+                    ? html`<button
+                        @click=${() => {
+                          this._showAttributeValue(attribute.value);
+                        }}
+                      >
+                        Show value
+                      </button>`
+                    : JSON.stringify(attribute.value)}
+                </div>
+              </md-list-item>
+              <md-divider />
+            `;
+          })}
         </md-list>
       </div>
     `;
   }
 
   private async _showAttributeValue(value: any) {
-    showAlertDialog(this, {
+    showAlertDialog({
       title: "Attribute value",
       text: JSON.stringify(value),
     });

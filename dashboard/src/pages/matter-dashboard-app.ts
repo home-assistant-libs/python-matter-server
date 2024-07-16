@@ -1,8 +1,10 @@
-import { LitElement, html, PropertyValueMap } from "lit";
+import { ContextProvider } from "@lit/context";
+import { LitElement, PropertyValueMap, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { MatterClient } from "../client/client";
+import { clientContext } from "../client/client-context";
 import { MatterError } from "../client/exceptions";
-import "./matter-server-view";
+import { clone } from "../util/clone_class";
 import type { Route } from "../util/routing";
 import "./matter-cluster-view";
 import "./matter-endpoint-view";
@@ -29,6 +31,8 @@ class MatterDashboardApp extends LitElement {
 
   private _error: string | undefined;
 
+  private provider = new ContextProvider(this, {context: clientContext, initialValue: this.client});
+
   protected firstUpdated(
     _changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>
   ): void {
@@ -36,9 +40,13 @@ class MatterDashboardApp extends LitElement {
     this.client.startListening().then(
       () => {
         this._state = "connected";
-        this.client.addEventListener("nodes_changed", () =>
-          this.requestUpdate()
-        );
+        this.client.addEventListener("nodes_changed", () => {
+          this.requestUpdate();
+          this.provider.setValue(clone(this.client));
+        });
+        this.client.addEventListener("server_info_updated", () => {
+          this.provider.setValue(clone(this.client));
+        });
       },
       (err: MatterError) => {
         this._state = "error";
@@ -51,7 +59,7 @@ class MatterDashboardApp extends LitElement {
       const pathParts = location.hash.substring(1).split("/");
       this._route = {
         prefix: pathParts.length == 1 ? "" : pathParts[0],
-        path: pathParts.length == 1 ? pathParts : pathParts.slice(1)
+        path: pathParts.length == 1 ? pathParts : pathParts.slice(1),
       };
     };
     window.addEventListener("hashchange", updateRoute);
@@ -105,5 +113,4 @@ class MatterDashboardApp extends LitElement {
       .route=${this._route}
     ></matter-server-view>`;
   }
-
 }

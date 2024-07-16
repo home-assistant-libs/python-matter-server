@@ -1,24 +1,23 @@
-import "@material/web/iconbutton/icon-button";
-import { LitElement, css, html, nothing } from "lit";
-import { customElement } from "lit/decorators.js";
-import "@material/web/list/list";
-import "@material/web/list/list-item";
-import "@material/web/divider/divider";
 import "@material/web/button/filled-button";
 import "@material/web/button/outlined-button";
 import "@material/web/button/text-button";
-import "../../components/ha-svg-icon";
-import { mdiFile } from "@mdi/js";
-import "../../components/ha-svg-icon";
+import "@material/web/divider/divider";
+import "@material/web/iconbutton/icon-button";
+import "@material/web/list/list";
+import "@material/web/list/list-item";
+import { mdiFile, mdiPlus } from "@mdi/js";
+import { LitElement, css, html, nothing } from "lit";
+import { customElement } from "lit/decorators.js";
+import { MatterClient } from "../../client/client";
 import {
   showAlertDialog,
   showPromptDialog,
 } from "../../components/dialog-box/show-dialog-box";
-import { MatterClient } from "../../client/client";
+import { showCommissionNodeDialog } from "../../components/dialogs/commission-node-dialog/show-commission-node-dialog";
+import "../../components/ha-svg-icon";
 
 @customElement("server-details")
 export class ServerDetails extends LitElement {
-
   public client?: MatterClient;
 
   protected render() {
@@ -28,10 +27,12 @@ export class ServerDetails extends LitElement {
       <md-list>
         <md-list-item>
             <div slot="headline">
-                <b>Python Matter Server ${this.client.isProduction ? '' : `(${this.client.serverBaseAddress})`}</b>
-                ${this.client.connection.connected
-        ? nothing
-        : html`<span class="status">OFFLINE</span>`}
+                <b>Python Matter Server ${this.client.isProduction ? "" : `(${this.client.serverBaseAddress})`}</b>
+                ${
+                  this.client.connection.connected
+                    ? nothing
+                    : html`<span class="status">OFFLINE</span>`
+                }
       </div>
         </md-list-item>
         <md-list-item>
@@ -53,7 +54,8 @@ export class ServerDetails extends LitElement {
         </md-list-item>
         <md-list-item class="btn">
           <span>
-            <md-outlined-button @click=${this._uploadDiagnosticsDumpFile}>Import node<ha-svg-icon slot="icon" .path=${mdiFile}></ha-svg-icon></md-outlined-button>
+          <md-outlined-button @click=${this._commissionNode}>Commission node<ha-svg-icon slot="icon" .path=${mdiPlus}></ha-svg-icon></md-outlined-button>
+          <md-outlined-button @click=${this._uploadDiagnosticsDumpFile}>Import node<ha-svg-icon slot="icon" .path=${mdiFile}></ha-svg-icon></md-outlined-button>
           </md-list-item>
       </md-list>
       <!-- hidden file element for the upload diagnostics -->
@@ -67,9 +69,14 @@ export class ServerDetails extends LitElement {
   `;
   }
 
+  private _commissionNode() {
+    console.log(this.client);
+    showCommissionNodeDialog(this.client!);
+  }
+
   private async _uploadDiagnosticsDumpFile() {
     if (
-      !(await showPromptDialog(this, {
+      !(await showPromptDialog({
         title: "Add test node",
         text: "Do you want to add a test node from a diagnostics dump ?",
         confirmText: "Select file",
@@ -78,7 +85,9 @@ export class ServerDetails extends LitElement {
       return;
     }
     // @ts-ignore:next-line
-    const fileElem = this.renderRoot.getElementById('fileElem') as HTMLInputElement;
+    const fileElem = this.renderRoot.getElementById(
+      "fileElem"
+    ) as HTMLInputElement;
     fileElem!.click();
   }
 
@@ -90,23 +99,22 @@ export class ServerDetails extends LitElement {
       reader.readAsText(selectedFile, "UTF-8");
       reader.onload = async () => {
         try {
-          await this.client!.importTestNode(reader.result?.toString() || '');
+          await this.client!.importTestNode(reader.result?.toString() || "");
         } catch (err: any) {
-          showAlertDialog(this, {
+          showAlertDialog({
             title: "Failed to import test node",
             text: err.message,
           });
         }
-      }
+      };
     }
     event.preventDefault();
-  }
+  };
 
   static styles = css`
-
-  .btn {
-    --md-outlined-button-container-shape: 0px;
-  }
+    .btn {
+      --md-outlined-button-container-shape: 0px;
+    }
 
     .left {
       width: 30%;
@@ -115,7 +123,5 @@ export class ServerDetails extends LitElement {
     .whitespace {
       height: 15px;
     }
-
   `;
-
 }
