@@ -150,7 +150,7 @@ export class NodeDetails extends LitElement {
         title: "No update available",
         text: "No update available for this node",
       });
-      return
+      return;
     }
     if (
       !(await showPromptDialog({
