@@ -266,5 +266,5 @@ class MatterSoftwareVersion:
             "min_applicable_software_version": self.min_applicable_software_version,
             "max_applicable_software_version": self.max_applicable_software_version,
             "release_notes_url": self.release_notes_url,
-            "update_source": str(self.update_source),
+            "update_source": self.update_source.value,
         }
