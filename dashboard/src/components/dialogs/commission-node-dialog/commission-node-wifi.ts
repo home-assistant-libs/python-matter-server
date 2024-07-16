@@ -46,41 +46,38 @@ export class CommissionNodeWifi extends LitElement {
   }
 
   private _setWifiCredentials() {
-    this._loading = true;
     const ssid = this._ssidField.value;
     if (!ssid) {
       alert("SSID is required");
-      this._loading = false;
       return;
     }
     const password = this._passwordField.value;
     if (!password) {
       alert("Password is required");
-      this._loading = false;
       return;
     }
+    this._loading = true;
     try {
       this.client.setWifiCredentials(ssid, password);
-      this._loading = false;
     } catch (err) {
       alert(`Error setting WiFi credentials: \n${(err as Error).message}`);
+    } finally {
       this._loading = false;
     }
   }
 
   private async _commissionNode() {
     try {
-      this._loading = true;
       if (!this._pairingCodeField.value) {
         alert("Pairing code is required");
-        this._loading = false;
         return;
       }
+      this._loading = true;
       const node = await this.client.commissionWithCode(this._pairingCodeField.value, false);
       fireEvent(this, "node-commissioned", node);
-      this._loading = false;
     } catch (err) {
       alert(`Error commissioning node: \n${(err as Error).message}`);
+    } finally {
       this._loading = false;
     }
   }
