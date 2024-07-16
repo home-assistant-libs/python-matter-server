@@ -93,6 +93,18 @@ export interface APICommands {
     requestArgs: {};
     response: MatterSoftwareVersion | null;
   };
+  discover_commissionable_nodes: {
+    requestArgs: {};
+    response: {};
+  };
+  get_matter_fabrics: {
+    requestArgs: {};
+    response: {};
+  };
+  remove_matter_fabric: {
+    requestArgs: {};
+    response: {};
+  };
 }
 
 export interface CommandMessage {
@@ -210,6 +222,16 @@ export interface CommissionableNodeData {
   addresses?: string[]
   rotating_id?: string
 }
+
+export interface MatterFabricData {
+  fabric_id?: number
+  vendor_id?: number
+  fabric_index?: number
+  fabric_label?: string
+  vendor_name?: string
+}
+
+
 
 export type NotificationType = "success" | "info" | "warning" | "error";
 export type NodePingResult = Record<string, boolean>;

@@ -3,9 +3,11 @@ import { Connection } from "./connection";
 import { InvalidServerVersion } from "./exceptions";
 import {
   APICommands,
+  CommissionableNodeData,
   CommissioningParameters,
   ErrorResultMessage,
   EventMessage,
+  MatterFabricData,
   MatterSoftwareVersion,
   NodePingResult,
   SuccessResultMessage,
@@ -73,16 +75,20 @@ export class MatterClient {
     return await this.sendCommand("open_commissioning_window", 0, { node_id: nodeId, timeout, iteration, option, distriminator }) as CommissioningParameters;
   }
 
-  async discoverCommissionableNodes() {
-    console.log("TODO");
+  async discoverCommissionableNodes(): Promise<CommissionableNodeData[]> {
+    // Discover Commissionable Nodes (discovered on BLE or mDNS).
+    return await this.sendCommand("discover_commissionable_nodes", 0, {}) as CommissionableNodeData[];
   }
 
-  async getMatterFabrics(nodeId: number) {
-    console.log("TODO");
+  async getMatterFabrics(nodeId: number): Promise<MatterFabricData[]> {
+    // Get Matter fabrics from a device.
+    // Returns a list of MatterFabricData objects.
+    return await this.sendCommand("get_matter_fabrics", 3, {}) as MatterFabricData[];
   }
 
-  async removeMatterFabric(nodeId: number, fabricId: number) {
-    console.log("TODO");
+  async removeMatterFabric(nodeId: number, fabricIndex: number) {
+    // Remove a Matter fabric from a device.
+    await this.sendCommand("remove_matter_fabric", 3, { node_id: nodeId, fabric_index: fabricIndex });
   }
 
   async pingNode(nodeId: number): Promise<NodePingResult> {
@@ -96,18 +102,27 @@ export class MatterClient {
   }
 
   async removeNode(nodeId: number) {
+    // Remove a Matter node/device from the fabric.
     await this.sendCommand("remove_node", 0, { node_id: nodeId });
   }
 
   async interviewNode(nodeId: number) {
+    // Interview a node.
     await this.sendCommand("interview_node", 0, { node_id: nodeId });
   }
 
   async importTestNode(dump: string) {
+    // Import test node(s) from a HA or Matter server diagnostics dump.
     await this.sendCommand("import_test_node", 0, { dump });
   }
 
+  async readAttribute(nodeId: number, attributePath: string | string[]): Promise<Record<string, any>> {
+    // Read one or more attribute(s) on a node by specifying an attributepath.
+    return await this.sendCommand("read_attribute", 0, { node_id: nodeId, attribute_path: attributePath });
+  }
+
   async writeAttribute(nodeId: number, attributePath: string, value: any) {
+    // Write an attribute(value) on a target node.
     await this.sendCommand("write_attribute", 0, { node_id: nodeId, attribute_path: attributePath, value: value });
   }
 
