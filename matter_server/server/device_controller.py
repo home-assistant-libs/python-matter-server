@@ -429,6 +429,7 @@ class MatterDeviceController:
 
         await self._chip_device_controller.set_wifi_credentials(ssid, credentials)
         self._wifi_credentials_set = True
+        self.server.signal_event(EventType.SERVER_INFO_UPDATED, self.server.get_info())
 
     @api_command(APICommand.SET_THREAD_DATASET)
     async def set_thread_operational_dataset(self, dataset: str) -> None:
@@ -436,6 +437,7 @@ class MatterDeviceController:
 
         await self._chip_device_controller.set_thread_operational_dataset(dataset)
         self._thread_credentials_set = True
+        self.server.signal_event(EventType.SERVER_INFO_UPDATED, self.server.get_info())
 
     @api_command(APICommand.OPEN_COMMISSIONING_WINDOW)
     async def open_commissioning_window(
