@@ -24,15 +24,19 @@ export class CommissionNodeThread extends LitElement {
 
   protected render() {
     if (!this.client.serverInfo.thread_credentials_set) {
-      return html`<md-outlined-text-field label="Thread dataset" disabled="${this._loading}">
+      return html`<md-outlined-text-field label="Thread dataset" .disabled="${this._loading}">
         </md-outlined-text-field>
-        <md-outlined-button @click=${this._setThreadDataset} disabled="${this._loading}"
+        <br />
+        <br />
+        <md-outlined-button @click=${this._setThreadDataset} .disabled="${this._loading}"
           >Set Thread Dataset</md-outlined-button
         >${this._loading ? html`<md-circular-progress indeterminate></md-circular-progress>` : nothing}`;
     }
-    return html`<md-outlined-text-field label="Pairing code" disabled="${this._loading}">
+    return html`<md-outlined-text-field label="Pairing code" .disabled="${this._loading}">
       </md-outlined-text-field>
-      <md-outlined-button @click=${this._commissionNode} disabled="${this._loading}"
+      <br />
+      <br />
+      <md-outlined-button @click=${this._commissionNode} .disabled="${this._loading}"
         >Commission</md-outlined-button
       >${this._loading ? html`<md-circular-progress indeterminate></md-circular-progress>` : nothing}`;
   }

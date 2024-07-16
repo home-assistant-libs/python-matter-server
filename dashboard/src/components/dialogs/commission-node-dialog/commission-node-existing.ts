@@ -21,9 +21,11 @@ export class CommissionNodeExisting extends LitElement {
   private _pairingCodeField!: MdOutlinedTextField;
 
   protected render() {
-    return html`<md-outlined-text-field label="Share code" disabled="${this._loading}">
+    return html`<md-outlined-text-field label="Share code" .disabled="${this._loading}">
       </md-outlined-text-field>
-      <md-outlined-button @click=${this._commissionNode} disabled="${this._loading}"
+      <br />
+      <br />
+      <md-outlined-button @click=${this._commissionNode} .disabled="${this._loading}"
         >Commission</md-outlined-button
       >${this._loading ? html`<md-circular-progress indeterminate></md-circular-progress>` : nothing}`;
   }
