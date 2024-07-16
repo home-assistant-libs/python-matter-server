@@ -10,12 +10,11 @@ export interface PromptDialogBoxParams extends BaseDialogBoxParams {
   cancelText?: string;
 }
 
-function dialogHelper(
-  element: HTMLElement,
+const showDialogBox = async (
   type: "alert" | "prompt",
   dialogParams: PromptDialogBoxParams
-) {
-  import("./dialog-box");
+) => {
+  await import("./dialog-box");
   return new Promise<boolean>((resolve) => {
     const dialog = document.createElement("dialox-box");
     dialog.params = dialogParams;
@@ -23,14 +22,10 @@ function dialogHelper(
     dialog.type = type;
     document.body.appendChild(dialog);
   });
-}
+};
 
-export const showAlertDialog = (
-  element: HTMLElement,
-  dialogParams: BaseDialogBoxParams
-) => dialogHelper(element, "alert", dialogParams);
+export const showAlertDialog = (dialogParams: BaseDialogBoxParams) =>
+  showDialogBox("alert", dialogParams);
 
-export const showPromptDialog = (
-  element: HTMLElement,
-  dialogParams: BaseDialogBoxParams
-) => dialogHelper(element, "prompt", dialogParams);
+export const showPromptDialog = (dialogParams: BaseDialogBoxParams) =>
+  showDialogBox("prompt", dialogParams);

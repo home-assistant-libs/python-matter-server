@@ -1,39 +1,38 @@
-import "@material/web/iconbutton/icon-button";
-import { LitElement, css, html, nothing } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import "@material/web/list/list";
-import "@material/web/list/list-item";
-import "@material/web/divider/divider";
 import "@material/web/button/filled-button";
 import "@material/web/button/outlined-button";
 import "@material/web/button/text-button";
-import "../../components/ha-svg-icon";
-import { MatterNode } from "../../client/models/node";
+import "@material/web/divider/divider";
+import "@material/web/iconbutton/icon-button";
+import "@material/web/list/list";
+import "@material/web/list/list-item";
 import { mdiChatProcessing, mdiTrashCan } from "@mdi/js";
-import "../../components/ha-svg-icon";
+import { LitElement, css, html, nothing } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import { MatterClient } from "../../client/client";
+import { DeviceType } from "../../client/models/descriptions";
+import { MatterNode } from "../../client/models/node";
 import {
   showAlertDialog,
   showPromptDialog,
 } from "../../components/dialog-box/show-dialog-box";
-import { MatterClient } from "../../client/client";
+import "../../components/ha-svg-icon";
 import { getEndpointDeviceTypes } from "../matter-endpoint-view";
-import { DeviceType } from "../../client/models/descriptions";
-
 
 function getNodeDeviceTypes(node: MatterNode): DeviceType[] {
-  const uniqueEndpoints = new Set(Object.keys(node!.attributes).map(key => Number(key.split("/")[0])))
+  const uniqueEndpoints = new Set(
+    Object.keys(node!.attributes).map((key) => Number(key.split("/")[0]))
+  );
   const allDeviceTypes: Set<DeviceType> = new Set();
-  uniqueEndpoints.forEach(endpointId => {
-    getEndpointDeviceTypes(node, endpointId).forEach(deviceType => {
+  uniqueEndpoints.forEach((endpointId) => {
+    getEndpointDeviceTypes(node, endpointId).forEach((deviceType) => {
       allDeviceTypes.add(deviceType);
-    })
+    });
   });
   return Array.from(allDeviceTypes);
 }
 
 @customElement("node-details")
 export class NodeDetails extends LitElement {
-
   public client!: MatterClient;
 
   @property() public node?: MatterNode;
@@ -45,9 +44,11 @@ export class NodeDetails extends LitElement {
         <md-list-item>
             <div slot="headline">
                 <b>Node ${this.node.node_id} ${this.node.nodeLabel}</b>
-                ${this.node.available
-        ? nothing
-        : html`<span class="status">OFFLINE</span>`}
+                ${
+                  this.node.available
+                    ? nothing
+                    : html`<span class="status">OFFLINE</span>`
+                }
       </div>
         </md-list-item>
         <md-list-item>
@@ -69,11 +70,18 @@ export class NodeDetails extends LitElement {
           <div slot="supporting-text">
             <span class="left">Serialnumber: </span>${this.node.serialNumber}
           </div>
-          ${this.node.is_bridge ? '' : html`
-            <div slot="supporting-text">
-              <span class="left">All device types: </span>${getNodeDeviceTypes(this.node).map(deviceType => { return deviceType.label }).join(" / ")}
-            </div>`
-      }
+          ${
+            this.node.is_bridge
+              ? ""
+              : html` <div slot="supporting-text">
+                  <span class="left">All device types: </span
+                  >${getNodeDeviceTypes(this.node)
+                    .map((deviceType) => {
+                      return deviceType.label;
+                    })
+                    .join(" / ")}
+                </div>`
+          }
         </md-list-item>
         <md-list-item class="btn">
           <span>
@@ -86,7 +94,7 @@ export class NodeDetails extends LitElement {
 
   private async _reinterview() {
     if (
-      !(await showPromptDialog(this, {
+      !(await showPromptDialog({
         title: "Reinterview",
         text: "Are you sure you want to reinterview this node?",
         confirmText: "Reinterview",
@@ -96,13 +104,13 @@ export class NodeDetails extends LitElement {
     }
     try {
       await this.client.interviewNode(this.node!.node_id);
-      showAlertDialog(this, {
+      showAlertDialog({
         title: "Reinterview node",
         text: "Success!",
       });
       location.reload();
     } catch (err: any) {
-      showAlertDialog(this, {
+      showAlertDialog({
         title: "Failed to reinterview node",
         text: err.message,
       });
@@ -111,7 +119,7 @@ export class NodeDetails extends LitElement {
 
   private async _remove() {
     if (
-      !(await showPromptDialog(this, {
+      !(await showPromptDialog({
         title: "Remove",
         text: "Are you sure you want to remove this node?",
         confirmText: "Remove",
@@ -124,7 +132,7 @@ export class NodeDetails extends LitElement {
       // make sure to navigate back to the root if node details was opened
       location.replace("#");
     } catch (err: any) {
-      showAlertDialog(this, {
+      showAlertDialog({
         title: "Failed to remove node",
         text: err.message,
       });
@@ -132,10 +140,9 @@ export class NodeDetails extends LitElement {
   }
 
   static styles = css`
-
-  .btn {
-    --md-outlined-button-container-shape: 0px;
-  }
+    .btn {
+      --md-outlined-button-container-shape: 0px;
+    }
 
     .left {
       width: 30%;
@@ -150,7 +157,5 @@ export class NodeDetails extends LitElement {
       font-weight: bold;
       font-size: 0.8em;
     }
-
   `;
-
 }
