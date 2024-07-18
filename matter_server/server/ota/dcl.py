@@ -59,6 +59,9 @@ async def _check_update_version(
     ):
         return None
 
+    if version_candidate["softwareVersionValid"] is False:
+        return None
+
     # Check minApplicableSoftwareVersion/maxApplicableSoftwareVersion
     min_sw_version = version_candidate["minApplicableSoftwareVersion"]
     max_sw_version = version_candidate["maxApplicableSoftwareVersion"]
