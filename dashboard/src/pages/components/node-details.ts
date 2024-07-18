@@ -5,7 +5,7 @@ import "@material/web/divider/divider";
 import "@material/web/iconbutton/icon-button";
 import "@material/web/list/list";
 import "@material/web/list/list-item";
-import { mdiChatProcessing, mdiTrashCan, mdiUpdate } from "@mdi/js";
+import { mdiChatProcessing, mdiShareVariant, mdiTrashCan, mdiUpdate } from "@mdi/js";
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { MatterClient } from "../../client/client";
@@ -85,11 +85,12 @@ export class NodeDetails extends LitElement {
       }
         </md-list-item>
         <md-list-item class="btn">
-          <span>
             <md-outlined-button @click=${this._reinterview}>Interview<ha-svg-icon slot="icon" .path=${mdiChatProcessing}></ha-svg-icon></md-outlined-button>
             ${this._updateInitiated || (this.node.updateState || 0) > 1 ? html`
                 <md-outlined-button disabled>Update in progress (${this.node.updateStateProgress || 0}%)<ha-svg-icon slot="icon" .path=${mdiUpdate}></ha-svg-icon></md-outlined-button>`
         : html`<md-outlined-button @click=${this._searchUpdate}>Update<ha-svg-icon slot="icon" .path=${mdiUpdate}></ha-svg-icon></md-outlined-button>`}
+
+            <md-outlined-button @click=${this._openCommissioningWindow}>Share<ha-svg-icon slot="icon" .path=${mdiShareVariant}></ha-svg-icon></md-outlined-button>
             <md-outlined-button @click=${this._remove}>Remove<ha-svg-icon slot="icon" .path=${mdiTrashCan}></ha-svg-icon></md-outlined-button>
           </md-list-item>
       </md-list>
@@ -175,6 +176,30 @@ export class NodeDetails extends LitElement {
       });
     } finally {
       this._updateInitiated = false
+    }
+  }
+
+  private async _openCommissioningWindow() {
+    if (
+      !(await showPromptDialog({
+        title: "Share device",
+        text: "Do you want to share this device with another Matter controller (open commissioning window)?",
+        confirmText: "Share",
+      }))
+    ) {
+      return;
+    }
+    try {
+      const shareCode = await this.client.openCommissioningWindow(this.node!.node_id);
+      showAlertDialog({
+        title: "Share device",
+        text: `Setup code: ${shareCode.setup_manual_code}`,
+      });
+    } catch (err: any) {
+      showAlertDialog({
+        title: "Failed to open commissioning window on node",
+        text: err.message,
+      });
     }
   }
 
