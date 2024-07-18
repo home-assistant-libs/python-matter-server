@@ -1,0 +1,19 @@
+{
+  "modelVersion": {
+    "vid": 4447,
+    "pid": 8194,
+    "softwareVersion": 1011,
+    "softwareVersionString": "1.0.1.1",
+    "cdVersionNumber": 1,
+    "firmwareInformation": "",
+    "softwareVersionValid": false,
+    "otaUrl": "https://cdn.aqara.com/cdn/opencloud-product/mainland/product-firmware/prd/aqara.matter.4447_8194/20240306154144_rel_up_to_enc_ota_sbl_app_aqara.matter.4447_8194_1.0.1.1_115F_2002_20240115195007_7a9b91.ota",
+    "otaFileSize": "615708",
+    "otaChecksum": "rFZ6WdH0DuuCf7HVoRmNjCF73mYZ98DGYpHoDKmf0Bw=",
+    "otaChecksumType": 1,
+    "minApplicableSoftwareVersion": 1000,
+    "maxApplicableSoftwareVersion": 1010,
+    "releaseNotesUrl": "",
+    "creator": "cosmos1qpz3ghnqj6my7gzegkftzav9hpxymkx6zdk73v"
+  }
+}

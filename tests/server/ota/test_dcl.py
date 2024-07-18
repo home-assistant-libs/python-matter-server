@@ -1,85 +1,74 @@
 """Test DCL OTA updates."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+import json
+import pathlib
+from typing import Any
+from unittest.mock import MagicMock
 
+from aioresponses import aioresponses
 import pytest
 
 from matter_server.server.ota.dcl import check_for_update
 
-# Mock the DCL responses (sample from https://on.dcl.csa-iot.org/dcl/model/versions/4447/8194)
-DCL_RESPONSE_SOFTWARE_VERSIONS = {
-    "modelVersions": {
-        "vid": 4447,
-        "pid": 8194,
-        "softwareVersions": [1000, 1011],
-    }
-}
 
-# Mock the DCL responses (sample from https://on.dcl.csa-iot.org/dcl/model/versions/4447/8194/1011)
-DCL_RESPONSE_SOFTWARE_VERSION_1011 = {
-    "modelVersion": {
-        "vid": 4447,
-        "pid": 8194,
-        "softwareVersion": 1011,
-        "softwareVersionString": "1.0.1.1",
-        "cdVersionNumber": 1,
-        "firmwareInformation": "",
-        "softwareVersionValid": True,
-        "otaUrl": "https://cdn.aqara.com/cdn/opencloud-product/mainland/product-firmware/prd/aqara.matter.4447_8194/20240306154144_rel_up_to_enc_ota_sbl_app_aqara.matter.4447_8194_1.0.1.1_115F_2002_20240115195007_7a9b91.ota",
-        "otaFileSize": "615708",
-        "otaChecksum": "rFZ6WdH0DuuCf7HVoRmNjCF73mYZ98DGYpHoDKmf0Bw=",
-        "otaChecksumType": 1,
-        "minApplicableSoftwareVersion": 1000,
-        "maxApplicableSoftwareVersion": 1010,
-        "releaseNotesUrl": "",
-        "creator": "cosmos1qpz3ghnqj6my7gzegkftzav9hpxymkx6zdk73v",
-    }
-}
+def _load_fixture(file_name) -> Any:
+    path = pathlib.Path(__file__).parent.joinpath("fixtures", file_name)
+    with open(path, "r") as f:
+        return json.load(f)
 
 
-@pytest.fixture(name="get_software_versions")
-def mock_get_software_versions():
+@pytest.fixture(name="aioresponse")
+def mock_aioresponse():
+    """Mock the aiohttp.ClientSession."""
+    with aioresponses() as m:
+        yield m
+
+
+@pytest.fixture(name="get_software_versions", autouse=True)
+def _mock_get_software_versions(aioresponse) -> None:
     """Mock the _get_software_versions function."""
-    with patch(
-        "matter_server.server.ota.dcl._get_software_versions",
-        new_callable=AsyncMock,
-        return_value=DCL_RESPONSE_SOFTWARE_VERSIONS,
-    ) as mock:
-        yield mock
+    data = _load_fixture("4447-8194.json")
+    aioresponse.get(url="/dcl/model/versions/4447/8194", status=200, payload=data)
+    aioresponse.get(
+        url="/dcl/model/versions/4447/8194/1000",
+        payload=_load_fixture("4447-8194-1000.json"),
+    )
 
 
-@pytest.fixture(name="get_software_version")
-def mock_get_software_version():
-    """Mock the _get_software_version function."""
-    with patch(
-        "matter_server.server.ota.dcl._get_software_version",
-        new_callable=AsyncMock,
-        return_value=DCL_RESPONSE_SOFTWARE_VERSION_1011,
-    ) as mock:
-        yield mock
-
-
-async def test_check_updates(get_software_versions, get_software_version):
+async def test_check_updates(aioresponse):
     """Test the case where the latest software version is applicable."""
     # Call the function with a current software version of 1000
+    data = _load_fixture("4447-8194-1011-valid.json")
+    aioresponse.get(url="/dcl/model/versions/4447/8194/1011", status=200, payload=data)
     result = await check_for_update(MagicMock(), 4447, 8194, 1000)
 
-    assert result == DCL_RESPONSE_SOFTWARE_VERSION_1011["modelVersion"]
+    assert result == data["modelVersion"]
 
 
-async def test_check_updates_not_applicable(
-    get_software_versions, get_software_version
-):
+async def test_check_updates_not_applicable(aioresponse):
     """Test the case where the latest software version is not applicable."""
-    # Call the function with a current software version of 1
-    result = await check_for_update(MagicMock(), 4447, 8194, 1)
+    # Call the function with a current software version of 2000
+    data = _load_fixture("4447-8194-1011-valid.json")
+    aioresponse.get(url="/dcl/model/versions/4447/8194/1011", status=200, payload=data)
+    result = await check_for_update(MagicMock(), 4447, 8194, 2000)
 
     assert result is None
 
 
-async def test_check_updates_specific_version(get_software_version):
+async def test_check_updates_not_applicable_not_valid(aioresponse):
+    """Test the case where the latest software version is not valid."""
+    data = _load_fixture("4447-8194-1011-invalid.json")
+    aioresponse.get(url="/dcl/model/versions/4447/8194/1011", status=200, payload=data)
+    result = await check_for_update(MagicMock(), 4447, 8194, 1000)
+
+    assert result is None
+
+
+async def test_check_updates_specific_version(aioresponse):
     """Test the case to get a specific version."""
     # Call the function with a current software version of 1000 and request 1011 as update
+    data = _load_fixture("4447-8194-1011-valid.json")
+    aioresponse.get(url="/dcl/model/versions/4447/8194/1011", payload=data)
     result = await check_for_update(MagicMock(), 4447, 8194, 1000, 1011)
 
-    assert result == DCL_RESPONSE_SOFTWARE_VERSION_1011["modelVersion"]
+    assert result == data["modelVersion"]
