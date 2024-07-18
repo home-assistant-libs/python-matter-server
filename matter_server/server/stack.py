@@ -116,7 +116,7 @@ class MatterStack:
 
         self._chip_stack = ChipStack(
             persistentStoragePath=storage_file,
-            enableServerInteractions=False,
+            enableServerInteractions=True,
         )
 
         # Initialize Certificate Authority Manager
