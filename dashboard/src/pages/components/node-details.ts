@@ -87,8 +87,8 @@ export class NodeDetails extends LitElement {
         <md-list-item class="btn">
           <span>
             <md-outlined-button @click=${this._reinterview}>Interview<ha-svg-icon slot="icon" .path=${mdiChatProcessing}></ha-svg-icon></md-outlined-button>
-            ${this.node.updateStateProgress != null || this._updateInitiated ? html`
-                <md-outlined-button disabled>Update (${this.node.updateStateProgress || 0}%)<ha-svg-icon slot="icon" .path=${mdiUpdate}></ha-svg-icon></md-outlined-button>`
+            ${this._updateInitiated || (this.node.updateState || 0) > 1 ? html`
+                <md-outlined-button disabled>Update in progress (${this.node.updateStateProgress || 0}%)<ha-svg-icon slot="icon" .path=${mdiUpdate}></ha-svg-icon></md-outlined-button>`
         : html`<md-outlined-button @click=${this._searchUpdate}>Update<ha-svg-icon slot="icon" .path=${mdiUpdate}></ha-svg-icon></md-outlined-button>`}
             <md-outlined-button @click=${this._remove}>Remove<ha-svg-icon slot="icon" .path=${mdiTrashCan}></ha-svg-icon></md-outlined-button>
           </md-list-item>
