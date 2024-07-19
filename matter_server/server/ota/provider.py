@@ -303,11 +303,12 @@ class ExternalOtaProvider:
                 # Download finished, check checksum if necessary
                 if checksum_alg:
                     checksum = b64encode(checksum_alg.digest()).decode("ascii")
-                    if checksum != update_desc["otaChecksum"]:
+                    checksum_expected = update_desc["otaChecksum"].strip()
+                    if checksum != checksum_expected:
                         LOGGER.error(
-                            "Checksum mismatch for file '%s', expected: %s, got: %s",
+                            "Checksum mismatch for file '%s', expected: '%s', got: '%s'",
                             file_name,
-                            update_desc["otaChecksum"],
+                            checksum_expected,
                             checksum,
                         )
                         await loop.run_in_executor(None, file_path.unlink)
