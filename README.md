@@ -288,23 +288,9 @@ Development is only possible on a (recent) Linux or MacOS machine. Other operati
 - Download/clone the repo to your local machine.
 - Set-up the development environment: `scripts/setup.sh`
 
-You can check out the example script in the scripts folder for generic directions to run the client and server. To just run the server, you can run:
+You can check out the example script in the scripts folder for generic directions to run the client and server.
 
-```
-python -m matter_server.server
-
-Optional arguments:
-  -h, --help            show help message and exit
-  --vendorid VENDORID   Vendor ID for the Fabric, defaults to 65521
-  --fabricid FABRICID   Fabric ID for the Fabric, defaults to 1
-  --storage-path STORAGE_PATH
-                        Storage path to keep persistent data, defaults to $HOME/.matter_server
-  --port PORT           TCP Port to run the websocket server, defaults to 5580
-  --log-level LOG_LEVEL
-                        Provide logging level. Example --log-level debug, default=info, possible=(critical, error, warning, info, debug)
-  --log-file LOG_FILE   Log file to write to (optional).
-
-```
+To just run the server, you can run: `python -m matter_server.server`
 
 The server runs a Matter Controller and includes all logic for storing node information, interviews and subscriptions. To interact with this controller we've created a small Websockets API with an RPC-like interface. The library contains a client as reference implementation which in turn is used by Home Assistant. Splitting the server from the client allows the scenario where multiple consumers can communicate to the same Matter fabric and the Matter fabric can keep running while the consumer (e.g. Home Assistant is down).
 
