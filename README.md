@@ -13,9 +13,9 @@ Got questions?
 
 You have several options to get them answered:
 
-  * The Home Assistant [Community Forum](https://community.home-assistant.io/).
-  * The Home Assistant [Discord Chat Server](https://discord.gg/c5DvZ4e).
-  * Join [the Reddit subreddit in /r/homeassistant](https://reddit.com/r/homeassistant).
+- The Home Assistant [Community Forum](https://community.home-assistant.io/).
+- The Home Assistant [Discord Chat Server](https://discord.gg/c5DvZ4e).
+- Join [the Reddit subreddit in /r/homeassistant](https://reddit.com/r/homeassistant).
 
 If you experience issues using Matter with Home Assistant, please open an issue
 report in the [Home Assistant Core repository](https://github.com/home-assistant/core/issues/new/choose).
@@ -114,37 +114,7 @@ docker compose up -d
 docker compose logs -f
 ```
 
-NOTE: Both Matter and this implementation are in early (v1) state and features are probably missing or could be improved. See our [development notes](#development) how you can help out, with development and/or testing.
-
-## Running the development server
-
-**For enabling Matter support within Home Assistant, please refer to the Home Assistant documentation. These instructions are for development only!**
-
-To install the server (including client): `pip install python-matter-server[server]`
-To only install the client part: `pip install python-matter-server`
-
-The client library has a dependency on the chip/matter clusters package which contains all (Cluster) models and this package is os/platform independent. The server library depends on the Matter Core SDK (still named CHIP) which is architecture and OS specific. We build (and publish) wheels for Linux (amd64 and aarch64) to pypi but for other platforms (like Macos) you will need to build those wheels yourself using the exact same version of the SDK as we use for the clusters package. Take a look at our build script for directions: https://github.com/home-assistant-libs/chip-wheels/blob/main/.github/workflows/build.yaml
-
-Once you have the wheels installed, you can check out the example script in the scripts folder for generic directions to run the client and server. To just run the server, you can run:
-
-```
-python -m matter_server.server
-
-Optional arguments:
-  -h, --help            show help message and exit
-  --vendorid VENDORID   Vendor ID for the Fabric, defaults to 65521
-  --fabricid FABRICID   Fabric ID for the Fabric, defaults to 1
-  --storage-path STORAGE_PATH
-                        Storage path to keep persistent data, defaults to $HOME/.matter_server
-  --port PORT           TCP Port to run the websocket server, defaults to 5580
-  --log-level LOG_LEVEL
-                        Provide logging level. Example --log-level debug, default=info, possible=(critical, error, warning, info, debug)
-  --log-file LOG_FILE   Log file to write to (optional).
-
-```
-
-The server runs a Matter Controller and includes all logic for storing node information, interviews and subscriptions. To interact with this controller we've created a small Websockets API with an RPC-like interface. The library contains a client as reference implementation which in turn is used by Home Assistant. Splitting the server from the client allows the scenario where multiple consumers can communicate to the same Matter fabric and the Matter fabric can keep running while the consumer (e.g. Home Assistant is down).
-
+NOTE: Both Matter and this implementation are in an early state and features are probably missing or could be improved. See our [development notes](#development) how you can help out, with development and/or testing.
 
 ### Websocket commands
 
@@ -238,7 +208,6 @@ When the start_listening command is issued, the server will dump all existing no
 }
 ```
 
-
 **Send a command**
 Because we use the datamodels of the Matter SDK, this is a little bit more involved. Here is an example of turning on a switch:
 
@@ -269,6 +238,7 @@ message = {
 
 print(json.dumps(message, indent=2))
 ```
+
 ```json
 {
   "message_id": "example",
@@ -284,25 +254,13 @@ print(json.dumps(message, indent=2))
 ```
 
 You can also provide parameters for the cluster commands. Here's how to change the brightness for example:
+
 ```
 command = clusters.LevelControl.Commands.MoveToLevelWithOnOff(
   level=int(value), # provide a percentage
   transitionTime=0, # in seconds
 )
 ```
-
-
-## Development
-
-Want to help out with development, testing, and/or documentation? Great! As both this project and Matter keeps evolving and devices will hit the market with actual Matter support, there will be a lot to improve. Reach out to us on discord if you want to help out.
-
-### Setting up your development environment
-
-Please note that development is only possible on Linux and MacOS, with no Windows support.
-
-- Download/clone the repo to your local machine.
-- Create a Python virtual environment.
-- Install the correct SDK wheels for both the cluster and core package, see instructions above if there is no wheel for your setup prebuilt.
 
 ### Note when using Thread based Matter devices
 
@@ -316,3 +274,30 @@ necessary, and there are still known issues (see NetworkManager issue
 
 The Home Assistant Operating System 10 and newer correctly processes ICMPv6
 Router Advertisements.
+
+## Development
+
+Want to help out with development, testing, and/or documentation? Great! As both this project and Matter keeps evolving and more and more devices are available with actual Matter support, there will be a lot to improve. Reach out to us on discord if you want to help out.
+
+### Setting up your development environment
+
+**For enabling Matter support within Home Assistant, please refer to the Home Assistant documentation. These instructions are for development only!**
+
+Development is only possible on a (recent) Linux or MacOS machine. Other operating systems are not supported.
+
+- Download/clone the repo to your local machine.
+- Set-up the development environment: `scripts/setup.sh`
+
+You can check out the example script in the scripts folder for generic directions to run the client and server.
+
+To just run the server, you can run: `python -m matter_server.server`
+
+The server runs a Matter Controller and includes all logic for storing node information, interviews and subscriptions. To interact with this controller we've created a small Websockets API with an RPC-like interface. The library contains a client as reference implementation which in turn is used by Home Assistant. Splitting the server from the client allows the scenario where multiple consumers can communicate to the same Matter fabric and the Matter fabric can keep running while the consumer (e.g. Home Assistant is down).
+
+### Python client library only
+
+There is also a Python client library hosted in this repository (used by Home Assistant), which consumes the Websockets API published from the server.
+
+The client library has a dependency on the chip/matter clusters package which contains all (Cluster) models and this package is os/platform independent. The server library depends on the Matter Core SDK (still named CHIP) which is architecture and OS specific. We build (and publish) wheels for Linux (amd64 and aarch64) to pypi but for other platforms (like Macos) you will need to build those wheels yourself using the exact same version of the SDK as we use for the clusters package. Take a look at our build script for directions: https://github.com/home-assistant-libs/chip-wheels/blob/main/.github/workflows/build.yaml
+
+To only install the client part: `pip install python-matter-server`
