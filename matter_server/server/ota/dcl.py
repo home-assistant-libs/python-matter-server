@@ -62,6 +62,9 @@ async def _check_update_version(
     if version_candidate["softwareVersionValid"] is False:
         return None
 
+    if version_candidate["otaUrl"].strip() == "":
+        return None
+
     # Check minApplicableSoftwareVersion/maxApplicableSoftwareVersion
     min_sw_version = version_candidate["minApplicableSoftwareVersion"]
     max_sw_version = version_candidate["maxApplicableSoftwareVersion"]
