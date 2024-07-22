@@ -181,8 +181,8 @@ class MatterServer:
 
         await self._device_controller.initialize()
         await self.storage.start()
-        await self._device_controller.start()
         await self.vendor_info.start()
+        await self._device_controller.start()
         mount_websocket(self, "/ws")
         self.app.router.add_route("GET", "/info", self._handle_info)
 
