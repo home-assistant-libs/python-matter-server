@@ -100,7 +100,7 @@ class MatterServer:
     _runner: web.AppRunner | None = None
     _http: MultiHostTCPSite | None = None
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         storage_path: str,
         vendor_id: int,
