@@ -72,3 +72,19 @@ async def test_check_updates_specific_version(aioresponse):
     result = await check_for_update(MagicMock(), 4447, 8194, 1000, 1011)
 
     assert result == data["modelVersion"]
+
+
+async def test_check_no_update_if_url_empty(aioresponse):
+    """Test the case checks if latest version gets picked version."""
+    # Call the function with a current software version of 1000 and request 1011 as update
+    data = _load_fixture("4442-67.json")
+    aioresponse.get(url="/dcl/model/versions/4442/67", payload=data)
+    data = _load_fixture("4442-67-197888.json")
+    aioresponse.get(url="/dcl/model/versions/4442/67/197888", payload=data)
+    data = _load_fixture("4442-67-197910.json")
+    aioresponse.get(url="/dcl/model/versions/4442/67/197910", payload=data)
+    data = _load_fixture("4442-67-198340.json")
+    aioresponse.get(url="/dcl/model/versions/4442/67/198340", payload=data)
+    result = await check_for_update(MagicMock(), 4442, 67, 197120)
+
+    assert result is None

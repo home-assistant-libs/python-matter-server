@@ -1,0 +1,19 @@
+{
+  "modelVersion": {
+    "vid": 4442,
+    "pid": 67,
+    "softwareVersion": 198340,
+    "softwareVersionString": "3.6.196",
+    "cdVersionNumber": 1,
+    "firmwareInformation": "",
+    "softwareVersionValid": true,
+    "otaUrl": "https://nl67-firmware.s3.amazonaws.com/3.6.196_r8.matter",
+    "otaFileSize": "755976",
+    "otaChecksum": "46pqTh87M5fNhvR/zzt1M0RNQcVa8bApOCat7aKQ3KA=",
+    "otaChecksumType": 1,
+    "minApplicableSoftwareVersion": 198317,
+    "maxApplicableSoftwareVersion": 198340,
+    "releaseNotesUrl": "",
+    "creator": "cosmos1sggrrmw05e6alve8umwdaszade5qxyt53kthud"
+  }
+}

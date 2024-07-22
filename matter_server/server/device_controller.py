@@ -1024,7 +1024,7 @@ class MatterDeviceController:
             node_logger.info("No new update found.")
             return None, None
 
-        if "otaUrl" not in update:
+        if "otaUrl" not in update or update["otaUrl"].strip().length == 0:
             raise UpdateCheckError("Update found, but no OTA URL provided.")
 
         node_logger.info(
