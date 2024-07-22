@@ -207,7 +207,7 @@ class MatterServer:
             self._runner, host=self.listen_addresses, port=self.port
         )
         await self._http.start()
-        self.logger.debug("Webserver initialized.")
+        self.logger.info("Matter Server successfully initialized.")
 
     async def stop(self) -> None:
         """Stop running the server."""
