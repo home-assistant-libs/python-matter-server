@@ -25,7 +25,7 @@ from typing import (
     get_type_hints,
 )
 
-from chip.clusters.Types import Nullable
+from chip.clusters.Types import Nullable, NullValue
 from chip.tlv import float32, uint
 
 if TYPE_CHECKING:
@@ -168,11 +168,14 @@ def parse_value(
         }
     # handle Union type
     if origin is Union or origin is UnionType:
-        # try all possible types
         sub_value_types = get_args(value_type)
+        # return early if value is None and None or Nullable allowed
+        if value is None and Nullable in sub_value_types and allow_sdk_types:
+            return NullValue
+        if value is None and NoneType in sub_value_types:
+            return None
+        # try all possible types
         for sub_arg_type in sub_value_types:
-            if value is NoneType and sub_arg_type is NoneType:
-                return value
             # try them all until one succeeds
             try:
                 return parse_value(
