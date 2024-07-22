@@ -129,3 +129,13 @@ def test_parse_value():
         )
         == NullValue
     )
+    assert (
+        parse_value(
+            "test",
+            None,
+            Union[None, int, Nullable],
+            allow_none=False,
+            allow_sdk_types=True,
+        )
+        == NullValue
+    )
