@@ -102,9 +102,23 @@ docker run -d \
   --restart=unless-stopped \
   --security-opt apparmor=unconfined \
   -v $(pwd)/data:/data \
-  -v /run/dbus:/run/dbus:ro \
   --network=host \
   ghcr.io/home-assistant-libs/python-matter-server:stable
+```
+
+> [!NOTE]
+> The container has a default command line set (see Dockerfile). If you intend to pass additional arguments, you have to pass the default command line as well.
+
+To use local commissioning with Bluetooth, make sure to pass the D-Bus socket as well:
+```
+docker run -d \
+  --name matter-server \
+  --restart=unless-stopped \
+  --security-opt apparmor=unconfined \
+  -v $(pwd)/data:/data \
+  -v /run/dbus:/run/dbus:ro \
+  --network=host \
+  ghcr.io/home-assistant-libs/python-matter-server:stable --storage-path /data --paa-root-cert-dir /data/credentials --bluetooth-adapter 0
 ```
 
 ### Running using Docker compose
