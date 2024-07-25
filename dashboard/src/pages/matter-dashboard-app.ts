@@ -27,11 +27,11 @@ class MatterDashboardApp extends LitElement {
   public client!: MatterClient;
 
   @state()
-  private _state: "connecting" | "connected" | "error" = "connecting";
+  private _state: "connecting" | "connected" | "error" | "disconnected" = "connecting";
 
   private _error: string | undefined;
 
-  private provider = new ContextProvider(this, {context: clientContext, initialValue: this.client});
+  private provider = new ContextProvider(this, { context: clientContext, initialValue: this.client });
 
   protected firstUpdated(
     _changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>
@@ -47,12 +47,15 @@ class MatterDashboardApp extends LitElement {
         this.client.addEventListener("server_info_updated", () => {
           this.provider.setValue(clone(this.client));
         });
+        this.client.addEventListener("connection_lost", () => {
+          this._state = "disconnected";
+        });
       },
       (err: MatterError) => {
         this._state = "error";
         this._error = err.message;
       }
-    );
+    )
 
     // Handle history changes
     const updateRoute = () => {
@@ -69,6 +72,9 @@ class MatterDashboardApp extends LitElement {
   render() {
     if (this._state === "connecting") {
       return html`<p>Connecting...</p>`;
+    }
+    if (this._state === "disconnected") {
+      return html`<p>Connection lost</p>`;
     }
     if (this._state === "error") {
       return html`

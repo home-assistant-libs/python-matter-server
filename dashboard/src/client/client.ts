@@ -181,7 +181,10 @@ export class MatterClient {
     if (this.connection.connected) {
       return;
     }
-    await this.connection.connect((msg) => this._handleIncomingMessage(msg));
+    await this.connection.connect(
+      (msg) => this._handleIncomingMessage(msg),
+      () => this.fireEvent("connection_lost")
+    );
   }
 
   disconnect(clearStorage = true) {
