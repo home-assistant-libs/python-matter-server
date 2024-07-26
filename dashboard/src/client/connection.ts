@@ -13,7 +13,7 @@ export class Connection {
     return this.socket?.readyState === WebSocket.OPEN;
   }
 
-  async connect(onMessage: (msg: Record<string, any>) => void) {
+  async connect(onMessage: (msg: Record<string, any>) => void, onConnectionLost: () => void) {
     if (this.socket) {
       throw new Error("Already connected");
     }
@@ -31,7 +31,7 @@ export class Connection {
         console.log(
           `WebSocket Closed: Code=${event.code}, Reason=${event.reason}`
         );
-        reject(new Error("Connection Closed"));
+        onConnectionLost();
       };
 
       this.socket.onerror = (error) => {
