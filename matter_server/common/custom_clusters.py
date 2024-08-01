@@ -84,6 +84,9 @@ class EveCluster(Cluster, CustomClusterMixin):
                 ClusterObjectFieldDescriptor(
                     Label="current", Tag=0x130A0009, Type=float32
                 ),
+                ClusterObjectFieldDescriptor(
+                    Label="pressure", Tag=0x130A0014, Type=float32
+                ),
             ]
         )
 
