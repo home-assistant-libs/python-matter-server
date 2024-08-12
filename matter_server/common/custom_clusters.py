@@ -291,6 +291,7 @@ class EveCluster(Cluster, CustomClusterMixin):
 
             value: int = 0
 
+
 @dataclass
 class NeoCluster(Cluster, CustomClusterMixin):
     """Custom (vendor-specific) cluster for Neo - Vendor ID 4991 (0x137F)."""
