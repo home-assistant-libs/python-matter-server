@@ -53,7 +53,7 @@ test = [
   "pytest-asyncio==0.23.8",
   "pytest-aiohttp==1.0.5",
   "pytest-cov==5.0.0",
-  "ruff==0.5.6",
+  "ruff==0.5.7",
   "tomli==2.0.1",
 ]
 
