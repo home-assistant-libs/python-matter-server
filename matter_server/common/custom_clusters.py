@@ -99,6 +99,8 @@ class EveCluster(Cluster, CustomClusterMixin):
     wattAccumulatedControlPoint: float32 | None = None
     voltage: float32 | None = None
     current: float32 | None = None
+    altitude: int | None = None
+    pressure: float32 | None = None
 
     class Attributes:
         """Attributes for the Eve Cluster."""
