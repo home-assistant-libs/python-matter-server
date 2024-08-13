@@ -99,7 +99,6 @@ class EveCluster(Cluster, CustomClusterMixin):
     wattAccumulatedControlPoint: float32 | None = None
     voltage: float32 | None = None
     current: float32 | None = None
-    altitude: int | None = None
     pressure: float32 | None = None
 
     class Attributes:
@@ -246,29 +245,6 @@ class EveCluster(Cluster, CustomClusterMixin):
             value: float32 = 0
 
         @dataclass
-        class Altitude(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
-            """Altitude Attribute within the Eve Cluster."""
-
-            should_poll = True
-
-            @ChipUtility.classproperty
-            def cluster_id(cls) -> int:
-                """Return cluster id."""
-                return 0x130AFC01
-
-            @ChipUtility.classproperty
-            def attribute_id(cls) -> int:
-                """Return attribute id."""
-                return 0x130A0013
-
-            @ChipUtility.classproperty
-            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
-                """Return attribute type."""
-                return ClusterObjectFieldDescriptor(Type=int)
-
-            value: int = 0
-
-        @dataclass
         class Pressure(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """Pressure Attribute within the Eve Cluster."""
 
@@ -289,7 +265,7 @@ class EveCluster(Cluster, CustomClusterMixin):
                 """Return attribute type."""
                 return ClusterObjectFieldDescriptor(Type=int)
 
-            value: int = 0
+            value: float32 = 0
 
 
 @dataclass
