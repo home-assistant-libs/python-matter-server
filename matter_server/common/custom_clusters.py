@@ -264,7 +264,7 @@ class EveCluster(Cluster, CustomClusterMixin):
             @ChipUtility.classproperty
             def attribute_type(cls) -> ClusterObjectFieldDescriptor:
                 """Return attribute type."""
-                return ClusterObjectFieldDescriptor(Type=int)
+                return ClusterObjectFieldDescriptor(Type=float32)
 
             value: float32 = 0
 
