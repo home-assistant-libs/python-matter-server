@@ -85,7 +85,7 @@ class EveCluster(Cluster, CustomClusterMixin):
                     Label="current", Tag=0x130A0009, Type=float32
                 ),
                 ClusterObjectFieldDescriptor(
-                    Label="altitude", Tag=0x130A0013, Type=int
+                    Label="altitude", Tag=0x130A0013, Type=float32
                 ),
                 ClusterObjectFieldDescriptor(
                     Label="pressure", Tag=0x130A0014, Type=float32
@@ -99,6 +99,8 @@ class EveCluster(Cluster, CustomClusterMixin):
     wattAccumulatedControlPoint: float32 | None = None
     voltage: float32 | None = None
     current: float32 | None = None
+    altitude: float32 | None = None
+    pressure: float32 | None = None
 
     class Attributes:
         """Attributes for the Eve Cluster."""
@@ -235,6 +237,48 @@ class EveCluster(Cluster, CustomClusterMixin):
             def attribute_id(cls) -> int:
                 """Return attribute id."""
                 return 0x130A0009
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=float32)
+
+            value: float32 = 0
+
+        @dataclass
+        class Altitude(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """Altitude Attribute within the Eve Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x130AFC01
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x130A0013
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=float32)
+
+            value: float32 = 0
+
+        @dataclass
+        class Pressure(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """Pressure Attribute within the Eve Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x130AFC01
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x130A0014
 
             @ChipUtility.classproperty
             def attribute_type(cls) -> ClusterObjectFieldDescriptor:
