@@ -160,7 +160,7 @@ async def fetch_git_certificates(
         async with ClientSession(raise_for_status=True) as http_session:
             # Fetch directory contents and filter out extension
             api_url = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/{PATH}"
-            async with http_session.get(api_url, timeout=20) as response:
+            async with http_session.get(api_url) as response:
                 contents = await response.json()
                 git_certs = {item["name"].split(".")[0] for item in contents}
             # Fetch certificates
