@@ -249,8 +249,6 @@ class EveCluster(Cluster, CustomClusterMixin):
         class Altitude(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """Altitude Attribute within the Eve Cluster."""
 
-            should_poll = False
-
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
                 """Return cluster id."""
