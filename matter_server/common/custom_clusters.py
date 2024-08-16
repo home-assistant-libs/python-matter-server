@@ -266,7 +266,7 @@ class EveCluster(Cluster, CustomClusterMixin):
                 """Return attribute type."""
                 return ClusterObjectFieldDescriptor(Type=int)
 
-            value: int = 0
+            value: float32 = 0
 
         @dataclass
         class Pressure(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
