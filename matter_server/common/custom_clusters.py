@@ -272,8 +272,6 @@ class EveCluster(Cluster, CustomClusterMixin):
         class Pressure(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """Pressure Attribute within the Eve Cluster."""
 
-            should_poll = True
-
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
                 """Return cluster id."""
