@@ -443,7 +443,7 @@ class MatterDeviceController:
     async def open_commissioning_window(
         self,
         node_id: int,
-        timeout: int = 300,
+        timeout: int = 300,  # noqa: ASYNC109 timeout parameter required for native timeout
         iteration: int = 1000,
         option: int = ChipDeviceController.CommissioningWindowPasscode.kTokenWithRandomPin,
         discriminator: int | None = None,
@@ -677,6 +677,12 @@ class MatterDeviceController:
                 for attr_path in attribute_paths
             }
 
+        LOGGER.debug(
+            "read_attribute called for node %s on path(s): %s - fabric_filtered: %s",
+            node_id,
+            str(attribute_paths),
+            fabric_filtered,
+        )
         # parse text based attribute paths into the SDK Attribute Path objects
         attributes: list[Attribute.AttributePath] = []
         for attr_path in attribute_paths:

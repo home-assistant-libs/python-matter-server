@@ -194,7 +194,7 @@ class ChipDeviceControllerWrapper:
     async def open_commissioning_window(
         self,
         node_id: int,
-        timeout: int,
+        timeout: int,  # noqa: ASYNC109 timeout parameter required for native timeout
         iteration: int,
         discriminator: int,
         option: ChipDeviceController.CommissioningWindowPasscode,

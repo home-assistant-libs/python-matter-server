@@ -182,7 +182,7 @@ class MatterClient:
     async def open_commissioning_window(
         self,
         node_id: int,
-        timeout: int = 300,
+        timeout: int = 300,  # noqa: ASYNC109 timeout parameter required for native timeout
         iteration: int = 1000,
         option: int = 1,
         discriminator: Optional[int] = None,
