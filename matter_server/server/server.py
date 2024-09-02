@@ -95,12 +95,12 @@ def mount_websocket(server: MatterServer, path: str) -> None:
 class MatterServer:
     """Serve Matter stack over WebSockets."""
 
-    # pylint: disable=too-many-instance-attributes,too-many-arguments
+    # pylint: disable=too-many-instance-attributes
 
     _runner: web.AppRunner | None = None
     _http: MultiHostTCPSite | None = None
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, pylint: disable=too-many-arguments
         self,
         storage_path: str,
         vendor_id: int,
@@ -112,6 +112,7 @@ class MatterServer:
         enable_test_net_dcl: bool = False,
         bluetooth_adapter_id: int | None = None,
         ota_provider_dir: Path | None = None,
+        enable_server_interactions: bool = True,
     ) -> None:
         """Initialize the Matter Server."""
         self.storage_path = storage_path
@@ -134,7 +135,7 @@ class MatterServer:
         self.app = web.Application()
         self.loop: asyncio.AbstractEventLoop | None = None
         # Instantiate the Matter Stack using the SDK using the given storage path
-        self.stack = MatterStack(self, bluetooth_adapter_id)
+        self.stack = MatterStack(self, bluetooth_adapter_id, enable_server_interactions)
         self.storage = StorageController(self)
         self.vendor_info = VendorInfo(self)
         # we dynamically register command handlers

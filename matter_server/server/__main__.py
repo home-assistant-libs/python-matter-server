@@ -122,6 +122,11 @@ parser.add_argument(
     default=None,
     help="Directory where OTA Provider stores software updates and configuration.",
 )
+parser.add_argument(
+    "--disable-server-interactions",
+    action="store_false",
+    help="Controls disabling server cluster interactions on a controller. This in turn disables advertisement of active controller operational identities.",
+)
 
 args = parser.parse_args()
 
@@ -223,6 +228,7 @@ def main() -> None:
         args.enable_test_net_dcl,
         args.bluetooth_adapter,
         args.ota_provider_dir,
+        args.disable_server_interactions,
     )
 
     async def handle_stop(loop: asyncio.AbstractEventLoop) -> None:

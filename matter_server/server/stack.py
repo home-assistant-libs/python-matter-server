@@ -90,6 +90,7 @@ class MatterStack:
         self,
         server: "MatterServer",
         bluetooth_adapter_id: int | None = None,
+        enable_server_interactions: bool = True,
     ) -> None:
         """Initialize Matter Stack."""
         self.logger = logging.getLogger(__name__)
@@ -114,9 +115,11 @@ class MatterStack:
         # Handle log level selection on SDK level
         chip.logging.SetLogFilter(_category_num)
 
+        if not enable_server_interactions:
+            self.logger.warning("Initializing stack with server interactions disabled!")
         self._chip_stack = ChipStack(
             persistentStoragePath=storage_file,
-            enableServerInteractions=True,
+            enableServerInteractions=enable_server_interactions,
         )
 
         # Initialize Certificate Authority Manager
