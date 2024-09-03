@@ -1405,7 +1405,7 @@ class MatterDeviceController:
                     ):
                         # NOTE: assume the node will be picked up by mdns discovery later
                         # automatically when it becomes available again.
-                        logging.info(
+                        logging.warning(
                             "Node setup not completed after %s minutes, giving up.",
                             NODE_MDNS_SUBSCRIPTION_RETRY_TIMEOUT // 60,
                         )
