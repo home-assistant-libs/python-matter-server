@@ -150,7 +150,7 @@ class MatterDeviceController:
         self._node_last_seen_on_mdns: dict[int, float] = {}
         self._nodes: dict[int, MatterNodeData] = {}
         self._last_known_ip_addresses: dict[int, list[str]] = {}
-        self._last_subscription_attempt: dict[int, int] = {}
+        self._resubscription_attempt: dict[int, int] = {}
         self._first_resubscribe_attempt: dict[int, float] = {}
         self._known_commissioning_params: dict[int, CommissioningParameters] = {}
         self._known_commissioning_params_timers: dict[int, asyncio.TimerHandle] = {}
@@ -1190,13 +1190,13 @@ class MatterDeviceController:
             nextResubscribeIntervalMsec: int,
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
-            resubscription_attempt = self._last_subscription_attempt[node_id]
+            resubscription_attempt = self._resubscription_attempt[node_id]
             node_logger.info(
                 "Subscription failed with %s, resubscription attempt %s",
                 str(PyChipError(code=terminationError)),
                 resubscription_attempt,
             )
-            self._last_subscription_attempt[node_id] = resubscription_attempt + 1
+            self._resubscription_attempt[node_id] = resubscription_attempt + 1
             if resubscription_attempt == 0:
                 self._first_resubscribe_attempt[node_id] = time.time()
             # Mark node as unavailable and signal consumers.
@@ -1219,7 +1219,7 @@ class MatterDeviceController:
         ) -> None:
             # pylint: disable=unused-argument, invalid-name
             node_logger.info("Re-Subscription succeeded")
-            self._last_subscription_attempt[node_id] = 0
+            self._resubscription_attempt[node_id] = 0
             self._first_resubscribe_attempt.pop(node_id, None)
             # mark node as available and signal consumers
             node = self._nodes[node_id]
@@ -1243,7 +1243,7 @@ class MatterDeviceController:
             interval_ceiling = NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED
         else:
             interval_ceiling = NODE_SUBSCRIPTION_CEILING_THREAD
-        self._last_subscription_attempt[node_id] = 0
+        self._resubscription_attempt[node_id] = 0
         # set-up the actual subscription
         sub: Attribute.SubscriptionTransaction = (
             await self._chip_device_controller.read_attribute(
