@@ -769,6 +769,9 @@ class MatterDeviceController:
 
         LOGGER.info("Removing Node ID %s.", node_id)
 
+        if task := self._setup_node_with_retry_tasks.pop(node_id, None):
+            task.cancel()
+
         # shutdown any existing subscriptions
         await self._chip_device_controller.shutdown_subscription(node_id)
         self._polled_attributes.pop(node_id, None)
