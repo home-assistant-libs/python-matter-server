@@ -1206,7 +1206,7 @@ class MatterDeviceController:
                 self._node_unavailable(node_id)
             # Shutdown the subscription if we tried to resubscribe for more than 30
             # minutes (typical TTL of mDNS). We assume this device got powered off.
-            # When the device gets powered on again, it typically announced itself via
+            # When the device gets powered on again, it typically announces itself via
             # mDNS again. The mDNS browsing code will setup the subscription again.
             if (
                 time.time() - self._first_resubscribe_attempt[node_id]
