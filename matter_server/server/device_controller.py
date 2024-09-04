@@ -1419,12 +1419,12 @@ class MatterDeviceController:
 
     def _setup_node_create_task(self, node_id: int) -> asyncio.Task | None:
         """Create a task for setting up a node with retry."""
-        task = self._setup_node_tasks.get(node_id, None)
-        if task and not task.done():
+        if node_id in self._setup_node_tasks:
             node_logger = self.get_node_logger(LOGGER, node_id)
             node_logger.debug("Setup task exists already for this Node")
             return None
         task = asyncio.create_task(self._setup_node(node_id))
+        task.add_done_callback(lambda _: self._setup_node_tasks.pop(node_id, None))
         self._setup_node_tasks[node_id] = task
         return task
 
