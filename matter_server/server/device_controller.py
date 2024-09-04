@@ -1404,7 +1404,7 @@ class MatterDeviceController:
                 ):
                     # NOTE: assume the node will be picked up by mdns discovery later
                     # automatically when it becomes available again.
-                    logging.warning(
+                    node_logger.warning(
                         "Node setup not completed after %s minutes, giving up.",
                         NODE_MDNS_SUBSCRIPTION_RETRY_TIMEOUT // 60,
                     )
@@ -1416,7 +1416,8 @@ class MatterDeviceController:
     def _setup_node_create_task(self, node_id: int) -> asyncio.Task | None:
         """Create a task for setting up a node with retry."""
         if node_id in self._setup_node_with_retry_tasks:
-            logging.debug("Node setup task already exists for node %s", node_id)
+            node_logger = self.get_node_logger(LOGGER, node_id)
+            node_logger.debug("Setup task exists already for this Node")
             return None
         task = asyncio.create_task(self._setup_node_with_retry(node_id))
         self._setup_node_with_retry_tasks[node_id] = task
