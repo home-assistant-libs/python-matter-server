@@ -1419,7 +1419,8 @@ class MatterDeviceController:
 
     def _setup_node_create_task(self, node_id: int) -> asyncio.Task | None:
         """Create a task for setting up a node with retry."""
-        if node_id in self._setup_node_tasks:
+        task = self._setup_node_tasks.get(node_id, None)
+        if task and not task.done():
             node_logger = self.get_node_logger(LOGGER, node_id)
             node_logger.debug("Setup task exists already for this Node")
             return None
