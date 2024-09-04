@@ -1424,6 +1424,7 @@ class MatterDeviceController:
             node_logger.debug("Setup task exists already for this Node")
             return None
         task = asyncio.create_task(self._setup_node(node_id))
+        task.add_done_callback(lambda _: self._setup_node_tasks.pop(node_id, None))
         self._setup_node_tasks[node_id] = task
         return task
 
