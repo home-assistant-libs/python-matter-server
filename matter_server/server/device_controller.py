@@ -230,6 +230,7 @@ class MatterDeviceController:
             scan_task.cancel()
         if self._aiozc:
             await self._aiozc.async_close()
+        # Ensure any in-progress setup tasks are cancelled
         for task in self._setup_node_with_retry_tasks.values():
             task.cancel()
 
