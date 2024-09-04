@@ -144,7 +144,7 @@ class MatterDeviceController:
         self._fabric_id_hex: str | None = None
         self._wifi_credentials_set: bool = False
         self._thread_credentials_set: bool = False
-        self._nodes_in_setup: set[int] = set()
+        self._setup_node_with_retry_tasks = dict[int, asyncio.Task]()
         self._nodes_in_ota: set[int] = set()
         self._node_last_seen_on_mdns: dict[int, float] = {}
         self._nodes: dict[int, MatterNodeData] = {}
@@ -230,6 +230,8 @@ class MatterDeviceController:
             scan_task.cancel()
         if self._aiozc:
             await self._aiozc.async_close()
+        for task in self._setup_node_with_retry_tasks.values():
+            task.cancel()
 
         # shutdown the sdk device controller
         await self._chip_device_controller.shutdown()
@@ -340,7 +342,8 @@ class MatterDeviceController:
                 break
 
         # make sure we start a subscription for this newly added node
-        await self._setup_node_with_retry(node_id)
+        if task := self._setup_node_create_task(node_id):
+            await task
         LOGGER.info("Commissioning of Node ID %s completed.", node_id)
         # return full node object once we're complete
         return self.get_node(node_id)
@@ -418,7 +421,8 @@ class MatterDeviceController:
             else:
                 break
         # make sure we start a subscription for this newly added node
-        await self._setup_node_with_retry(node_id)
+        if task := self._setup_node_create_task(node_id):
+            await task
         LOGGER.info("Commissioning of Node ID %s completed.", node_id)
         # return full node object once we're complete
         return self.get_node(node_id)
@@ -1386,35 +1390,37 @@ class MatterDeviceController:
         """Handle set-up of subscriptions and interview (if needed) for known/discovered node."""
         if node_id not in self._nodes:
             raise NodeNotExists(f"Node {node_id} does not exist.")
-        if node_id in self._nodes_in_setup:
-            # prevent duplicate setup actions
-            return
-        self._nodes_in_setup.add(node_id)
 
         node_logger = self.get_node_logger(LOGGER, node_id)
 
-        try:
-            while True:
-                try:
-                    await self._setup_node(node_logger, node_id)
+        while True:
+            try:
+                await self._setup_node(node_logger, node_id)
+                break
+            except (NodeNotResolving, NodeInterviewFailed, ChipStackError):
+                if (
+                    time.time() - self._node_last_seen_on_mdns.get(node_id, 0)
+                    > NODE_MDNS_SUBSCRIPTION_RETRY_TIMEOUT
+                ):
+                    # NOTE: assume the node will be picked up by mdns discovery later
+                    # automatically when it becomes available again.
+                    logging.warning(
+                        "Node setup not completed after %s minutes, giving up.",
+                        NODE_MDNS_SUBSCRIPTION_RETRY_TIMEOUT // 60,
+                    )
                     break
-                except (NodeNotResolving, NodeInterviewFailed, ChipStackError):
-                    if (
-                        time.time() - self._node_last_seen_on_mdns.get(node_id, 0)
-                        > NODE_MDNS_SUBSCRIPTION_RETRY_TIMEOUT
-                    ):
-                        # NOTE: assume the node will be picked up by mdns discovery later
-                        # automatically when it becomes available again.
-                        logging.warning(
-                            "Node setup not completed after %s minutes, giving up.",
-                            NODE_MDNS_SUBSCRIPTION_RETRY_TIMEOUT // 60,
-                        )
-                        break
 
-                node_logger.info("Retrying node setup in 60 seconds...")
-                await asyncio.sleep(60)
-        finally:
-            self._nodes_in_setup.discard(node_id)
+            node_logger.info("Retrying node setup in 60 seconds...")
+            await asyncio.sleep(60)
+
+    def _setup_node_create_task(self, node_id: int) -> asyncio.Task | None:
+        """Create a task for setting up a node with retry."""
+        if node_id in self._setup_node_with_retry_tasks:
+            logging.debug("Node setup task already exists for node %s", node_id)
+            return None
+        task = asyncio.create_task(self._setup_node_with_retry(node_id))
+        self._setup_node_with_retry_tasks[node_id] = task
+        return task
 
     def _handle_endpoints_removed(self, node_id: int, endpoints: Iterable[int]) -> None:
         """Handle callback for when bridge endpoint(s) get deleted."""
@@ -1504,12 +1510,10 @@ class MatterDeviceController:
         if node.available and state_change == ServiceStateChange.Updated:
             return
 
-        if node_id in self._nodes_in_setup:
-            # prevent duplicate setup actions
-            return
-
         if not self._chip_device_controller.node_has_subscription(node_id):
             node_logger.info("Discovered on mDNS")
+            # Setup the node - this will setup the subscriptions etc.
+            self._setup_node_create_task(node_id)
         elif state_change == ServiceStateChange.Added:
             # Trigger node re-subscriptions when mDNS entry got added
             node_logger.info("Activity on mDNS, trigger resubscribe")
@@ -1518,13 +1522,6 @@ class MatterDeviceController:
                     node_id, "mDNS state change detected"
                 )
             )
-            return
-        else:
-            # ignore all other cases
-            return
-
-        # setup the node - this will (re) setup the subscriptions etc.
-        asyncio.create_task(self._setup_node_with_retry(node_id))
 
     def _on_mdns_commissionable_node_state(
         self, name: str, state_change: ServiceStateChange
@@ -1627,7 +1624,8 @@ class MatterDeviceController:
                 continue
             if await self.ping_node(node_id, attempts=3):
                 LOGGER.info("Node %s discovered using fallback ping", node_id)
-                await self._setup_node_with_retry(node_id)
+                if task := self._setup_node_create_task(node_id):
+                    await task
 
         # reschedule self to run at next interval
         self._schedule_fallback_scanner()
