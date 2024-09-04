@@ -144,7 +144,7 @@ class MatterDeviceController:
         self._fabric_id_hex: str | None = None
         self._wifi_credentials_set: bool = False
         self._thread_credentials_set: bool = False
-        self._setup_node_with_retry_tasks = dict[int, asyncio.Task]()
+        self._setup_node_tasks = dict[int, asyncio.Task]()
         self._nodes_in_ota: set[int] = set()
         self._node_last_seen_on_mdns: dict[int, float] = {}
         self._nodes: dict[int, MatterNodeData] = {}
@@ -231,7 +231,7 @@ class MatterDeviceController:
         if self._aiozc:
             await self._aiozc.async_close()
         # Ensure any in-progress setup tasks are cancelled
-        for task in self._setup_node_with_retry_tasks.values():
+        for task in self._setup_node_tasks.values():
             task.cancel()
 
         # shutdown the sdk device controller
@@ -770,7 +770,7 @@ class MatterDeviceController:
 
         LOGGER.info("Removing Node ID %s.", node_id)
 
-        if task := self._setup_node_with_retry_tasks.pop(node_id, None):
+        if task := self._setup_node_tasks.pop(node_id, None):
             task.cancel()
 
         # shutdown any existing subscriptions
@@ -1276,11 +1276,12 @@ class MatterDeviceController:
         self.server.storage.set(DATA_KEY_LAST_NODE_ID, next_node_id, force=True)
         return next_node_id
 
-    async def _setup_node(
+    async def _setup_node_try_once(
         self,
         node_logger: logging.LoggerAdapter,
         node_id: int,
     ) -> None:
+        """Handle set-up of subscriptions and interview (if needed) for known/discovered node."""
         node_data = self._nodes[node_id]
         log_timers: dict[int, asyncio.TimerHandle] = {}
         is_thread_node = (
@@ -1390,8 +1391,7 @@ class MatterDeviceController:
             if is_thread_node:
                 self._thread_node_setup_throttle.release()
 
-    async def _setup_node_with_retry(self, node_id: int) -> None:
-        """Handle set-up of subscriptions and interview (if needed) for known/discovered node."""
+    async def _setup_node(self, node_id: int) -> None:
         if node_id not in self._nodes:
             raise NodeNotExists(f"Node {node_id} does not exist.")
 
@@ -1399,7 +1399,7 @@ class MatterDeviceController:
 
         while True:
             try:
-                await self._setup_node(node_logger, node_id)
+                await self._setup_node_try_once(node_logger, node_id)
                 break
             except (NodeNotResolving, NodeInterviewFailed, ChipStackError):
                 if (
@@ -1419,12 +1419,12 @@ class MatterDeviceController:
 
     def _setup_node_create_task(self, node_id: int) -> asyncio.Task | None:
         """Create a task for setting up a node with retry."""
-        if node_id in self._setup_node_with_retry_tasks:
+        if node_id in self._setup_node_tasks:
             node_logger = self.get_node_logger(LOGGER, node_id)
             node_logger.debug("Setup task exists already for this Node")
             return None
-        task = asyncio.create_task(self._setup_node_with_retry(node_id))
-        self._setup_node_with_retry_tasks[node_id] = task
+        task = asyncio.create_task(self._setup_node(node_id))
+        self._setup_node_tasks[node_id] = task
         return task
 
     def _handle_endpoints_removed(self, node_id: int, endpoints: Iterable[int]) -> None:
