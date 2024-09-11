@@ -291,7 +291,6 @@ class EveCluster(Cluster, CustomClusterMixin):
 
             value: float32 = 0
 
-
         @dataclass
         class ValvePosition(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """ValvePosition Attribute within the Eve Cluster."""
