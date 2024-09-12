@@ -1293,55 +1293,14 @@ class MatterDeviceController:
     ) -> None:
         """Handle set-up of subscriptions and interview (if needed) for known/discovered node."""
         node_data = self._nodes[node_id]
-        log_timers: dict[int, asyncio.TimerHandle] = {}
         is_thread_node = (
             node_data.attributes.get(ROUTING_ROLE_ATTRIBUTE_PATH) is not None
         )
-
-        async def log_node_long_setup(time_start: float) -> None:
-            """Temporary measure to track a locked-up SDK issue in some (special) circumstances."""
-            time_mins = int((time.time() - time_start) / 60)
-            # get productlabel or modelname from raw attributes
-            node_model = node_data.attributes.get(
-                "0/40/14", node_data.attributes.get("0/40/3", "")
-            )
-            node_name = f"Node {node_id} ({node_model})"
-            # get current IP the sdk is using to communicate with the device
-            if sdk_ip_info := await self._chip_device_controller.get_address_and_port(
-                node_id
-            ):
-                ip_address = sdk_ip_info[0]
-            else:
-                ip_address = "unknown"
-
-            node_logger.error(
-                f"\n\nATTENTION: {node_name} did not complete setup in {time_mins} minutes.\n"  # noqa: G004
-                "This is an indication of a (connectivity) issue with this device. \n"
-                f"IP-address in use for this device: {ip_address}\n"
-                "Try powercycling this device and/or relocate it closer to a Border Router or \n"
-                "WiFi Access Point. If this issue persists, please create an issue report on \n"
-                "the Matter channel of the Home Assistant Discord server or on Github:\n"
-                "https://github.com/home-assistant/core/issues/new?assignees=&labels="
-                "integration%3A%20matter&projects=&template=bug_report.yml\n",
-            )
-            # reschedule itself
-            log_timers[node_id] = self._loop.call_later(
-                15 * 60, lambda: asyncio.create_task(log_node_long_setup(time_start))
-            )
-            # release semaphore to give an additional free slot for setup
-            # otherwise no thread nodes will be setup if 5 are stuck in this state
-            if is_thread_node:
-                self._thread_node_setup_throttle.release()
 
         # use semaphore for thread based devices to (somewhat)
         # throttle the traffic that setup/initial subscription generates
         if is_thread_node:
             await self._thread_node_setup_throttle.acquire()
-        time_start = time.time()
-        # we want to track nodes that take too long so we log it when we detect that
-        log_timers[node_id] = self._loop.call_later(
-            15 * 60, lambda: asyncio.create_task(log_node_long_setup(time_start))
-        )
 
         try:
             node_logger.info("Setting-up node...")
@@ -1397,7 +1356,6 @@ class MatterDeviceController:
                 self._polled_attributes[node_id] = polled_attributes
                 self._schedule_custom_attributes_poller()
         finally:
-            log_timers[node_id].cancel()
             if is_thread_node:
                 self._thread_node_setup_throttle.release()
 
