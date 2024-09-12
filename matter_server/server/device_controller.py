@@ -87,7 +87,6 @@ NODE_RESUBSCRIBE_FORCE_TIMEOUT = 5
 NODE_PING_TIMEOUT = 10
 NODE_PING_TIMEOUT_BATTERY_POWERED = 60
 NODE_MDNS_SUBSCRIPTION_RETRY_TIMEOUT = 30 * 60
-FALLBACK_NODE_SCANNER_INTERVAL = 30 * 60
 CUSTOM_ATTRIBUTES_POLLER_INTERVAL = 30
 
 MDNS_TYPE_OPERATIONAL_NODE = "_matter._tcp.local."
@@ -156,8 +155,6 @@ class MatterDeviceController:
         self._known_commissioning_params_timers: dict[int, asyncio.TimerHandle] = {}
         self._aiobrowser: AsyncServiceBrowser | None = None
         self._aiozc: AsyncZeroconf | None = None
-        self._fallback_node_scanner_timer: asyncio.TimerHandle | None = None
-        self._fallback_node_scanner_task: asyncio.Task | None = None
         self._thread_node_setup_throttle = asyncio.Semaphore(5)
         self._mdns_event_timer: dict[str, asyncio.TimerHandle] = {}
         self._polled_attributes: dict[int, set[str]] = {}
@@ -218,18 +215,12 @@ class MatterDeviceController:
             services,
             handlers=[self._on_mdns_service_state_change],
         )
-        # set-up fallback node scanner
-        self._schedule_fallback_scanner()
 
     async def stop(self) -> None:
         """Handle logic on server stop."""
-        # shutdown (and cleanup) mdns browser and fallback node scanner
+        # shutdown (and cleanup) mdns browser
         if self._aiobrowser:
             await self._aiobrowser.async_cancel()
-        if self._fallback_node_scanner_timer:
-            self._fallback_node_scanner_timer.cancel()
-        if (scan_task := self._fallback_node_scanner_task) and not scan_task.done():
-            scan_task.cancel()
         if self._aiozc:
             await self._aiozc.async_close()
         # Ensure any in-progress setup tasks are cancelled
@@ -1622,43 +1613,6 @@ class MatterDeviceController:
 
         # mark node as unavailable (if it wasn't already)
         self._node_unavailable(node_id)
-
-    async def _fallback_node_scanner(self) -> None:
-        """Scan for operational nodes in the background that are missed by mdns."""
-        # This code could/should be removed in the future and is added to have a fallback
-        # to discover operational nodes that got somehow missed by zeroconf.
-        # the issue in zeroconf is being investigated and in the meanwhile we have this fallback.
-        for node_id, node in self._nodes.items():
-            if node.available:
-                continue
-            now = time.time()
-            last_seen = self._node_last_seen_on_mdns.get(node_id, 0)
-            if now - last_seen < FALLBACK_NODE_SCANNER_INTERVAL:
-                continue
-            if await self.ping_node(node_id, attempts=3):
-                LOGGER.info("Node %s discovered using fallback ping", node_id)
-                if task := self._setup_node_create_task(node_id):
-                    await task
-
-        # reschedule self to run at next interval
-        self._schedule_fallback_scanner()
-
-    def _schedule_fallback_scanner(self) -> None:
-        """Schedule running the fallback node scanner at X interval."""
-        if existing := self._fallback_node_scanner_timer:
-            existing.cancel()
-
-        def run_fallback_node_scanner() -> None:
-            self._fallback_node_scanner_timer = None
-            if (existing := self._fallback_node_scanner_task) and not existing.done():
-                existing.cancel()
-            self._fallback_node_scanner_task = asyncio.create_task(
-                self._fallback_node_scanner()
-            )
-
-        self._fallback_node_scanner_timer = self._loop.call_later(
-            FALLBACK_NODE_SCANNER_INTERVAL, run_fallback_node_scanner
-        )
 
     async def _custom_attributes_poller(self) -> None:
         """Poll custom clusters/attributes for changes."""
