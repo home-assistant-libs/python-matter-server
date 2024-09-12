@@ -90,6 +90,9 @@ class EveCluster(Cluster, CustomClusterMixin):
                 ClusterObjectFieldDescriptor(
                     Label="pressure", Tag=0x130A0014, Type=float32
                 ),
+                ClusterObjectFieldDescriptor(
+                    Label="valvePosition", Tag=0x130A0018, Type=int
+                ),
             ]
         )
 
@@ -101,6 +104,7 @@ class EveCluster(Cluster, CustomClusterMixin):
     current: float32 | None = None
     altitude: float32 | None = None
     pressure: float32 | None = None
+    valvePosition: int | None = None
 
     class Attributes:
         """Attributes for the Eve Cluster."""
@@ -286,6 +290,29 @@ class EveCluster(Cluster, CustomClusterMixin):
                 return ClusterObjectFieldDescriptor(Type=float32)
 
             value: float32 = 0
+
+        @dataclass
+        class ValvePosition(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """ValvePosition Attribute within the Eve Cluster."""
+
+            should_poll = True
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x130AFC01
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x130A0018
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=int)
+
+            value: int = 0
 
 
 @dataclass
