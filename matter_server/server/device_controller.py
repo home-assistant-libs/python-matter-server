@@ -1482,7 +1482,7 @@ class MatterDeviceController:
         elif state_change == ServiceStateChange.Added:
             # Trigger node re-subscriptions when mDNS entry got added
             # Note: Users seem to get such mDNS messages fairly regularly, and often
-            # the subscription to the device is healthy nad fine. This is not a problem
+            # the subscription to the device is healthy and fine. This is not a problem
             # since trigger_resubscribe_if_scheduled won't do anything in that case
             # (no resubscribe is scheduled).
             # But this does speedup the resubscription process in case the subscription
