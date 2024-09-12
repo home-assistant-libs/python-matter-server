@@ -178,7 +178,7 @@ class ExternalOtaProvider:
             "--discriminator",
             str(ota_provider_discriminator),
             "--secured-device-port",
-            "5540",
+            "0",
             "--KVS",
             str(self._ota_provider_dir / f"chip_kvs_ota_provider_{timestamp}"),
             "--filepath",
