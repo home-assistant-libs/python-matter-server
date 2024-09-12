@@ -972,13 +972,15 @@ class MatterDeviceController:
 
         # Add update to the OTA provider
         ota_provider = ExternalOtaProvider(
-            self.server.vendor_id, self._ota_provider_dir / f"{node_id}"
+            self.server.vendor_id,
+            self._ota_provider_dir,
+            self._ota_provider_dir / f"{node_id}",
         )
 
         await ota_provider.initialize()
 
         node_logger.info("Downloading update from '%s'", update["otaUrl"])
-        await ota_provider.download_update(update)
+        await ota_provider.fetch_update(update)
 
         self._attribute_update_callbacks.setdefault(node_id, []).append(
             ota_provider.check_update_state
