@@ -1481,7 +1481,13 @@ class MatterDeviceController:
             self._setup_node_create_task(node_id)
         elif state_change == ServiceStateChange.Added:
             # Trigger node re-subscriptions when mDNS entry got added
-            node_logger.info("Activity on mDNS, trigger resubscribe")
+            # Note: Users seem to get such mDNS messages fairly regularly, and often
+            # the subscription to the device is healthy and fine. This is not a problem
+            # since trigger_resubscribe_if_scheduled won't do anything in that case
+            # (no resubscribe is scheduled).
+            # But this does speedup the resubscription process in case the subscription
+            # is already in resubscribe mode.
+            node_logger.debug("Activity on mDNS, trigger resubscribe if scheduled")
             asyncio.create_task(
                 self._chip_device_controller.trigger_resubscribe_if_scheduled(
                     node_id, "mDNS state change detected"
