@@ -319,7 +319,9 @@ class EveCluster(Cluster, CustomClusterMixin):
             value: int = 0
 
         @dataclass
-        class MotionSensitivity(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+        class MotionSensitivity(
+            ClusterAttributeDescriptor, CustomClusterAttributeMixin
+        ):
             """MotionSensitivity Attribute within the Eve Cluster."""
 
             should_poll = True
