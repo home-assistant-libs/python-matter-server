@@ -324,7 +324,7 @@ class EveCluster(Cluster, CustomClusterMixin):
         ):
             """MotionSensitivity Attribute within the Eve Cluster."""
 
-            should_poll = True
+            should_poll = False
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
