@@ -338,15 +338,17 @@ class ChipDeviceControllerWrapper:
                 allowPASE=False,
                 timeoutMs=None,
             )
+            transaction = Attribute.AsyncReadTransaction(
+                future, self.server.loop, self._chip_controller, True
+            )
             Attribute.Read(
-                future=future,
-                eventLoop=self.server.loop,
+                transaction=transaction,
                 device=device.deviceProxy,
-                devCtrl=self._chip_controller,
                 attributes=attributes,
                 fabricFiltered=fabric_filtered,
             ).raise_on_error()
-            return await future
+            await future
+            return transaction.GetReadResponse()
 
     async def write_attribute(
         self,
