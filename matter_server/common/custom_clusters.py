@@ -62,6 +62,17 @@ class CustomClusterAttributeMixin:
         ALL_CUSTOM_ATTRIBUTES[cls.cluster_id][cls.attribute_id] = cls
 
 
+def should_poll_eve_energy(node_data: MatterNodeData) -> bool:
+    """Check if the (Eve Energy) custom attribute should be polled for state changes."""
+    if node_data.attributes.get("0/40/2") != 4874:
+        # Some implementation (such as MatterBridge) use the
+        # Eve cluster to send the power measurements. Filter that out.
+        return False
+    # if the ElectricalPowerMeasurement cluster is NOT present,
+    # we should poll the custom Eve cluster attribute(s).
+    return node_data.attributes.get("2/144/65531") is None
+
+
 @dataclass
 class EveCluster(Cluster, CustomClusterMixin):
     """Custom (vendor-specific) cluster for Eve - Vendor ID 4874 (0x130a)."""
@@ -145,11 +156,7 @@ class EveCluster(Cluster, CustomClusterMixin):
         class Watt(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """Watt Attribute within the Eve Cluster."""
 
-            @staticmethod
-            def should_poll(node_data: MatterNodeData) -> bool:
-                """Check if the custom attribute should be polled for state changes."""
-                # if fw version < 9000 (=3.5.0), polling is needed
-                return node_data.attributes.get("0/40/9", 0) < 9000
+            should_poll = should_poll_eve_energy
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -172,11 +179,7 @@ class EveCluster(Cluster, CustomClusterMixin):
         class WattAccumulated(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """WattAccumulated Attribute within the Eve Cluster."""
 
-            @staticmethod
-            def should_poll(node_data: MatterNodeData) -> bool:
-                """Check if the custom attribute should be polled for state changes."""
-                # if fw version < 9000 (=3.5.0), polling is needed
-                return node_data.attributes.get("0/40/9", 0) < 9000
+            should_poll = should_poll_eve_energy
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -201,11 +204,7 @@ class EveCluster(Cluster, CustomClusterMixin):
         ):
             """wattAccumulatedControlPoint Attribute within the Eve Cluster."""
 
-            @staticmethod
-            def should_poll(node_data: MatterNodeData) -> bool:
-                """Check if the custom attribute should be polled for state changes."""
-                # if fw version < 9000 (=3.5.0), polling is needed
-                return node_data.attributes.get("0/40/9", 0) < 9000
+            should_poll = should_poll_eve_energy
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -228,11 +227,7 @@ class EveCluster(Cluster, CustomClusterMixin):
         class Voltage(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """Voltage Attribute within the Eve Cluster."""
 
-            @staticmethod
-            def should_poll(node_data: MatterNodeData) -> bool:
-                """Check if the custom attribute should be polled for state changes."""
-                # if fw version < 9000 (=3.5.0), polling is needed
-                return node_data.attributes.get("0/40/9", 0) < 9000
+            should_poll = should_poll_eve_energy
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -255,11 +250,7 @@ class EveCluster(Cluster, CustomClusterMixin):
         class Current(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """Current Attribute within the Eve Cluster."""
 
-            @staticmethod
-            def should_poll(node_data: MatterNodeData) -> bool:
-                """Check if the custom attribute should be polled for state changes."""
-                # if fw version < 9000 (=3.5.0), polling is needed
-                return node_data.attributes.get("0/40/9", 0) < 9000
+            should_poll = should_poll_eve_energy
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
