@@ -78,6 +78,7 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
+NODE_SUBSCRIPTION_FLOOR = 1
 NODE_SUBSCRIPTION_CEILING_WIFI = 60
 NODE_SUBSCRIPTION_CEILING_THREAD = 60
 NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 600
@@ -1221,7 +1222,6 @@ class MatterDeviceController:
                 self.server.signal_event(EventType.NODE_UPDATED, node)
 
         node_logger.info("Setting up attributes and events subscription.")
-        interval_floor = 0
         # determine subscription ceiling based on routing role
         # Endpoint 0, ThreadNetworkDiagnostics Cluster, routingRole attribute
         # for WiFi devices, this cluster doesn't exist.
@@ -1244,7 +1244,7 @@ class MatterDeviceController:
                 [()],
                 events=[("*", 1)],
                 return_cluster_objects=False,
-                report_interval=(interval_floor, interval_ceiling),
+                report_interval=(NODE_SUBSCRIPTION_FLOOR, interval_ceiling),
                 auto_resubscribe=True,
             )
         )
