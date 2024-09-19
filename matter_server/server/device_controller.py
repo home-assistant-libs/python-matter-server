@@ -78,7 +78,8 @@ DATA_KEY_NODES = "nodes"
 DATA_KEY_LAST_NODE_ID = "last_node_id"
 
 LOGGER = logging.getLogger(__name__)
-NODE_SUBSCRIPTION_FLOOR = 1
+NODE_SUBSCRIPTION_FLOOR_DEFAULT = 1
+NODE_SUBSCRIPTION_FLOOR_ICD = 1
 NODE_SUBSCRIPTION_CEILING_WIFI = 60
 NODE_SUBSCRIPTION_CEILING_THREAD = 60
 NODE_SUBSCRIPTION_CEILING_BATTERY_POWERED = 600
@@ -1243,9 +1244,9 @@ class MatterDeviceController:
             # for ICD devices, the interval floor must be 0 according to the spec,
             # to prevent additional battery drainage. See Matter core spec, chapter 8.5.2.2.
             # TODO: revisit this after Matter 1.4 release (as that mighht change this again).
-            interval_floor = 0
+            interval_floor = NODE_SUBSCRIPTION_FLOOR_ICD
         else:
-            interval_floor = NODE_SUBSCRIPTION_FLOOR
+            interval_floor = NODE_SUBSCRIPTION_FLOOR_DEFAULT
         self._resubscription_attempt[node_id] = 0
         # set-up the actual subscription
         sub: Attribute.SubscriptionTransaction = (
