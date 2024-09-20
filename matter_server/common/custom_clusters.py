@@ -12,9 +12,13 @@ from chip.clusters.ClusterObjects import (
     ClusterObjectDescriptor,
     ClusterObjectFieldDescriptor,
 )
+from chip.clusters.Objects import BasicInformation, ElectricalPowerMeasurement
 from chip.tlv import float32, uint
 
-from matter_server.common.helpers.util import parse_attribute_path
+from matter_server.common.helpers.util import (
+    create_attribute_path_from_attribute,
+    parse_attribute_path,
+)
 
 if TYPE_CHECKING:
     from matter_server.common.models import MatterNodeData
@@ -26,6 +30,8 @@ if TYPE_CHECKING:
 
 ALL_CUSTOM_CLUSTERS: dict[int, Cluster] = {}
 ALL_CUSTOM_ATTRIBUTES: dict[int, dict[int, ClusterAttributeDescriptor]] = {}
+
+VENDOR_ID_EVE = 4874
 
 
 @dataclass
@@ -64,13 +70,19 @@ class CustomClusterAttributeMixin:
 
 def should_poll_eve_energy(node_data: MatterNodeData) -> bool:
     """Check if the (Eve Energy) custom attribute should be polled for state changes."""
-    if node_data.attributes.get("0/40/2") != 4874:
+    attr_path = create_attribute_path_from_attribute(
+        0, BasicInformation.Attributes.VendorID
+    )
+    if node_data.attributes.get(attr_path) != VENDOR_ID_EVE:
         # Some implementation (such as MatterBridge) use the
         # Eve cluster to send the power measurements. Filter that out.
         return False
     # if the ElectricalPowerMeasurement cluster is NOT present,
     # we should poll the custom Eve cluster attribute(s).
-    return node_data.attributes.get("2/144/65531") is None
+    attr_path = create_attribute_path_from_attribute(
+        2, ElectricalPowerMeasurement.Attributes.AttributeList
+    )
+    return node_data.attributes.get(attr_path) is None
 
 
 @dataclass
