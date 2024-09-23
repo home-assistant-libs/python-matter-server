@@ -48,7 +48,7 @@ test = [
   "mypy==1.11.2",
   "pre-commit==3.8.0",
   "pre-commit-hooks==4.6.0",
-  "pylint==3.2.7",
+  "pylint==3.3.0",
   "pytest==8.3.3",
   "pytest-asyncio==0.24.0",
   "pytest-aiohttp==1.0.5",
@@ -117,6 +117,7 @@ good-names = [
 [tool.pylint.DESIGN]
 max-args = 10
 max-attributes = 12
+max-positional-arguments = 10
 
 [tool.pylint."MESSAGES CONTROL"]
 disable = [
