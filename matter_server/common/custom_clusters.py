@@ -12,9 +12,13 @@ from chip.clusters.ClusterObjects import (
     ClusterObjectDescriptor,
     ClusterObjectFieldDescriptor,
 )
+from chip.clusters.Objects import BasicInformation, ElectricalPowerMeasurement
 from chip.tlv import float32, uint
 
-from matter_server.common.helpers.util import parse_attribute_path
+from matter_server.common.helpers.util import (
+    create_attribute_path_from_attribute,
+    parse_attribute_path,
+)
 
 if TYPE_CHECKING:
     from matter_server.common.models import MatterNodeData
@@ -27,13 +31,19 @@ if TYPE_CHECKING:
 ALL_CUSTOM_CLUSTERS: dict[int, Cluster] = {}
 ALL_CUSTOM_ATTRIBUTES: dict[int, dict[int, ClusterAttributeDescriptor]] = {}
 
+VENDOR_ID_EVE = 4874
+
 
 @dataclass
 class CustomClusterMixin:
     """Base model for a vendor specific custom cluster."""
 
     id: ClassVar[int]  # cluster id
-    should_poll: bool = False  # should the entire cluster be polled for state changes?
+
+    @staticmethod
+    def should_poll(node_data: MatterNodeData) -> bool:  # noqa: ARG004
+        """Check if the (entire) custom cluster should be polled for state changes."""
+        return False
 
     def __init_subclass__(cls: Cluster, *args, **kwargs) -> None:
         """Register a subclass."""
@@ -45,7 +55,10 @@ class CustomClusterMixin:
 class CustomClusterAttributeMixin:
     """Base model for a vendor specific custom cluster attribute."""
 
-    should_poll: bool = False  # should this attribute be polled ?
+    @staticmethod
+    def should_poll(node_data: MatterNodeData) -> bool:  # noqa: ARG004
+        """Check if the custom attribute should be polled for state changes."""
+        return False
 
     def __init_subclass__(cls: ClusterAttributeDescriptor, *args, **kwargs) -> None:
         """Register a subclass."""
@@ -53,6 +66,23 @@ class CustomClusterAttributeMixin:
         if cls.cluster_id not in ALL_CUSTOM_ATTRIBUTES:
             ALL_CUSTOM_ATTRIBUTES[cls.cluster_id] = {}
         ALL_CUSTOM_ATTRIBUTES[cls.cluster_id][cls.attribute_id] = cls
+
+
+def should_poll_eve_energy(node_data: MatterNodeData) -> bool:
+    """Check if the (Eve Energy) custom attribute should be polled for state changes."""
+    attr_path = create_attribute_path_from_attribute(
+        0, BasicInformation.Attributes.VendorID
+    )
+    if node_data.attributes.get(attr_path) != VENDOR_ID_EVE:
+        # Some implementation (such as MatterBridge) use the
+        # Eve cluster to send the power measurements. Filter that out.
+        return False
+    # if the ElectricalPowerMeasurement cluster is NOT present,
+    # we should poll the custom Eve cluster attribute(s).
+    attr_path = create_attribute_path_from_attribute(
+        2, ElectricalPowerMeasurement.Attributes.AttributeList
+    )
+    return node_data.attributes.get(attr_path) is None
 
 
 @dataclass
@@ -117,8 +147,6 @@ class EveCluster(Cluster, CustomClusterMixin):
         class TimesOpened(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """TimesOpened Attribute within the Eve Cluster."""
 
-            should_poll = True
-
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
                 """Return cluster id."""
@@ -140,7 +168,7 @@ class EveCluster(Cluster, CustomClusterMixin):
         class Watt(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """Watt Attribute within the Eve Cluster."""
 
-            should_poll = True
+            should_poll = should_poll_eve_energy
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -163,7 +191,7 @@ class EveCluster(Cluster, CustomClusterMixin):
         class WattAccumulated(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """WattAccumulated Attribute within the Eve Cluster."""
 
-            should_poll = True
+            should_poll = should_poll_eve_energy
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -188,7 +216,7 @@ class EveCluster(Cluster, CustomClusterMixin):
         ):
             """wattAccumulatedControlPoint Attribute within the Eve Cluster."""
 
-            should_poll = True
+            should_poll = should_poll_eve_energy
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -211,7 +239,7 @@ class EveCluster(Cluster, CustomClusterMixin):
         class Voltage(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """Voltage Attribute within the Eve Cluster."""
 
-            should_poll = True
+            should_poll = should_poll_eve_energy
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -234,7 +262,7 @@ class EveCluster(Cluster, CustomClusterMixin):
         class Current(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """Current Attribute within the Eve Cluster."""
 
-            should_poll = True
+            should_poll = should_poll_eve_energy
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -299,8 +327,6 @@ class EveCluster(Cluster, CustomClusterMixin):
         class ValvePosition(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """ValvePosition Attribute within the Eve Cluster."""
 
-            should_poll = True
-
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
                 """Return cluster id."""
@@ -323,8 +349,6 @@ class EveCluster(Cluster, CustomClusterMixin):
             ClusterAttributeDescriptor, CustomClusterAttributeMixin
         ):
             """MotionSensitivity Attribute within the Eve Cluster."""
-
-            should_poll = False
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -558,12 +582,12 @@ def check_polled_attributes(node_data: MatterNodeData) -> set[str]:
         endpoint_id, cluster_id, attribute_id = parse_attribute_path(attr_path)
         if not (custom_cluster := ALL_CUSTOM_CLUSTERS.get(cluster_id)):
             continue
-        if custom_cluster.should_poll:
+        if custom_cluster.should_poll(node_data):
             # the entire cluster needs to be polled
             attributes_to_poll.add(f"{endpoint_id}/{cluster_id}/*")
             continue
         custom_attribute = ALL_CUSTOM_ATTRIBUTES[cluster_id].get(attribute_id)
-        if custom_attribute and custom_attribute.should_poll:
+        if custom_attribute and custom_attribute.should_poll(node_data):
             # this attribute needs to be polled
             attributes_to_poll.add(attr_path)
     return attributes_to_poll
