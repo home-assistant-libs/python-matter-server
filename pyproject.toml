@@ -117,6 +117,7 @@ good-names = [
 [tool.pylint.DESIGN]
 max-args = 10
 max-attributes = 12
+max-positional-arguments = 10
 
 [tool.pylint."MESSAGES CONTROL"]
 disable = [
@@ -129,8 +130,6 @@ disable = [
   "fixme", # we're still developing
   "too-few-public-methods", # unavoidable
 ]
-
-max-positional-arguments = 10
 
 [tool.pylint.SIMILARITIES]
 ignore-imports = true
