@@ -100,7 +100,7 @@ class MatterServer:
     _runner: web.AppRunner | None = None
     _http: MultiHostTCPSite | None = None
 
-    def __init__(  # noqa: PLR0913, pylint: disable=too-many-arguments
+    def __init__(  # noqa: PLR0913, pylint: disable=too-many-positional-arguments, too-many-arguments
         self,
         storage_path: str,
         vendor_id: int,
