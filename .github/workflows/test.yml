@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.0
       - name: Set up Python
         uses: actions/setup-python@v5.2.0
         with:
@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.0
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5.2.0
         with:
