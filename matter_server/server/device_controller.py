@@ -315,6 +315,14 @@ class MatterDeviceController:
             LOGGER.info("Commissioned Node ID: %s vs %s", commissioned_node_id, node_id)
             if commissioned_node_id != node_id:
                 raise RuntimeError("Returned Node ID must match requested Node ID")
+
+            await self._chip_device_controller.send_command(
+                node_id,
+                0,
+                Clusters.OperationalCredentials.Commands.UpdateFabricLabel(
+                    "Home Assistant"
+                ),
+            )
         except ChipStackError as err:
             raise NodeCommissionFailed(
                 f"Commission with code failed for node {node_id}."
