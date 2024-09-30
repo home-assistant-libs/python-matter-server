@@ -131,7 +131,7 @@ class MatterClient:
             return node
         raise NodeNotExists(f"Node {node_id} does not exist or is not yet interviewed")
 
-    async def set_default_fabric_label(self, label: str) -> None:
+    async def set_default_fabric_label(self, label: str | None) -> None:
         """Set the default fabric label."""
         await self.send_command(
             APICommand.SET_DEFAULT_FABRIC_LABEL, require_schema=11, label=label
