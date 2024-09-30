@@ -353,6 +353,12 @@ class ExternalOtaProvider:
     ) -> None:
         """Check the update state of a node and take appropriate action."""
 
+        if path is None:
+            self._ota_done.set_exception(
+                UpdateError("Device went offline during OTA update")
+            )
+            return
+
         if str(path) != OTA_SOFTWARE_UPDATE_REQUESTOR_UPDATE_STATE_ATTRIBUTE_PATH:
             return
 
