@@ -7,6 +7,8 @@ as a base and provides both a server and client implementation.
 The goal of this project is primarily to have Matter support in Home Assistant
 but its universal approach makes it suitable to be used in other projects too.
 
+[![Python Matter Server - A library from the Open Home Foundation](https://www.openhomefoundation.org/badges/python-matter-server.png)](https://www.openhomefoundation.org/)
+
 ## Support
 
 Got questions?
@@ -315,5 +317,3 @@ There is also a Python client library hosted in this repository (used by Home As
 The client library has a dependency on the chip/matter clusters package which contains all (Cluster) models and this package is os/platform independent. The server library depends on the Matter Core SDK (still named CHIP) which is architecture and OS specific. We build (and publish) wheels for Linux (amd64 and aarch64) to pypi but for other platforms (like Macos) you will need to build those wheels yourself using the exact same version of the SDK as we use for the clusters package. Take a look at our build script for directions: https://github.com/home-assistant-libs/chip-wheels/blob/main/.github/workflows/build.yaml
 
 To only install the client part: `pip install python-matter-server`
-
-[![Python Matter Server - A library from the Open Home Foundation](https://www.openhomefoundation.org/badges/python-matter-server.png)](https://www.openhomefoundation.org/)
