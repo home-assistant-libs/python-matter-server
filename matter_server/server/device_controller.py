@@ -1603,6 +1603,11 @@ class MatterDeviceController:
         node_logger.info("Node considered offline, shutdown subscription")
         await self._chip_device_controller.shutdown_subscription(node_id)
 
+        # inform listeners for update callbacks that this subscription is now offline
+        if node_id in self._attribute_update_callbacks:
+            for callback in self._attribute_update_callbacks[node_id]:
+                self._loop.create_task(callback(None, None, None))
+
         # mark node as unavailable (if it wasn't already)
         self._node_unavailable(node_id)
 
