@@ -166,6 +166,7 @@ class MatterDeviceController:
         self._custom_attribute_poller_timer: asyncio.TimerHandle | None = None
         self._custom_attribute_poller_task: asyncio.Task | None = None
         self._attribute_update_callbacks: dict[int, list[Callable]] = {}
+        self._default_fabric_label: str | None = None
 
     async def initialize(self) -> None:
         """Initialize the device controller."""
@@ -280,6 +281,11 @@ class MatterDeviceController:
             return node
         raise NodeNotExists(f"Node {node_id} does not exist or is not yet interviewed")
 
+    @api_command(APICommand.SET_DEFAULT_FABRIC_LABEL)
+    async def set_default_fabric_label(self, label: str | None) -> None:
+        """Set the default fabric label."""
+        self._default_fabric_label = label
+
     @api_command(APICommand.COMMISSION_WITH_CODE)
     async def commission_with_code(
         self, code: str, network_only: bool = False
@@ -315,6 +321,15 @@ class MatterDeviceController:
             LOGGER.info("Commissioned Node ID: %s vs %s", commissioned_node_id, node_id)
             if commissioned_node_id != node_id:
                 raise RuntimeError("Returned Node ID must match requested Node ID")
+
+            if self._default_fabric_label:
+                await self._chip_device_controller.send_command(
+                    node_id,
+                    0,
+                    Clusters.OperationalCredentials.Commands.UpdateFabricLabel(
+                        self._default_fabric_label
+                    ),
+                )
         except ChipStackError as err:
             raise NodeCommissionFailed(
                 f"Commission with code failed for node {node_id}."

@@ -50,6 +50,7 @@ class APICommand(str, Enum):
     IMPORT_TEST_NODE = "import_test_node"
     CHECK_NODE_UPDATE = "check_node_update"
     UPDATE_NODE = "update_node"
+    SET_DEFAULT_FABRIC_LABEL = "set_default_fabric_label"
 
 
 EventCallBackType = Callable[[EventType, Any], None]
