@@ -345,7 +345,7 @@ class MatterDeviceController:
         retries = 3
         while retries:
             try:
-                await self.interview_node(node_id)
+                await self._interview_node(node_id)
             except (NodeNotResolving, NodeInterviewFailed) as err:
                 if retries <= 0:
                     raise err
@@ -425,7 +425,7 @@ class MatterDeviceController:
         retries = 3
         while retries:
             try:
-                await self.interview_node(node_id)
+                await self._interview_node(node_id)
             except NodeInterviewFailed as err:
                 if retries <= 0:
                     raise err
@@ -567,17 +567,7 @@ class MatterDeviceController:
             for x in sdk_result
         ]
 
-    @api_command(APICommand.INTERVIEW_NODE)
-    async def interview_node(self, node_id: int) -> None:
-        """Interview a node."""
-        if node_id >= TEST_NODE_START:
-            LOGGER.debug(
-                "interview_node called for test node %s",
-                node_id,
-            )
-            self.server.signal_event(EventType.NODE_UPDATED, self._nodes[node_id])
-            return
-
+    async def _interview_node(self, node_id: int) -> None:
         try:
             LOGGER.info("Interviewing node: %s", node_id)
             read_response: Attribute.AsyncReadTransaction.ReadResponse = (
@@ -621,6 +611,28 @@ class MatterDeviceController:
             self.server.signal_event(EventType.NODE_UPDATED, node)
 
         LOGGER.debug("Interview of node %s completed", node_id)
+
+    @api_command(APICommand.INTERVIEW_NODE)
+    async def interview_node(self, node_id: int) -> None:
+        """Interview a node."""
+        if node_id >= TEST_NODE_START:
+            LOGGER.debug(
+                "interview_node called for test node %s",
+                node_id,
+            )
+            self.server.signal_event(EventType.NODE_UPDATED, self._nodes[node_id])
+            return
+
+        await self._interview_node(node_id)
+
+        if self._default_fabric_label:
+            await self._chip_device_controller.send_command(
+                node_id,
+                0,
+                Clusters.OperationalCredentials.Commands.UpdateFabricLabel(
+                    self._default_fabric_label
+                ),
+            )
 
     @api_command(APICommand.DEVICE_COMMAND)
     async def send_device_command(
@@ -1114,7 +1126,7 @@ class MatterDeviceController:
                 and new_value != old_value
             ):
                 # schedule a full interview of the node if the software version changed
-                self._loop.create_task(self.interview_node(node_id))
+                self._loop.create_task(self._interview_node(node_id))
 
             # store updated value in node attributes
             node.attributes[str(path)] = new_value
@@ -1346,7 +1358,7 @@ class MatterDeviceController:
                 or node_data.interview_version != DATA_MODEL_SCHEMA_VERSION
             ):
                 try:
-                    await self.interview_node(node_id)
+                    await self._interview_node(node_id)
                 except NodeInterviewFailed as err:
                     node_logger.warning(
                         "Setup for node failed: %s",
@@ -1436,7 +1448,7 @@ class MatterDeviceController:
     ) -> None:
         """Handle callback for when bridge endpoint(s) get added."""
         # we simply do a full interview of the node
-        await self.interview_node(node_id)
+        await self._interview_node(node_id)
         # signal event to consumers
         for endpoint_id in endpoints:
             self.server.signal_event(
