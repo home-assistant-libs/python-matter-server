@@ -587,6 +587,16 @@ class MatterDeviceController:
                     fabric_filtered=False,
                 )
             )
+
+            # Update label, just in case.
+            if self._default_fabric_label:
+                await self._chip_device_controller.send_command(
+                    node_id,
+                    0,
+                    Clusters.OperationalCredentials.Commands.UpdateFabricLabel(
+                        self._default_fabric_label
+                    ),
+                )
         except ChipStackError as err:
             raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
 
