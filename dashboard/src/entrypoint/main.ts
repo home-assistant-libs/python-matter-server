@@ -6,7 +6,7 @@ async function main() {
   let url = "";
 
   // Detect if we're running in the (production) webserver included in the matter server or not.
-  const isProductionServer = location.href.includes(":5580") || location.href.includes("hassio_ingress");
+  const isProductionServer = location.href.includes(":5580") || location.href.includes("hassio_ingress") || location.href.includes("/api/ingress/");
 
   if (!isProductionServer) {
     // development server, ask for url to matter server
