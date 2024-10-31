@@ -72,6 +72,9 @@ class MatterNodeView extends LitElement {
                   <div slot="headline">
                     Endpoint ${endPointId}
                   </div>
+                 <div slot="supporting-text"> 
+                      Device Type(s): ${getEndpointDeviceTypes(this.node, this.endpoint).map(deviceType => { return deviceType.label }).join(" / ")} 
+             </div> 
                   <ha-svg-icon slot="end" .path=${mdiChevronRight}></ha-svg-icon>
                 </md-list-item>
               `;
