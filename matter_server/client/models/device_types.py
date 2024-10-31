@@ -116,12 +116,12 @@ class Aggregator(DeviceType, device_type=0x000E):
     }
 
 
-class BridgedDevice(DeviceType, device_type=0x0013):
-    """Bridged Device."""
+class BridgedNode(DeviceType, device_type=0x0013):
+    """Bridged Node."""
 
     clusters = {
         all_clusters.Descriptor,
-        all_clusters.BridgedDeviceBasicInformation,
+        all_clusters.BridgedDeviceBasic,
         all_clusters.PowerSourceConfiguration,
         all_clusters.PowerSource,
     }
@@ -594,13 +594,12 @@ class SmokeCoAlarm(DeviceType, device_type=0x0076):
     """Smoke CO Alarm."""
 
     clusters = {
-        all_clusters.Descriptor,
         all_clusters.Identify,
         all_clusters.Groups,
         all_clusters.SmokeCoAlarm,
         all_clusters.RelativeHumidityMeasurement,
         all_clusters.TemperatureMeasurement,
-        all_clusters.CarbonMonoxideConcentrationMeasurement,
+        all_clusters.CarbonMonoxide,
         all_clusters.PowerSource,
         all_clusters.Descriptor,
     }
@@ -737,6 +736,7 @@ class RoboticVacuumCleaner(DeviceType, device_type=0x0074):
         all_clusters.RvcRunMode,
         all_clusters.RvcCleanMode,
         all_clusters.RvcOperationalState,
+        all_clusters.ServiceArea,
     }
 
 
@@ -796,11 +796,24 @@ class RainSensor(DeviceType, device_type=0x0044):
     }
 
 
-class NetworkInfrastructureManager(DeviceType, device_type=0xFFF10010):
+class NetworkInfrastructureManager(DeviceType, device_type=0x0090):
     """Network Infrastructure Manager."""
 
     clusters = {
         all_clusters.Descriptor,
+        all_clusters.ThreadNetworkDirectory,
+        all_clusters.WiFiNetworkManagement,
+        all_clusters.ThreadBorderRouterManagement,
+    }
+
+
+class ThreadBorderRouter(DeviceType, device_type=0x0091):
+    """Thread Border Router."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.ThreadNetworkDiagnostics,
+        all_clusters.ThreadBorderRouterManagement,
     }
 
 
@@ -811,7 +824,6 @@ class AllClustersAppServerExample(DeviceType, device_type=0xFFF10003):
         all_clusters.Identify,
         all_clusters.Descriptor,
         all_clusters.Binding,
-        all_clusters.BarrierControl,
         all_clusters.ColorControl,
         all_clusters.DoorLock,
         all_clusters.Groups,
@@ -822,12 +834,15 @@ class AllClustersAppServerExample(DeviceType, device_type=0xFFF10003):
     }
 
 
-class SecondaryNetworkCommissioningDeviceType(DeviceType, device_type=0xFFF10002):
-    """Secondary Network Commissioning Device Type."""
+class SecondaryNetworkInterface(DeviceType, device_type=0x0019):
+    """Secondary Network Interface."""
 
     clusters = {
         all_clusters.NetworkCommissioning,
         all_clusters.Descriptor,
+        all_clusters.EthernetNetworkDiagnostics,
+        all_clusters.WiFiNetworkDiagnostics,
+        all_clusters.ThreadNetworkDiagnostics,
     }
 
 
@@ -845,6 +860,7 @@ class CookSurface(DeviceType, device_type=0x0077):
     """Cook Surface."""
 
     clusters = {
+        all_clusters.OnOff,
         all_clusters.Descriptor,
         all_clusters.TemperatureControl,
         all_clusters.TemperatureMeasurement,
@@ -860,4 +876,53 @@ class Evse(DeviceType, device_type=0x050C):
         all_clusters.EnergyEvse,
         all_clusters.EnergyEvseMode,
         all_clusters.TemperatureMeasurement,
+    }
+
+
+class DeviceEnergyManagement(DeviceType, device_type=0x050D):
+    """Device Energy Management."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.DeviceEnergyManagement,
+        all_clusters.DeviceEnergyManagementMode,
+    }
+
+
+class WaterHeater(DeviceType, device_type=0x050F):
+    """Water Heater."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.Identify,
+        all_clusters.Thermostat,
+        all_clusters.WaterHeaterManagement,
+        all_clusters.WaterHeaterMode,
+    }
+
+
+class HeatPump(DeviceType, device_type=0x0309):
+    """Heat Pump."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.Identify,
+    }
+
+
+class SolarPower(DeviceType, device_type=0x0017):
+    """Solar Power."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.Identify,
+    }
+
+
+class BatteryStorage(DeviceType, device_type=0x0018):
+    """Battery Storage."""
+
+    clusters = {
+        all_clusters.Descriptor,
+        all_clusters.Identify,
     }
