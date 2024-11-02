@@ -126,8 +126,8 @@ docker run -d \
 ### Running using Docker compose
 
 ```sh
-docker compose up -d
-docker compose logs -f
+docker-compose up -d
+docker-compose logs -f
 ```
 
 NOTE: Both Matter and this implementation are in an early state and features are probably missing or could be improved. See our [development notes](#development) how you can help out, with development and/or testing.
