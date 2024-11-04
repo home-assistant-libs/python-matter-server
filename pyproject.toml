@@ -34,7 +34,7 @@ version = "0.0.0"
 server = [
   "aiohttp==3.10.10",
   "aiorun==2024.8.1",
-  "async-timeout==4.0.3",
+  "async-timeout==5.0.0",
   "coloredlogs==15.0.1",
   "cryptography==43.0.3",
   "orjson==3.10.11",
