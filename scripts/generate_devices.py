@@ -88,12 +88,6 @@ class DeviceType:
     for device in data["configurator"]["deviceType"]:
         name = device["typeName"]
 
-        if not name.startswith("Matter "):
-            print("Unexpected: device doesn't start with Matter. Skipping")
-            continue
-
-        name = name[len("Matter ") :]
-
         print(name, device["deviceId"]["#text"])
 
         clusters = device["clusters"]["include"]
