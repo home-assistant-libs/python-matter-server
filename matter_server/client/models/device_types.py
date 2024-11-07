@@ -121,7 +121,7 @@ class BridgedNode(DeviceType, device_type=0x0013):
 
     clusters = {
         all_clusters.Descriptor,
-        all_clusters.BridgedDeviceBasic,
+        all_clusters.BridgedDeviceBasicInformation,
         all_clusters.PowerSourceConfiguration,
         all_clusters.PowerSource,
     }
