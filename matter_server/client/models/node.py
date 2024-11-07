@@ -19,7 +19,7 @@ from matter_server.common.helpers.util import (
 from .device_types import (
     ALL_TYPES as DEVICE_TYPES,
     Aggregator,
-    BridgedDevice,
+    BridgedNode,
     DeviceType,
     RootNode,
 )
@@ -75,7 +75,7 @@ class MatterEndpoint:
     @property
     def is_bridged_device(self) -> bool:
         """Return if this endpoint represents a Bridged device."""
-        return BridgedDevice in self.device_types
+        return BridgedNode in self.device_types
 
     @property
     def is_composed_device(self) -> bool:
@@ -85,16 +85,16 @@ class MatterEndpoint:
     @property
     def device_info(
         self,
-    ) -> Clusters.BasicInformation | Clusters.BridgedDeviceBasicInformation:
+    ) -> Clusters.BasicInformation | Clusters.BridgedNodeBasicInformation:
         """
         Return device info.
 
-        If this endpoint represents a BridgedDevice, returns BridgedDeviceBasic.
+        If this endpoint represents a BridgedNode, returns BridgedNodeBasic.
         If this endpoint represents a ComposedDevice, returns the info of the compose device.
         Otherwise, returns BasicInformation from the Node itself (endpoint 0).
         """
         if self.is_bridged_device:
-            return self.get_cluster(Clusters.BridgedDeviceBasicInformation)
+            return self.get_cluster(Clusters.BridgedNodeBasicInformation)
         if compose_parent := self.node.get_compose_parent(self.endpoint_id):
             return compose_parent.device_info
         return self.node.device_info
