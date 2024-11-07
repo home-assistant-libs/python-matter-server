@@ -88,6 +88,7 @@ class MatterEndpoint:
     ) -> Clusters.BasicInformation | Clusters.BridgedDeviceBasicInformation:
         """
         Return device info.
+        
         If this endpoint represents a BridgedDevice, returns BridgedDeviceBasic.
         If this endpoint represents a ComposedDevice, returns the info of the compose device.
         Otherwise, returns BasicInformation from the Node itself (endpoint 0).
