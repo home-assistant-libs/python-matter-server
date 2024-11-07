@@ -85,16 +85,15 @@ class MatterEndpoint:
     @property
     def device_info(
         self,
-    ) -> Clusters.BasicInformation | Clusters.BridgedDeviceBasic:
+    ) -> Clusters.BasicInformation | Clusters.BridgedDeviceBasicInformation:
         """
         Return device info.
-
-        If this endpoint represents a BridgedNode, returns BridgedNodeBasic.
+        If this endpoint represents a BridgedDevice, returns BridgedDeviceBasic.
         If this endpoint represents a ComposedDevice, returns the info of the compose device.
         Otherwise, returns BasicInformation from the Node itself (endpoint 0).
         """
         if self.is_bridged_device:
-            return self.get_cluster(Clusters.BridgedDeviceBasic)
+            return self.get_cluster(Clusters.BridgedDeviceBasicInformation)
         if compose_parent := self.node.get_compose_parent(self.endpoint_id):
             return compose_parent.device_info
         return self.node.device_info
