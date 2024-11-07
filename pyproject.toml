@@ -34,10 +34,10 @@ version = "0.0.0"
 server = [
   "aiohttp==3.10.10",
   "aiorun==2024.8.1",
-  "async-timeout==4.0.3",
+  "async-timeout==5.0.0",
   "coloredlogs==15.0.1",
   "cryptography==43.0.3",
-  "orjson==3.10.10",
+  "orjson==3.10.11",
   "zeroconf==0.136.0",
   "home-assistant-chip-core==2024.9.0",
 ]
@@ -52,8 +52,8 @@ test = [
   "pytest==8.3.3",
   "pytest-asyncio==0.24.0",
   "pytest-aiohttp==1.0.5",
-  "pytest-cov==5.0.0",
-  "ruff==0.7.1",
+  "pytest-cov==6.0.0",
+  "ruff==0.7.2",
   "tomli==2.0.2",
 ]
 
