@@ -599,7 +599,7 @@ class SmokeCoAlarm(DeviceType, device_type=0x0076):
         all_clusters.SmokeCoAlarm,
         all_clusters.RelativeHumidityMeasurement,
         all_clusters.TemperatureMeasurement,
-        all_clusters.CarbonMonoxide,
+        all_clusters.CarbonMonoxideConcentrationMeasurement,
         all_clusters.PowerSource,
         all_clusters.Descriptor,
     }
