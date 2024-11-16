@@ -11,6 +11,7 @@ import "./components/header";
 import "./components/node-details";
 import { mdiChevronRight } from "@mdi/js";
 import { MatterNode } from "../client/models/node";
+import { getEndpointDeviceTypes } from "./matter-endpoint-view";
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -73,7 +74,7 @@ class MatterNodeView extends LitElement {
                     Endpoint ${endPointId}
                   </div>
                   <div slot="supporting-text">
-                    Device Type(s): ${getEndpointDeviceTypes(this.node, this.endpoint).map(deviceType => { return deviceType.label }).join(" / ")}
+                    Device Type(s): ${getEndpointDeviceTypes(this.node!, endPointId).map(deviceType => { return deviceType.label }).join(" / ")}
                   </div>
                   <ha-svg-icon slot="end" .path=${mdiChevronRight}></ha-svg-icon>
                 </md-list-item>
