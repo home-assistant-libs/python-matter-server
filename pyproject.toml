@@ -42,7 +42,7 @@ server = [
   "home-assistant-chip-core==2024.9.0",
 ]
 test = [
-  "aioresponses==0.7.6",
+  "aioresponses==0.7.7",
   "codespell==2.3.0",
   "isort==5.13.2",
   "mypy==1.11.2",
