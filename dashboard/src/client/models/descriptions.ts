@@ -26,10 +26,10 @@ export const device_types: Record<number, DeviceType> = {
     "id": 4293984257,
     "label": "Orphan Clusters",
     "clusters": [
+      28,
       66,
       67,
-      68,
-      28
+      68
     ]
   },
   "22": {
@@ -70,69 +70,69 @@ export const device_types: Record<number, DeviceType> = {
     "id": 1296,
     "label": "Electrical Sensor",
     "clusters": [
+      29,
       144,
       145,
-      156,
-      29
+      156
     ]
   },
   "18": {
     "id": 18,
     "label": "OTA Requestor",
     "clusters": [
-      42,
-      29
+      29,
+      42
     ]
   },
   "20": {
     "id": 20,
     "label": "OTA Provider",
     "clusters": [
-      41,
-      29
+      29,
+      41
     ]
   },
   "14": {
     "id": 14,
     "label": "Aggregator",
     "clusters": [
-      37,
-      29
+      29,
+      37
     ]
   },
   "19": {
     "id": 19,
     "label": "Bridged Node",
     "clusters": [
-      57,
       29,
       46,
-      47
+      47,
+      57
     ]
   },
   "256": {
     "id": 256,
     "label": "On/Off Light",
     "clusters": [
-      98,
       3,
       4,
       6,
       8,
-      29
+      29,
+      98
     ]
   },
   "257": {
     "id": 257,
     "label": "Dimmable Light",
     "clusters": [
-      98,
       3,
       4,
       6,
       8,
       29,
-      30
+      30,
+      98
     ]
   },
   "268": {
