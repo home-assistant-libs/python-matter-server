@@ -388,14 +388,14 @@ export const device_types: Record<number, DeviceType> = {
     "id": 769,
     "label": "Thermostat",
     "clusters": [
-      513,
-      98,
       3,
-      516,
       4,
-      56,
       29,
-      30
+      30,
+      56,
+      98,
+      513,
+      516
     ]
   },
   "43": {
