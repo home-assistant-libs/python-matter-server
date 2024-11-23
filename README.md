@@ -279,7 +279,7 @@ print(json.dumps(message, indent=2))
 
 You can also provide parameters for the cluster commands. Here's how to change the brightness for example:
 
-```
+```python
 command = clusters.LevelControl.Commands.MoveToLevelWithOnOff(
   level=int(value), # provide a percentage
   transitionTime=0, # in seconds
