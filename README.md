@@ -137,6 +137,7 @@ NOTE: Both Matter and this implementation are in an early state and features are
 This list is not intended to be complete, for a complete oversight see the client implementation.
 
 **Set WiFi credentials**
+
 Inform the controller about the WiFi credentials it needs to send when commissioning a new device.
 
 ```json
@@ -151,6 +152,7 @@ Inform the controller about the WiFi credentials it needs to send when commissio
 ```
 
 **Set Thread dataset**
+
 Inform the controller about the Thread credentials it needs to use when commissioning a new device.
 
 ```json
@@ -164,6 +166,7 @@ Inform the controller about the Thread credentials it needs to use when commissi
 ```
 
 **Commission with code**
+
 Commission a new device. For WiFi or Thread based devices, the credentials need to be set upfront, otherwise, commissioning will fail. Supports both QR-code syntax (MT:...) and manual pairing code as string.
 The controller will use bluetooth for the commissioning of wireless devices. If the machine running the Python Matter Server controller lacks Bluetooth support, commissioning will only work for devices already connected to the network (by cable or another controller).
 
@@ -191,6 +194,7 @@ Manual pairing code
 ```
 
 **Open Commissioning window**
+
 Open a commissioning window to commission a device present on this controller to another.
 Returns code to use as discriminator.
 
@@ -205,6 +209,7 @@ Returns code to use as discriminator.
 ```
 
 **Get Nodes**
+
 Get all nodes already commissioned on the controller.
 
 ```json
@@ -215,6 +220,7 @@ Get all nodes already commissioned on the controller.
 ```
 
 **Get Node**
+
 Get info of a single Node.
 
 ```json
@@ -228,6 +234,7 @@ Get info of a single Node.
 ```
 
 **Start listening**
+
 When the start_listening command is issued, the server will dump all existing nodes. From that moment on all events (including node attribute changes) will be forwarded.
 
 ```json
@@ -238,6 +245,7 @@ When the start_listening command is issued, the server will dump all existing no
 ```
 
 **Send a command**
+
 Because we use the datamodels of the Matter SDK, this is a little bit more involved. Here is an example of turning on a switch:
 
 ```python
@@ -284,7 +292,7 @@ print(json.dumps(message, indent=2))
 
 You can also provide parameters for the cluster commands. Here's how to change the brightness for example:
 
-```
+```python
 command = clusters.LevelControl.Commands.MoveToLevelWithOnOff(
   level=int(value), # provide a percentage
   transitionTime=0, # in seconds
