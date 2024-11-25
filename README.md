@@ -167,12 +167,25 @@ Inform the controller about the Thread credentials it needs to use when commissi
 Commission a new device. For WiFi or Thread based devices, the credentials need to be set upfront, otherwise, commissioning will fail. Supports both QR-code syntax (MT:...) and manual pairing code as string.
 The controller will use bluetooth for the commissioning of wireless devices. If the machine running the Python Matter Server controller lacks Bluetooth support, commissioning will only work for devices already connected to the network (by cable or another controller).
 
+Matter QR-code
 ```json
 {
   "message_id": "2",
   "command": "commission_with_code",
   "args": {
     "code": "MT:Y.ABCDEFG123456789"
+  }
+}
+```
+
+Manual pairing code
+```
+{
+  "message_id": "2",
+  "command": "commission_with_code",
+  "args": {
+    "code": "35325335079",
+    "network_only": true
   }
 }
 ```
