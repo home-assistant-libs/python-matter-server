@@ -143,7 +143,7 @@ def parse_value(
             value = None
 
     if is_dataclass(value_type) and isinstance(value, dict):
-        return dataclass_from_dict(value_type, value)
+        return dataclass_from_dict(value_type, value)  # type: ignore[arg-type]
     # get origin value type and inspect one-by-one
     origin: Any = get_origin(value_type)
     if origin in (list, tuple, set) and isinstance(value, (list, tuple, set)):
@@ -267,7 +267,10 @@ def parse_value(
 
 
 def dataclass_from_dict(
-    cls: type[_T], dict_obj: dict, strict: bool = False, allow_sdk_types: bool = False
+    cls: type[_T],
+    dict_obj: dict,
+    strict: bool = False,
+    allow_sdk_types: bool = False,
 ) -> _T:
     """
     Create (instance of) a dataclass by providing a dict with values.
