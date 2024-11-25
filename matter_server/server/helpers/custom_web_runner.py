@@ -21,7 +21,7 @@ class MultiHostTCPSite(web.BaseSite):
     explicitly), we would like to pass an array of strings.
     """
 
-    __slots__ = ("_host", "_port", "_reuse_address", "_reuse_port", "_hosturl")
+    __slots__ = ("_host", "_hosturl", "_port", "_reuse_address", "_reuse_port")
 
     def __init__(
         self,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime  # noqa: TCH003
+from datetime import datetime  # noqa: TC003
 from enum import Enum
 from typing import Any
 

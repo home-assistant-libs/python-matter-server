@@ -155,7 +155,6 @@ convention = "pep257"
 ignore = [
   "ANN002", # Just annoying, not really useful
   "ANN003", # Just annoying, not really useful
-  "ANN101", # Self... explanatory
   "ANN401", # Opinioated warning on disallowing dynamically typed expressions
   "D203", # Conflicts with other rules
   "D213", # Conflicts with other rules
@@ -214,7 +213,6 @@ ignore = [
   "N801", # TEMPORARY DISABLED
   "N813", # TEMPORARY DISABLED
   "RUF012", # TEMPORARY DISABLED
-  "ANN102", # TEMPORARY DISABLED
   "B007", # TEMPORARY DISABLED
   "SIM102", # TEMPORARY DISABLED
   "C901", # TEMPORARY DISABLED
