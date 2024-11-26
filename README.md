@@ -182,7 +182,7 @@ Matter QR-code
 ```
 
 Manual pairing code
-```
+```json
 {
   "message_id": "2",
   "command": "commission_with_code",
