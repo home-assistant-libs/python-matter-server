@@ -244,6 +244,21 @@ When the start_listening command is issued, the server will dump all existing no
 }
 ```
 
+**Read an attribute**
+
+Here is an example of reading OnOff attribute on a switch (OnOff cluster)
+
+```json
+{
+  "message_id": "read",
+  "command": "read_attribute",
+  "args": {
+    "node_id": 1,
+     "attribute_path":"1/6/0"
+   }
+}
+```
+
 **Send a command**
 
 Here is an example of turning on a switch (OnOff cluster)
