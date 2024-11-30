@@ -265,7 +265,7 @@ Here is an example of writing `OnTime` attribute on a switch (OnOff cluster)
 
 ```json
 {
-   "message_id": "2",
+   "message_id": "write",
    "command":"write_attribute",
    "args":{
       "node_id":1,
