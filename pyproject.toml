@@ -54,7 +54,7 @@ test = [
   "pytest-aiohttp==1.0.5",
   "pytest-cov==6.0.0",
   "ruff==0.8.0",
-  "tomli==2.1.0",
+  "tomli==2.2.1",
 ]
 
 [project.scripts]
