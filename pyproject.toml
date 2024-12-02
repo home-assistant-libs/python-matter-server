@@ -39,7 +39,7 @@ server = [
   "cryptography==44.0.0",
   "orjson==3.10.12",
   "zeroconf==0.136.2",
-  "home-assistant-chip-core==2024.9.0",
+  "home-assistant-chip-core==2024.11.3",
 ]
 test = [
   "aioresponses==0.7.7",
