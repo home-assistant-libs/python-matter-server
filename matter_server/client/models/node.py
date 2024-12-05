@@ -19,7 +19,7 @@ from matter_server.common.helpers.util import (
 from .device_types import (
     ALL_TYPES as DEVICE_TYPES,
     Aggregator,
-    BridgedDevice,
+    BridgedNode,
     DeviceType,
     RootNode,
 )
@@ -75,7 +75,7 @@ class MatterEndpoint:
     @property
     def is_bridged_device(self) -> bool:
         """Return if this endpoint represents a Bridged device."""
-        return BridgedDevice in self.device_types
+        return BridgedNode in self.device_types
 
     @property
     def is_composed_device(self) -> bool:

@@ -20,7 +20,7 @@ dependencies = [
   "async-timeout",
   "coloredlogs",
   "orjson",
-  "home-assistant-chip-clusters==2024.9.0",
+  "home-assistant-chip-clusters==2024.11.4",
 ]
 description = "Python Matter WebSocket Server"
 license = {text = "Apache-2.0"}
@@ -39,7 +39,7 @@ server = [
   "cryptography==44.0.0",
   "orjson==3.10.12",
   "zeroconf==0.136.2",
-  "home-assistant-chip-core==2024.9.0",
+  "home-assistant-chip-core==2024.11.4",
 ]
 test = [
   "aioresponses==0.7.7",
