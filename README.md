@@ -175,4 +175,4 @@ To only install the client part: `pip install python-matter-server`
 
 ### Websocket commands
 
-[Websocket documentation](/docs/README.md)
+[Websocket documentation](/docs/websockets_api.md)
