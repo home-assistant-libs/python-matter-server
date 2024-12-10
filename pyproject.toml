@@ -22,7 +22,7 @@ dependencies = [
   "orjson",
   "home-assistant-chip-clusters==2024.11.4",
 ]
-description = "Python Matter WebSocket Server"
+description = "Open Home Foundation Matter Server"
 license = {text = "Apache-2.0"}
 name = "python-matter-server"
 readme = "README.md"

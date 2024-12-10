@@ -1,19 +1,16 @@
-# Python Matter Server
+# Open Home Foundation Matter Server
+
+The Open Home Foundation Matter Server is an [officially certified](https://csa-iot.org/csa_product/open-home-foundation-matter-server/) Software Component to create a Matter controller. It serves as the foundation to provide Matter support to [Home Assistant](https://home-assistant.io) but its universal approach makes it suitable to be used in other projects too.
 
 This project implements a Matter Controller Server over WebSockets using the
 [official Matter (formerly CHIP) SDK](https://github.com/project-chip/connectedhomeip)
 as a base and provides both a server and client implementation.
 
-The goal of this project is primarily to have Matter support in Home Assistant
-but its universal approach makes it suitable to be used in other projects too.
-
-[![Python Matter Server - A library from the Open Home Foundation](https://www.openhomefoundation.org/badges/python-matter-server.png)](https://www.openhomefoundation.org/)
+The Open Home Foundation Matter Server software component is funded by [Nabu Casa](https://www.nabucasa.com/) (a member of the CSA) and donated to [The Open Home Foundation](<(https://www.openhomefoundation.org/)>).
 
 ## Support
 
-Got questions?
-
-You have several options to get them answered:
+For users of Home Assistant, seek support in the official Home Assistant support channels.
 
 - The Home Assistant [Community Forum](https://community.home-assistant.io/).
 - The Home Assistant [Discord Chat Server](https://discord.gg/c5DvZ4e).
@@ -22,8 +19,9 @@ You have several options to get them answered:
 If you experience issues using Matter with Home Assistant, please open an issue
 report in the [Home Assistant Core repository](https://github.com/home-assistant/core/issues/new/choose).
 
-You may also open issues in this repository if you are absolutely sure that your
-issue is related to the Matter Server component.
+Please do not create Home Assistant enduser support issues in the issue tracker of this repository.
+
+For developers, making use of this component, use the issue tracker within this repository and/or reach out on discord.
 
 ## Installation
 
@@ -112,6 +110,7 @@ docker run -d \
 > The container has a default command line set (see Dockerfile). If you intend to pass additional arguments, you have to pass the default command line as well.
 
 To use local commissioning with Bluetooth, make sure to pass the D-Bus socket as well:
+
 ```
 docker run -d \
   --name matter-server \
@@ -136,12 +135,12 @@ NOTE: Both Matter and this implementation are in an early state and features are
 
 > [!NOTE]
 > When communicating with Thread devices through a non-local Thread border router,
-your host must process ICMPv6 Router Advertisements. See the [openthread.io
-Bidirectional IPv6 Connectivity code labs](https://openthread.io/codelabs/openthread-border-router#6)
-on how-to setup your host correctly. Note that NetworkManager has its own ICMPv6
-Router Advertisement processing. A recent version of NetworkManager is
-necessary, and there are still known issues (see NetworkManager issue
-[#1232](https://gitlab.freedesktop.org/NetworkManager/NetworkManager/-/issues/1232)).
+> your host must process ICMPv6 Router Advertisements. See the [openthread.io
+> Bidirectional IPv6 Connectivity code labs](https://openthread.io/codelabs/openthread-border-router#6)
+> on how-to setup your host correctly. Note that NetworkManager has its own ICMPv6
+> Router Advertisement processing. A recent version of NetworkManager is
+> necessary, and there are still known issues (see NetworkManager issue
+> [#1232](https://gitlab.freedesktop.org/NetworkManager/NetworkManager/-/issues/1232)).
 
 The Home Assistant Operating System 10 and newer correctly processes ICMPv6
 Router Advertisements.
