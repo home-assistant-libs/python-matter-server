@@ -12267,5 +12267,65 @@ export const clusters: Record<number, ClusterDescription> = {
         "type": "uint"
       }
     }
+  },
+  "2820": {
+    "id": 2820,
+    "label": "DraftElectricalMeasurementCluster",
+    "attributes": {
+      "1285": {
+        "id": 1285,
+        "cluster_id": 2820,
+        "label": "RmsVoltage",
+        "type": "uint"
+      },
+      "1288": {
+        "id": 1288,
+        "cluster_id": 2820,
+        "label": "RmsCurrent",
+        "type": "uint"
+      },
+      "1291": {
+        "id": 1291,
+        "cluster_id": 2820,
+        "label": "ActivePower",
+        "type": "uint"
+      },
+      "1536": {
+        "id": 1536,
+        "cluster_id": 2820,
+        "label": "AcVoltageMultiplier",
+        "type": "uint"
+      },
+      "1537": {
+        "id": 1537,
+        "cluster_id": 2820,
+        "label": "AcVoltageDivisor",
+        "type": "uint"
+      },
+      "1538": {
+        "id": 1538,
+        "cluster_id": 2820,
+        "label": "AcCurrentMultiplier",
+        "type": "uint"
+      },
+      "1539": {
+        "id": 1539,
+        "cluster_id": 2820,
+        "label": "AcCurrentDivisor",
+        "type": "uint"
+      },
+      "1540": {
+        "id": 1540,
+        "cluster_id": 2820,
+        "label": "AcPowerMultiplier",
+        "type": "uint"
+      },
+      "1541": {
+        "id": 1541,
+        "cluster_id": 2820,
+        "label": "AcPowerDivisor",
+        "type": "uint"
+      }
+    }
   }
 }
