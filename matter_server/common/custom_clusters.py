@@ -575,6 +575,256 @@ class ThirdRealityMeteringCluster(Cluster, CustomClusterMixin):
             value: uint = 0
 
 
+@dataclass
+class DraftElectricalMeasurementCluster(Cluster, CustomClusterMixin):
+    """Custom ElectricalMetering cluster from Matter 1.0 draft specification."""
+
+    id: ClassVar[int] = 0x00000B04
+
+    @ChipUtility.classproperty
+    def descriptor(cls) -> ClusterObjectDescriptor:
+        """Return descriptor for this cluster."""
+        return ClusterObjectDescriptor(
+            Fields=[
+                ClusterObjectFieldDescriptor(
+                    Label="rmsVoltage", Tag=0x00000505, Type=uint
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="rmsCurrent", Tag=0x00000508, Type=uint
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="activePower", Tag=0x0000050B, Type=uint
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="acVoltageMultiplier", Tag=0x00000600, Type=uint
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="acVoltageDivisor", Tag=0x00000601, Type=uint
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="acCurrentMultiplier", Tag=0x00000602, Type=uint
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="acCurrentDivisor", Tag=0x00000603, Type=uint
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="acPowerMultiplier", Tag=0x00000604, Type=uint
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="acPowerDivisor", Tag=0x00000605, Type=uint
+                ),
+            ]
+        )
+
+    rmsVoltage: uint | None = None
+    rmsCurrent: uint | None = None
+    activePower: uint | None = None
+    acVoltageMultiplier: uint | None = None
+    acVoltageDivisor: uint | None = None
+    acCurrentMultiplier: uint | None = None
+    acCurrentDivisor: uint | None = None
+    acPowerMultiplier: uint | None = None
+    acPowerDivisor: uint | None = None
+
+    class Attributes:
+        """Attributes for the custom Cluster."""
+
+        @dataclass
+        class RmsVoltage(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """RmsVoltage Attribute within the DraftElectricalMeasurement Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x00000B04
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00000505
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+        @dataclass
+        class RmsCurrent(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """RmsCurrent Attribute within the DraftElectricalMeasurement Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x00000B04
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00000508
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+        @dataclass
+        class ActivePower(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """ActivePower Attribute within the DraftElectricalMeasurement Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x00000B04
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x0000050B
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+        @dataclass
+        class AcVoltageMultiplier(
+            ClusterAttributeDescriptor, CustomClusterAttributeMixin
+        ):
+            """AcVoltageMultiplier Attribute within the DraftElectricalMeasurement Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x00000B04
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00000600
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+        @dataclass
+        class AcVoltageDivisor(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """AcVoltageDivisor Attribute within the DraftElectricalMeasurement Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x00000B04
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00000601
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+        @dataclass
+        class AcCurrentMultiplier(
+            ClusterAttributeDescriptor, CustomClusterAttributeMixin
+        ):
+            """AcCurrentMultiplier Attribute within the DraftElectricalMeasurement Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x00000B04
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00000602
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+        @dataclass
+        class AcCurrentDivisor(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """AcCurrentDivisor Attribute within the DraftElectricalMeasurement Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x00000B04
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00000603
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+        @dataclass
+        class AcPowerMultiplier(
+            ClusterAttributeDescriptor, CustomClusterAttributeMixin
+        ):
+            """AcPowerMultiplier Attribute within the DraftElectricalMeasurement Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x00000B04
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00000604
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+        @dataclass
+        class AcPowerDivisor(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """AcPowerDivisor Attribute within the DraftElectricalMeasurement Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x00000B04
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00000605
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+
 def check_polled_attributes(node_data: MatterNodeData) -> set[str]:
     """Check if custom attributes are present in the node data that need to be polled."""
     attributes_to_poll: set[str] = set()
