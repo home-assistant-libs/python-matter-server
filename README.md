@@ -164,6 +164,9 @@ You can check out the [example script](/scripts/example.py) in the scripts folde
 
 * To run the server in `info` log-level, you can run: `python -m matter_server.server`
 * To start the server in `debug` log-level, you can run: `python -m matter_server.server --log-level debug`
+* To start the server with SDK in `progress` log-level, you can run: `python -m matter_server.server --log-level-sdk progress`. This will display more information from the Matter SDK (C++) side of the Matter Server.
+
+Use `--help` to get a list of possible log levels and other command line arguments.
 
 The server runs a Matter Controller and includes all logic for storing node information, interviews and subscriptions. To interact with this controller we've created a small Websockets API with an RPC-like interface. The library contains a client as reference implementation which in turn is used by Home Assistant. Splitting the server from the client allows the scenario where multiple consumers can communicate to the same Matter fabric and the Matter fabric can keep running while the consumer (e.g. Home Assistant is down).
 
