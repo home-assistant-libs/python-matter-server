@@ -321,15 +321,6 @@ class MatterDeviceController:
             LOGGER.info("Commissioned Node ID: %s vs %s", commissioned_node_id, node_id)
             if commissioned_node_id != node_id:
                 raise RuntimeError("Returned Node ID must match requested Node ID")
-
-            if self._default_fabric_label:
-                await self._chip_device_controller.send_command(
-                    node_id,
-                    0,
-                    Clusters.OperationalCredentials.Commands.UpdateFabricLabel(
-                        self._default_fabric_label
-                    ),
-                )
         except ChipStackError as err:
             raise NodeCommissionFailed(
                 f"Commission with code failed for node {node_id}."
@@ -348,6 +339,12 @@ class MatterDeviceController:
                 await self._interview_node(node_id)
             except (NodeNotResolving, NodeInterviewFailed) as err:
                 if retries <= 0:
+                    try:
+                        await self._chip_device_controller.unpair_device(node_id)
+                    except ChipStackError as err_unpair:
+                        LOGGER.warning(
+                            "Removing current fabric from device failed: %s", err_unpair
+                        )
                     raise err
                 retries -= 1
                 LOGGER.warning("Unable to interview Node %s: %s", node_id, err)
@@ -579,6 +576,39 @@ class MatterDeviceController:
             )
         except ChipStackError as err:
             raise NodeInterviewFailed(f"Failed to interview node {node_id}") from err
+
+        # Set label if specified and needed
+        if self._default_fabric_label:
+            cluster = read_response.attributes[0][Clusters.OperationalCredentials]
+            fabrics: list[
+                Clusters.OperationalCredentials.Structs.FabricDescriptorStruct
+            ] = cluster[Clusters.OperationalCredentials.Attributes.Fabrics]
+            fabric_index = cluster[
+                Clusters.OperationalCredentials.Attributes.CurrentFabricIndex
+            ]
+
+            local_fabric = next(
+                (fabric for fabric in fabrics if fabric.fabricIndex == fabric_index),
+                None,
+            )
+            if local_fabric and local_fabric.label != self._default_fabric_label:
+                try:
+                    LOGGER.debug(
+                        "Setting fabric label for node %s to '%s'",
+                        node_id,
+                        self._default_fabric_label,
+                    )
+                    await self._chip_device_controller.send_command(
+                        node_id,
+                        0,
+                        Clusters.OperationalCredentials.Commands.UpdateFabricLabel(
+                            self._default_fabric_label
+                        ),
+                    )
+                except ChipStackError as err:
+                    LOGGER.warning(
+                        "Failed to set fabric label for node %s: %s", node_id, err
+                    )
 
         is_new_node = node_id not in self._nodes
         existing_info = self._nodes.get(node_id)
