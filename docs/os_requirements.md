@@ -9,7 +9,7 @@ Matter uses link-local multicast protocols which do not work across different LA
 
 The host network interface needs IPv6 support enabled.
 
-Be aware of any (semi) professional networking gear such as Unifi or Omada which has options to filter multicast traffic. Disable such features, often called something like "Multicast optimizations" or something along those lines. Disable such features, they are helpful in a high density enterprise network, but they're killing domestic protocols that rely on multicast like Matter, Airplay etc.
+Be aware of any (semi) professional networking gear such as Unifi or Omada which has options to filter multicast traffic, often called something like "Multicast optimizations" or something along those lines. Disable such features, they are helpful in a high density enterprise network, but they're killing domestic protocols that rely on multicast like Matter, Airplay etc.
 
 Also do not enable any mdns forwarders on the network (the option is called mDNS on Unifi for example) as they tend to corrupt or severely hinder the Matter packets on the network.
 

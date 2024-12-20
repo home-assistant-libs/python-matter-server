@@ -6,8 +6,9 @@ For testing/evaluation purposes or as a guideline towards other application deve
 
 We strongly recommend using Home Assistant OS along with the official Matter
 Server add-on to use Matter with Home Assistant. The Matter integration
-automatically installs the Python Matter Server add-on. Please refer to the
+automatically installs the Matter Server as an add-on. Please refer to the
 [Home Assistant documentation](https://www.home-assistant.io/integrations/matter/).
+
 Home Assistant OS has been tested and tuned to be used with Matter and Thread,
 which makes this combination the best tested and largely worry free
 environment.
