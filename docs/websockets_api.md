@@ -1,4 +1,4 @@
-## Websocket documentation
+# Websocket documentation
 
 This list is not intended to be complete, for a complete oversight see the client implementation.
 
@@ -41,6 +41,7 @@ Commission a new device. For WiFi or Thread based devices, the credentials need 
 The controller will use bluetooth for the commissioning of wireless devices. If the machine running the Python Matter Server controller lacks Bluetooth support, commissioning will only work for devices already connected to the network (by cable or another controller).
 
 Matter QR-code
+
 ```json
 {
   "message_id": "2",
@@ -52,6 +53,7 @@ Matter QR-code
 ```
 
 Manual pairing code
+
 ```json
 {
   "message_id": "2",
@@ -124,8 +126,8 @@ Here is an example of reading `OnOff` attribute on a switch (OnOff cluster)
   "command": "read_attribute",
   "args": {
     "node_id": 1,
-     "attribute_path":"1/6/0"
-   }
+    "attribute_path": "1/6/0"
+  }
 }
 ```
 
@@ -135,13 +137,13 @@ Here is an example of writing `OnTime` attribute on a switch (OnOff cluster)
 
 ```json
 {
-   "message_id": "write",
-   "command":"write_attribute",
-   "args":{
-      "node_id":1,
-      "attribute_path":"1/6/16385",
-      "value": 10
-   }
+  "message_id": "write",
+  "command": "write_attribute",
+  "args": {
+    "node_id": 1,
+    "attribute_path": "1/6/16385",
+    "value": 10
+  }
 }
 ```
 
@@ -195,6 +197,7 @@ message = {
 
 print(json.dumps(message, indent=2))
 ```
+
 You can also provide parameters for the cluster commands. Here's how to change the brightness for example:
 
 ```python
