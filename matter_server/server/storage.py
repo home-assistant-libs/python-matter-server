@@ -5,7 +5,10 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
+import shutil
 from typing import TYPE_CHECKING, Any, cast
+
+from atomicwrites import atomic_write
 
 from ..common.helpers.json import JSON_DECODE_EXCEPTIONS, json_dumps, json_loads
 
@@ -152,11 +155,14 @@ class StorageController:
 
         def do_save() -> None:
             # make backup before we write a new file
-            if self.filename.is_file():
-                self.filename.replace(self.filename_backup)
+            self.filename_backup.unlink(True)
+            shutil.copy(self.filename, self.filename_backup)
 
-            with open(self.filename, "w", encoding="utf-8") as _file:
+            # use atomomic write to avoid corrupting the file
+            # if power is cut during write, we don't write a corrupted file
+            with atomic_write(self.filename, encoding="utf-8", overwrite=True) as _file:
                 _file.write(json_dumps(self._data))
+
             LOGGER.debug("Saved data to persistent storage")
 
         async with self._save_lock:
