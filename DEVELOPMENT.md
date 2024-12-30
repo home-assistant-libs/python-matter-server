@@ -6,6 +6,7 @@ Development is only possible on a (recent) Linux or MacOS machine. Other operati
 
 - Download/clone the repo to your local machine.
 - Set-up the development environment: `scripts/setup.sh`
+- Activate the new Python environment  `source .venv/bin/activate`
 
 ## Start Matter server
 
