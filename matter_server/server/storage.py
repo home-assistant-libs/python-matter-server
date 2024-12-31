@@ -156,7 +156,8 @@ class StorageController:
         def do_save() -> None:
             # make backup before we write a new file
             self.filename_backup.unlink(True)
-            shutil.copy(self.filename, self.filename_backup)
+            if self.filename.is_file():
+                shutil.copy(self.filename, self.filename_backup)
 
             # use atomomic write to avoid corrupting the file
             # if power is cut during write, we don't write a corrupted file
