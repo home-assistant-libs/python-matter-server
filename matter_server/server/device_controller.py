@@ -1099,10 +1099,12 @@ class MatterDeviceController:
             raise UpdateCheckError("Update found, but no OTA URL provided.")
 
         node_logger.info(
-            "New software update found: %s on %s (current %s).",
+            "Software update found: %s (%s) from %s, current %s (%s)).",
             update["softwareVersionString"],
+            update["softwareVersion"],
             update_source,
             software_version_string,
+            software_version,
         )
         return update_source, update
 
