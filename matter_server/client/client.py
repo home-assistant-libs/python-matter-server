@@ -612,6 +612,8 @@ class MatterClient:
         if self.connection.connected:
             # already connected
             return
+
+        self._stop_called = False
         # NOTE: connect will raise when connecting failed
         await self.connection.connect()
 
