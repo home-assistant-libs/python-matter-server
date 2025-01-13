@@ -283,7 +283,7 @@ def dataclass_from_dict(
         extra_keys = dict_obj.keys() - {f.name for f in dc_fields}
         if extra_keys:
             raise KeyError(
-                f'Extra key(s) {",".join(extra_keys)} not allowed for {str(cls)}'
+                f"Extra key(s) {','.join(extra_keys)} not allowed for {str(cls)}"
             )
     type_hints = cached_type_hints(cls)
     return cls(
