@@ -45,7 +45,7 @@ server = [
 test = [
   "aioresponses==0.7.8",
   "codespell==2.4.1",
-  "isort==5.13.2",
+  "isort==6.0.0",
   "mypy==1.14.1",
   "pre-commit==4.1.0",
   "pre-commit-hooks==5.0.0",
