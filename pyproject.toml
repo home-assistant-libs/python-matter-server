@@ -239,6 +239,9 @@ ignore = [
 
 select = ["ALL"]
 
+[tool.ruff.lint.flake8-builtins]
+builtins-allowed-modules = ["json"]
+
 [tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
 mark-parentheses = false
