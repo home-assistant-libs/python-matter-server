@@ -6,6 +6,7 @@ Development is only possible on a (recent) Linux or MacOS machine. Other operati
 
 - Download/clone the repo to your local machine.
 - Set-up the development environment: `scripts/setup.sh`
+- Create the `/data` directory if it does not exist with permissions for the user running the python-matter-server.
 
 ## Start Matter server
 
@@ -18,6 +19,12 @@ You can check out the [example script](/scripts/example.py) in the scripts folde
 Use `--help` to get a list of possible log levels and other command line arguments.
 
 The server runs a Matter Controller and includes all logic for storing node information, interviews and subscriptions. To interact with this controller we've created a small Websockets API with an RPC-like interface. The library contains a client as reference implementation which in turn is used by Home Assistant. Splitting the server from the client allows the scenario where multiple consumers can communicate to the same Matter fabric and the Matter fabric can keep running while the consumer (e.g. Home Assistant is down).
+
+If you happen to get `OSError: [Errno 105] No buffer space available.`, increase the IPv4 group limits with:
+```
+echo "net.ipv4.igmp_max_memberships=1024" >> sysctl.conf
+sudo sysctl -p sysctl.conf
+```
 
 ## Python client library only
 
