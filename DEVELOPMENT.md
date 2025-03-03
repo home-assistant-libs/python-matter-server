@@ -22,8 +22,8 @@ The server runs a Matter Controller and includes all logic for storing node info
 
 If you happen to get `OSError: [Errno 105] No buffer space available.`, increase the IPv4 group limits with:
 ```
-echo "net.ipv4.igmp_max_memberships=1024" >> sysctl.conf
-sudo sysctl -p sysctl.conf
+echo "net.ipv4.igmp_max_memberships=1024" | sudo tee -a /etc/sysctl.d/local.conf
+sudo service procps force-reload
 ```
 
 ## Python client library only
