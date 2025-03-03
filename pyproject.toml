@@ -37,7 +37,7 @@ server = [
   "async-timeout==5.0.1",
   "atomicwrites==1.4.1",
   "coloredlogs==15.0.1",
-  "cryptography==44.0.1",
+  "cryptography==44.0.2",
   "orjson==3.10.15",
   "zeroconf==0.145.1",
   "home-assistant-chip-core==2024.11.4",
