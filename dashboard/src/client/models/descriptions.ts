@@ -12220,6 +12220,24 @@ export const clusters: Record<number, ClusterDescription> = {
       }
     }
   },
+  "305134641": {
+    "id": 305134641,
+    "label": "InovelliCluster",
+    "attributes": {
+      "305070177": {
+        "id": 305070177,
+        "cluster_id": 305134641,
+        "label": "LEDIndicatorIntensityOn",
+        "type": "uint"
+      },
+      "305070178": {
+        "id": 305070178,
+        "cluster_id": 305134641,
+        "label": "LEDIndicatorIntensityOff",
+        "type": "uint"
+      }
+    }
+  },
   "308149265": {
     "id": 308149265,
     "label": "NeoCluster",
