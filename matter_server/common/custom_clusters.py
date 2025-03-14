@@ -385,11 +385,17 @@ class InovelliCluster(Cluster, CustomClusterMixin):
                 ClusterObjectFieldDescriptor(
                     Label="ledIndicatorIntensityOff", Tag=0x122F0062, Type=uint
                 ),
+                ClusterObjectFieldDescriptor(
+                    Label="clearNotificationWithConfigDoubleTap",
+                    Tag=0x122F0106,
+                    Type=bool,
+                ),
             ]
         )
 
     ledIndicatorIntenstyOn: uint | None = None
     ledIndicatorIntensityOff: uint | None = None
+    clearNotificationWithConfigDoubleTap: bool | None = None
 
     class Attributes:
         """Attributes for the Inovelli Cluster."""
@@ -439,6 +445,29 @@ class InovelliCluster(Cluster, CustomClusterMixin):
                 return ClusterObjectFieldDescriptor(Type=uint)
 
             value: uint = 0
+
+        @dataclass
+        class ClearNotificationWithConfigDoubleTap(
+            ClusterAttributeDescriptor, CustomClusterAttributeMixin
+        ):
+            """ClearNotificationWithConfigDoubleTap Attribute within the Inovelli Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x122FFC31
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x122F0106
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=bool)
+
+            value: bool = False
 
 
 @dataclass
