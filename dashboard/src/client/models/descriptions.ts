@@ -12235,6 +12235,12 @@ export const clusters: Record<number, ClusterDescription> = {
         "cluster_id": 305134641,
         "label": "LEDIndicatorIntensityOff",
         "type": "uint"
+      },
+      "305070342": {
+        "id": 305070342,
+        "cluster_id": 305134641,
+        "label": "ClearNotificationWithConfigDoubleTap",
+        "type": "bool"
       }
     }
   },
