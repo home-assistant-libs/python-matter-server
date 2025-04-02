@@ -149,13 +149,13 @@ class ExternalOtaProvider:
                 )
             )
             if write_result[0].Status != Status.Success:
-                logging.error(
+                LOGGER.error(
                     "Failed writing adjusted OTA Provider App ACL: Status %s.",
                     str(write_result[0].Status),
                 )
                 raise UpdateError("Error while setting up OTA Provider.")
         except ChipStackError as ex:
-            logging.exception("Failed setting up OTA Provider.", exc_info=ex)
+            LOGGER.exception("Failed setting up OTA Provider.", exc_info=ex)
             raise UpdateError("Error while setting up OTA Provider.") from ex
 
     async def start_update(
@@ -323,7 +323,7 @@ class ExternalOtaProvider:
         elif parsed_url.scheme in ["file"]:
             file_path = self._ota_provider_base_dir / Path(parsed_url.path[1:])
             if not await asyncio.to_thread(file_path.exists):
-                logging.warning("Local update file not found: %s", file_path)
+                LOGGER.warning("Local update file not found: %s", file_path)
                 raise UpdateError("Local update file not found")
             if checksum_alg:
                 checksum_alg.update(await asyncio.to_thread(file_path.read_bytes))
