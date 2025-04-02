@@ -170,6 +170,8 @@ ignore = [
   "TD004", # Just annoying, not really useful
   "COM812", # Conflict with the Ruff formatter
   "ISC001", # Conflict with the Ruff formatter
+  # Quotes for typing.cast generally not necessary, only for performance critical paths
+  "TC006", # Add quotes to type expression in typing.cast()
   "TID252", # TEMPORARY DISABLED
   "N805", # TEMPORARY DISABLED
   "EXE002", # TEMPORARY DISABLED
