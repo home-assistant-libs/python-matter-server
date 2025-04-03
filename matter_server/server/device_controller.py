@@ -24,7 +24,12 @@ from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.discovery import DiscoveryType
 from chip.exceptions import ChipStackError
 from chip.native import PyChipError
-from zeroconf import BadTypeInNameException, IPVersion, ServiceStateChange, Zeroconf
+from zeroconf import (
+    DNSQuestionType,
+    IPVersion,
+    ServiceStateChange,
+    Zeroconf,
+)
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
 from matter_server.common.const import VERBOSE_LOG_LEVEL
@@ -215,11 +220,14 @@ class MatterDeviceController:
         LOGGER.info("Loaded %s nodes from stored configuration", len(self._nodes))
         # set-up mdns browser
         self._aiozc = AsyncZeroconf(ip_version=IPVersion.All)
-        services = [MDNS_TYPE_OPERATIONAL_NODE, MDNS_TYPE_COMMISSIONABLE_NODE]
+        services = [
+            f"_I{self.compressed_fabric_id:0{16}X}._sub.{MDNS_TYPE_OPERATIONAL_NODE}"
+        ]
         self._aiobrowser = AsyncServiceBrowser(
             self._aiozc.zeroconf,
             services,
             handlers=[self._on_mdns_service_state_change],
+            question_type=DNSQuestionType.QM,
         )
 
     async def stop(self) -> None:
@@ -1510,13 +1518,6 @@ class MatterDeviceController:
             # We already have a timer to resolve this service, so ignore this callback.
             return
 
-        if service_type == MDNS_TYPE_COMMISSIONABLE_NODE:
-            # process the event with a debounce timer
-            self._mdns_event_timer[name] = self._loop.call_later(
-                0.5, self._on_mdns_commissionable_node_state, name, state_change
-            )
-            return
-
         if service_type == MDNS_TYPE_OPERATIONAL_NODE:
             if self._fabric_id_hex is None or self._fabric_id_hex not in name.lower():
                 # filter out messages that are not for our fabric
@@ -1565,30 +1566,6 @@ class MatterDeviceController:
                     node_id, "mDNS state change detected"
                 )
             )
-
-    def _on_mdns_commissionable_node_state(
-        self, name: str, state_change: ServiceStateChange
-    ) -> None:
-        """Handle a (commissionable) Matter node MDNS state change."""
-        self._mdns_event_timer.pop(name, None)
-        logger = LOGGER.getChild("mdns")
-
-        try:
-            info = AsyncServiceInfo(MDNS_TYPE_COMMISSIONABLE_NODE, name)
-        except BadTypeInNameException as ex:
-            logger.debug("Ignoring record with bad type in name: %s: %s", name, ex)
-            return
-
-        async def handle_commissionable_node_added() -> None:
-            if TYPE_CHECKING:
-                assert self._aiozc is not None
-            await info.async_request(self._aiozc.zeroconf, 3000)
-            logger.debug("Discovered commissionable Matter node: %s", info)
-
-        if state_change == ServiceStateChange.Added:
-            asyncio.create_task(handle_commissionable_node_added())
-        elif state_change == ServiceStateChange.Removed:
-            logger.debug("Commissionable Matter node disappeared: %s", info)
 
     def _write_node_state(self, node_id: int, force: bool = False) -> None:
         """Schedule the write of the current node state to persistent storage."""

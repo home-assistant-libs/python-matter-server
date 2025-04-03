@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
 
 import pytest
 
 from matter_server.common.helpers.api import parse_arguments
 from matter_server.common.models import APICommand
+from matter_server.server.sdk import ChipDeviceControllerWrapper
 from matter_server.server.server import MatterServer
 
 if TYPE_CHECKING:
@@ -21,6 +22,7 @@ pytestmark = pytest.mark.usefixtures(
     "chip_native",
     "chip_logging",
     "chip_stack",
+    "chip_device_controller_wrapper",
     "certificate_authority_manager",
     "storage_controller",
 )
@@ -72,6 +74,25 @@ def chip_stack_fixture() -> Generator[MagicMock, None, None]:
     """Return a mocked chip stack."""
     with patch("matter_server.server.stack.ChipStack", autospec=True) as chip_stack:
         yield chip_stack
+
+
+@pytest.fixture(name="chip_device_controller_wrapper")
+def chip_device_controller_wrapper_fixture() -> Generator[MagicMock, None, None]:
+    """Return a mocked chip native."""
+    with patch(
+        "matter_server.server.device_controller.ChipDeviceControllerWrapper",
+        autospec=True,
+    ) as chip_device_controller_wrapper_class:
+        chip_device_controller_wrapper = create_autospec(
+            ChipDeviceControllerWrapper, instance=True
+        )
+        chip_device_controller_wrapper.get_compressed_fabric_id = AsyncMock(
+            return_value=1234
+        )
+        chip_device_controller_wrapper_class.return_value = (
+            chip_device_controller_wrapper
+        )
+        yield chip_device_controller_wrapper
 
 
 @pytest.fixture(name="certificate_authority_manager")
