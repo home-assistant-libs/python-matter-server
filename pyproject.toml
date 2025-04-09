@@ -20,7 +20,7 @@ dependencies = [
   "async-timeout",
   "coloredlogs",
   "orjson",
-  "home-assistant-chip-clusters==2024.11.4",
+  "home-assistant-chip-clusters==2025.4.0",
 ]
 description = "Open Home Foundation Matter Server"
 license = {text = "Apache-2.0"}
@@ -40,7 +40,7 @@ server = [
   "cryptography==44.0.2",
   "orjson==3.10.16",
   "zeroconf==0.146.3",
-  "home-assistant-chip-core==2024.11.4",
+  "home-assistant-chip-core==2025.4.0",
 ]
 test = [
   "aioresponses==0.7.8",
