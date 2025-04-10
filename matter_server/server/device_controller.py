@@ -24,7 +24,13 @@ from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.discovery import DiscoveryType
 from chip.exceptions import ChipStackError
 from chip.native import PyChipError
-from zeroconf import BadTypeInNameException, IPVersion, ServiceStateChange, Zeroconf
+from zeroconf import (
+    BadTypeInNameException,
+    DNSQuestionType,
+    IPVersion,
+    ServiceStateChange,
+    Zeroconf,
+)
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
 from matter_server.common.const import VERBOSE_LOG_LEVEL
@@ -220,6 +226,7 @@ class MatterDeviceController:
             self._aiozc.zeroconf,
             services,
             handlers=[self._on_mdns_service_state_change],
+            question_type=DNSQuestionType.QM,
         )
 
     async def stop(self) -> None:
