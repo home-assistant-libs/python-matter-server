@@ -154,6 +154,30 @@ class DimmableLight(DeviceType, device_type=0x0101):
     }
 
 
+class MountedOnOffControl(DeviceType, device_type=0x010F):
+    """Mounted On/Off Control."""
+
+    clusters = {
+        all_clusters.Groups,
+        all_clusters.Identify,
+        all_clusters.LevelControl,
+        all_clusters.OnOff,
+        all_clusters.ScenesManagement,
+    }
+
+
+class MountedDimmableLoadControl(DeviceType, device_type=0x0110):
+    """Mounted Dimmable Load Control."""
+
+    clusters = {
+        all_clusters.Groups,
+        all_clusters.Identify,
+        all_clusters.LevelControl,
+        all_clusters.OnOff,
+        all_clusters.ScenesManagement,
+    }
+
+
 class ColorTemperatureLight(DeviceType, device_type=0x010C):
     """Color Temperature Light."""
 
