@@ -135,6 +135,28 @@ export const device_types: Record<number, DeviceType> = {
       98
     ]
   },
+  "271": {
+    "id": 271,
+    "label": "Mounted On/Off Control",
+    "clusters": [
+      98,
+      3,
+      4,
+      6,
+      8
+    ]
+  },
+  "272": {
+    "id": 272,
+    "label": "Mounted Dimmable Load Control",
+    "clusters": [
+      98,
+      3,
+      4,
+      6,
+      8
+    ]
+  },
   "268": {
     "id": 268,
     "label": "Color Temperature Light",
