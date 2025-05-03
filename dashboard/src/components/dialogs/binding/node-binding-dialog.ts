@@ -31,7 +31,7 @@ export class NodeBindingDialog extends LitElement {
   public node?: MatterNode;
 
   @property({ attribute: false })
-  bindingPath!: string;
+  endpoint!: number;
 
   @query("md-outlined-text-field[label='target node id']")
   private _targetNodeId!: MdOutlinedTextField;
@@ -40,7 +40,7 @@ export class NodeBindingDialog extends LitElement {
   private _targetEndpoint!: MdOutlinedTextField;
 
   private _transformBindingStruct(): BindingEntryStruct[] {
-    const bindings_raw: [] = this.node!.attributes[this.bindingPath];
+    const bindings_raw: [] = this.node!.attributes[this.endpoint + "/30/0"];
     return Object.values(bindings_raw).map((value) =>
       BindingEntryDataTransformer.transform(value),
     );
@@ -57,7 +57,7 @@ export class NodeBindingDialog extends LitElement {
   }
 
   async _bindingDelete(index: number) {
-    const endpoint = this.bindingPath.split("/")[0];
+    const endpoint = this.endpoint;
     const bindings = this._transformBindingStruct();
     const targetNodeId = bindings[index].node;
 
@@ -83,12 +83,8 @@ export class NodeBindingDialog extends LitElement {
 
     bindings.splice(index, 1);
     try {
-      await this.client.setNodeBinding(
-        this.node!.node_id,
-        parseInt(endpoint, 10),
-        bindings,
-      );
-      this.node!.attributes[this.bindingPath].splice(index, 1);
+      await this.client.setNodeBinding(this.node!.node_id, endpoint, bindings);
+      this.node!.attributes[this.endpoint + "/30/0"].splice(index, 1);
       this.requestUpdate();
     } catch (err) {
       console.error("Failed to delete binding:", err);
@@ -174,7 +170,7 @@ export class NodeBindingDialog extends LitElement {
     const result_acl = await this.add_target_acl(targetNodeId, acl_entry);
     if (!result_acl) return;
 
-    const endpoint = this.bindingPath.split("/")[0];
+    const endpoint = this.endpoint;
     const bindingEntry: BindingEntryStruct = {
       node: targetNodeId,
       endpoint: targetEndpoint,
@@ -183,10 +179,7 @@ export class NodeBindingDialog extends LitElement {
       fabricIndex: undefined,
     };
 
-    const result_binding = await this.add_bindings(
-      parseInt(endpoint, 10),
-      bindingEntry,
-    );
+    const result_binding = await this.add_bindings(endpoint, bindingEntry);
 
     if (result_binding) {
       this.requestUpdate();
@@ -202,7 +195,7 @@ export class NodeBindingDialog extends LitElement {
   }
 
   protected render() {
-    const bindings = this.node!.attributes[this.bindingPath];
+    const bindings = this.node!.attributes[this.endpoint + "/30/0"];
 
     return html`
       <md-dialog open @cancel=${preventDefault} @closed=${this._handleClosed}>

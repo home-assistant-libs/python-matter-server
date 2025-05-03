@@ -40,15 +40,12 @@ class MatterClusterView extends LitElement {
   @property()
   public node?: MatterNode;
 
+  @provide({ context: bindingContext })
   @property()
-  public endpoint?: number;
+  public endpoint!: number;
 
   @property()
   public cluster?: number;
-
-  @provide({ context: bindingContext })
-  @property({ attribute: false })
-  bindingPath: string = "";
 
   render() {
     if (!this.node || this.endpoint == undefined || this.cluster == undefined) {
@@ -56,10 +53,6 @@ class MatterClusterView extends LitElement {
         <p>Node, endpoint or cluster not found!</p>
         <button @click=${this._goBack}>Back</button>
       `;
-    }
-
-    if (this.cluster == 30) {
-      this.bindingPath = this.endpoint + "/30/0";
     }
 
     return html`

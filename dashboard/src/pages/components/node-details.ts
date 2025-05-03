@@ -52,12 +52,12 @@ export class NodeDetails extends LitElement {
 
   @consume({ context: bindingContext })
   @property({ attribute: false })
-  bindingPath!: string;
+  endpoint!: number;
 
   protected render() {
     if (!this.node) return html``;
 
-    const bindings = this.node.attributes[this.bindingPath];
+    const bindings = this.node.attributes[this.endpoint + "/30/0"];
 
     return html`
       <md-list>
@@ -172,7 +172,7 @@ export class NodeDetails extends LitElement {
 
   private async _binding() {
     try {
-      showNodeBindingDialog(this.client!, this.node!, this.bindingPath!);
+      showNodeBindingDialog(this.client!, this.node!, this.endpoint!);
     } catch (err: any) {
       console.log(err);
     }
