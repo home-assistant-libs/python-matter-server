@@ -9,6 +9,9 @@ import { clusters } from "../client/models/descriptions";
 import { MatterNode } from "../client/models/node";
 import { showAlertDialog } from "../components/dialog-box/show-dialog-box";
 import "../components/ha-svg-icon";
+import "../pages/components/node-details";
+import { provide } from "@lit/context";
+import { bindingContext } from "./components/context";
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -43,12 +46,20 @@ class MatterClusterView extends LitElement {
   @property()
   public cluster?: number;
 
+  @provide({ context: bindingContext })
+  @property({ attribute: false })
+  bindingPath: string = "";
+
   render() {
     if (!this.node || this.endpoint == undefined || this.cluster == undefined) {
       return html`
         <p>Node, endpoint or cluster not found!</p>
         <button @click=${this._goBack}>Back</button>
       `;
+    }
+
+    if (this.cluster == 30) {
+      this.bindingPath = this.endpoint + "/30/0";
     }
 
     return html`

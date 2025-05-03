@@ -5,7 +5,15 @@ import "@material/web/divider/divider";
 import "@material/web/iconbutton/icon-button";
 import "@material/web/list/list";
 import "@material/web/list/list-item";
-import { mdiChatProcessing, mdiShareVariant, mdiTrashCan, mdiUpdate } from "@mdi/js";
+import {
+  mdiChatProcessing,
+  mdiShareVariant,
+  mdiTrashCan,
+  mdiUpdate,
+  mdiLink,
+} from "@mdi/js";
+
+import { consume } from "@lit/context";
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { MatterClient } from "../../client/client";
@@ -17,6 +25,8 @@ import {
 } from "../../components/dialog-box/show-dialog-box";
 import "../../components/ha-svg-icon";
 import { getEndpointDeviceTypes } from "../matter-endpoint-view";
+import { bindingContext } from "./context";
+import { showNodeBindingDialog } from "../../components/dialogs/binding/show-node-binding-dialog";
 
 function getNodeDeviceTypes(node: MatterNode): DeviceType[] {
   const uniqueEndpoints = new Set(
@@ -40,8 +50,15 @@ export class NodeDetails extends LitElement {
   @state()
   private _updateInitiated: boolean = false;
 
+  @consume({ context: bindingContext })
+  @property({ attribute: false })
+  bindingPath!: string;
+
   protected render() {
     if (!this.node) return html``;
+
+    const bindings = this.node.attributes[this.bindingPath];
+
     return html`
       <md-list>
         <md-list-item>
@@ -89,6 +106,15 @@ export class NodeDetails extends LitElement {
             ${this._updateInitiated || (this.node.updateState || 0) > 1 ? html`
                 <md-outlined-button disabled>Update in progress (${this.node.updateStateProgress || 0}%)<ha-svg-icon slot="icon" .path=${mdiUpdate}></ha-svg-icon></md-outlined-button>`
         : html`<md-outlined-button @click=${this._searchUpdate}>Update<ha-svg-icon slot="icon" .path=${mdiUpdate}></ha-svg-icon></md-outlined-button>`}
+
+          ${bindings
+            ? html` 
+              <md-outlined-button @click=${this._binding}> 
+                Binding 
+                <ha-svg-icon slot="icon" .path=${mdiLink}></ha-svg-icon>
+              </md-outlined-button>
+              `
+            : nothing}
 
             <md-outlined-button @click=${this._openCommissioningWindow}>Share<ha-svg-icon slot="icon" .path=${mdiShareVariant}></ha-svg-icon></md-outlined-button>
             <md-outlined-button @click=${this._remove}>Remove<ha-svg-icon slot="icon" .path=${mdiTrashCan}></ha-svg-icon></md-outlined-button>
@@ -141,6 +167,14 @@ export class NodeDetails extends LitElement {
         title: "Failed to remove node",
         text: err.message,
       });
+    }
+  }
+
+  private async _binding() {
+    try {
+      showNodeBindingDialog(this.client!, this.node!, this.bindingPath!);
+    } catch (err: any) {
+      console.log(err);
     }
   }
 
