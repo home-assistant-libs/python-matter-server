@@ -51,6 +51,10 @@ class APICommand(str, Enum):
     CHECK_NODE_UPDATE = "check_node_update"
     UPDATE_NODE = "update_node"
     SET_DEFAULT_FABRIC_LABEL = "set_default_fabric_label"
+    GET_ACL_ENTRY = "get_acl_entry"
+    SET_ACL_ENTRY = "set_acl_entry"
+    GET_NODE_BINDINGS = "get_node_bindings"
+    SET_NODE_BINDING = "set_node_binding"
 
 
 EventCallBackType = Callable[[EventType, Any], None]

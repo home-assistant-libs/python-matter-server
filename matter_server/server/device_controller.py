@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from chip.ChipDeviceCtrl import ChipDeviceController
 from chip.clusters import Attribute, Objects as Clusters
-from chip.clusters.Attribute import ValueDecodeFailure
+from chip.clusters.Attribute import SubscriptionTransaction, ValueDecodeFailure
 from chip.clusters.ClusterObjects import ALL_ATTRIBUTES, ALL_CLUSTERS, Cluster
 from chip.discovery import DiscoveryType
 from chip.exceptions import ChipStackError
@@ -861,6 +861,63 @@ class MatterDeviceController:
             await self._chip_device_controller.unpair_device(node_id)
         except ChipStackError as err:
             LOGGER.warning("Removing current fabric from device failed: %s", err)
+
+    @api_command(APICommand.SET_ACL_ENTRY)
+    async def set_acl_entry(
+        self,
+        node_id: int,
+        entry: list[Clusters.AccessControl.Structs.AccessControlEntryStruct],
+    ):
+        """Set acl entry"""
+        return await self._chip_device_controller.write_attribute(
+            node_id, [(0, Clusters.AccessControl.Attributes.Acl(entry))]
+        )
+
+    @api_command(APICommand.GET_ACL_ENTRY)
+    async def get_acl_entry(self, node_id: int):
+        """Get acl entry"""
+        read_response: (
+            SubscriptionTransaction | Attribute.AsyncReadTransaction.ReadResponse | None
+        ) = await self._chip_device_controller.read_attribute(
+            node_id, [(0, Clusters.AccessControl.Attributes.Acl)]
+        )
+        acl_entities = []
+        if isinstance(read_response, Attribute.AsyncReadTransaction.ReadResponse):
+            acl_entities: list[
+                Clusters.AccessControl.Structs.AccessControlEntryStruct
+            ] = read_response.attributes[0][Clusters.AccessControl][
+                Clusters.AccessControl.Attributes.Acl
+            ]
+        return acl_entities
+
+    @api_command(APICommand.GET_NODE_BINDINGS)
+    async def get_node_bindings(self, node_id: int):
+        """Get node bindings"""
+        read_response: (
+            SubscriptionTransaction | Attribute.AsyncReadTransaction.ReadResponse | None
+        ) = await self._chip_device_controller.read_attribute(
+            node_id, (Clusters.Binding.Attributes.Binding,)
+        )
+
+        bindings = []
+        if isinstance(read_response, Attribute.AsyncReadTransaction.ReadResponse):
+            for k, v in read_response.attributes.items():
+                bindings.append(
+                    {k: v[Clusters.Binding][Clusters.Binding.Attributes.Binding]}
+                )
+        return bindings
+
+    @api_command(APICommand.SET_NODE_BINDING)
+    async def set_node_binding(
+        self,
+        node_id: int,
+        endpoint: int,
+        bindings: list[Clusters.Binding.Structs.TargetStruct],
+    ):
+        """Set node binding"""
+        return await self._chip_device_controller.write_attribute(
+            node_id, [(endpoint, Clusters.Binding.Attributes.Binding(bindings))]
+        )
 
     @api_command(APICommand.PING_NODE)
     async def ping_node(self, node_id: int, attempts: int = 1) -> NodePingResult:
