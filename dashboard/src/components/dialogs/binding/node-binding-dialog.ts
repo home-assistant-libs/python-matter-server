@@ -18,10 +18,14 @@ import {
   BindingEntryStruct,
   BindingEntryDataTransformer,
 } from "./model";
+import { consume } from "@lit/context";
+import { clientContext } from "../../../client/client-context";
 
 @customElement("node-binding-dialog")
 export class NodeBindingDialog extends LitElement {
-  @property({ attribute: false }) public client!: MatterClient;
+  @consume({ context: clientContext, subscribe: true })
+  @property({ attribute: false })
+  public client!: MatterClient;
 
   @property()
   public node?: MatterNode;
@@ -38,17 +42,17 @@ export class NodeBindingDialog extends LitElement {
   private _transformBindingStruct(): BindingEntryStruct[] {
     const bindings_raw: [] = this.node!.attributes[this.bindingPath];
     return Object.values(bindings_raw).map((value) =>
-      BindingEntryDataTransformer.transform(value)
+      BindingEntryDataTransformer.transform(value),
     );
   }
 
   private _transformACLStruct(
-    targetNodeId: number
+    targetNodeId: number,
   ): AccessControlEntryStruct[] {
     const acl_cluster_raw: [InputType] =
       this.client.nodes[targetNodeId].attributes["0/31/0"];
     return Object.values(acl_cluster_raw).map((value: InputType) =>
-      AccessControlEntryDataTransformer.transform(value)
+      AccessControlEntryDataTransformer.transform(value),
     );
   }
 
@@ -63,7 +67,7 @@ export class NodeBindingDialog extends LitElement {
         .map((entry) => {
           if (entry.subjects && entry.subjects.includes(this.node!.node_id)) {
             entry.subjects = entry.subjects.filter(
-              (nodeId) => nodeId !== this.node!.node_id
+              (nodeId) => nodeId !== this.node!.node_id,
             );
             if (entry.subjects.length === 0) {
               return null;
@@ -82,7 +86,7 @@ export class NodeBindingDialog extends LitElement {
       await this.client.setNodeBinding(
         this.node!.node_id,
         parseInt(endpoint, 10),
-        bindings
+        bindings,
       );
       this.node!.attributes[this.bindingPath].splice(index, 1);
       this.requestUpdate();
@@ -96,7 +100,7 @@ export class NodeBindingDialog extends LitElement {
     path: string,
     entry: T,
     transformFn: (value: InputType) => T,
-    updateFn: (targetId: number, entries: T[]) => Promise<any>
+    updateFn: (targetId: number, entries: T[]) => Promise<any>,
   ) {
     try {
       const rawEntries: [InputType] =
@@ -111,7 +115,7 @@ export class NodeBindingDialog extends LitElement {
 
   private async add_target_acl(
     targetNodeId: number,
-    entry: AccessControlEntryStruct
+    entry: AccessControlEntryStruct,
   ) {
     try {
       const result = (await this._updateEntry(
@@ -119,7 +123,7 @@ export class NodeBindingDialog extends LitElement {
         "0/31/0",
         entry,
         AccessControlEntryDataTransformer.transform,
-        this.client.setACLEntry.bind(this.client)
+        this.client.setACLEntry.bind(this.client),
       )) as { [key: string]: { Status: number } };
       return result["0"].Status === 0;
     } catch (err) {
@@ -130,7 +134,7 @@ export class NodeBindingDialog extends LitElement {
 
   private async add_bindings(
     endpoint: number,
-    bindingEntry: BindingEntryStruct
+    bindingEntry: BindingEntryStruct,
   ) {
     const bindings = this._transformBindingStruct();
     bindings.push(bindingEntry);
@@ -138,7 +142,7 @@ export class NodeBindingDialog extends LitElement {
       const result = (await this.client.setNodeBinding(
         this.node!.node_id,
         endpoint,
-        bindings
+        bindings,
       )) as { [key: string]: { Status: number } };
       return result["0"].Status === 0;
     } catch (err) {
@@ -181,7 +185,7 @@ export class NodeBindingDialog extends LitElement {
 
     const result_binding = await this.add_bindings(
       parseInt(endpoint, 10),
-      bindingEntry
+      bindingEntry,
     );
 
     if (result_binding) {
@@ -213,7 +217,7 @@ export class NodeBindingDialog extends LitElement {
                   <md-list-item>
                     <div slot="supporting-text">
                       ${JSON.stringify(
-                        BindingEntryDataTransformer.transform(entry)
+                        BindingEntryDataTransformer.transform(entry),
                       )}
                     </div>
                     <div slot="end">
@@ -222,7 +226,7 @@ export class NodeBindingDialog extends LitElement {
                       >delete</md-text-button
                     </div>
                   </md-list-item>
-                `
+                `,
               )}
             </md-list>
             <div>
