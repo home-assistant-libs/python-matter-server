@@ -39,16 +39,14 @@ export class NodeBindingDialog extends LitElement {
   @query("md-outlined-text-field[label='target endpoint']")
   private _targetEndpoint!: MdOutlinedTextField;
 
-  private _transformBindingStruct(): BindingEntryStruct[] {
+  private fetchBindingEntry(): BindingEntryStruct[] {
     const bindings_raw: [] = this.node!.attributes[this.endpoint + "/30/0"];
     return Object.values(bindings_raw).map((value) =>
       BindingEntryDataTransformer.transform(value),
     );
   }
 
-  private _transformACLStruct(
-    targetNodeId: number,
-  ): AccessControlEntryStruct[] {
+  private fetchACLEntry(targetNodeId: number): AccessControlEntryStruct[] {
     const acl_cluster_raw: [InputType] =
       this.client.nodes[targetNodeId].attributes["0/31/0"];
     return Object.values(acl_cluster_raw).map((value: InputType) =>
@@ -56,39 +54,81 @@ export class NodeBindingDialog extends LitElement {
     );
   }
 
-  async _bindingDelete(index: number) {
-    const endpoint = this.endpoint;
-    const bindings = this._transformBindingStruct();
-    const targetNodeId = bindings[index].node;
-
+  private async deleteBindingHandler(index: number): Promise<void> {
+    const rawBindings = this.fetchBindingEntry();
     try {
-      const acl_cluster = this._transformACLStruct(targetNodeId);
-      const _acl_cluster = acl_cluster
-        .map((entry) => {
-          if (entry.subjects && entry.subjects.includes(this.node!.node_id)) {
-            entry.subjects = entry.subjects.filter(
-              (nodeId) => nodeId !== this.node!.node_id,
-            );
-            if (entry.subjects.length === 0) {
-              return null;
-            }
-          }
-          return entry;
-        })
-        .filter((entry) => entry !== null);
-      this.client.setACLEntry(targetNodeId, _acl_cluster);
-    } catch (err) {
-      console.log(err);
+      const targetNodeId = rawBindings[index].node;
+      await this.removeNodeAtACLEntry(this.node!.node_id, targetNodeId);
+      const updatedBindings = this.removeBindingAtIndex(rawBindings, index);
+      await this.syncBindingUpdates(updatedBindings, index);
+    } catch (error) {
+      this.handleBindingDeletionError(error);
     }
+  }
 
-    bindings.splice(index, 1);
-    try {
-      await this.client.setNodeBinding(this.node!.node_id, endpoint, bindings);
-      this.node!.attributes[this.endpoint + "/30/0"].splice(index, 1);
-      this.requestUpdate();
-    } catch (err) {
-      console.error("Failed to delete binding:", err);
-    }
+  private async removeNodeAtACLEntry(
+    sourceNodeId: number,
+    targetNodeId: number,
+  ): Promise<void> {
+    const aclEntries = this.fetchACLEntry(targetNodeId);
+
+    const updatedACLEntries = aclEntries
+      .map((entry) => this.removeSubjectAtACL(sourceNodeId, entry))
+      .filter((entry): entry is Exclude<typeof entry, null> => entry !== null);
+
+    await this.client.setACLEntry(targetNodeId, updatedACLEntries);
+  }
+
+  private removeSubjectAtACL(
+    nodeId: number,
+    entry: AccessControlEntryStruct,
+  ): AccessControlEntryStruct | null {
+    const shouldRemoveSubject = entry.subjects?.includes(nodeId);
+
+    if (!shouldRemoveSubject) return entry;
+
+    const updatedSubjects = entry.subjects.filter(
+      (nodeId) => nodeId !== this.node!.node_id,
+    );
+
+    return updatedSubjects.length > 0
+      ? { ...entry, subjects: updatedSubjects }
+      : null;
+  }
+
+  private removeBindingAtIndex(
+    bindings: BindingEntryStruct[],
+    index: number,
+  ): BindingEntryStruct[] {
+    return [...bindings.slice(0, index), ...bindings.slice(index + 1)];
+  }
+
+  private async syncBindingUpdates(
+    updatedBindings: BindingEntryStruct[],
+    index: number,
+  ): Promise<void> {
+    await this.client.setNodeBinding(
+      this.node!.node_id,
+      this.endpoint,
+      updatedBindings,
+    );
+
+    const attributePath = `${this.endpoint}/30/0`;
+    const updatedAttributes = {
+      ...this.node!.attributes,
+      [attributePath]: this.removeBindingAtIndex(
+        this.node!.attributes[attributePath],
+        index,
+      ),
+    };
+
+    this.node!.attributes = updatedAttributes;
+    this.requestUpdate();
+  }
+
+  private handleBindingDeletionError(error: unknown): void {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`Binding deletion failed: ${errorMessage}`);
   }
 
   private async _updateEntry<T>(
@@ -132,7 +172,7 @@ export class NodeBindingDialog extends LitElement {
     endpoint: number,
     bindingEntry: BindingEntryStruct,
   ) {
-    const bindings = this._transformBindingStruct();
+    const bindings = this.fetchBindingEntry();
     bindings.push(bindingEntry);
     try {
       const result = (await this.client.setNodeBinding(
@@ -147,7 +187,7 @@ export class NodeBindingDialog extends LitElement {
     }
   }
 
-  async _bindingAdd() {
+  async addBindingHandler() {
     const targetNodeId = parseInt(this._targetNodeId.value, 10);
     const targetEndpoint = parseInt(this._targetEndpoint.value, 10);
 
@@ -215,7 +255,7 @@ export class NodeBindingDialog extends LitElement {
                     </div>
                     <div slot="end">
                       <md-text-button
-                        @click=${() => this._bindingDelete(index)}
+                        @click=${() => this.deleteBindingHandler(index)}
                       >delete</md-text-button
                     </div>
                   </md-list-item>
@@ -233,7 +273,7 @@ export class NodeBindingDialog extends LitElement {
           </div>
         </div>
         <div slot="actions">
-          <md-text-button @click=${this._bindingAdd}>Add</md-text-button>
+          <md-text-button @click=${this.addBindingHandler}>Add</md-text-button>
           <md-text-button @click=${this._close}>Cancel</md-text-button>
         </div>
       </md-dialog>
