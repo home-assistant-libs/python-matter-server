@@ -113,9 +113,6 @@ class DeviceType:
                         # It's optional server cluster
                         or cluster["@serverLocked"] == "false"
                     )
-                    # Temporary: PollControl will be removed from matter_devices.xml
-                    # https://github.com/project-chip/connectedhomeip/pull/22718
-                    and cluster["@cluster"] != "Poll Control"
                 )
                 + ",}"  # extra comma to force black to do a cluster per line
             )
