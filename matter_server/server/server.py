@@ -331,7 +331,7 @@ class MatterServer:
                 if hasattr(attr, "mock_calls"):
                     continue
 
-                # Bind the function to the instance before registering
+                # Get the instance method before registering
                 bound_method = getattr(obj, attr_name)
                 self.register_api_command(attr.api_cmd, bound_method)
 
