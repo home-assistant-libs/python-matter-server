@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from functools import cached_property, partial
+import inspect
 import ipaddress
 import logging
 import os
@@ -315,18 +316,24 @@ class MatterServer:
 
     def _register_api_commands(self) -> None:
         """Register all methods decorated as api_command."""
-        for cls in (self, self._device_controller, self.vendor_info):
-            for attr_name in dir(cls):
+        for obj in (self, self._device_controller, self.vendor_info):
+            cls = obj.__class__
+            for attr_name, attr in inspect.getmembers(cls):
                 if attr_name.startswith("_"):
                     continue
-                val = getattr(cls, attr_name)
-                if not hasattr(val, "api_cmd"):
+
+                if isinstance(attr, property):
+                    continue  # skip properties
+
+                # attr is the (unbound) function, we can check for the decorator
+                if not hasattr(attr, "api_cmd"):
                     continue
-                if hasattr(val, "mock_calls"):
-                    # filter out mocks
+                if hasattr(attr, "mock_calls"):
                     continue
-                # method is decorated with our api decorator
-                self.register_api_command(val.api_cmd, val)
+
+                # Get the instance method before registering
+                bound_method = getattr(obj, attr_name)
+                self.register_api_command(attr.api_cmd, bound_method)
 
     async def _handle_info(self, request: web.Request) -> web.Response:
         """Handle info endpoint to serve basic server (version) info."""
