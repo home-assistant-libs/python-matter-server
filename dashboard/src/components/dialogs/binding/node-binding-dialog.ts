@@ -6,18 +6,23 @@ import "../../../components/ha-svg-icon";
 import "@material/web/textfield/outlined-text-field";
 import type { MdOutlinedTextField } from "@material/web/textfield/outlined-text-field";
 
-import { html, LitElement } from "lit";
+import { html, LitElement, css } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import { MatterNode } from "../../../client/models/node";
 import { preventDefault } from "../../../util/prevent_default";
 import { MatterClient } from "../../../client/client";
 import {
   InputType,
-  AccessControlEntryStruct,
-  AccessControlEntryDataTransformer,
   BindingEntryStruct,
   BindingEntryDataTransformer,
 } from "./model";
+
+import {
+  AccessControlEntryDataTransformer,
+  AccessControlEntryStruct,
+  AccessControlTargetStruct,
+} from "../acl/model";
+
 import { consume } from "@lit/context";
 import { clientContext } from "../../../client/client-context";
 
@@ -33,10 +38,10 @@ export class NodeBindingDialog extends LitElement {
   @property({ attribute: false })
   endpoint!: number;
 
-  @query("md-outlined-text-field[label='target node id']")
+  @query("md-outlined-text-field[label='node id']")
   private _targetNodeId!: MdOutlinedTextField;
 
-  @query("md-outlined-text-field[label='target endpoint']")
+  @query("md-outlined-text-field[label='endpoint']")
   private _targetEndpoint!: MdOutlinedTextField;
 
   private fetchBindingEntry(): BindingEntryStruct[] {
@@ -49,6 +54,7 @@ export class NodeBindingDialog extends LitElement {
   private fetchACLEntry(targetNodeId: number): AccessControlEntryStruct[] {
     const acl_cluster_raw: [InputType] =
       this.client.nodes[targetNodeId].attributes["0/31/0"];
+
     return Object.values(acl_cluster_raw).map((value: InputType) =>
       AccessControlEntryDataTransformer.transform(value),
     );
@@ -58,7 +64,11 @@ export class NodeBindingDialog extends LitElement {
     const rawBindings = this.fetchBindingEntry();
     try {
       const targetNodeId = rawBindings[index].node;
-      await this.removeNodeAtACLEntry(this.node!.node_id, targetNodeId);
+      await this.removeNodeAtACLEntry(
+        this.node!.node_id,
+        this.endpoint,
+        targetNodeId,
+      );
       const updatedBindings = this.removeBindingAtIndex(rawBindings, index);
       await this.syncBindingUpdates(updatedBindings, index);
     } catch (error) {
@@ -68,32 +78,36 @@ export class NodeBindingDialog extends LitElement {
 
   private async removeNodeAtACLEntry(
     sourceNodeId: number,
+    sourceEndpoint: number,
     targetNodeId: number,
   ): Promise<void> {
     const aclEntries = this.fetchACLEntry(targetNodeId);
 
     const updatedACLEntries = aclEntries
-      .map((entry) => this.removeSubjectAtACL(sourceNodeId, entry))
+      .map((entry) =>
+        this.removeEntryAtACL(sourceNodeId, sourceEndpoint, entry),
+      )
       .filter((entry): entry is Exclude<typeof entry, null> => entry !== null);
 
+    console.log(updatedACLEntries);
     await this.client.setACLEntry(targetNodeId, updatedACLEntries);
   }
 
-  private removeSubjectAtACL(
+  private removeEntryAtACL(
     nodeId: number,
+    sourceEndpoint: number,
     entry: AccessControlEntryStruct,
   ): AccessControlEntryStruct | null {
-    const shouldRemoveSubject = entry.subjects?.includes(nodeId);
+    const hasSubject = entry.subjects!.includes(nodeId);
 
-    if (!shouldRemoveSubject) return entry;
+    if (!hasSubject) return entry;
 
-    const updatedSubjects = entry.subjects.filter(
-      (nodeId) => nodeId !== this.node!.node_id,
+    const hasTarget = entry.targets!.filter(
+      (item) => item.endpoint === sourceEndpoint,
     );
-
-    return updatedSubjects.length > 0
-      ? { ...entry, subjects: updatedSubjects }
-      : null;
+    return hasTarget.length > 0
+      ? null
+      : entry;
   }
 
   private removeBindingAtIndex(
@@ -200,11 +214,17 @@ export class NodeBindingDialog extends LitElement {
       return;
     }
 
+    const targets: AccessControlTargetStruct = {
+      endpoint: targetEndpoint,
+      cluster: undefined,
+      deviceType: undefined,
+    };
+
     const acl_entry: AccessControlEntryStruct = {
       privilege: 5,
       authMode: 2,
       subjects: [this.node!.node_id],
-      targets: undefined,
+      targets: [targets],
       fabricIndex: this.client.connection.serverInfo!.fabric_id,
     };
     const result_acl = await this.add_target_acl(targetNodeId, acl_entry);
@@ -235,23 +255,25 @@ export class NodeBindingDialog extends LitElement {
   }
 
   protected render() {
-    const bindings = this.node!.attributes[this.endpoint + "/30/0"];
+    const bindings = Object.values(
+      this.node!.attributes[this.endpoint + "/30/0"],
+    ).map((entry) => BindingEntryDataTransformer.transform(entry));
 
     return html`
       <md-dialog open @cancel=${preventDefault} @closed=${this._handleClosed}>
         <div slot="headline">
-          <div>Binding Add</div>
+          <div>Binding</div>
         </div>
         <div slot="content">
           <div>
-            <md-list>
+            <md-list style="padding-bottom:18px;">
               ${Object.values(bindings).map(
                 (entry, index) => html`
-                  <md-list-item>
-                    <div slot="supporting-text">
-                      ${JSON.stringify(
-                        BindingEntryDataTransformer.transform(entry),
-                      )}
+                  <md-list-item style="background:cornsilk;">
+                    <div style="display:flex;gap:10px;">
+                        <div>node:${entry["node"]}</div>
+                        <div>endpoint:${entry["endpoint"]}</div>
+                        <div>fabricIndex:${entry["fabricIndex"]}</div>
                     </div>
                     <div slot="end">
                       <md-text-button
@@ -262,12 +284,15 @@ export class NodeBindingDialog extends LitElement {
                 `,
               )}
             </md-list>
-            <div>
+            <div class="inline-group">
+              <div class="group-label">target</div>
               <md-outlined-text-field
-                label="target node id"
+                label="node id"
+                class="target-item"
               ></md-outlined-text-field>
               <md-outlined-text-field
-                label="target endpoint"
+                label="endpoint"
+                class="target-item"
               ></md-outlined-text-field>
             </div>
           </div>
@@ -279,6 +304,36 @@ export class NodeBindingDialog extends LitElement {
       </md-dialog>
     `;
   }
+
+  static styles = css`
+    .inline-group {
+      display: flex;
+      border: 2px solid #673ab7;
+      padding: 1px;
+      border-radius: 8px;
+      position: relative;
+      margin: 8px;
+    }
+
+    .target-item {
+      display: inline-block;
+      padding: 20px 10px 10px 10px;
+      border-radius: 4px;
+      vertical-align: middle;
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .group-label {
+      position: absolute;
+      left: 15px;
+      top: -12px;
+      background: #673ab7;
+      color: white;
+      padding: 3px 15px;
+      border-radius: 4px;
+    }
+  `;
 }
 
 declare global {
