@@ -143,6 +143,21 @@ export class MatterClient {
     await this.sendCommand("update_node", 10, { node_id: nodeId, software_version: softwareVersion });
   }
 
+  async setACLEntry(nodeId: number, entry: any) {
+    return await this.sendCommand("set_acl_entry", 0, {
+      node_id: nodeId,
+      entry: entry,
+    });
+  }
+
+  async setNodeBinding(nodeId: number, endpoint: number, bindings: any) {
+    return await this.sendCommand("set_node_binding", 0, {
+      node_id: nodeId,
+      endpoint: endpoint,
+      bindings: bindings,
+    });
+  }
+
   async sendCommand<T extends keyof APICommands>(
     command: T,
     require_schema: number | undefined = undefined,
