@@ -6,7 +6,7 @@ import "../../../components/ha-svg-icon";
 import "@material/web/textfield/outlined-text-field";
 import type { MdOutlinedTextField } from "@material/web/textfield/outlined-text-field";
 
-import { html, LitElement, css } from "lit";
+import { html, LitElement, css, nothing } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import { MatterNode } from "../../../client/models/node";
 import { preventDefault } from "../../../util/prevent_default";
@@ -43,6 +43,9 @@ export class NodeBindingDialog extends LitElement {
 
   @query("md-outlined-text-field[label='endpoint']")
   private _targetEndpoint!: MdOutlinedTextField;
+
+  @query("md-outlined-text-field[label='cluster']")
+  private _targetCluster!: MdOutlinedTextField;
 
   private fetchBindingEntry(): BindingEntryStruct[] {
     const bindings_raw: [] = this.node!.attributes[this.endpoint + "/30/0"];
@@ -105,9 +108,7 @@ export class NodeBindingDialog extends LitElement {
     const hasTarget = entry.targets!.filter(
       (item) => item.endpoint === sourceEndpoint,
     );
-    return hasTarget.length > 0
-      ? null
-      : entry;
+    return hasTarget.length > 0 ? null : entry;
   }
 
   private removeBindingAtIndex(
@@ -204,6 +205,7 @@ export class NodeBindingDialog extends LitElement {
   async addBindingHandler() {
     const targetNodeId = parseInt(this._targetNodeId.value, 10);
     const targetEndpoint = parseInt(this._targetEndpoint.value, 10);
+    const targetCluster = parseInt(this._targetCluster.value, 10);
 
     if (isNaN(targetNodeId) || targetNodeId <= 0) {
       alert("Please enter a valid target node ID");
@@ -213,10 +215,14 @@ export class NodeBindingDialog extends LitElement {
       alert("Please enter a valid target endpoint");
       return;
     }
+    if (isNaN(targetCluster) || targetCluster < 0) {
+      alert("Please enter a valid target endpoint");
+      return;
+    }
 
     const targets: AccessControlTargetStruct = {
       endpoint: targetEndpoint,
-      cluster: undefined,
+      cluster: targetCluster,
       deviceType: undefined,
     };
 
@@ -235,13 +241,16 @@ export class NodeBindingDialog extends LitElement {
       node: targetNodeId,
       endpoint: targetEndpoint,
       group: undefined,
-      cluster: undefined,
-      fabricIndex: undefined,
+      cluster: targetCluster,
+      fabricIndex: this.client.connection.serverInfo!.fabric_id,
     };
 
     const result_binding = await this.add_bindings(endpoint, bindingEntry);
 
     if (result_binding) {
+      this._targetNodeId.value = "";
+      this._targetEndpoint.value = "";
+      this._targetCluster.value = "";
       this.requestUpdate();
     }
   }
@@ -273,7 +282,7 @@ export class NodeBindingDialog extends LitElement {
                     <div style="display:flex;gap:10px;">
                         <div>node:${entry["node"]}</div>
                         <div>endpoint:${entry["endpoint"]}</div>
-                        <div>fabricIndex:${entry["fabricIndex"]}</div>
+                        ${entry["cluster"] ? html` <div>cluster:${entry["cluster"]}</div> ` : nothing}
                     </div>
                     <div slot="end">
                       <md-text-button
@@ -292,6 +301,10 @@ export class NodeBindingDialog extends LitElement {
               ></md-outlined-text-field>
               <md-outlined-text-field
                 label="endpoint"
+                class="target-item"
+              ></md-outlined-text-field>
+              <md-outlined-text-field
+                label="cluster"
                 class="target-item"
               ></md-outlined-text-field>
             </div>

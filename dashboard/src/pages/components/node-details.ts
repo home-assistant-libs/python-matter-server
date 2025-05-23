@@ -108,9 +108,9 @@ export class NodeDetails extends LitElement {
         : html`<md-outlined-button @click=${this._searchUpdate}>Update<ha-svg-icon slot="icon" .path=${mdiUpdate}></ha-svg-icon></md-outlined-button>`}
 
           ${bindings
-            ? html` 
-              <md-outlined-button @click=${this._binding}> 
-                Binding 
+            ? html`
+              <md-outlined-button @click=${this._binding}>
+                Binding
                 <ha-svg-icon slot="icon" .path=${mdiLink}></ha-svg-icon>
               </md-outlined-button>
               `
