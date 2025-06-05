@@ -9,6 +9,9 @@ import { clusters } from "../client/models/descriptions";
 import { MatterNode } from "../client/models/node";
 import { showAlertDialog } from "../components/dialog-box/show-dialog-box";
 import "../components/ha-svg-icon";
+import "../pages/components/node-details";
+import { provide } from "@lit/context";
+import { bindingContext } from "./components/context";
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -37,8 +40,9 @@ class MatterClusterView extends LitElement {
   @property()
   public node?: MatterNode;
 
+  @provide({ context: bindingContext })
   @property()
-  public endpoint?: number;
+  public endpoint!: number;
 
   @property()
   public cluster?: number;

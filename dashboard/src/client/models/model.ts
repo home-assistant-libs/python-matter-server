@@ -105,6 +105,14 @@ export interface APICommands {
     requestArgs: {};
     response: {};
   };
+  set_acl_entry: {
+    requestArgs: {};
+    response: {};
+  };
+  set_node_binding: {
+    requestArgs: {};
+    response: {};
+  };
 }
 
 export interface CommandMessage {
