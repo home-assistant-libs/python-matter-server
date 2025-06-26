@@ -91,7 +91,7 @@ def dataclass_to_dict(obj_in: DataclassInstance) -> dict:
 
 def parse_utc_timestamp(datetime_string: str) -> datetime:
     """Parse datetime from string."""
-    return datetime.fromisoformat(datetime_string.replace("Z", "+00:00"))
+    return datetime.fromisoformat(datetime_string)
 
 
 def _get_descriptor_key(descriptor: ClusterObjectDescriptor, key: str | int) -> str:
