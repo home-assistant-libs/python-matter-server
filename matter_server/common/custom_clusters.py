@@ -121,6 +121,9 @@ class EveCluster(Cluster, CustomClusterMixin):
                     Label="pressure", Tag=0x130A0014, Type=float32
                 ),
                 ClusterObjectFieldDescriptor(
+                    Label="weatherTrend", Tag=0x130A0015, Type=int
+                ),
+                ClusterObjectFieldDescriptor(
                     Label="valvePosition", Tag=0x130A0018, Type=int
                 ),
                 ClusterObjectFieldDescriptor(
@@ -137,6 +140,7 @@ class EveCluster(Cluster, CustomClusterMixin):
     current: float32 | None = None
     altitude: float32 | None = None
     pressure: float32 | None = None
+    weatherTrend: int | None = None
     valvePosition: int | None = None
     motionSensitivity: int | None = None
 
