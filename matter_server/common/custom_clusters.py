@@ -327,7 +327,6 @@ class EveCluster(Cluster, CustomClusterMixin):
 
             value: float32 = 0
 
-
         @dataclass
         class WeatherTrend(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
             """WeatherTrend Attribute within the Eve Cluster."""
