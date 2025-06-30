@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, Final, Optional, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 import uuid
 
 from chip.clusters import Objects as Clusters
@@ -80,9 +80,9 @@ class MatterClient:
     def subscribe_events(
         self,
         callback: Callable[[EventType, Any], None],
-        event_filter: Optional[EventType] = None,
-        node_filter: Optional[int] = None,
-        attr_path_filter: Optional[str] = None,
+        event_filter: EventType | None = None,
+        node_filter: int | None = None,
+        attr_path_filter: str | None = None,
     ) -> Callable[[], None]:
         """
         Subscribe to node and server events.
@@ -191,7 +191,7 @@ class MatterClient:
         timeout: int = 300,  # noqa: ASYNC109 timeout parameter required for native timeout
         iteration: int = 1000,
         option: int = 1,
-        discriminator: Optional[int] = None,
+        discriminator: int | None = None,
     ) -> CommissioningParameters:
         """
         Open a commissioning window to commission a device present on this controller to another.
@@ -771,8 +771,8 @@ class MatterClient:
         self,
         event: EventType,
         data: Any = None,
-        node_id: Optional[int] = None,
-        attribute_path: Optional[str] = None,
+        node_id: int | None = None,
+        attribute_path: str | None = None,
     ) -> None:
         """Signal event to all subscribers."""
         # instead of iterating all subscribers we iterate over subscription keys

@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 import datetime
 from enum import Enum, IntEnum
-from typing import Optional, Union
+from typing import Union
 
 from chip.clusters.Types import Nullable, NullValue
 import pytest
@@ -34,7 +34,7 @@ class BasicModelChild:
     a: int
     b: str
     c: str
-    d: Optional[int]
+    d: int | None
 
 
 @dataclass
@@ -44,7 +44,7 @@ class BasicModel:
     a: int
     b: float
     c: str
-    d: Optional[int]
+    d: int | None
     e: BasicModelChild
     f: datetime.datetime
     g: MatterEnum
