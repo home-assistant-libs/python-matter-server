@@ -121,6 +121,9 @@ class EveCluster(Cluster, CustomClusterMixin):
                     Label="pressure", Tag=0x130A0014, Type=float32
                 ),
                 ClusterObjectFieldDescriptor(
+                    Label="weatherTrend", Tag=0x130A0015, Type=int
+                ),
+                ClusterObjectFieldDescriptor(
                     Label="valvePosition", Tag=0x130A0018, Type=int
                 ),
                 ClusterObjectFieldDescriptor(
@@ -137,6 +140,7 @@ class EveCluster(Cluster, CustomClusterMixin):
     current: float32 | None = None
     altitude: float32 | None = None
     pressure: float32 | None = None
+    weatherTrend: int | None = None
     valvePosition: int | None = None
     motionSensitivity: int | None = None
 
@@ -322,6 +326,27 @@ class EveCluster(Cluster, CustomClusterMixin):
                 return ClusterObjectFieldDescriptor(Type=float32)
 
             value: float32 = 0
+
+        @dataclass
+        class WeatherTrend(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """WeatherTrend Attribute within the Eve Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x130AFC01
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x130A0015
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=int)
+
+            value: int = 0
 
         @dataclass
         class ValvePosition(ClusterAttributeDescriptor, CustomClusterAttributeMixin):

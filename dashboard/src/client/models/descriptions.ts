@@ -12228,6 +12228,12 @@ export const clusters: Record<number, ClusterDescription> = {
         "label": "Pressure",
         "type": "float32"
       },
+      "319422485": {
+        "id": 319422485,
+        "cluster_id": 319486977,
+        "label": "WeatherTrend",
+        "type": "int"
+      },
       "319422488": {
         "id": 319422488,
         "cluster_id": 319486977,
