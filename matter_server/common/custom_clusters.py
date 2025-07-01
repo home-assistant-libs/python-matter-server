@@ -606,11 +606,15 @@ class ThirdRealityMeteringCluster(Cluster, CustomClusterMixin):
                 ClusterObjectFieldDescriptor(
                     Label="instantaneousDemand", Tag=0x0400, Type=uint
                 ),
+                ClusterObjectFieldDescriptor(Label="multiplier", Tag=0x0301, Type=uint),
+                ClusterObjectFieldDescriptor(Label="divisor", Tag=0x0302, Type=uint),
             ]
         )
 
     currentSummationDelivered: uint | None = None
     instantaneousDemand: uint | None = None
+    multiplier: uint = 1
+    divisor: uint = 1
 
     class Attributes:
         """Attributes for the custom Cluster."""
@@ -643,6 +647,48 @@ class ThirdRealityMeteringCluster(Cluster, CustomClusterMixin):
                 return ClusterObjectFieldDescriptor(Type=uint)
 
             value: uint = 0
+
+        @dataclass
+        class Divisor(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """Divisor Attribute within the ThirdRealityMeteringCluster Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x130DFC02
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x0302
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 1
+
+        @dataclass
+        class Multiplier(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """Multiplier Attribute within the ThirdRealityMeteringCluster Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x130DFC02
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x0301
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 1
 
         @dataclass
         class InstantaneousDemand(
