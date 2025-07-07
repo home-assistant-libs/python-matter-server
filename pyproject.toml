@@ -90,7 +90,7 @@ ignore_missing_imports = true
 no_implicit_optional = true
 no_implicit_reexport = true
 platform = "linux"
-python_version = "3.11"
+python_version = "3.12"
 strict_optional = true
 warn_incomplete_stub = true
 warn_no_return = true
@@ -147,7 +147,7 @@ asyncio_mode = "auto"
 fix = true
 line-length = 88
 show-fixes = true
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint.pydocstyle]
 # Use Google-style docstrings.
