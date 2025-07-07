@@ -28,7 +28,7 @@ jobs:
           pip install -e .[server]
           pip install -e .[test]
       - name: Lint/test with pre-commit
-        run: SKIP=no-commit-to-branch pre-commit run --all-files
+        run: SKIP=no-commit-to-branch pre-commit run --all-files --verbose
 
   test:
     runs-on: ubuntu-latest
