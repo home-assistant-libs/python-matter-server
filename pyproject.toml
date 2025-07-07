@@ -56,7 +56,7 @@ test = [
   "pytest-cov==6.2.1",
   "ruff==0.12.2",
   "tomli==2.2.1",
-  "typing-extensions==4.14.1",
+  "typing-extensions==4.14.0",
 ]
 
 [project.scripts]
