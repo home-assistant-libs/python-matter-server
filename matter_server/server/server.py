@@ -84,6 +84,7 @@ def mount_websocket(server: MatterServer, path: str) -> None:
         finally:
             clients.remove(connection)
 
+    @web.middleware
     async def _handle_shutdown(app: web.Application) -> None:
         # pylint: disable=unused-argument
         for client in set(clients):
