@@ -199,7 +199,7 @@ def _setup_logging() -> None:
     )
     threading.excepthook = lambda args: logger.exception(
         "Uncaught thread exception",
-        exc_info=(  # type: ignore[arg-type] # noqa: LOG014
+        exc_info=(  # type: ignore[arg-type]
             args.exc_type,
             args.exc_value,
             args.exc_traceback,
