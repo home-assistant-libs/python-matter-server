@@ -616,7 +616,7 @@ class NeoCluster(Cluster, CustomClusterMixin):
 
 @dataclass
 class HeimanCluster(Cluster, CustomClusterMixin):
-    """Custom (vendor-specific) cluster for Neo - Vendor ID 4619 (0x120B)."""
+    """Custom (vendor-specific) cluster for Heiman - Vendor ID 4619 (0x120B)."""
 
     id: ClassVar[int] = 0x120BFC01
 
