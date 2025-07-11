@@ -649,8 +649,8 @@ class HeimanCluster(Cluster, CustomClusterMixin):
         """Attributes for the Heiman Cluster."""
 
         @dataclass
-        class tamperAlarm(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
-            """tamperAlarm Attribute within the Heiman Cluster."""
+        class TamperAlarm(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """TamperAlarm Attribute within the Heiman Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -670,8 +670,8 @@ class HeimanCluster(Cluster, CustomClusterMixin):
             value: uint = 0
 
         @dataclass
-        class preheatingState(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
-            """preheatingState Attribute within the Heiman Cluster."""
+        class PreheatingState(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """PreheatingState Attribute within the Heiman Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -691,8 +691,8 @@ class HeimanCluster(Cluster, CustomClusterMixin):
             value: uint = 0
 
         @dataclass
-        class noDisturbingState(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
-            """noDisturbingState Attribute within the Heiman Cluster."""
+        class NoDisturbingState(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """NoDisturbingState Attribute within the Heiman Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
@@ -712,8 +712,8 @@ class HeimanCluster(Cluster, CustomClusterMixin):
             value: uint = 0
 
         @dataclass
-        class sensorType(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
-            """sensorType Attribute within the Heiman Cluster."""
+        class SensorType(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """SensorType Attribute within the Heiman Cluster."""
 
             @ChipUtility.classproperty
             def cluster_id(cls) -> int:
