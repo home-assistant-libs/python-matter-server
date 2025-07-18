@@ -146,7 +146,7 @@ class EveCluster(Cluster, CustomClusterMixin):
     weatherTrend: int | None = None
     valvePosition: int | None = None
     motionSensitivity: int | None = None
-    obstructionDetected:bool  | None = None
+    obstructionDetected: bool | None = None
 
     class Attributes:
         """Attributes for the Eve Cluster."""
@@ -290,7 +290,9 @@ class EveCluster(Cluster, CustomClusterMixin):
             value: float32 = 0
 
         @dataclass
-        class ObstructionDetected(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+        class ObstructionDetected(
+            ClusterAttributeDescriptor, CustomClusterAttributeMixin
+        ):
             """ObstructionDetected Attribute within the Eve Cluster."""
 
             @ChipUtility.classproperty
