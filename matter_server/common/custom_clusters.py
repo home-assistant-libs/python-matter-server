@@ -645,8 +645,6 @@ class HeimanCluster(Cluster, CustomClusterMixin):
     noDisturbingState: uint | None = None
     sensorType: uint | None = None
 
-    """ Heiman Attributes """
-
     class Attributes:
         """Attributes for the Heiman Cluster."""
 
