@@ -645,6 +645,8 @@ class HeimanCluster(Cluster, CustomClusterMixin):
     noDisturbingState: uint | None = None
     sensorType: uint | None = None
 
+    """ Heiman Attributes """
+
     class Attributes:
         """Attributes for the Heiman Cluster."""
 
@@ -691,7 +693,9 @@ class HeimanCluster(Cluster, CustomClusterMixin):
             value: uint = 0
 
         @dataclass
-        class NoDisturbingState(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+        class NoDisturbingState(
+            ClusterAttributeDescriptor, CustomClusterAttributeMixin
+        ):
             """NoDisturbingState Attribute within the Heiman Cluster."""
 
             @ChipUtility.classproperty
