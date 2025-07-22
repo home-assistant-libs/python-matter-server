@@ -615,6 +615,127 @@ class NeoCluster(Cluster, CustomClusterMixin):
 
 
 @dataclass
+class HeimanCluster(Cluster, CustomClusterMixin):
+    """Custom (vendor-specific) cluster for Heiman - Vendor ID 4619 (0x120BFC01)."""
+
+    id: ClassVar[int] = 0x120BFC01
+
+    @ChipUtility.classproperty
+    def descriptor(cls) -> ClusterObjectDescriptor:
+        """Return descriptor for this cluster."""
+        return ClusterObjectDescriptor(
+            Fields=[
+                ClusterObjectFieldDescriptor(
+                    Label="tamperAlarm", Tag=0x00120B0010, Type=uint
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="preheatingState", Tag=0x00120B0011, Type=uint
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="noDisturbingState", Tag=0x00120B0012, Type=uint
+                ),
+                ClusterObjectFieldDescriptor(
+                    Label="sensorType", Tag=0x00120B0013, Type=uint
+                ),
+            ]
+        )
+
+    tamperAlarm: uint | None = None
+    preheatingState: uint | None = None
+    noDisturbingState: uint | None = None
+    sensorType: uint | None = None
+
+    class Attributes:
+        """Attributes for the Heiman Cluster."""
+
+        @dataclass
+        class TamperAlarm(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """TamperAlarm Attribute within the Heiman Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x120BFC01
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00120B0010
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+        @dataclass
+        class PreheatingState(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """PreheatingState Attribute within the Heiman Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x120BFC01
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00120B0011
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+        @dataclass
+        class NoDisturbingState(
+            ClusterAttributeDescriptor, CustomClusterAttributeMixin
+        ):
+            """NoDisturbingState Attribute within the Heiman Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x120BFC01
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00120B0012
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+        @dataclass
+        class SensorType(ClusterAttributeDescriptor, CustomClusterAttributeMixin):
+            """SensorType Attribute within the Heiman Cluster."""
+
+            @ChipUtility.classproperty
+            def cluster_id(cls) -> int:
+                """Return cluster id."""
+                return 0x120BFC01
+
+            @ChipUtility.classproperty
+            def attribute_id(cls) -> int:
+                """Return attribute id."""
+                return 0x00120B0013
+
+            @ChipUtility.classproperty
+            def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+                """Return attribute type."""
+                return ClusterObjectFieldDescriptor(Type=uint)
+
+            value: uint = 0
+
+
+@dataclass
 class ThirdRealityMeteringCluster(Cluster, CustomClusterMixin):
     """Custom (vendor-specific) PowerMetering cluster for ThirdReality."""
 
