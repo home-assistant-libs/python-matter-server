@@ -147,6 +147,11 @@ class MatterServer:
             raise RuntimeError(
                 "Minimum supported schema version can't be higher than current schema version."
             )
+        self.logger.info("Matter Server initialized")
+        self.logger.info(
+            "Using '%s' as primary interface (for link-local addresses)",
+            self.primary_interface,
+        )
 
     @cached_property
     def device_controller(self) -> MatterDeviceController:
