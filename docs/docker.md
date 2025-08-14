@@ -51,6 +51,8 @@ docker run -d \
   --network=host \
   ghcr.io/home-assistant-libs/python-matter-server:stable --storage-path /data --paa-root-cert-dir /data/credentials --bluetooth-adapter 0
 ```
+> [!NOTE]
+> Bluetooth is required for using Multi-Admin via HomeKit through the Turn On Pairing Mode feature in the Apple Home app
 
 ## Running using Docker compose
 
